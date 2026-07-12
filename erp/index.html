@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emagrims Ltd | ERP</title>
+  <meta name="description" content="Emagrims Ltd internal ERP — inventory, sales, purchasing, HR, accounting, and daily land clearing operations.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <span class="brand-mark">EL</span>
+        <div>
+          <strong class="brand-name">Emagrims Ltd</strong>
+          <span class="brand-sub">Enterprise ERP</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav" id="sidebarNav" aria-label="Main navigation"></nav>
+      <div class="sidebar-footer">
+        <button type="button" class="btn btn-ghost btn-block" id="resetDataBtn">Reset Demo Data</button>
+        <a href="../index.html" class="back-link">← Company website</a>
+      </div>
+    </aside>
+
+    <div class="app-main">
+      <header class="topbar">
+        <button type="button" class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+          <span></span><span></span><span></span>
+        </button>
+        <span class="topbar-title">Emagrims Ltd — Operations ERP</span>
+        <span class="topbar-tag">Land Clearing &amp; Earthmoving</span>
+      </header>
+      <main class="view" id="view"></main>
+    </div>
+  </div>
+
+  <div id="modalRoot"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
