@@ -1,39 +1,46 @@
-import { store } from './store.js';
-import { setCurrentUserId } from './session.js';
+import { login } from './auth.js';
 import { el } from './utils.js';
 
-export function showUserGate(onDone) {
+export function showLoginForm(onDone) {
   const overlay = document.getElementById('userGate');
   overlay.innerHTML = '';
   overlay.classList.add('open');
 
-  const employees = store.get('employees')
-    .filter((e) => e.status !== 'Disengaged')
-    .slice()
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const usernameInput = el('input', { type: 'text', name: 'username', autocomplete: 'username', required: 'required' });
+  const passwordInput = el('input', { type: 'password', name: 'password', autocomplete: 'current-password', required: 'required' });
+  const errorNote = el('p', { class: 'gate-error' });
 
-  const select = el('select', { name: 'gateUser' }, [
-    el('option', { value: '' }, '— Select your name —'),
-    ...employees.map((e) => el('option', { value: e.id }, `${e.name} — ${e.role}${e.status === 'Suspended' ? ' (Suspended)' : ''}`)),
+  const form = el('form', { class: 'modal-form' }, [
+    el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Username'), usernameInput]),
+    el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Password'), passwordInput]),
+    errorNote,
+    el('button', { type: 'submit', class: 'btn btn-primary btn-block' }, 'Log In'),
   ]);
 
-  const continueBtn = el('button', { type: 'button', class: 'btn btn-primary btn-block' }, 'Continue');
-  continueBtn.addEventListener('click', () => {
-    if (!select.value) { window.alert('Select your name to continue.'); return; }
-    setCurrentUserId(select.value);
-    overlay.classList.remove('open');
-    onDone();
+  form.addEventListener('submit', async (evt) => {
+    evt.preventDefault();
+    const submitBtn = form.querySelector('button[type="submit"]');
+    errorNote.textContent = '';
+    try {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Logging in…';
+      await login(usernameInput.value, passwordInput.value);
+      overlay.classList.remove('open');
+      onDone();
+    } catch (err) {
+      errorNote.textContent = err.message || 'Could not log in. Please try again.';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Log In';
+    }
   });
 
   const card = el('div', { class: 'gate-card' }, [
     el('img', { src: 'assets/logo.png', alt: 'Emagrims Ltd', class: 'gate-logo' }),
-    el('h2', {}, "Who's using this device?"),
-    el('p', { class: 'gate-note' }, "This just organizes your menu so you see what's relevant to your role — it is not a secure login, and it doesn't protect data from anyone with access to this browser. Anyone can switch users below at any time."),
-    el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Your Name'), select]),
-    continueBtn,
+    el('h2', {}, 'Sign in to Emagrims ERP'),
+    el('p', { class: 'gate-note' }, "Use the username and password given to you by an admin. If you've forgotten yours, ask an admin to reset it."),
+    form,
   ]);
   overlay.appendChild(card);
 
-  const firstFocusable = card.querySelector('select');
-  if (firstFocusable) firstFocusable.focus();
+  usernameInput.focus();
 }

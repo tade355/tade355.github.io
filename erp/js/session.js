@@ -1,24 +1,23 @@
 import { store } from './store.js';
 
-// IMPORTANT: this is a soft, UI-level access gate — not real security. There is
-// no server or authentication; all data already lives in this browser's local
-// storage regardless of who is "signed in". This only organizes the menu and
-// filters what's shown by default, for a trusted-team, shared-device setup.
-const SESSION_KEY = 'emagrims_erp_session';
+// Who's logged in is now backed by a real Supabase Auth session (see
+// auth.js) — this just caches which employee record that session maps to,
+// set once at login/restore and read synchronously everywhere else. Tier
+// filtering below is still soft/UI-level (not row-level security), but
+// getting into the app at all now requires a real account and password.
+let currentEmployeeId = null;
 
-export function getCurrentUserId() {
-  return localStorage.getItem(SESSION_KEY) || null;
+export function setCurrentEmployeeId(id) {
+  currentEmployeeId = id;
 }
 
-export function setCurrentUserId(id) {
-  if (id) localStorage.setItem(SESSION_KEY, id);
-  else localStorage.removeItem(SESSION_KEY);
+export function getCurrentUserId() {
+  return currentEmployeeId;
 }
 
 export function getCurrentUser() {
-  const id = getCurrentUserId();
-  if (!id) return null;
-  return store.find('employees', id);
+  if (!currentEmployeeId) return null;
+  return store.find('employees', currentEmployeeId);
 }
 
 export function getCurrentTier() {

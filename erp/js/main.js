@@ -1,9 +1,10 @@
 import { ROUTES, initRouter } from './router.js';
-import { initModalRoot } from './ui.js';
+import { initModalRoot, openModal } from './ui.js';
 import { store } from './store.js';
 import { el } from './utils.js';
-import { getCurrentUserId, getCurrentUser, getCurrentTier, canAccess, setCurrentUserId } from './session.js';
-import { showUserGate } from './userGate.js';
+import { getCurrentUser, getCurrentTier, canAccess } from './session.js';
+import { showLoginForm } from './userGate.js';
+import { restoreSession, logout, changePassword } from './auth.js';
 
 const sidebarNav = document.getElementById('sidebarNav');
 const viewContainer = document.getElementById('view');
@@ -16,6 +17,21 @@ const loadingMessage = document.getElementById('loadingMessage');
 
 initModalRoot();
 
+function openChangePasswordForm() {
+  openModal({
+    title: 'Change Password',
+    fields: [
+      { name: 'newPassword', label: 'New Password', type: 'password', required: true },
+    ],
+    initial: {},
+    submitLabel: 'Change Password',
+    onSubmit: async (data) => {
+      await changePassword(data.newPassword);
+      window.alert('Password changed.');
+    },
+  });
+}
+
 function renderUserBadge() {
   userBadge.innerHTML = '';
   const user = getCurrentUser();
@@ -25,14 +41,21 @@ function renderUserBadge() {
       el('span', { class: 'user-badge-name' }, user.name),
       el('span', { class: 'user-badge-tier' }, getCurrentTier()),
     ]),
-    el('button', {
-      type: 'button',
-      class: 'user-badge-switch',
-      onClick: () => {
-        setCurrentUserId(null);
-        window.location.reload();
-      },
-    }, 'Switch'),
+    el('div', { class: 'user-badge-actions' }, [
+      el('button', {
+        type: 'button',
+        class: 'user-badge-switch',
+        onClick: openChangePasswordForm,
+      }, 'Change Password'),
+      el('button', {
+        type: 'button',
+        class: 'user-badge-switch',
+        onClick: async () => {
+          await logout();
+          window.location.reload();
+        },
+      }, 'Log Out'),
+    ]),
   ]));
 }
 
@@ -107,8 +130,9 @@ async function boot() {
   }
   loadingScreen.classList.remove('open');
 
-  if (!getCurrentUserId() || !getCurrentUser()) {
-    showUserGate(() => window.location.reload());
+  const employee = await restoreSession();
+  if (!employee) {
+    showLoginForm(() => window.location.reload());
     return;
   }
   initApp();
