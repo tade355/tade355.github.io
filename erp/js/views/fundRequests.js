@@ -3,6 +3,7 @@ import { formatCurrency, formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
 import { PROJECTS } from '../constants.js';
 import { printFundRequest } from '../print.js';
+import { filterFundRequests, getCurrentUserId } from '../session.js';
 
 function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
@@ -62,7 +63,7 @@ function openRequestForm(record, onSaved) {
         { value: '', label: '— Not specified —' },
         ...PROJECTS.map((p) => ({ value: p, label: p })),
       ], record?.project);
-      const submittedByField = selectField('submittedBy', 'Submitted By', employeeOptions(), record?.submittedBy);
+      const submittedByField = selectField('submittedBy', 'Submitted By', employeeOptions(), record?.submittedBy || getCurrentUserId());
       const descriptionInput = el('textarea', { name: 'description', rows: 2 });
       descriptionInput.value = record?.description || '';
       const descriptionField = el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Description'), descriptionInput]);
@@ -167,7 +168,7 @@ export function renderFundRequests(container) {
   }
 
   function refresh() {
-    const rows = store.get('fundRequests').slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+    const rows = filterFundRequests(store.get('fundRequests')).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
     const pending = rows.filter((r) => r.status === 'Pending').length;
     const totalPending = rows.filter((r) => r.status === 'Pending').reduce((sum, r) => sum + totalOf(r), 0);
 

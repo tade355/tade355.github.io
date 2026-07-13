@@ -1,6 +1,7 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete } from '../ui.js';
+import { PROJECTS, ACCESS_TIERS, ACCESS_TIER_LABELS } from '../constants.js';
 
 const FIELDS = [
   { name: 'name', label: 'Full Name', required: true },
@@ -20,6 +21,11 @@ const FIELDS = [
     { value: 'Active', label: 'Active' },
     { value: 'Suspended', label: 'Suspended' },
     { value: 'Disengaged', label: 'Disengaged' },
+  ] },
+  { name: 'accessTier', label: 'ERP Access Level', type: 'select', required: true, options: ACCESS_TIERS.map((t) => ({ value: t, label: ACCESS_TIER_LABELS[t] })) },
+  { name: 'assignedProject', label: 'Assigned Project (Supervisors only — restricts what they see)', type: 'select', options: [
+    { value: '', label: '— All projects —' },
+    ...PROJECTS.map((p) => ({ value: p, label: p })),
   ] },
 ];
 
@@ -43,6 +49,7 @@ export function renderHR(container) {
         { key: 'salary', label: 'Salary', render: (r) => (r.salary ? formatCurrency(r.salary) : '—') },
         { key: 'dateHired', label: 'Hired', render: (r) => formatDate(r.dateHired) },
         { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
+        { key: 'accessTier', label: 'ERP Access', render: (r) => r.accessTier || 'Staff' },
         {
           key: 'actions',
           label: '',
@@ -66,7 +73,7 @@ export function renderHR(container) {
     openModal({
       title: record ? 'Edit Employee' : 'Add Employee',
       fields: FIELDS,
-      initial: record || { status: 'Active' },
+      initial: record || { status: 'Active', accessTier: 'Staff' },
       submitLabel: record ? 'Save Changes' : 'Add Employee',
       onSubmit: (data) => {
         if (record) store.update('employees', record.id, data);

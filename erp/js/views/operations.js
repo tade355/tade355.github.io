@@ -2,6 +2,7 @@ import { store } from '../store.js';
 import { formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { PROJECTS } from '../constants.js';
+import { filterByProject, getAssignedProject } from '../session.js';
 
 function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
@@ -42,7 +43,12 @@ export function renderOperations(container) {
   container.innerHTML = '';
 
   const addBtn = el('button', { class: 'btn btn-primary', onClick: () => openForm() }, '+ Log Daily Report');
-  container.appendChild(sectionHeader('Daily Land Clearing Operations', 'Site activity, equipment usage, and progress logs', addBtn));
+  const assignedProject = getAssignedProject();
+  container.appendChild(sectionHeader(
+    'Daily Land Clearing Operations',
+    assignedProject ? `Showing ${assignedProject} only — site activity, equipment usage, and progress logs` : 'Site activity, equipment usage, and progress logs',
+    addBtn,
+  ));
 
   const summaryGrid = el('div', { class: 'stats-grid' });
   container.appendChild(summaryGrid);
@@ -53,7 +59,7 @@ export function renderOperations(container) {
   function refresh() {
     const employees = store.get('employees');
     const customers = store.get('customers');
-    const rows = store.get('operations').slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+    const rows = filterByProject(store.get('operations'), 'siteName').slice().sort((a, b) => (a.date < b.date ? 1 : -1));
 
     const totalArea = rows.reduce((sum, r) => sum + r.areaCleared, 0);
     const totalFuel = rows.reduce((sum, r) => sum + r.fuelUsed, 0);
@@ -103,7 +109,7 @@ export function renderOperations(container) {
     openModal({
       title: record ? 'Edit Daily Report' : 'Log Daily Report',
       fields: fields(),
-      initial: record || { date: new Date().toISOString().slice(0, 10), status: 'Completed' },
+      initial: record || { date: new Date().toISOString().slice(0, 10), status: 'Completed', siteName: getAssignedProject() },
       submitLabel: record ? 'Save Changes' : 'Log Report',
       onSubmit: (data) => {
         if (record) store.update('operations', record.id, data);

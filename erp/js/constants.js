@@ -19,3 +19,13 @@ export const LEAVE_TYPES = [
   'Compassionate',
   'Unpaid',
 ];
+
+// Soft, UI-level access tiers only — not real security. See session.js.
+export const ACCESS_TIERS = ['Admin', 'Accounts', 'Supervisor', 'Staff'];
+
+export const ACCESS_TIER_LABELS = {
+  Admin: 'Admin / Management — full access',
+  Accounts: 'Office / Accounts — Sales, Purchasing, Accounting, Profitability',
+  Supervisor: 'Site Supervisor — Operations, Fleet, Inventory for their project',
+  Staff: 'General Staff — Leave, Attendance, Fund Requests only',
+};

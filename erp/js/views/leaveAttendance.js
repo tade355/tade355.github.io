@@ -2,6 +2,7 @@ import { store } from '../store.js';
 import { formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { PROJECTS, LEAVE_TYPES } from '../constants.js';
+import { getCurrentUserId } from '../session.js';
 
 function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
@@ -135,7 +136,7 @@ export function renderLeaveAttendance(container) {
       openModal({
         title: record ? 'Edit Leave Request' : 'Apply for Leave',
         fields: leaveFields(),
-        initial: record || { status: 'Pending', startDate: todayIso(), endDate: todayIso() },
+        initial: record || { status: 'Pending', startDate: todayIso(), endDate: todayIso(), employeeId: getCurrentUserId() },
         submitLabel: record ? 'Save Changes' : 'Submit Request',
         onSubmit: (data) => {
           const payload = { ...data, appliedDate: record?.appliedDate || todayIso() };
@@ -152,7 +153,12 @@ export function renderLeaveAttendance(container) {
   function renderAttendanceTab() {
     actionSlot.innerHTML = '';
 
-    const clockEmployee = el('select', { name: 'clockEmployee' }, employeeOptions().map((o) => el('option', { value: o.value }, o.label)));
+    const currentUserId = getCurrentUserId();
+    const clockEmployee = el('select', { name: 'clockEmployee' }, employeeOptions().map((o) => {
+      const opt = el('option', { value: o.value }, o.label);
+      if (o.value === currentUserId) opt.setAttribute('selected', 'selected');
+      return opt;
+    }));
     const clockProject = el('select', { name: 'clockProject' }, [
       el('option', { value: '' }, '— Not site-specific —'),
       ...PROJECTS.map((p) => el('option', { value: p }, p)),
