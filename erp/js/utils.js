@@ -20,6 +20,13 @@ export function monthLabel(key) {
   return d.toLocaleDateString('en-GB', { month: 'short' });
 }
 
+export function formatMonthLong(key) {
+  if (!key) return '—';
+  const [y, m] = key.split('-');
+  const d = new Date(Number(y), Number(m) - 1, 1);
+  return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+}
+
 export function invoiceTotal(invoice) {
   return invoice.items.reduce((sum, it) => sum + it.qty * it.price, 0);
 }

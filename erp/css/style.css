@@ -273,6 +273,7 @@ button { font-family: inherit; }
 .btn-ghost { background: transparent; color: var(--text-primary); border-color: var(--border); }
 .btn-ghost:hover { background: var(--page-plane); }
 .btn-block { width: 100%; justify-content: center; }
+.btn-sm { padding: 0.4rem 0.7rem; font-size: 0.78rem; }
 
 /* Stat cards */
 .stats-grid {
@@ -593,6 +594,33 @@ button { font-family: inherit; }
   width: 100%;
   box-sizing: border-box;
 }
+.payroll-line-header, .payroll-line-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+.payroll-line-header {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.4rem;
+}
+.payroll-line-row { margin-bottom: 0.5rem; }
+.payroll-line-row input {
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--page-plane);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .line-items-total {
   display: flex;
   justify-content: flex-end;

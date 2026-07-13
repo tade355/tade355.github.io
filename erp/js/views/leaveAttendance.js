@@ -2,7 +2,7 @@ import { store } from '../store.js';
 import { formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { PROJECTS, LEAVE_TYPES } from '../constants.js';
-import { getCurrentUserId } from '../session.js';
+import { getCurrentUserId, filterLeaveRequests } from '../session.js';
 
 function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
@@ -29,6 +29,10 @@ function leaveFields() {
       { value: 'Pending', label: 'Pending' },
       { value: 'Approved', label: 'Approved' },
       { value: 'Rejected', label: 'Rejected' },
+    ] },
+    { name: 'approvedBy', label: 'Approved By', type: 'select', options: [
+      { value: '', label: '— Not yet approved —' },
+      ...employeeOptions(),
     ] },
   ];
 }
@@ -91,7 +95,7 @@ export function renderLeaveAttendance(container) {
     actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openLeaveForm() }, '+ Apply for Leave'));
 
     function refresh() {
-      const rows = store.get('leaveRequests').slice().sort((a, b) => (a.startDate < b.startDate ? 1 : -1));
+      const rows = filterLeaveRequests(store.get('leaveRequests')).slice().sort((a, b) => (a.startDate < b.startDate ? 1 : -1));
       const pending = rows.filter((r) => r.status === 'Pending').length;
 
       summarySlot.innerHTML = '';
@@ -109,6 +113,7 @@ export function renderLeaveAttendance(container) {
           { key: 'days', label: 'Days', render: (r) => `${daysBetween(r.startDate, r.endDate)}` },
           { key: 'reason', label: 'Reason' },
           { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
+          { key: 'approvedBy', label: 'Approved By', render: (r) => (r.approvedBy ? employeeName(r.approvedBy) : '—') },
           {
             key: 'actions',
             label: '',

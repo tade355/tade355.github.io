@@ -4,7 +4,7 @@ const COLLECTIONS = [
   'employees', 'inventory', 'customers', 'suppliers',
   'invoices', 'purchaseOrders', 'expenses', 'operations',
   'maintenanceLogs', 'dieselReceipts', 'dieselStockCounts',
-  'leaveRequests', 'attendanceLogs', 'fuelingVouchers', 'fundRequests',
+  'leaveRequests', 'attendanceLogs', 'fuelingVouchers', 'fundRequests', 'payrollRuns',
 ];
 
 function seedData() {
@@ -119,14 +119,15 @@ function seedData() {
       { id: 'SC-1', date: iso(1), countedLitres: 3420, countedBy: 'EMP-4', notes: 'Manual tank dip reading' },
     ],
     leaveRequests: [
-      { id: 'LV-1', employeeId: 'EMP-9', leaveType: 'Sick', startDate: iso(20), endDate: iso(16), reason: 'Recovering from malaria treatment.', status: 'Approved', appliedDate: iso(22) },
-      { id: 'LV-2', employeeId: 'EMP-20', leaveType: 'Casual', startDate: iso(-2), endDate: iso(-3), reason: 'Family event.', status: 'Pending', appliedDate: iso(1) },
+      { id: 'LV-1', employeeId: 'EMP-9', leaveType: 'Sick', startDate: iso(20), endDate: iso(16), reason: 'Recovering from malaria treatment.', status: 'Approved', appliedDate: iso(22), approvedBy: 'EMP-1' },
+      { id: 'LV-2', employeeId: 'EMP-20', leaveType: 'Casual', startDate: iso(-2), endDate: iso(-3), reason: 'Family event.', status: 'Pending', appliedDate: iso(1), approvedBy: '' },
     ],
     attendanceLogs: [],
     fuelingVouchers: [
       { id: 'FV-1', date: iso(3), station: 'Midejab Ltd', project: 'REX Forestry Project - Kajola Site', equipment: 'Bulldozer - EMG 004', litresRequested: 200, estimatedCost: 230000, requestedBy: 'EMP-6', status: 'Approved', approvedBy: 'EMP-1', notes: '' },
     ],
     fundRequests: [],
+    payrollRuns: [],
   };
 }
 
@@ -160,7 +161,7 @@ export const store = {
       employees: 'EMP', inventory: 'INV', customers: 'CUS', suppliers: 'SUP',
       invoices: 'INV-2024', purchaseOrders: 'PO-2024', expenses: 'EXP', operations: 'OPS',
       maintenanceLogs: 'MNT', dieselReceipts: 'DR', dieselStockCounts: 'SC',
-      leaveRequests: 'LV', attendanceLogs: 'ATT', fuelingVouchers: 'FV', fundRequests: 'FR',
+      leaveRequests: 'LV', attendanceLogs: 'ATT', fuelingVouchers: 'FV', fundRequests: 'FR', payrollRuns: 'PR',
     };
     state.meta.counter += 1;
     const id = record.id || `${prefixMap[collection] || 'REC'}-${state.meta.counter}`;

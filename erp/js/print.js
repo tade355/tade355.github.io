@@ -1,4 +1,4 @@
-import { formatCurrency, formatDate } from './utils.js';
+import { formatCurrency, formatDate, formatMonthLong } from './utils.js';
 
 function render(html) {
   const area = document.getElementById('printArea');
@@ -128,6 +128,58 @@ export function printFundRequest(request, { projectLabel, submittedByName, appro
       <strong>Approved By:</strong> ${approvedByName || 'Pending approval'}
     </div>
     ${signatureBlock(['Submitted By', 'Approved By'])}
+  `;
+  render(html);
+}
+
+export function printPayslip(run, line, employeeName) {
+  const netPay = (line.baseSalary || 0) + (line.bonus || 0) - (line.deductions || 0);
+  const html = `
+    ${letterhead('PAYSLIP', run.id)}
+    <div class="print-meta-grid">
+      <div><strong>Employee:</strong> ${employeeName}</div>
+      <div><strong>Pay Period:</strong> ${formatMonthLong(run.month)}</div>
+      <div><strong>Status:</strong> ${run.status}</div>
+    </div>
+    <table class="print-table">
+      <thead><tr><th>Item</th><th>Amount</th></tr></thead>
+      <tbody>
+        <tr><td>Base Salary</td><td>${formatCurrency(line.baseSalary)}</td></tr>
+        <tr><td>Bonus</td><td>${formatCurrency(line.bonus)}</td></tr>
+        <tr><td>Deductions</td><td>-${formatCurrency(line.deductions)}</td></tr>
+      </tbody>
+      <tfoot><tr><td>Net Pay</td><td>${formatCurrency(netPay)}</td></tr></tfoot>
+    </table>
+    ${signatureBlock(['Employee Signature', 'Authorized Signature'])}
+  `;
+  render(html);
+}
+
+export function printPayrollRegister(run, lines) {
+  const totalNet = lines.reduce((sum, l) => sum + (l.baseSalary || 0) + (l.bonus || 0) - (l.deductions || 0), 0);
+  const html = `
+    ${letterhead('PAYROLL REGISTER', run.id)}
+    <div class="print-meta-grid">
+      <div><strong>Pay Period:</strong> ${formatMonthLong(run.month)}</div>
+      <div><strong>Status:</strong> ${run.status}</div>
+      <div><strong>Employees:</strong> ${lines.length}</div>
+    </div>
+    <table class="print-table">
+      <thead><tr><th>Employee</th><th>Base Salary</th><th>Bonus</th><th>Deductions</th><th>Net Pay</th></tr></thead>
+      <tbody>
+        ${lines.map((l) => `
+          <tr>
+            <td>${l.employeeName}</td>
+            <td>${formatCurrency(l.baseSalary)}</td>
+            <td>${formatCurrency(l.bonus)}</td>
+            <td>-${formatCurrency(l.deductions)}</td>
+            <td>${formatCurrency((l.baseSalary || 0) + (l.bonus || 0) - (l.deductions || 0))}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+      <tfoot><tr><td colspan="4">Total</td><td>${formatCurrency(totalNet)}</td></tr></tfoot>
+    </table>
+    ${signatureBlock(['Prepared By', 'Approved By'])}
   `;
   render(html);
 }

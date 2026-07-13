@@ -60,3 +60,17 @@ export function filterFundRequests(rows) {
   const userId = getCurrentUserId();
   return rows.filter((r) => r.submittedBy === userId);
 }
+
+// Leave requests: Supervisors see requests from staff on their assigned project, Staff see only their own.
+export function filterLeaveRequests(rows) {
+  const tier = getCurrentTier();
+  if (tier === 'Admin' || tier === 'Accounts') return rows;
+  if (tier === 'Supervisor') {
+    const project = getAssignedProject();
+    if (!project) return rows;
+    const employees = store.get('employees');
+    return rows.filter((r) => employees.find((e) => e.id === r.employeeId)?.assignedProject === project);
+  }
+  const userId = getCurrentUserId();
+  return rows.filter((r) => r.employeeId === userId);
+}
