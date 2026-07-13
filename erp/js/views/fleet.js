@@ -3,6 +3,7 @@ import { formatCurrency, formatDate, el, monthKey, statusPillClass } from '../ut
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { PROJECTS, FUEL_STATIONS } from '../constants.js';
 import { printFuelingVoucher } from '../print.js';
+import { renderInventory } from './inventory.js';
 
 const FLEET_CATEGORIES = ['Heavy Equipment', 'Vehicles'];
 
@@ -166,13 +167,15 @@ export function renderFleet(container) {
   const maintenanceTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('maintenance') }, 'Maintenance Log');
   const dieselTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('diesel') }, 'Diesel Tracking');
   const voucherTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('vouchers') }, 'Fueling Vouchers');
+  const inventoryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('inventory') }, 'Inventory & Equipment');
   tabBar.appendChild(rosterTabBtn);
   tabBar.appendChild(maintenanceTabBtn);
   tabBar.appendChild(dieselTabBtn);
   tabBar.appendChild(voucherTabBtn);
+  tabBar.appendChild(inventoryTabBtn);
 
   const actionSlot = el('div');
-  container.appendChild(sectionHeader('Fleet Management', 'Dozer status, ownership, maintenance, and diesel accountability', actionSlot));
+  container.appendChild(sectionHeader('Fleet Management', 'Dozer status, ownership, maintenance, diesel accountability, and inventory', actionSlot));
   container.appendChild(tabBar);
 
   const summarySlot = el('div');
@@ -186,11 +189,19 @@ export function renderFleet(container) {
     maintenanceTabBtn.classList.toggle('active', tab === 'maintenance');
     dieselTabBtn.classList.toggle('active', tab === 'diesel');
     voucherTabBtn.classList.toggle('active', tab === 'vouchers');
+    inventoryTabBtn.classList.toggle('active', tab === 'inventory');
     summarySlot.innerHTML = '';
     if (tab === 'roster') renderRosterTab();
     else if (tab === 'maintenance') renderMaintenanceTab();
     else if (tab === 'diesel') renderDieselTab();
-    else renderVouchersTab();
+    else if (tab === 'vouchers') renderVouchersTab();
+    else renderInventoryTab();
+  }
+
+  function renderInventoryTab() {
+    actionSlot.innerHTML = '';
+    body.innerHTML = '';
+    renderInventory(body);
   }
 
   function renderRosterTab() {

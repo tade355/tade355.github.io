@@ -1,12 +1,10 @@
 import { renderDashboard } from './views/dashboard.js';
-import { renderInventory } from './views/inventory.js';
 import { renderSales } from './views/sales.js';
 import { renderPurchasing } from './views/purchasing.js';
 import { renderHR } from './views/hr.js';
 import { renderAccounting } from './views/accounting.js';
 import { renderOperations } from './views/operations.js';
 import { renderFleet } from './views/fleet.js';
-import { renderProfitability } from './views/profitability.js';
 import { renderLeaveAttendance } from './views/leaveAttendance.js';
 import { renderFundRequests } from './views/fundRequests.js';
 import { renderApprovals } from './views/approvals.js';
@@ -20,7 +18,6 @@ export const ROUTES = [
   { path: 'approvals', label: 'Approvals', icon: '✅', render: renderApprovals, tiers: ['Admin', 'Supervisor'] },
   { path: 'operations', label: 'Daily Operations', icon: '🚜', render: renderOperations, tiers: ['Admin', 'Supervisor'] },
   { path: 'fleet', label: 'Fleet Management', icon: '🔧', render: renderFleet, tiers: ['Admin', 'Supervisor'] },
-  { path: 'inventory', label: 'Inventory & Equipment', icon: '📦', render: renderInventory, tiers: ['Admin', 'Supervisor'] },
   { path: 'sales', label: 'Sales & Invoicing', icon: '🧾', render: renderSales, tiers: ['Admin', 'Accounts'] },
   { path: 'purchasing', label: 'Purchasing & Suppliers', icon: '🛒', render: renderPurchasing, tiers: ['Admin', 'Accounts'] },
   { path: 'hr', label: 'HR & Employees', icon: '👷', render: renderHR, tiers: ['Admin'] },
@@ -28,7 +25,6 @@ export const ROUTES = [
   { path: 'leave', label: 'Leave & Attendance', icon: '🕒', render: renderLeaveAttendance, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   { path: 'accounting', label: 'Accounting & Expenses', icon: '💰', render: renderAccounting, tiers: ['Admin', 'Accounts'] },
   { path: 'fundRequests', label: 'Fund Requests', icon: '💵', render: renderFundRequests, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
-  { path: 'profitability', label: 'Profitability', icon: '📈', render: renderProfitability, tiers: ['Admin', 'Accounts'] },
   { path: 'backup', label: 'Backup & Data', icon: '💾', render: renderBackup, tiers: ['Admin'] },
 ];
 

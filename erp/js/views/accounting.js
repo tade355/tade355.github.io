@@ -3,6 +3,7 @@ import { formatCurrency, formatDate, invoiceTotal, el } from '../utils.js';
 import { renderTable, actionButtons, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { PROJECTS } from '../constants.js';
+import { renderProfitability } from './profitability.js';
 
 const FIELDS = [
   { name: 'date', label: 'Date', type: 'date', required: true },
@@ -26,93 +27,127 @@ const FIELDS = [
 export function renderAccounting(container) {
   container.innerHTML = '';
 
-  const addBtn = el('button', { class: 'btn btn-primary', onClick: () => openForm() }, '+ Add Expense');
-  container.appendChild(sectionHeader('Accounting & Expenses', 'Company spending and revenue summary', addBtn));
+  let tab = 'expenses';
 
-  const summaryGrid = el('div', { class: 'stats-grid' });
-  container.appendChild(summaryGrid);
+  const tabBar = el('div', { class: 'tab-bar' });
+  const expensesTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('expenses') }, 'Expenses');
+  const profitabilityTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('profitability') }, 'Profitability');
+  tabBar.appendChild(expensesTabBtn);
+  tabBar.appendChild(profitabilityTabBtn);
 
-  const chartContainer = el('div', { class: 'charts-grid charts-grid-1' });
-  container.appendChild(chartContainer);
+  const actionSlot = el('div');
+  container.appendChild(sectionHeader('Accounting & Expenses', 'Company spending, revenue summary, and project profitability', actionSlot));
+  container.appendChild(tabBar);
 
-  let searchQuery = '';
-  const searchInput = el('input', { type: 'search', placeholder: 'Search by description, category, or paid by…' });
-  container.appendChild(el('div', { class: 'search-bar' }, [searchInput]));
-  searchInput.addEventListener('input', () => {
-    searchQuery = searchInput.value.trim().toLowerCase();
-    refresh();
-  });
+  const body = el('div');
+  container.appendChild(body);
 
-  const tableContainer = el('div');
-  container.appendChild(tableContainer);
+  function setTab(next) {
+    tab = next;
+    expensesTabBtn.classList.toggle('active', tab === 'expenses');
+    profitabilityTabBtn.classList.toggle('active', tab === 'profitability');
+    if (tab === 'expenses') renderExpensesTab();
+    else renderProfitabilityTab();
+  }
 
-  function refresh() {
-    const invoices = store.get('invoices');
-    const expenses = store.get('expenses');
-    const totalRevenue = invoices.filter((i) => i.status === 'Paid').reduce((sum, i) => sum + invoiceTotal(i), 0);
-    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-    const netPosition = totalRevenue - totalExpenses;
+  function renderProfitabilityTab() {
+    actionSlot.innerHTML = '';
+    body.innerHTML = '';
+    renderProfitability(body);
+  }
 
-    summaryGrid.innerHTML = '';
-    summaryGrid.appendChild(statCard({ label: 'Total Revenue (Paid)', value: formatCurrency(totalRevenue), tone: 'good' }));
-    summaryGrid.appendChild(statCard({ label: 'Total Expenses', value: formatCurrency(totalExpenses), tone: 'critical' }));
-    summaryGrid.appendChild(statCard({ label: 'Net Position', value: formatCurrency(netPosition), tone: netPosition >= 0 ? 'good' : 'critical' }));
+  function renderExpensesTab() {
+    actionSlot.innerHTML = '';
+    actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openForm() }, '+ Add Expense'));
 
-    const categories = [...new Set(expenses.map((e) => e.category))];
-    const bars = categories.map((cat, i) => ({
-      label: cat,
-      value: expenses.filter((e) => e.category === cat).reduce((sum, e) => sum + e.amount, 0),
-      colorVar: CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length],
-    }));
-    renderBarChart(chartContainer, { title: 'Expenses by Category', bars, formatValue: formatCurrency });
+    body.innerHTML = '';
+    const summaryGrid = el('div', { class: 'stats-grid' });
+    body.appendChild(summaryGrid);
 
-    let rows = expenses.slice().sort((a, b) => (a.date < b.date ? 1 : -1));
-    if (searchQuery) {
-      rows = rows.filter((r) => [r.description, r.category, r.paidBy, r.project].join(' ').toLowerCase().includes(searchQuery));
+    const chartContainer = el('div', { class: 'charts-grid charts-grid-1' });
+    body.appendChild(chartContainer);
+
+    let searchQuery = '';
+    const searchInput = el('input', { type: 'search', placeholder: 'Search by description, category, or paid by…' });
+    body.appendChild(el('div', { class: 'search-bar' }, [searchInput]));
+    searchInput.addEventListener('input', () => {
+      searchQuery = searchInput.value.trim().toLowerCase();
+      refresh();
+    });
+
+    const tableContainer = el('div');
+    body.appendChild(tableContainer);
+
+    function refresh() {
+      const invoices = store.get('invoices');
+      const expenses = store.get('expenses');
+      const totalRevenue = invoices.filter((i) => i.status === 'Paid').reduce((sum, i) => sum + invoiceTotal(i), 0);
+      const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+      const netPosition = totalRevenue - totalExpenses;
+
+      summaryGrid.innerHTML = '';
+      summaryGrid.appendChild(statCard({ label: 'Total Revenue (Paid)', value: formatCurrency(totalRevenue), tone: 'good' }));
+      summaryGrid.appendChild(statCard({ label: 'Total Expenses', value: formatCurrency(totalExpenses), tone: 'critical' }));
+      summaryGrid.appendChild(statCard({ label: 'Net Position', value: formatCurrency(netPosition), tone: netPosition >= 0 ? 'good' : 'critical' }));
+
+      const categories = [...new Set(expenses.map((e) => e.category))];
+      const bars = categories.map((cat, i) => ({
+        label: cat,
+        value: expenses.filter((e) => e.category === cat).reduce((sum, e) => sum + e.amount, 0),
+        colorVar: CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length],
+      }));
+      renderBarChart(chartContainer, { title: 'Expenses by Category', bars, formatValue: formatCurrency });
+
+      let rows = expenses.slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+      if (searchQuery) {
+        rows = rows.filter((r) => [r.description, r.category, r.paidBy, r.project].join(' ').toLowerCase().includes(searchQuery));
+      }
+      renderTable(tableContainer, {
+        columns: [
+          { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
+          { key: 'category', label: 'Category' },
+          { key: 'description', label: 'Description' },
+          { key: 'amount', label: 'Amount', render: (r) => formatCurrency(r.amount) },
+          { key: 'paidBy', label: 'Paid By' },
+          { key: 'project', label: 'Project', render: (r) => r.project || '—' },
+          {
+            key: 'actions',
+            label: '',
+            render: (r) => actionButtons({
+              onEdit: () => openForm(r),
+              onDelete: async () => {
+                if (!confirmDelete(r.description)) return;
+                try {
+                  await store.remove('expenses', r.id);
+                  refresh();
+                } catch (err) {
+                  window.alert(err.message || 'Could not delete this expense.');
+                }
+              },
+            }),
+          },
+        ],
+        rows,
+        emptyText: 'No expenses recorded yet.',
+      });
     }
-    renderTable(tableContainer, {
-      columns: [
-        { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
-        { key: 'category', label: 'Category' },
-        { key: 'description', label: 'Description' },
-        { key: 'amount', label: 'Amount', render: (r) => formatCurrency(r.amount) },
-        { key: 'paidBy', label: 'Paid By' },
-        { key: 'project', label: 'Project', render: (r) => r.project || '—' },
-        {
-          key: 'actions',
-          label: '',
-          render: (r) => actionButtons({
-            onEdit: () => openForm(r),
-            onDelete: async () => {
-              if (!confirmDelete(r.description)) return;
-              try {
-                await store.remove('expenses', r.id);
-                refresh();
-              } catch (err) {
-                window.alert(err.message || 'Could not delete this expense.');
-              }
-            },
-          }),
+
+    function openForm(record) {
+      openModal({
+        title: record ? 'Edit Expense' : 'Add Expense',
+        fields: FIELDS,
+        initial: record || { date: new Date().toISOString().slice(0, 10) },
+        submitLabel: record ? 'Save Changes' : 'Add Expense',
+        onSubmit: async (data) => {
+          if (record) await store.update('expenses', record.id, data);
+          else await store.add('expenses', data);
+          refresh();
         },
-      ],
-      rows,
-      emptyText: 'No expenses recorded yet.',
-    });
+      });
+    }
+
+    refresh();
   }
 
-  function openForm(record) {
-    openModal({
-      title: record ? 'Edit Expense' : 'Add Expense',
-      fields: FIELDS,
-      initial: record || { date: new Date().toISOString().slice(0, 10) },
-      submitLabel: record ? 'Save Changes' : 'Add Expense',
-      onSubmit: async (data) => {
-        if (record) await store.update('expenses', record.id, data);
-        else await store.add('expenses', data);
-        refresh();
-      },
-    });
-  }
-
-  refresh();
+  setTab('expenses');
 }
