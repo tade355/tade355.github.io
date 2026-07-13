@@ -44,7 +44,7 @@ export function renderApprovals(container) {
     let leaveRequests = [];
     let vouchers = [];
 
-    if (tier === 'Admin' || tier === 'Accounts' || tier === 'Supervisor') {
+    if (tier === 'Admin') {
       fundRequests = filterFundRequests(store.get('fundRequests')).filter((r) => r.status === 'Pending');
     }
     if (tier === 'Admin' || tier === 'Supervisor') {

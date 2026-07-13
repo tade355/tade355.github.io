@@ -16,7 +16,7 @@ import { canAccess, getCurrentTier, defaultRouteForTier } from './session.js';
 
 export const ROUTES = [
   { path: 'dashboard', label: 'Dashboard', icon: '🏠', render: renderDashboard, tiers: ['Admin', 'Accounts'] },
-  { path: 'approvals', label: 'Approvals', icon: '✅', render: renderApprovals, tiers: ['Admin', 'Accounts', 'Supervisor'] },
+  { path: 'approvals', label: 'Approvals', icon: '✅', render: renderApprovals, tiers: ['Admin', 'Supervisor'] },
   { path: 'operations', label: 'Daily Operations', icon: '🚜', render: renderOperations, tiers: ['Admin', 'Supervisor'] },
   { path: 'fleet', label: 'Fleet Management', icon: '🔧', render: renderFleet, tiers: ['Admin', 'Supervisor'] },
   { path: 'inventory', label: 'Inventory & Equipment', icon: '📦', render: renderInventory, tiers: ['Admin', 'Supervisor'] },

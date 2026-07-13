@@ -3,7 +3,7 @@ import { formatCurrency, formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
 import { PROJECTS } from '../constants.js';
 import { printFundRequest } from '../print.js';
-import { filterFundRequests, getCurrentUserId } from '../session.js';
+import { filterFundRequests, getCurrentUserId, getCurrentTier } from '../session.js';
 
 function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
@@ -93,16 +93,30 @@ function openRequestForm(record, onSaved) {
 
       const totalRow = el('div', { class: 'line-items-total' }, [el('span', {}, 'Total Amount:'), totalDisplay]);
 
-      const statusField = selectField('status', 'Status', [
-        { value: 'Pending', label: 'Pending' },
-        { value: 'Approved', label: 'Approved' },
-        { value: 'Rejected', label: 'Rejected' },
-        { value: 'Paid', label: 'Paid' },
-      ], record?.status || 'Pending');
-      const approvedByField = selectField('approvedBy', 'Approved By', [
-        { value: '', label: '— Not yet approved —' },
-        ...employeeOptions(),
-      ], record?.approvedBy);
+      const isAdmin = getCurrentTier() === 'Admin';
+      let statusField;
+      let approvedByField;
+      if (isAdmin) {
+        statusField = selectField('status', 'Status', [
+          { value: 'Pending', label: 'Pending' },
+          { value: 'Approved', label: 'Approved' },
+          { value: 'Rejected', label: 'Rejected' },
+          { value: 'Paid', label: 'Paid' },
+        ], record?.status || 'Pending');
+        approvedByField = selectField('approvedBy', 'Approved By', [
+          { value: '', label: '— Not yet approved —' },
+          ...employeeOptions(),
+        ], record?.approvedBy);
+      } else {
+        statusField = el('div', { class: 'field' }, [
+          el('span', { class: 'field-label' }, 'Status'),
+          el('p', {}, `${record?.status || 'Pending'} — only an Admin can approve or reject a fund request.`),
+        ]);
+        approvedByField = el('div', { class: 'field' }, [
+          el('span', { class: 'field-label' }, 'Approved By'),
+          el('p', {}, record?.approvedBy ? employeeName(record.approvedBy) : '— Not yet approved —'),
+        ]);
+      }
       const bottomGrid = el('div', { class: 'form-grid-2' }, [statusField, approvedByField]);
 
       const actions = el('div', { class: 'modal-actions' }, [
@@ -129,8 +143,8 @@ function openRequestForm(record, onSaved) {
           submittedBy: submittedByField.querySelector('select').value,
           description: descriptionInput.value,
           items,
-          status: statusField.querySelector('select').value,
-          approvedBy: approvedByField.querySelector('select').value,
+          status: isAdmin ? statusField.querySelector('select').value : (record?.status || 'Pending'),
+          approvedBy: isAdmin ? approvedByField.querySelector('select').value : (record?.approvedBy || ''),
         };
 
         if (record) store.update('fundRequests', record.id, payload);
