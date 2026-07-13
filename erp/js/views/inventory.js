@@ -6,6 +6,7 @@ const FIELDS = [
   { name: 'name', label: 'Item Name', required: true },
   { name: 'category', label: 'Category', type: 'select', required: true, options: [
     { value: 'Heavy Equipment', label: 'Heavy Equipment' },
+    { value: 'Vehicles', label: 'Vehicles' },
     { value: 'Tools', label: 'Tools' },
     { value: 'Consumables', label: 'Consumables' },
     { value: 'Safety Gear', label: 'Safety Gear' },

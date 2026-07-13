@@ -2,6 +2,13 @@ import { store } from '../store.js';
 import { formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 
+const PROJECTS = [
+  'Enugu Palm Project',
+  'REX Forestry Project - Kangidi Site',
+  'REX Forestry Project - Kajola Site',
+  'FAYUS Project',
+];
+
 function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
 }
@@ -11,7 +18,7 @@ function customerOptions() {
 }
 
 function equipmentOptions() {
-  const items = store.get('inventory').filter((i) => i.category === 'Heavy Equipment' || i.category === 'Tools');
+  const items = store.get('inventory').filter((i) => ['Heavy Equipment', 'Tools', 'Vehicles'].includes(i.category));
   return items.length
     ? items.map((i) => ({ value: i.name, label: i.name }))
     : [{ value: '', label: 'No equipment in inventory' }];
@@ -20,7 +27,7 @@ function equipmentOptions() {
 function fields() {
   return [
     { name: 'date', label: 'Date', type: 'date', required: true },
-    { name: 'siteName', label: 'Site / Project Name', required: true },
+    { name: 'siteName', label: 'Site / Project Name', type: 'select', required: true, options: PROJECTS.map((p) => ({ value: p, label: p })) },
     { name: 'customerId', label: 'Client', type: 'select', options: customerOptions() },
     { name: 'equipment', label: 'Equipment Used', type: 'select', required: true, options: equipmentOptions() },
     { name: 'operatorId', label: 'Operator', type: 'select', required: true, options: employeeOptions() },
