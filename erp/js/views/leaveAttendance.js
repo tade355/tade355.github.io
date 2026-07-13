@@ -2,7 +2,7 @@ import { store } from '../store.js';
 import { formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { PROJECTS, LEAVE_TYPES } from '../constants.js';
-import { getCurrentUserId, filterLeaveRequests } from '../session.js';
+import { getCurrentUserId, filterLeaveRequests, getCurrentTier, getAssignedProject } from '../session.js';
 
 function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
@@ -16,6 +16,27 @@ function daysBetween(start, end) {
   if (!start || !end) return 0;
   const ms = new Date(end + 'T00:00:00') - new Date(start + 'T00:00:00');
   return Math.max(0, Math.round(ms / 86400000) + 1);
+}
+
+function usedLeaveDaysThisYear(employeeId) {
+  const year = String(new Date().getFullYear());
+  return store.get('leaveRequests')
+    .filter((r) => r.employeeId === employeeId && r.status === 'Approved' && r.startDate?.slice(0, 4) === year)
+    .reduce((sum, r) => sum + daysBetween(r.startDate, r.endDate), 0);
+}
+
+function leaveBalanceRows() {
+  const tier = getCurrentTier();
+  let employees = store.get('employees').filter((e) => e.status !== 'Disengaged');
+  if (tier === 'Supervisor') {
+    const project = getAssignedProject();
+    if (project) employees = employees.filter((e) => e.assignedProject === project);
+  }
+  return employees.map((e) => {
+    const entitlement = e.leaveEntitlement ?? 21;
+    const used = usedLeaveDaysThisYear(e.id);
+    return { employee: e, entitlement, used, remaining: entitlement - used };
+  });
 }
 
 function leaveFields() {
@@ -98,13 +119,41 @@ export function renderLeaveAttendance(container) {
       const rows = filterLeaveRequests(store.get('leaveRequests')).slice().sort((a, b) => (a.startDate < b.startDate ? 1 : -1));
       const pending = rows.filter((r) => r.status === 'Pending').length;
 
+      const currentUserId = getCurrentUserId();
+      const myEntitlement = store.find('employees', currentUserId)?.leaveEntitlement ?? 21;
+      const myUsed = currentUserId ? usedLeaveDaysThisYear(currentUserId) : 0;
+      const myRemaining = myEntitlement - myUsed;
+
       summarySlot.innerHTML = '';
       summarySlot.appendChild(el('div', { class: 'stats-grid' }, [
+        statCard({ label: 'Your Leave Balance', value: `${myRemaining} day(s)`, hint: `${myUsed} used of ${myEntitlement} this year`, tone: myRemaining <= 0 ? 'critical' : (myRemaining <= 5 ? 'warning' : 'good') }),
         statCard({ label: 'Total Requests', value: String(rows.length) }),
         statCard({ label: 'Pending Approval', value: String(pending), tone: pending ? 'warning' : 'good' }),
       ]));
 
-      renderTable(body, {
+      body.innerHTML = '';
+      const tier = getCurrentTier();
+      if (tier === 'Admin' || tier === 'Supervisor') {
+        body.appendChild(el('h3', { class: 'subsection-title' }, 'Leave Balances'));
+        const balanceContainer = el('div');
+        body.appendChild(balanceContainer);
+        renderTable(balanceContainer, {
+          columns: [
+            { key: 'name', label: 'Employee', render: (r) => r.employee.name },
+            { key: 'entitlement', label: 'Entitlement', render: (r) => `${r.entitlement} days` },
+            { key: 'used', label: 'Used (this year)', render: (r) => `${r.used} days` },
+            { key: 'remaining', label: 'Remaining', render: (r) => `${r.remaining} days` },
+          ],
+          rows: leaveBalanceRows(),
+          emptyText: 'No employees to show.',
+          rowClass: (r) => (r.remaining <= 0 ? 'row-critical' : (r.remaining <= 5 ? 'row-warning' : undefined)),
+        });
+        body.appendChild(el('h3', { class: 'subsection-title' }, 'Leave Requests'));
+      }
+      const tableContainer = el('div');
+      body.appendChild(tableContainer);
+
+      renderTable(tableContainer, {
         columns: [
           { key: 'employee', label: 'Employee', render: (r) => employeeName(r.employeeId) },
           { key: 'leaveType', label: 'Type' },

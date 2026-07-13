@@ -11,6 +11,7 @@ import { renderLeaveAttendance } from './views/leaveAttendance.js';
 import { renderFundRequests } from './views/fundRequests.js';
 import { renderApprovals } from './views/approvals.js';
 import { renderPayroll } from './views/payroll.js';
+import { renderBackup } from './views/backup.js';
 import { closeModal } from './ui.js';
 import { canAccess, getCurrentTier, defaultRouteForTier } from './session.js';
 
@@ -28,6 +29,7 @@ export const ROUTES = [
   { path: 'accounting', label: 'Accounting & Expenses', icon: '💰', render: renderAccounting, tiers: ['Admin', 'Accounts'] },
   { path: 'fundRequests', label: 'Fund Requests', icon: '💵', render: renderFundRequests, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   { path: 'profitability', label: 'Profitability', icon: '📈', render: renderProfitability, tiers: ['Admin', 'Accounts'] },
+  { path: 'backup', label: 'Backup & Data', icon: '💾', render: renderBackup, tiers: ['Admin'] },
 ];
 
 export function initRouter(viewContainer, onRouteChange) {

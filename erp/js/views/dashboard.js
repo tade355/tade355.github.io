@@ -34,6 +34,17 @@ export function renderDashboard(container) {
 
   container.appendChild(sectionHeader('Dashboard', 'Emagrims Ltd — company overview'));
 
+  const lastBackup = store.getLastBackupAt();
+  const daysSinceBackup = lastBackup ? Math.floor((Date.now() - new Date(lastBackup).getTime()) / 86400000) : null;
+  if (!lastBackup || daysSinceBackup > 7) {
+    container.appendChild(el('div', { class: 'backup-nudge' }, [
+      el('span', {}, lastBackup
+        ? `⚠ It's been ${daysSinceBackup} days since your last backup.`
+        : "⚠ You've never backed up this data — everything lives only in this browser."),
+      el('a', { href: '#/backup' }, 'Back up now →'),
+    ]));
+  }
+
   const statsGrid = el('div', { class: 'stats-grid' }, [
     statCard({ label: 'Active Employees', value: String(employees.filter((e) => e.status === 'Active').length), hint: `${employees.length} total` }),
     statCard({ label: 'Low Stock Items', value: String(lowStock.length), hint: lowStock.length ? 'Needs reorder' : 'All stocked', tone: lowStock.length ? 'warning' : 'good' }),

@@ -17,6 +17,7 @@ const FIELDS = [
   { name: 'email', label: 'Email', type: 'email' },
   { name: 'salary', label: 'Monthly Salary (₦)', type: 'number', min: 0 },
   { name: 'dateHired', label: 'Date Hired', type: 'date' },
+  { name: 'leaveEntitlement', label: 'Annual Leave Entitlement (days/year)', type: 'number', min: 0 },
   { name: 'status', label: 'Status', type: 'select', required: true, options: [
     { value: 'Active', label: 'Active' },
     { value: 'Suspended', label: 'Suspended' },
@@ -73,7 +74,7 @@ export function renderHR(container) {
     openModal({
       title: record ? 'Edit Employee' : 'Add Employee',
       fields: FIELDS,
-      initial: record || { status: 'Active', accessTier: 'Staff' },
+      initial: record || { status: 'Active', accessTier: 'Staff', leaveEntitlement: 21 },
       submitLabel: record ? 'Save Changes' : 'Add Employee',
       onSubmit: (data) => {
         if (record) store.update('employees', record.id, data);

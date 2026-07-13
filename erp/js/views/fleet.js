@@ -31,8 +31,27 @@ function totalFuelFor(name) {
 }
 
 function lastMaintenanceFor(name) {
-  const logs = store.get('maintenanceLogs').filter((m) => m.equipment === name).sort((a, b) => (a.date < b.date ? 1 : -1));
+  const logs = store.get('maintenanceLogs')
+    .filter((m) => m.equipment === name && m.status === 'Completed')
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
   return logs[0]?.date || '';
+}
+
+function hoursSinceLastServiceFor(name) {
+  const lastDate = lastMaintenanceFor(name);
+  return store.get('operations')
+    .filter((o) => o.equipment === name && (!lastDate || o.date > lastDate))
+    .reduce((sum, o) => sum + o.hoursWorked, 0);
+}
+
+function serviceStatusFor(item) {
+  const interval = item.serviceIntervalHours || 250;
+  const hours = hoursSinceLastServiceFor(item.name);
+  const ratio = hours / interval;
+  let status = 'OK';
+  if (ratio >= 1) status = 'Overdue';
+  else if (ratio >= 0.8) status = 'Due Soon';
+  return { hours, interval, ratio, status };
 }
 
 const FLEET_FIELDS = [
@@ -60,6 +79,7 @@ const FLEET_FIELDS = [
   ] },
   { name: 'location', label: 'Location', required: true },
   { name: 'unitCost', label: 'Acquisition Value (₦)', type: 'number', min: 0 },
+  { name: 'serviceIntervalHours', label: 'Service Interval (engine hours)', type: 'number', min: 0 },
 ];
 
 function maintenanceFields() {
@@ -126,6 +146,7 @@ function voucherFields() {
       ...employeeOptions(),
     ] },
     { name: 'notes', label: 'Notes', type: 'textarea' },
+    { name: 'attachments', label: 'Receipts / Photos', type: 'attachments' },
   ];
 }
 
@@ -181,6 +202,7 @@ export function renderFleet(container) {
       const companyCount = rows.filter((r) => r.ownership !== '3rd Party').length;
       const thirdPartyCount = rows.filter((r) => r.ownership === '3rd Party').length;
       const downCount = rows.filter((r) => r.fleetStatus === 'Down' || r.fleetStatus === 'Under Maintenance').length;
+      const dueForServiceCount = rows.filter((r) => serviceStatusFor(r).status !== 'OK').length;
 
       summarySlot.innerHTML = '';
       const grid = el('div', { class: 'stats-grid' }, [
@@ -188,6 +210,7 @@ export function renderFleet(container) {
         statCard({ label: 'Company Owned', value: String(companyCount) }),
         statCard({ label: '3rd Party Managed', value: String(thirdPartyCount) }),
         statCard({ label: 'Down / Under Maintenance', value: String(downCount), tone: downCount ? 'warning' : 'good' }),
+        statCard({ label: 'Due for Service', value: String(dueForServiceCount), tone: dueForServiceCount ? 'warning' : 'good' }),
       ]);
       summarySlot.appendChild(grid);
 
@@ -202,6 +225,16 @@ export function renderFleet(container) {
           { key: 'totalHours', label: 'Total Hours', render: (r) => `${totalHoursFor(r.name)} h` },
           { key: 'totalFuel', label: 'Total Fuel', render: (r) => `${totalFuelFor(r.name)} L` },
           { key: 'lastMaintenance', label: 'Last Maintenance', render: (r) => formatDate(lastMaintenanceFor(r.name)) },
+          {
+            key: 'nextService',
+            label: 'Next Service',
+            render: (r) => {
+              const s = serviceStatusFor(r);
+              const label = `${s.hours.toFixed(0)}h / ${s.interval}h`;
+              const pillStatus = s.status === 'Overdue' ? 'Down' : s.status === 'Due Soon' ? 'Under Maintenance' : 'Active';
+              return el('span', { class: `pill ${statusPillClass(pillStatus)}` }, `${label} — ${s.status}`);
+            },
+          },
           {
             key: 'actions',
             label: '',
@@ -226,7 +259,7 @@ export function renderFleet(container) {
       openModal({
         title: record ? 'Edit Fleet Asset' : 'Add Fleet Asset',
         fields: FLEET_FIELDS,
-        initial: record || { category: 'Heavy Equipment', ownership: 'Company', fleetStatus: 'Active' },
+        initial: record || { category: 'Heavy Equipment', ownership: 'Company', fleetStatus: 'Active', serviceIntervalHours: 250 },
         submitLabel: record ? 'Save Changes' : 'Add Asset',
         onSubmit: (data) => {
           if (record) {
@@ -468,6 +501,7 @@ export function renderFleet(container) {
           { key: 'estimatedCost', label: 'Est. Cost', render: (r) => formatCurrency(r.estimatedCost) },
           { key: 'requestedBy', label: 'Requested By', render: (r) => employees.find((e) => e.id === r.requestedBy)?.name || 'Unknown' },
           { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
+          { key: 'attachments', label: 'Files', render: (r) => (r.attachments?.length ? `📎 ${r.attachments.length}` : '—') },
           {
             key: 'actions',
             label: '',

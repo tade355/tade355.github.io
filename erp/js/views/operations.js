@@ -53,13 +53,30 @@ export function renderOperations(container) {
   const summaryGrid = el('div', { class: 'stats-grid' });
   container.appendChild(summaryGrid);
 
+  let searchQuery = '';
+  const searchInput = el('input', { type: 'search', placeholder: 'Search by site, equipment, operator, or notes…' });
+  const searchBar = el('div', { class: 'search-bar' }, [searchInput]);
+  container.appendChild(searchBar);
+  searchInput.addEventListener('input', () => {
+    searchQuery = searchInput.value.trim().toLowerCase();
+    refresh();
+  });
+
   const tableContainer = el('div');
   container.appendChild(tableContainer);
 
   function refresh() {
     const employees = store.get('employees');
     const customers = store.get('customers');
-    const rows = filterByProject(store.get('operations'), 'siteName').slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+    let rows = filterByProject(store.get('operations'), 'siteName').slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+
+    if (searchQuery) {
+      rows = rows.filter((r) => {
+        const operatorName = employees.find((e) => e.id === r.operatorId)?.name || '';
+        const haystack = [r.siteName, r.equipment, operatorName, r.notes].join(' ').toLowerCase();
+        return haystack.includes(searchQuery);
+      });
+    }
 
     const totalArea = rows.reduce((sum, r) => sum + r.areaCleared, 0);
     const totalFuel = rows.reduce((sum, r) => sum + r.fuelUsed, 0);

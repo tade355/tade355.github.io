@@ -1,4 +1,5 @@
 import { el, statusPillClass } from './utils.js';
+import { createAttachmentPicker } from './attachments.js';
 
 let modalRoot = null;
 
@@ -37,6 +38,7 @@ export function openModal({ title, fields, initial = {}, onSubmit, submitLabel =
   modalRoot.innerHTML = '';
 
   const form = el('form', { class: 'modal-form' });
+  const attachmentPickers = {};
 
   fields.forEach((f) => {
     const fieldWrap = el('label', { class: 'field' }, [
@@ -54,6 +56,12 @@ export function openModal({ title, fields, initial = {}, onSubmit, submitLabel =
     } else if (f.type === 'textarea') {
       input = el('textarea', { name: f.name, rows: f.rows || 3 });
       input.value = initial[f.name] ?? '';
+    } else if (f.type === 'attachments') {
+      const picker = createAttachmentPicker(initial[f.name] || []);
+      attachmentPickers[f.name] = picker;
+      fieldWrap.appendChild(picker.element);
+      form.appendChild(fieldWrap);
+      return;
     } else {
       input = el('input', {
         type: f.type || 'text',
@@ -79,6 +87,10 @@ export function openModal({ title, fields, initial = {}, onSubmit, submitLabel =
     const data = new FormData(form);
     const record = {};
     fields.forEach((f) => {
+      if (f.type === 'attachments') {
+        record[f.name] = attachmentPickers[f.name].getAttachments();
+        return;
+      }
       let val = data.get(f.name);
       if (f.type === 'number') val = Number(val);
       record[f.name] = val;

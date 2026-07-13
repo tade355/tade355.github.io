@@ -4,6 +4,7 @@ import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal,
 import { PROJECTS } from '../constants.js';
 import { printFundRequest } from '../print.js';
 import { filterFundRequests, getCurrentUserId, getCurrentTier } from '../session.js';
+import { createAttachmentPicker } from '../attachments.js';
 
 function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
@@ -119,6 +120,9 @@ function openRequestForm(record, onSaved) {
       }
       const bottomGrid = el('div', { class: 'form-grid-2' }, [statusField, approvedByField]);
 
+      const attachmentPicker = createAttachmentPicker(record?.attachments || []);
+      const attachmentField = el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Receipts / Photos'), attachmentPicker.element]);
+
       const actions = el('div', { class: 'modal-actions' }, [
         el('button', { type: 'button', class: 'btn btn-ghost', onClick: closeModal }, 'Cancel'),
         el('button', { type: 'button', class: 'btn btn-primary' }, record ? 'Save Changes' : 'Submit Request'),
@@ -145,6 +149,7 @@ function openRequestForm(record, onSaved) {
           items,
           status: isAdmin ? statusField.querySelector('select').value : (record?.status || 'Pending'),
           approvedBy: isAdmin ? approvedByField.querySelector('select').value : (record?.approvedBy || ''),
+          attachments: attachmentPicker.getAttachments(),
         };
 
         if (record) store.update('fundRequests', record.id, payload);
@@ -161,6 +166,7 @@ function openRequestForm(record, onSaved) {
       container.appendChild(addLineBtn);
       container.appendChild(totalRow);
       container.appendChild(bottomGrid);
+      container.appendChild(attachmentField);
       container.appendChild(actions);
     },
   });
@@ -174,6 +180,18 @@ export function renderFundRequests(container) {
 
   const summarySlot = el('div');
   container.appendChild(summarySlot);
+
+  let searchQuery = '';
+  let statusFilter = '';
+  const searchInput = el('input', { type: 'search', placeholder: 'Search by description, project, or submitter…' });
+  const statusSelect = el('select', {}, [
+    el('option', { value: '' }, 'All Statuses'),
+    ...['Pending', 'Approved', 'Rejected', 'Paid'].map((s) => el('option', { value: s }, s)),
+  ]);
+  container.appendChild(el('div', { class: 'search-bar' }, [searchInput, statusSelect]));
+  searchInput.addEventListener('input', () => { searchQuery = searchInput.value.trim().toLowerCase(); refresh(); });
+  statusSelect.addEventListener('change', () => { statusFilter = statusSelect.value; refresh(); });
+
   const tableContainer = el('div');
   container.appendChild(tableContainer);
 
@@ -182,9 +200,14 @@ export function renderFundRequests(container) {
   }
 
   function refresh() {
-    const rows = filterFundRequests(store.get('fundRequests')).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+    let rows = filterFundRequests(store.get('fundRequests')).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
     const pending = rows.filter((r) => r.status === 'Pending').length;
     const totalPending = rows.filter((r) => r.status === 'Pending').reduce((sum, r) => sum + totalOf(r), 0);
+
+    if (statusFilter) rows = rows.filter((r) => r.status === statusFilter);
+    if (searchQuery) {
+      rows = rows.filter((r) => [r.description, r.project, employeeName(r.submittedBy)].join(' ').toLowerCase().includes(searchQuery));
+    }
 
     summarySlot.innerHTML = '';
     summarySlot.appendChild(el('div', { class: 'stats-grid' }, [
@@ -201,6 +224,7 @@ export function renderFundRequests(container) {
         { key: 'description', label: 'Description', render: (r) => r.description || `${r.items.length} item(s)` },
         { key: 'total', label: 'Total', render: (r) => formatCurrency(totalOf(r)) },
         { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
+        { key: 'attachments', label: 'Files', render: (r) => (r.attachments?.length ? `📎 ${r.attachments.length}` : '—') },
         {
           key: 'actions',
           label: '',

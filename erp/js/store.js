@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'emagrims_erp_v1';
+const LAST_BACKUP_KEY = 'emagrims_erp_last_backup';
 
 const COLLECTIONS = [
   'employees', 'inventory', 'customers', 'suppliers',
@@ -18,49 +19,49 @@ function seedData() {
   return {
     meta: { counter: 1000 },
     employees: [
-      { id: 'EMP-1', name: 'Oki Christopher', role: 'General Manager/Site manager', department: 'Administration', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Admin', assignedProject: '' },
-      { id: 'EMP-2', name: 'Edewor Monday', role: 'Maintenance Manager/Site Manager', department: 'Maintenance', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Supervisor', assignedProject: 'Enugu Palm Project' },
-      { id: 'EMP-3', name: 'Amadi Vincent', role: 'Site Manager', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Supervisor', assignedProject: 'FAYUS Project' },
-      { id: 'EMP-4', name: 'James Geisibi', role: 'Diesel Manager/Site Manager', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Supervisor', assignedProject: 'REX Forestry Project - Kajola Site' },
-      { id: 'EMP-5', name: 'Okpowe Nathaniel', role: 'Site Manager', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Supervisor', assignedProject: 'Enugu Palm Project' },
-      { id: 'EMP-6', name: 'Hussein Godstime', role: 'Site Manager', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Supervisor', assignedProject: 'REX Forestry Project - Kangidi Site' },
-      { id: 'EMP-7', name: 'Omuno John Okezi (Marcelo)', role: 'Site Manager', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Supervisor', assignedProject: 'REX Forestry Project - Kajola Site' },
-      { id: 'EMP-8', name: 'Sodunke Ola', role: 'Mechanic 1', department: 'Maintenance', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Staff', assignedProject: '' },
-      { id: 'EMP-9', name: 'Fakolujo Adewale', role: 'Mechanic 2', department: 'Maintenance', phone: '', email: '', salary: null, dateHired: '', status: 'Disengaged', accessTier: 'Staff', assignedProject: '' },
-      { id: 'EMP-10', name: 'Olawale Waliu', role: 'Mechanic 3', department: 'Maintenance', phone: '', email: '', salary: null, dateHired: '', status: 'Disengaged', accessTier: 'Staff', assignedProject: '' },
-      { id: 'EMP-11', name: 'Adebayo Tope', role: 'Operator/EMG007', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Staff', assignedProject: '' },
-      { id: 'EMP-12', name: 'Paul Joshua', role: 'Operator/EMG006', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Staff', assignedProject: '' },
-      { id: 'EMP-13', name: 'Olawale Idris', role: 'Operator/EMG004', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Staff', assignedProject: '' },
-      { id: 'EMP-14', name: 'Olayiwola Sulieman', role: 'Operator', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Disengaged', accessTier: 'Staff', assignedProject: '' },
-      { id: 'EMP-15', name: 'Olawale Sodiq', role: 'Operator/Big Fish', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Disengaged', accessTier: 'Staff', assignedProject: '' },
-      { id: 'EMP-16', name: 'Onigbinde Jide', role: 'Operator/C1', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Staff', assignedProject: '' },
-      { id: 'EMP-17', name: 'Asibeluo Isaac', role: 'Operator/C2', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Disengaged', accessTier: 'Staff', assignedProject: '' },
-      { id: 'EMP-18', name: 'Sodiq Bello', role: 'Operator/C3', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Staff', assignedProject: '' },
-      { id: 'EMP-19', name: 'Ayo Justice', role: 'Operator/EMA001', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Disengaged', accessTier: 'Staff', assignedProject: '' },
-      { id: 'EMP-20', name: "Joshua's Boy (Jessi)", role: 'Trainee/Motor Boy', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Staff', assignedProject: '' },
-      { id: 'EMP-21', name: "Tope's Boy", role: 'Trainee/Motor Boy', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Staff', assignedProject: '' },
-      { id: 'EMP-22', name: 'Salifu Job', role: "Transporter/CEO's Field Driver", department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Staff', assignedProject: '' },
-      { id: 'EMP-23', name: 'Tukur Torgo', role: 'Transporter/Site Assistant', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Disengaged', accessTier: 'Staff', assignedProject: '' },
-      { id: 'EMP-24', name: 'Vincent', role: 'Transporter/Site Assistant', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Staff', assignedProject: '' },
-      { id: 'EMP-25', name: 'Ewoma Ascet', role: 'Maintenance Manager', department: 'Maintenance', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Supervisor', assignedProject: '' },
-      { id: 'EMP-26', name: 'Olumide Davidson', role: 'Chief Operations Officer', department: 'Administration', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Admin', assignedProject: '' },
-      { id: 'EMP-27', name: 'Atabo Victoria', role: 'Executive Director/HR', department: 'Human Resources', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Admin', assignedProject: '' },
-      { id: 'EMP-28', name: 'Agrimo Gideon', role: 'Chief Executive Officer', department: 'Administration', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Admin', assignedProject: '' },
-      { id: 'EMP-29', name: 'Alabi Emmanuel', role: 'Managing Director', department: 'Administration', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Admin', assignedProject: '' },
-      { id: 'EMP-30', name: 'Haruna Divine', role: 'Procurement Officer', department: 'Administration', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Accounts', assignedProject: '' },
-      { id: 'EMP-31', name: 'Elyakub Fadeelat', role: 'Admin Assistant/Social Media Manager', department: 'Administration', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Accounts', assignedProject: '' },
-      { id: 'EMP-32', name: 'Uko Elizabeth', role: 'Executive Assistant', department: 'Administration', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Accounts', assignedProject: '' },
+      { id: 'EMP-1', name: 'Oki Christopher', role: 'General Manager/Site manager', department: 'Administration', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Admin', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-2', name: 'Edewor Monday', role: 'Maintenance Manager/Site Manager', department: 'Maintenance', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Supervisor', assignedProject: 'Enugu Palm Project', leaveEntitlement: 21 },
+      { id: 'EMP-3', name: 'Amadi Vincent', role: 'Site Manager', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Supervisor', assignedProject: 'FAYUS Project', leaveEntitlement: 21 },
+      { id: 'EMP-4', name: 'James Geisibi', role: 'Diesel Manager/Site Manager', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Supervisor', assignedProject: 'REX Forestry Project - Kajola Site', leaveEntitlement: 21 },
+      { id: 'EMP-5', name: 'Okpowe Nathaniel', role: 'Site Manager', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Supervisor', assignedProject: 'Enugu Palm Project', leaveEntitlement: 21 },
+      { id: 'EMP-6', name: 'Hussein Godstime', role: 'Site Manager', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Supervisor', assignedProject: 'REX Forestry Project - Kangidi Site', leaveEntitlement: 21 },
+      { id: 'EMP-7', name: 'Omuno John Okezi (Marcelo)', role: 'Site Manager', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Supervisor', assignedProject: 'REX Forestry Project - Kajola Site', leaveEntitlement: 21 },
+      { id: 'EMP-8', name: 'Sodunke Ola', role: 'Mechanic 1', department: 'Maintenance', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Staff', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-9', name: 'Fakolujo Adewale', role: 'Mechanic 2', department: 'Maintenance', phone: '', email: '', salary: null, dateHired: '', status: 'Disengaged', accessTier: 'Staff', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-10', name: 'Olawale Waliu', role: 'Mechanic 3', department: 'Maintenance', phone: '', email: '', salary: null, dateHired: '', status: 'Disengaged', accessTier: 'Staff', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-11', name: 'Adebayo Tope', role: 'Operator/EMG007', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Staff', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-12', name: 'Paul Joshua', role: 'Operator/EMG006', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Staff', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-13', name: 'Olawale Idris', role: 'Operator/EMG004', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Staff', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-14', name: 'Olayiwola Sulieman', role: 'Operator', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Disengaged', accessTier: 'Staff', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-15', name: 'Olawale Sodiq', role: 'Operator/Big Fish', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Disengaged', accessTier: 'Staff', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-16', name: 'Onigbinde Jide', role: 'Operator/C1', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Staff', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-17', name: 'Asibeluo Isaac', role: 'Operator/C2', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Disengaged', accessTier: 'Staff', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-18', name: 'Sodiq Bello', role: 'Operator/C3', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Staff', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-19', name: 'Ayo Justice', role: 'Operator/EMA001', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Disengaged', accessTier: 'Staff', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-20', name: "Joshua's Boy (Jessi)", role: 'Trainee/Motor Boy', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Staff', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-21', name: "Tope's Boy", role: 'Trainee/Motor Boy', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Staff', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-22', name: 'Salifu Job', role: "Transporter/CEO's Field Driver", department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Active', accessTier: 'Staff', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-23', name: 'Tukur Torgo', role: 'Transporter/Site Assistant', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Disengaged', accessTier: 'Staff', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-24', name: 'Vincent', role: 'Transporter/Site Assistant', department: 'Operations', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Staff', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-25', name: 'Ewoma Ascet', role: 'Maintenance Manager', department: 'Maintenance', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Supervisor', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-26', name: 'Olumide Davidson', role: 'Chief Operations Officer', department: 'Administration', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Admin', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-27', name: 'Atabo Victoria', role: 'Executive Director/HR', department: 'Human Resources', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Admin', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-28', name: 'Agrimo Gideon', role: 'Chief Executive Officer', department: 'Administration', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Admin', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-29', name: 'Alabi Emmanuel', role: 'Managing Director', department: 'Administration', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Admin', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-30', name: 'Haruna Divine', role: 'Procurement Officer', department: 'Administration', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Accounts', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-31', name: 'Elyakub Fadeelat', role: 'Admin Assistant/Social Media Manager', department: 'Administration', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Accounts', assignedProject: '', leaveEntitlement: 21 },
+      { id: 'EMP-32', name: 'Uko Elizabeth', role: 'Executive Assistant', department: 'Administration', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended', accessTier: 'Accounts', assignedProject: '', leaveEntitlement: 21 },
     ],
     inventory: [
-      { id: 'INV-1', name: 'Bulldozer - EMG 003', category: 'Heavy Equipment', sku: 'EMG-003', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: '', ownership: 'Company', ownerName: '', fleetStatus: 'Idle', hourlyRate: 25000 },
-      { id: 'INV-2', name: 'Bulldozer - EMG 004', category: 'Heavy Equipment', sku: 'EMG-004', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kajola Site', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000 },
-      { id: 'INV-3', name: 'Bulldozer - EMG 006', category: 'Heavy Equipment', sku: 'EMG-006', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'Enugu Palm Project', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000 },
-      { id: 'INV-4', name: 'Bulldozer - EMG 007', category: 'Heavy Equipment', sku: 'EMG-007', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kajola Site', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000 },
-      { id: 'INV-5', name: 'Bulldozer - D8K Collins', category: 'Heavy Equipment', sku: 'D8K-COLLINS', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kajola Site', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000 },
-      { id: 'INV-6', name: 'Bulldozer - CHI 05', category: 'Heavy Equipment', sku: 'CHI-05', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kajola Site', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000 },
-      { id: 'INV-7', name: 'Bulldozer - CHI 01', category: 'Heavy Equipment', sku: 'CHI-01', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kangidi Site', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000 },
-      { id: 'INV-8', name: 'Bulldozer - CHI 02', category: 'Heavy Equipment', sku: 'CHI-02', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kangidi Site', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000 },
-      { id: 'INV-9', name: 'Toyota Tacoma', category: 'Vehicles', sku: 'VEH-TACOMA-01', quantity: 1, unit: 'unit', unitCost: 20000000, reorderLevel: 1, location: 'Main Yard', currentProject: '', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 8000 },
+      { id: 'INV-1', name: 'Bulldozer - EMG 003', category: 'Heavy Equipment', sku: 'EMG-003', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: '', ownership: 'Company', ownerName: '', fleetStatus: 'Idle', hourlyRate: 25000, serviceIntervalHours: 250 },
+      { id: 'INV-2', name: 'Bulldozer - EMG 004', category: 'Heavy Equipment', sku: 'EMG-004', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kajola Site', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000, serviceIntervalHours: 250 },
+      { id: 'INV-3', name: 'Bulldozer - EMG 006', category: 'Heavy Equipment', sku: 'EMG-006', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'Enugu Palm Project', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000, serviceIntervalHours: 250 },
+      { id: 'INV-4', name: 'Bulldozer - EMG 007', category: 'Heavy Equipment', sku: 'EMG-007', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kajola Site', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000, serviceIntervalHours: 250 },
+      { id: 'INV-5', name: 'Bulldozer - D8K Collins', category: 'Heavy Equipment', sku: 'D8K-COLLINS', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kajola Site', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000, serviceIntervalHours: 250 },
+      { id: 'INV-6', name: 'Bulldozer - CHI 05', category: 'Heavy Equipment', sku: 'CHI-05', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kajola Site', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000, serviceIntervalHours: 250 },
+      { id: 'INV-7', name: 'Bulldozer - CHI 01', category: 'Heavy Equipment', sku: 'CHI-01', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kangidi Site', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000, serviceIntervalHours: 250 },
+      { id: 'INV-8', name: 'Bulldozer - CHI 02', category: 'Heavy Equipment', sku: 'CHI-02', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kangidi Site', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000, serviceIntervalHours: 250 },
+      { id: 'INV-9', name: 'Toyota Tacoma', category: 'Vehicles', sku: 'VEH-TACOMA-01', quantity: 1, unit: 'unit', unitCost: 20000000, reorderLevel: 1, location: 'Main Yard', currentProject: '', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 8000, serviceIntervalHours: 5000 },
       { id: 'INV-10', name: 'Diesel (AGO)', category: 'Consumables', sku: 'FUEL-001', quantity: 1200, unit: 'litres', unitCost: 1150, reorderLevel: 2000, location: 'Fuel Depot', currentProject: '' },
       { id: 'INV-11', name: 'Chainsaw - Stihl MS 660', category: 'Tools', sku: 'TL-CHS-05', quantity: 8, unit: 'unit', unitCost: 320000, reorderLevel: 3, location: 'Tool Store', currentProject: '' },
       { id: 'INV-12', name: 'Hydraulic Oil', category: 'Consumables', sku: 'LUB-011', quantity: 40, unit: 'drums', unitCost: 65000, reorderLevel: 15, location: 'Fuel Depot', currentProject: '' },
@@ -184,6 +185,26 @@ export const store = {
   },
   all() {
     return state;
+  },
+  exportSnapshot() {
+    localStorage.setItem(LAST_BACKUP_KEY, new Date().toISOString());
+    return JSON.stringify(state, null, 2);
+  },
+  importSnapshot(json) {
+    let parsed;
+    try {
+      parsed = JSON.parse(json);
+    } catch (e) {
+      throw new Error('That file is not valid JSON.');
+    }
+    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.employees) || !parsed.meta) {
+      throw new Error('This file does not look like a valid Emagrims ERP backup.');
+    }
+    state = parsed;
+    save(state);
+  },
+  getLastBackupAt() {
+    return localStorage.getItem(LAST_BACKUP_KEY);
   },
 };
 

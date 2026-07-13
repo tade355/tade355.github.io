@@ -35,6 +35,14 @@ export function renderAccounting(container) {
   const chartContainer = el('div', { class: 'charts-grid charts-grid-1' });
   container.appendChild(chartContainer);
 
+  let searchQuery = '';
+  const searchInput = el('input', { type: 'search', placeholder: 'Search by description, category, or paid by…' });
+  container.appendChild(el('div', { class: 'search-bar' }, [searchInput]));
+  searchInput.addEventListener('input', () => {
+    searchQuery = searchInput.value.trim().toLowerCase();
+    refresh();
+  });
+
   const tableContainer = el('div');
   container.appendChild(tableContainer);
 
@@ -58,7 +66,10 @@ export function renderAccounting(container) {
     }));
     renderBarChart(chartContainer, { title: 'Expenses by Category', bars, formatValue: formatCurrency });
 
-    const rows = expenses.slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+    let rows = expenses.slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+    if (searchQuery) {
+      rows = rows.filter((r) => [r.description, r.category, r.paidBy, r.project].join(' ').toLowerCase().includes(searchQuery));
+    }
     renderTable(tableContainer, {
       columns: [
         { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
