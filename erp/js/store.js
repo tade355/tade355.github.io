@@ -3,6 +3,7 @@ const STORAGE_KEY = 'emagrims_erp_v1';
 const COLLECTIONS = [
   'employees', 'inventory', 'customers', 'suppliers',
   'invoices', 'purchaseOrders', 'expenses', 'operations',
+  'maintenanceLogs', 'dieselReceipts', 'dieselStockCounts',
 ];
 
 function seedData() {
@@ -50,15 +51,15 @@ function seedData() {
       { id: 'EMP-32', name: 'Uko Elizabeth', role: 'Executive Assistant', department: 'Administration', phone: '', email: '', salary: null, dateHired: '', status: 'Suspended' },
     ],
     inventory: [
-      { id: 'INV-1', name: 'Bulldozer - EMG 003', category: 'Heavy Equipment', sku: 'EMG-003', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: '' },
-      { id: 'INV-2', name: 'Bulldozer - EMG 004', category: 'Heavy Equipment', sku: 'EMG-004', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kajola Site' },
-      { id: 'INV-3', name: 'Bulldozer - EMG 006', category: 'Heavy Equipment', sku: 'EMG-006', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'Enugu Palm Project' },
-      { id: 'INV-4', name: 'Bulldozer - EMG 007', category: 'Heavy Equipment', sku: 'EMG-007', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kajola Site' },
-      { id: 'INV-5', name: 'Bulldozer - D8K Collins', category: 'Heavy Equipment', sku: 'D8K-COLLINS', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kajola Site' },
-      { id: 'INV-6', name: 'Bulldozer - CHI 05', category: 'Heavy Equipment', sku: 'CHI-05', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kajola Site' },
-      { id: 'INV-7', name: 'Bulldozer - CHI 01', category: 'Heavy Equipment', sku: 'CHI-01', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kangidi Site' },
-      { id: 'INV-8', name: 'Bulldozer - CHI 02', category: 'Heavy Equipment', sku: 'CHI-02', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kangidi Site' },
-      { id: 'INV-9', name: 'Toyota Tacoma', category: 'Vehicles', sku: 'VEH-TACOMA-01', quantity: 1, unit: 'unit', unitCost: 20000000, reorderLevel: 1, location: 'Main Yard', currentProject: '' },
+      { id: 'INV-1', name: 'Bulldozer - EMG 003', category: 'Heavy Equipment', sku: 'EMG-003', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: '', ownership: 'Company', ownerName: '', fleetStatus: 'Idle', hourlyRate: 25000 },
+      { id: 'INV-2', name: 'Bulldozer - EMG 004', category: 'Heavy Equipment', sku: 'EMG-004', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kajola Site', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000 },
+      { id: 'INV-3', name: 'Bulldozer - EMG 006', category: 'Heavy Equipment', sku: 'EMG-006', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'Enugu Palm Project', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000 },
+      { id: 'INV-4', name: 'Bulldozer - EMG 007', category: 'Heavy Equipment', sku: 'EMG-007', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kajola Site', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000 },
+      { id: 'INV-5', name: 'Bulldozer - D8K Collins', category: 'Heavy Equipment', sku: 'D8K-COLLINS', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kajola Site', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000 },
+      { id: 'INV-6', name: 'Bulldozer - CHI 05', category: 'Heavy Equipment', sku: 'CHI-05', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kajola Site', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000 },
+      { id: 'INV-7', name: 'Bulldozer - CHI 01', category: 'Heavy Equipment', sku: 'CHI-01', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kangidi Site', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000 },
+      { id: 'INV-8', name: 'Bulldozer - CHI 02', category: 'Heavy Equipment', sku: 'CHI-02', quantity: 1, unit: 'unit', unitCost: 45000000, reorderLevel: 1, location: 'Main Yard', currentProject: 'REX Forestry Project - Kangidi Site', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 25000 },
+      { id: 'INV-9', name: 'Toyota Tacoma', category: 'Vehicles', sku: 'VEH-TACOMA-01', quantity: 1, unit: 'unit', unitCost: 20000000, reorderLevel: 1, location: 'Main Yard', currentProject: '', ownership: 'Company', ownerName: '', fleetStatus: 'Active', hourlyRate: 8000 },
       { id: 'INV-10', name: 'Diesel (AGO)', category: 'Consumables', sku: 'FUEL-001', quantity: 1200, unit: 'litres', unitCost: 1150, reorderLevel: 2000, location: 'Fuel Depot', currentProject: '' },
       { id: 'INV-11', name: 'Chainsaw - Stihl MS 660', category: 'Tools', sku: 'TL-CHS-05', quantity: 8, unit: 'unit', unitCost: 320000, reorderLevel: 3, location: 'Tool Store', currentProject: '' },
       { id: 'INV-12', name: 'Hydraulic Oil', category: 'Consumables', sku: 'LUB-011', quantity: 40, unit: 'drums', unitCost: 65000, reorderLevel: 15, location: 'Fuel Depot', currentProject: '' },
@@ -76,11 +77,11 @@ function seedData() {
       { id: 'SUP-3', name: 'SafeGuard PPE Supplies', contact: 'Halima Sule', phone: '+234 813 555 3030', email: 'orders@safeguardppe.ng', address: 'Kano' },
     ],
     invoices: [
-      { id: 'INV-2024-101', customerId: 'CUS-1', date: iso(48), dueDate: iso(18), items: [{ description: 'Land clearing - 12 hectares', qty: 12, price: 350000 }], status: 'Paid' },
-      { id: 'INV-2024-102', customerId: 'CUS-2', date: iso(35), dueDate: iso(5), items: [{ description: 'Bush clearing - 8 hectares', qty: 8, price: 320000 }], status: 'Paid' },
-      { id: 'INV-2024-103', customerId: 'CUS-3', date: iso(20), dueDate: iso(-10), items: [{ description: 'Site grading - 20 hectares', qty: 20, price: 400000 }], status: 'Unpaid' },
-      { id: 'INV-2024-104', customerId: 'CUS-4', date: iso(9), dueDate: iso(-21), items: [{ description: 'Land clearing - 15 hectares', qty: 15, price: 375000 }], status: 'Unpaid' },
-      { id: 'INV-2024-105', customerId: 'CUS-1', date: iso(3), dueDate: iso(-27), items: [{ description: 'Debris removal - 5 hectares', qty: 5, price: 300000 }], status: 'Unpaid' },
+      { id: 'INV-2024-101', customerId: 'CUS-1', date: iso(48), dueDate: iso(18), items: [{ description: 'Land clearing - 12 hectares', qty: 12, price: 350000 }], status: 'Paid', project: '' },
+      { id: 'INV-2024-102', customerId: 'CUS-2', date: iso(35), dueDate: iso(5), items: [{ description: 'Bush clearing - 8 hectares', qty: 8, price: 320000 }], status: 'Paid', project: '' },
+      { id: 'INV-2024-103', customerId: 'CUS-3', date: iso(20), dueDate: iso(-10), items: [{ description: 'Site grading - 20 hectares', qty: 20, price: 400000 }], status: 'Unpaid', project: '' },
+      { id: 'INV-2024-104', customerId: 'CUS-4', date: iso(9), dueDate: iso(-21), items: [{ description: 'Land clearing - 15 hectares', qty: 15, price: 375000 }], status: 'Unpaid', project: '' },
+      { id: 'INV-2024-105', customerId: 'CUS-1', date: iso(3), dueDate: iso(-27), items: [{ description: 'Debris removal - 5 hectares', qty: 5, price: 300000 }], status: 'Unpaid', project: '' },
     ],
     purchaseOrders: [
       { id: 'PO-2024-51', supplierId: 'SUP-1', date: iso(40), items: [{ description: 'Diesel (AGO)', qty: 3000, price: 1150 }], status: 'Received' },
@@ -88,12 +89,13 @@ function seedData() {
       { id: 'PO-2024-53', supplierId: 'SUP-3', date: iso(6), items: [{ description: 'Safety helmets', qty: 30, price: 4500 }], status: 'Pending' },
     ],
     expenses: [
-      { id: 'EXP-1', date: iso(44), category: 'Fuel', description: 'Diesel refill - Lekki site', amount: 850000, paidBy: 'Ngozi Balogun' },
-      { id: 'EXP-2', date: iso(37), category: 'Maintenance', description: 'Excavator hydraulic repair', amount: 420000, paidBy: 'Musa Ibrahim' },
-      { id: 'EXP-3', date: iso(26), category: 'Payroll', description: 'Site crew wages - March', amount: 1850000, paidBy: 'Grace Okonkwo' },
-      { id: 'EXP-4', date: iso(17), category: 'Logistics', description: 'Equipment haulage to Abuja site', amount: 310000, paidBy: 'Adewale Ogundimu' },
-      { id: 'EXP-5', date: iso(8), category: 'Fuel', description: 'Diesel refill - Abuja site', amount: 690000, paidBy: 'Ngozi Balogun' },
-      { id: 'EXP-6', date: iso(2), category: 'Maintenance', description: 'Chainsaw blade replacement', amount: 95000, paidBy: 'Musa Ibrahim' },
+      { id: 'EXP-1', date: iso(44), category: 'Fuel', description: 'Diesel refill - Lekki site', amount: 850000, paidBy: 'Ngozi Balogun', project: '' },
+      { id: 'EXP-2', date: iso(37), category: 'Maintenance', description: 'Excavator hydraulic repair', amount: 420000, paidBy: 'Musa Ibrahim', project: '' },
+      { id: 'EXP-3', date: iso(26), category: 'Payroll', description: 'Site crew wages - March', amount: 1850000, paidBy: 'Grace Okonkwo', project: '' },
+      { id: 'EXP-4', date: iso(17), category: 'Logistics', description: 'Equipment haulage to Kajola site', amount: 310000, paidBy: 'Adewale Ogundimu', project: 'REX Forestry Project - Kajola Site' },
+      { id: 'EXP-5', date: iso(8), category: 'Fuel', description: 'Diesel refill - Enugu Palm site', amount: 690000, paidBy: 'Ngozi Balogun', project: 'Enugu Palm Project' },
+      { id: 'EXP-6', date: iso(2), category: 'Maintenance', description: 'Chainsaw blade replacement', amount: 95000, paidBy: 'Musa Ibrahim', project: '' },
+      { id: 'EXP-7', date: iso(5), category: 'Logistics', description: 'Fuel delivery haulage to Kangidi site', amount: 145000, paidBy: 'James Geisibi', project: 'REX Forestry Project - Kangidi Site' },
     ],
     operations: [
       { id: 'OPS-1', date: iso(6), siteName: 'Enugu Palm Project', customerId: '', equipment: 'Bulldozer - EMG 003', operatorId: 'EMP-16', supervisorId: 'EMP-5', hoursWorked: 8, areaCleared: 2.5, fuelUsed: 220, status: 'Completed', notes: 'Cleared northern block, no incidents.' },
@@ -101,6 +103,19 @@ function seedData() {
       { id: 'OPS-3', date: iso(4), siteName: 'REX Forestry Project - Kajola Site', customerId: '', equipment: 'Bulldozer - EMG 006', operatorId: 'EMP-12', supervisorId: 'EMP-7', hoursWorked: 7, areaCleared: 2.0, fuelUsed: 195, status: 'Completed', notes: '' },
       { id: 'OPS-4', date: iso(2), siteName: 'FAYUS Project', customerId: '', equipment: 'Bulldozer - EMG 007', operatorId: 'EMP-11', supervisorId: 'EMP-5', hoursWorked: 6, areaCleared: 1.6, fuelUsed: 150, status: 'Ongoing', notes: 'Continuing tomorrow.' },
       { id: 'OPS-5', date: iso(1), siteName: 'Enugu Palm Project', customerId: '', equipment: 'Toyota Tacoma', operatorId: 'EMP-22', supervisorId: 'EMP-6', hoursWorked: 5, areaCleared: 1.2, fuelUsed: 110, status: 'Halted', notes: 'Halted due to rainfall.' },
+    ],
+    maintenanceLogs: [
+      { id: 'MNT-1', date: iso(20), equipment: 'Bulldozer - EMG 003', type: 'Repair', description: 'Track chain replacement', cost: 850000, performedBy: 'Sodunke Ola', status: 'Completed' },
+      { id: 'MNT-2', date: iso(10), equipment: 'Bulldozer - CHI 05', type: 'Service', description: 'Routine 250hr service', cost: 180000, performedBy: 'Fakolujo Adewale', status: 'Completed' },
+      { id: 'MNT-3', date: iso(1), equipment: 'Bulldozer - EMG 006', type: 'Inspection', description: 'Pre-deployment inspection', cost: 0, performedBy: 'Olawale Waliu', status: 'Completed' },
+      { id: 'MNT-4', date: iso(-3), equipment: 'Bulldozer - EMG 003', type: 'Service', description: 'Post-repair service before redeployment', cost: 60000, performedBy: 'Sodunke Ola', status: 'Scheduled' },
+    ],
+    dieselReceipts: [
+      { id: 'DR-1', date: iso(40), litres: 3000, unitCost: 1150, supplier: 'Ascon Fuel Distributors', reference: 'PO-2024-51', notes: '' },
+      { id: 'DR-2', date: iso(12), litres: 1500, unitCost: 1180, supplier: 'Ascon Fuel Distributors', reference: '', notes: '' },
+    ],
+    dieselStockCounts: [
+      { id: 'SC-1', date: iso(1), countedLitres: 3420, countedBy: 'James Geisibi', notes: 'Manual tank dip reading' },
     ],
   };
 }
@@ -134,6 +149,7 @@ export const store = {
     const prefixMap = {
       employees: 'EMP', inventory: 'INV', customers: 'CUS', suppliers: 'SUP',
       invoices: 'INV-2024', purchaseOrders: 'PO-2024', expenses: 'EXP', operations: 'OPS',
+      maintenanceLogs: 'MNT', dieselReceipts: 'DR', dieselStockCounts: 'SC',
     };
     state.meta.counter += 1;
     const id = record.id || `${prefixMap[collection] || 'REC'}-${state.meta.counter}`;

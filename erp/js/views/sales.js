@@ -1,6 +1,7 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, invoiceTotal, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete } from '../ui.js';
+import { PROJECTS } from '../constants.js';
 
 const CUSTOMER_FIELDS = [
   { name: 'name', label: 'Company / Customer Name', required: true },
@@ -17,6 +18,10 @@ function customerOptions() {
 function invoiceFields() {
   return [
     { name: 'customerId', label: 'Customer', type: 'select', required: true, options: customerOptions() },
+    { name: 'project', label: 'Project', type: 'select', options: [
+      { value: '', label: '— Not linked to a project —' },
+      ...PROJECTS.map((p) => ({ value: p, label: p })),
+    ] },
     { name: 'date', label: 'Invoice Date', type: 'date', required: true },
     { name: 'dueDate', label: 'Due Date', type: 'date', required: true },
     { name: 'description', label: 'Description of Work', required: true },
@@ -66,6 +71,7 @@ export function renderSales(container) {
         columns: [
           { key: 'id', label: 'Invoice #' },
           { key: 'customer', label: 'Customer', render: (r) => customers.find((c) => c.id === r.customerId)?.name || 'Unknown' },
+          { key: 'project', label: 'Project', render: (r) => r.project || '—' },
           { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
           { key: 'dueDate', label: 'Due', render: (r) => formatDate(r.dueDate) },
           { key: 'total', label: 'Total', render: (r) => formatCurrency(invoiceTotal(r)) },
@@ -106,6 +112,7 @@ export function renderSales(container) {
         onSubmit: (data) => {
           const payload = {
             customerId: data.customerId,
+            project: data.project,
             date: data.date,
             dueDate: data.dueDate,
             status: data.status,

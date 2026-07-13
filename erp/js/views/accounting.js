@@ -2,6 +2,7 @@ import { store } from '../store.js';
 import { formatCurrency, formatDate, invoiceTotal, el } from '../utils.js';
 import { renderTable, actionButtons, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
+import { PROJECTS } from '../constants.js';
 
 const FIELDS = [
   { name: 'date', label: 'Date', type: 'date', required: true },
@@ -16,6 +17,10 @@ const FIELDS = [
   { name: 'description', label: 'Description', required: true },
   { name: 'amount', label: 'Amount (₦)', type: 'number', required: true, min: 0 },
   { name: 'paidBy', label: 'Paid By', required: true },
+  { name: 'project', label: 'Project (for profitability tracking)', type: 'select', options: [
+    { value: '', label: '— Not linked to a project —' },
+    ...PROJECTS.map((p) => ({ value: p, label: p })),
+  ] },
 ];
 
 export function renderAccounting(container) {
@@ -61,6 +66,7 @@ export function renderAccounting(container) {
         { key: 'description', label: 'Description' },
         { key: 'amount', label: 'Amount', render: (r) => formatCurrency(r.amount) },
         { key: 'paidBy', label: 'Paid By' },
+        { key: 'project', label: 'Project', render: (r) => r.project || '—' },
         {
           key: 'actions',
           label: '',

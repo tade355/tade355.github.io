@@ -48,13 +48,21 @@ export function el(tag, attrs = {}, children = []) {
 
 export function statusPillClass(status) {
   const map = {
-    Paid: 'pill-good', Received: 'pill-good', Completed: 'pill-good', Active: 'pill-good',
-    Unpaid: 'pill-critical', Halted: 'pill-critical', Disengaged: 'pill-critical',
+    Paid: 'pill-good', Received: 'pill-good', Completed: 'pill-good', Active: 'pill-good', Company: 'pill-good',
+    Unpaid: 'pill-critical', Halted: 'pill-critical', Disengaged: 'pill-critical', Down: 'pill-critical',
     Pending: 'pill-warning', Ongoing: 'pill-warning', 'On Leave': 'pill-warning', Suspended: 'pill-warning',
+    'Under Maintenance': 'pill-warning', Scheduled: 'pill-warning', 'In Progress': 'pill-warning', '3rd Party': 'pill-warning',
   };
   return map[status] || 'pill-neutral';
 }
 
 export function uid() {
   return Math.random().toString(36).slice(2, 9);
+}
+
+export function dateInRange(iso, from, to) {
+  if (!iso) return false;
+  if (from && iso < from) return false;
+  if (to && iso > to) return false;
+  return true;
 }

@@ -5,16 +5,20 @@ import { renderPurchasing } from './views/purchasing.js';
 import { renderHR } from './views/hr.js';
 import { renderAccounting } from './views/accounting.js';
 import { renderOperations } from './views/operations.js';
+import { renderFleet } from './views/fleet.js';
+import { renderProfitability } from './views/profitability.js';
 import { closeModal } from './ui.js';
 
 export const ROUTES = [
   { path: 'dashboard', label: 'Dashboard', icon: '🏠', render: renderDashboard },
   { path: 'operations', label: 'Daily Operations', icon: '🚜', render: renderOperations },
+  { path: 'fleet', label: 'Fleet Management', icon: '🔧', render: renderFleet },
   { path: 'inventory', label: 'Inventory & Equipment', icon: '📦', render: renderInventory },
   { path: 'sales', label: 'Sales & Invoicing', icon: '🧾', render: renderSales },
   { path: 'purchasing', label: 'Purchasing & Suppliers', icon: '🛒', render: renderPurchasing },
   { path: 'hr', label: 'HR & Employees', icon: '👷', render: renderHR },
   { path: 'accounting', label: 'Accounting & Expenses', icon: '💰', render: renderAccounting },
+  { path: 'profitability', label: 'Profitability', icon: '📈', render: renderProfitability },
 ];
 
 export function initRouter(viewContainer, onRouteChange) {

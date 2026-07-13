@@ -202,6 +202,12 @@ button { font-family: inherit; }
   flex: 1;
 }
 
+.subsection-title {
+  font-size: 1rem;
+  margin: 1.5rem 0 0.75rem;
+}
+.subsection-title:first-child { margin-top: 0; }
+
 /* Section header */
 .section-header {
   display: flex;
@@ -213,6 +219,39 @@ button { font-family: inherit; }
 }
 .section-header h2 { margin: 0 0 0.25rem; font-size: 1.35rem; }
 .section-subtitle { margin: 0; color: var(--text-secondary); font-size: 0.9rem; }
+
+/* Filters */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.85rem 1rem;
+}
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.filter-field select, .filter-field input {
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--page-plane);
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.text-good { color: var(--good); }
+.text-critical { color: var(--critical); }
 
 /* Buttons */
 .btn {
