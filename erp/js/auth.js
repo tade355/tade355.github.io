@@ -29,9 +29,12 @@ export async function login(username, password) {
   if (!username || !password) throw new Error('Enter your username and password.');
   const { data, error } = await supabase.auth.signInWithPassword({
     email: emailFor(username),
-    password,
+    password: password.trim(),
   });
-  if (error) throw new Error('Incorrect username or password.');
+  if (error) {
+    console.error('Login failed:', error.message);
+    throw new Error('Incorrect username or password.');
+  }
   const employee = employeeForAuthUser(data.user.id);
   if (!employee) {
     await supabase.auth.signOut();
