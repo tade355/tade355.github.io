@@ -38,7 +38,9 @@ export async function login(username, password) {
   const employee = employeeForAuthUser(data.user.id);
   if (!employee) {
     await supabase.auth.signOut();
-    throw new Error('This account is not linked to a staff record. Contact an admin.');
+    // TEMPORARY diagnostics while tracking down a login bug — remove once resolved.
+    const all = store.get('employees');
+    throw new Error(`Not linked. auth uid=${data.user.id} | employees loaded=${all.length} | sample authUserIds=${all.slice(0, 3).map((e) => e.authUserId).join(',')}`);
   }
   setCurrentEmployeeId(employee.id);
   return employee;
