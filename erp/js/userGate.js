@@ -8,13 +8,13 @@ export function showUserGate(onDone) {
   overlay.classList.add('open');
 
   const employees = store.get('employees')
-    .filter((e) => e.status === 'Active')
+    .filter((e) => e.status !== 'Disengaged')
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const select = el('select', { name: 'gateUser' }, [
     el('option', { value: '' }, '— Select your name —'),
-    ...employees.map((e) => el('option', { value: e.id }, `${e.name} — ${e.role}`)),
+    ...employees.map((e) => el('option', { value: e.id }, `${e.name} — ${e.role}${e.status === 'Suspended' ? ' (Suspended)' : ''}`)),
   ]);
 
   const continueBtn = el('button', { type: 'button', class: 'btn btn-primary btn-block' }, 'Continue');
