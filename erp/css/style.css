@@ -98,14 +98,9 @@ button { font-family: inherit; }
 }
 
 .brand-mark {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: var(--brand);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
   flex-shrink: 0;
 }
 
@@ -193,6 +188,14 @@ button { font-family: inherit; }
   padding: 4px;
 }
 .menu-toggle span { width: 22px; height: 2px; background: var(--text-primary); border-radius: 2px; }
+
+.topbar-mark {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  display: none;
+  flex-shrink: 0;
+}
 
 .view {
   padding: 1.5rem;
@@ -441,4 +444,5 @@ button { font-family: inherit; }
   .sidebar.open { transform: translateX(0); box-shadow: 0 0 0 100vmax rgba(0,0,0,0.35); }
   .menu-toggle { display: flex; }
   .topbar-tag { display: none; }
+  .topbar-mark { display: block; }
 }
