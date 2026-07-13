@@ -1,13 +1,7 @@
 import { store } from '../store.js';
 import { formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
-
-const PROJECTS = [
-  'Enugu Palm Project',
-  'REX Forestry Project - Kangidi Site',
-  'REX Forestry Project - Kajola Site',
-  'FAYUS Project',
-];
+import { PROJECTS } from '../constants.js';
 
 function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));

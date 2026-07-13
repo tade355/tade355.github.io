@@ -1,6 +1,7 @@
 import { store } from '../store.js';
 import { formatCurrency, el } from '../utils.js';
 import { renderTable, actionButtons, sectionHeader, openModal, confirmDelete } from '../ui.js';
+import { PROJECTS } from '../constants.js';
 
 const FIELDS = [
   { name: 'name', label: 'Item Name', required: true },
@@ -17,6 +18,10 @@ const FIELDS = [
   { name: 'unitCost', label: 'Unit Cost (₦)', type: 'number', required: true, min: 0 },
   { name: 'reorderLevel', label: 'Reorder Level', type: 'number', required: true, min: 0 },
   { name: 'location', label: 'Location', required: true },
+  { name: 'currentProject', label: 'Current Project (for deployed equipment)', type: 'select', options: [
+    { value: '', label: '— Unassigned —' },
+    ...PROJECTS.map((p) => ({ value: p, label: p })),
+  ] },
 ];
 
 export function renderInventory(container) {
@@ -38,6 +43,7 @@ export function renderInventory(container) {
         { key: 'quantity', label: 'Qty', render: (r) => `${r.quantity} ${r.unit}` },
         { key: 'unitCost', label: 'Unit Cost', render: (r) => formatCurrency(r.unitCost) },
         { key: 'location', label: 'Location' },
+        { key: 'currentProject', label: 'Current Project', render: (r) => r.currentProject || '—' },
         {
           key: 'actions',
           label: '',
