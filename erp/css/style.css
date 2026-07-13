@@ -253,6 +253,9 @@ button { font-family: inherit; }
 .text-good { color: var(--good); }
 .text-critical { color: var(--critical); }
 
+.clock-status { font-size: 0.82rem; color: var(--text-muted); align-self: center; }
+.map-link { text-decoration: none; }
+
 /* Buttons */
 .btn {
   display: inline-flex;
@@ -438,6 +441,7 @@ button { font-family: inherit; }
   overflow-y: auto;
   border: 1px solid var(--border);
 }
+.modal-dialog-wide { max-width: 760px; }
 .modal-header {
   display: flex;
   align-items: center;
@@ -484,4 +488,117 @@ button { font-family: inherit; }
   .menu-toggle { display: flex; }
   .topbar-tag { display: none; }
   .topbar-mark { display: block; }
+}
+
+/* Print documents */
+#printArea { display: none; }
+
+@media print {
+  body * { visibility: hidden; }
+  #printArea, #printArea * { visibility: visible; }
+  #printArea {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 0;
+    color: #000;
+    background: #fff;
+  }
+}
+
+.print-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 3px solid #14261c;
+  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+}
+.print-logo { width: 56px; height: 56px; object-fit: contain; }
+.print-company { flex: 1; }
+.print-company h1 { margin: 0; font-size: 1.3rem; }
+.print-company p { margin: 0.15rem 0 0; font-size: 0.85rem; color: #444; }
+.print-doc-meta { text-align: right; }
+.print-doc-title { font-size: 1.4rem; font-weight: 700; letter-spacing: 0.04em; }
+.print-doc-number { font-size: 0.85rem; color: #444; }
+
+.print-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem 1.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.92rem;
+}
+.print-block { margin-bottom: 1rem; font-size: 0.92rem; }
+.print-block p { margin: 0.25rem 0 0; }
+
+.print-table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: 0.9rem; }
+.print-table th, .print-table td { border: 1px solid #999; padding: 0.5rem 0.6rem; text-align: left; }
+.print-table thead th { background: #eee; }
+.print-table tfoot td { font-weight: 700; }
+
+.print-stamp {
+  display: inline-block;
+  border: 3px solid #0ca30c;
+  color: #0ca30c;
+  font-weight: 700;
+  font-size: 1.3rem;
+  padding: 0.25rem 1rem;
+  transform: rotate(-6deg);
+  letter-spacing: 0.1em;
+}
+.print-thanks { margin-top: 1.5rem; font-style: italic; }
+
+.print-signatures {
+  display: flex;
+  gap: 3rem;
+  margin-top: 3rem;
+}
+.print-signature { flex: 1; text-align: center; font-size: 0.85rem; }
+.print-signature-line { border-top: 1px solid #333; margin-bottom: 0.35rem; padding-top: 2.5rem; }
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 0.85rem;
+}
+
+/* Line items (Fund Requests) */
+.line-items-header, .line-item-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.3fr 1.2fr 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+.line-items-header {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.4rem;
+}
+.line-item-row { margin-bottom: 0.5rem; }
+.line-item-row input {
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--page-plane);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+.line-items-total {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  font-weight: 700;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--border);
+  margin-top: 0.25rem;
 }

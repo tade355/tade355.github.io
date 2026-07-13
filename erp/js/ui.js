@@ -10,6 +10,28 @@ export function closeModal() {
   if (modalRoot) modalRoot.innerHTML = '';
 }
 
+export function openCustomModal({ title, build, wide }) {
+  if (!modalRoot) return;
+  modalRoot.innerHTML = '';
+
+  const bodyContainer = el('div', { class: 'modal-form' });
+  build(bodyContainer, closeModal);
+
+  const dialog = el('div', { class: wide ? 'modal-dialog modal-dialog-wide' : 'modal-dialog' }, [
+    el('div', { class: 'modal-header' }, [
+      el('h3', {}, title),
+      el('button', { type: 'button', class: 'modal-close', 'aria-label': 'Close', onClick: closeModal }, '×'),
+    ]),
+    bodyContainer,
+  ]);
+
+  const backdrop = el('div', { class: 'modal-backdrop', onClick: (evt) => { if (evt.target === backdrop) closeModal(); } }, [dialog]);
+  modalRoot.appendChild(backdrop);
+
+  const firstInput = bodyContainer.querySelector('input, select, textarea');
+  if (firstInput) firstInput.focus();
+}
+
 export function openModal({ title, fields, initial = {}, onSubmit, submitLabel = 'Save' }) {
   if (!modalRoot) return;
   modalRoot.innerHTML = '';
@@ -106,8 +128,9 @@ export function renderTable(container, { columns, rows, emptyText = 'No records 
   container.appendChild(table);
 }
 
-export function actionButtons({ onEdit, onDelete }) {
+export function actionButtons({ onEdit, onDelete, onPrint }) {
   return el('div', { class: 'row-actions' }, [
+    onPrint ? el('button', { class: 'icon-btn', type: 'button', title: 'Print', onClick: onPrint }, '🖨') : null,
     el('button', { class: 'icon-btn', type: 'button', title: 'Edit', onClick: onEdit }, '✎'),
     el('button', { class: 'icon-btn icon-btn-danger', type: 'button', title: 'Delete', onClick: onDelete }, '🗑'),
   ]);

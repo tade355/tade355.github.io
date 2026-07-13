@@ -1,7 +1,8 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el, monthKey, statusPillClass } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
-import { PROJECTS } from '../constants.js';
+import { PROJECTS, FUEL_STATIONS } from '../constants.js';
+import { printFuelingVoucher } from '../print.js';
 
 const FLEET_CATEGORIES = ['Heavy Equipment', 'Vehicles'];
 
@@ -102,6 +103,32 @@ function countFields() {
   ];
 }
 
+function voucherFields() {
+  return [
+    { name: 'date', label: 'Date', type: 'date', required: true },
+    { name: 'station', label: 'Fuel Station', type: 'select', required: true, options: FUEL_STATIONS.map((s) => ({ value: s, label: s })) },
+    { name: 'project', label: 'Project', type: 'select', options: [
+      { value: '', label: '— Not specified —' },
+      ...PROJECTS.map((p) => ({ value: p, label: p })),
+    ] },
+    { name: 'equipment', label: 'Dozer / Equipment', type: 'select', required: true, options: fleetOptions() },
+    { name: 'litresRequested', label: 'Litres Requested', type: 'number', required: true, min: 0 },
+    { name: 'estimatedCost', label: 'Estimated Cost (₦)', type: 'number', required: true, min: 0 },
+    { name: 'requestedBy', label: 'Requested By', type: 'select', required: true, options: employeeOptions() },
+    { name: 'status', label: 'Status', type: 'select', required: true, options: [
+      { value: 'Pending Approval', label: 'Pending Approval' },
+      { value: 'Approved', label: 'Approved' },
+      { value: 'Rejected', label: 'Rejected' },
+      { value: 'Fulfilled', label: 'Fulfilled' },
+    ] },
+    { name: 'approvedBy', label: 'Approved By', type: 'select', options: [
+      { value: '', label: '— Not yet approved —' },
+      ...employeeOptions(),
+    ] },
+    { name: 'notes', label: 'Notes', type: 'textarea' },
+  ];
+}
+
 function dieselBalanceAsOf(date) {
   const received = store.get('dieselReceipts').filter((r) => r.date <= date).reduce((sum, r) => sum + r.litres, 0);
   const issued = store.get('operations').filter((o) => o.date <= date).reduce((sum, o) => sum + o.fuelUsed, 0);
@@ -117,9 +144,11 @@ export function renderFleet(container) {
   const rosterTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('roster') }, 'Fleet Roster');
   const maintenanceTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('maintenance') }, 'Maintenance Log');
   const dieselTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('diesel') }, 'Diesel Tracking');
+  const voucherTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('vouchers') }, 'Fueling Vouchers');
   tabBar.appendChild(rosterTabBtn);
   tabBar.appendChild(maintenanceTabBtn);
   tabBar.appendChild(dieselTabBtn);
+  tabBar.appendChild(voucherTabBtn);
 
   const actionSlot = el('div');
   container.appendChild(sectionHeader('Fleet Management', 'Dozer status, ownership, maintenance, and diesel accountability', actionSlot));
@@ -135,10 +164,12 @@ export function renderFleet(container) {
     rosterTabBtn.classList.toggle('active', tab === 'roster');
     maintenanceTabBtn.classList.toggle('active', tab === 'maintenance');
     dieselTabBtn.classList.toggle('active', tab === 'diesel');
+    voucherTabBtn.classList.toggle('active', tab === 'vouchers');
     summarySlot.innerHTML = '';
     if (tab === 'roster') renderRosterTab();
     else if (tab === 'maintenance') renderMaintenanceTab();
-    else renderDieselTab();
+    else if (tab === 'diesel') renderDieselTab();
+    else renderVouchersTab();
   }
 
   function renderRosterTab() {
@@ -402,6 +433,78 @@ export function renderFleet(container) {
         onSubmit: (data) => {
           if (record) store.update('dieselStockCounts', record.id, data);
           else store.add('dieselStockCounts', data);
+          refresh();
+        },
+      });
+    }
+
+    refresh();
+  }
+
+  function renderVouchersTab() {
+    actionSlot.innerHTML = '';
+    actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openVoucherForm() }, '+ New Fueling Voucher'));
+
+    function refresh() {
+      const employees = store.get('employees');
+      const rows = store.get('fuelingVouchers').slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+      const pending = rows.filter((r) => r.status === 'Pending Approval').length;
+      const totalEstimated = rows.filter((r) => r.status !== 'Rejected').reduce((sum, r) => sum + r.estimatedCost, 0);
+
+      summarySlot.innerHTML = '';
+      summarySlot.appendChild(el('div', { class: 'stats-grid' }, [
+        statCard({ label: 'Vouchers Logged', value: String(rows.length) }),
+        statCard({ label: 'Pending Approval', value: String(pending), tone: pending ? 'warning' : 'good' }),
+        statCard({ label: 'Total Estimated Cost', value: formatCurrency(totalEstimated) }),
+      ]));
+
+      renderTable(body, {
+        columns: [
+          { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
+          { key: 'station', label: 'Station' },
+          { key: 'project', label: 'Project', render: (r) => r.project || '—' },
+          { key: 'equipment', label: 'Equipment' },
+          { key: 'litresRequested', label: 'Litres', render: (r) => `${r.litresRequested.toLocaleString()} L` },
+          { key: 'estimatedCost', label: 'Est. Cost', render: (r) => formatCurrency(r.estimatedCost) },
+          { key: 'requestedBy', label: 'Requested By', render: (r) => employees.find((e) => e.id === r.requestedBy)?.name || 'Unknown' },
+          { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
+          {
+            key: 'actions',
+            label: '',
+            render: (r) => actionButtons({
+              onPrint: () => printFuelingVoucher(r, {
+                requestedByName: employees.find((e) => e.id === r.requestedBy)?.name,
+                approvedByName: employees.find((e) => e.id === r.approvedBy)?.name,
+              }),
+              onEdit: () => openVoucherForm(r),
+              onDelete: () => {
+                if (confirmDelete(`Voucher for ${r.equipment} at ${r.station}`)) {
+                  store.remove('fuelingVouchers', r.id);
+                  refresh();
+                }
+              },
+            }),
+          },
+        ],
+        rows,
+        emptyText: 'No fueling vouchers yet.',
+        rowClass: (r) => (r.status === 'Pending Approval' ? 'row-warning' : undefined),
+      });
+    }
+
+    function openVoucherForm(record) {
+      if (!fleetOptions().length) {
+        window.alert('Add a fleet asset first before requesting fuel.');
+        return;
+      }
+      openModal({
+        title: record ? 'Edit Fueling Voucher' : 'New Fueling Voucher',
+        fields: voucherFields(),
+        initial: record || { date: new Date().toISOString().slice(0, 10), status: 'Pending Approval' },
+        submitLabel: record ? 'Save Changes' : 'Submit Voucher',
+        onSubmit: (data) => {
+          if (record) store.update('fuelingVouchers', record.id, data);
+          else store.add('fuelingVouchers', data);
           refresh();
         },
       });

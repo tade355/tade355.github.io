@@ -4,6 +4,7 @@ const COLLECTIONS = [
   'employees', 'inventory', 'customers', 'suppliers',
   'invoices', 'purchaseOrders', 'expenses', 'operations',
   'maintenanceLogs', 'dieselReceipts', 'dieselStockCounts',
+  'leaveRequests', 'attendanceLogs', 'fuelingVouchers', 'fundRequests',
 ];
 
 function seedData() {
@@ -105,18 +106,27 @@ function seedData() {
       { id: 'OPS-5', date: iso(1), siteName: 'Enugu Palm Project', customerId: '', equipment: 'Toyota Tacoma', operatorId: 'EMP-22', supervisorId: 'EMP-6', hoursWorked: 5, areaCleared: 1.2, fuelUsed: 110, status: 'Halted', notes: 'Halted due to rainfall.' },
     ],
     maintenanceLogs: [
-      { id: 'MNT-1', date: iso(20), equipment: 'Bulldozer - EMG 003', type: 'Repair', description: 'Track chain replacement', cost: 850000, performedBy: 'Sodunke Ola', status: 'Completed' },
-      { id: 'MNT-2', date: iso(10), equipment: 'Bulldozer - CHI 05', type: 'Service', description: 'Routine 250hr service', cost: 180000, performedBy: 'Fakolujo Adewale', status: 'Completed' },
-      { id: 'MNT-3', date: iso(1), equipment: 'Bulldozer - EMG 006', type: 'Inspection', description: 'Pre-deployment inspection', cost: 0, performedBy: 'Olawale Waliu', status: 'Completed' },
-      { id: 'MNT-4', date: iso(-3), equipment: 'Bulldozer - EMG 003', type: 'Service', description: 'Post-repair service before redeployment', cost: 60000, performedBy: 'Sodunke Ola', status: 'Scheduled' },
+      { id: 'MNT-1', date: iso(20), equipment: 'Bulldozer - EMG 003', type: 'Repair', description: 'Track chain replacement', cost: 850000, performedBy: 'EMP-8', status: 'Completed' },
+      { id: 'MNT-2', date: iso(10), equipment: 'Bulldozer - CHI 05', type: 'Service', description: 'Routine 250hr service', cost: 180000, performedBy: 'EMP-9', status: 'Completed' },
+      { id: 'MNT-3', date: iso(1), equipment: 'Bulldozer - EMG 006', type: 'Inspection', description: 'Pre-deployment inspection', cost: 0, performedBy: 'EMP-10', status: 'Completed' },
+      { id: 'MNT-4', date: iso(-3), equipment: 'Bulldozer - EMG 003', type: 'Service', description: 'Post-repair service before redeployment', cost: 60000, performedBy: 'EMP-8', status: 'Scheduled' },
     ],
     dieselReceipts: [
       { id: 'DR-1', date: iso(40), litres: 3000, unitCost: 1150, supplier: 'Ascon Fuel Distributors', reference: 'PO-2024-51', notes: '' },
       { id: 'DR-2', date: iso(12), litres: 1500, unitCost: 1180, supplier: 'Ascon Fuel Distributors', reference: '', notes: '' },
     ],
     dieselStockCounts: [
-      { id: 'SC-1', date: iso(1), countedLitres: 3420, countedBy: 'James Geisibi', notes: 'Manual tank dip reading' },
+      { id: 'SC-1', date: iso(1), countedLitres: 3420, countedBy: 'EMP-4', notes: 'Manual tank dip reading' },
     ],
+    leaveRequests: [
+      { id: 'LV-1', employeeId: 'EMP-9', leaveType: 'Sick', startDate: iso(20), endDate: iso(16), reason: 'Recovering from malaria treatment.', status: 'Approved', appliedDate: iso(22) },
+      { id: 'LV-2', employeeId: 'EMP-20', leaveType: 'Casual', startDate: iso(-2), endDate: iso(-3), reason: 'Family event.', status: 'Pending', appliedDate: iso(1) },
+    ],
+    attendanceLogs: [],
+    fuelingVouchers: [
+      { id: 'FV-1', date: iso(3), station: 'Midejab Ltd', project: 'REX Forestry Project - Kajola Site', equipment: 'Bulldozer - EMG 004', litresRequested: 200, estimatedCost: 230000, requestedBy: 'EMP-6', status: 'Approved', approvedBy: 'EMP-1', notes: '' },
+    ],
+    fundRequests: [],
   };
 }
 
@@ -150,6 +160,7 @@ export const store = {
       employees: 'EMP', inventory: 'INV', customers: 'CUS', suppliers: 'SUP',
       invoices: 'INV-2024', purchaseOrders: 'PO-2024', expenses: 'EXP', operations: 'OPS',
       maintenanceLogs: 'MNT', dieselReceipts: 'DR', dieselStockCounts: 'SC',
+      leaveRequests: 'LV', attendanceLogs: 'ATT', fuelingVouchers: 'FV', fundRequests: 'FR',
     };
     state.meta.counter += 1;
     const id = record.id || `${prefixMap[collection] || 'REC'}-${state.meta.counter}`;

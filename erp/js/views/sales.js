@@ -2,6 +2,7 @@ import { store } from '../store.js';
 import { formatCurrency, formatDate, invoiceTotal, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete } from '../ui.js';
 import { PROJECTS } from '../constants.js';
+import { printInvoice } from '../print.js';
 
 const CUSTOMER_FIELDS = [
   { name: 'name', label: 'Company / Customer Name', required: true },
@@ -80,6 +81,7 @@ export function renderSales(container) {
             key: 'actions',
             label: '',
             render: (r) => actionButtons({
+              onPrint: () => printInvoice(r, customers.find((c) => c.id === r.customerId)),
               onEdit: () => openInvoiceForm(r),
               onDelete: () => {
                 if (confirmDelete(r.id)) {

@@ -7,6 +7,8 @@ import { renderAccounting } from './views/accounting.js';
 import { renderOperations } from './views/operations.js';
 import { renderFleet } from './views/fleet.js';
 import { renderProfitability } from './views/profitability.js';
+import { renderLeaveAttendance } from './views/leaveAttendance.js';
+import { renderFundRequests } from './views/fundRequests.js';
 import { closeModal } from './ui.js';
 
 export const ROUTES = [
@@ -17,7 +19,9 @@ export const ROUTES = [
   { path: 'sales', label: 'Sales & Invoicing', icon: '🧾', render: renderSales },
   { path: 'purchasing', label: 'Purchasing & Suppliers', icon: '🛒', render: renderPurchasing },
   { path: 'hr', label: 'HR & Employees', icon: '👷', render: renderHR },
+  { path: 'leave', label: 'Leave & Attendance', icon: '🕒', render: renderLeaveAttendance },
   { path: 'accounting', label: 'Accounting & Expenses', icon: '💰', render: renderAccounting },
+  { path: 'fundRequests', label: 'Fund Requests', icon: '💵', render: renderFundRequests },
   { path: 'profitability', label: 'Profitability', icon: '📈', render: renderProfitability },
 ];
 
