@@ -83,10 +83,13 @@ export function renderSales(container) {
             render: (r) => actionButtons({
               onPrint: () => printInvoice(r, customers.find((c) => c.id === r.customerId)),
               onEdit: () => openInvoiceForm(r),
-              onDelete: () => {
-                if (confirmDelete(r.id)) {
-                  store.remove('invoices', r.id);
+              onDelete: async () => {
+                if (!confirmDelete(r.id)) return;
+                try {
+                  await store.remove('invoices', r.id);
                   refresh();
+                } catch (err) {
+                  window.alert(err.message || 'Could not delete this invoice.');
                 }
               },
             }),
@@ -111,7 +114,7 @@ export function renderSales(container) {
         fields: invoiceFields(),
         initial,
         submitLabel: record ? 'Save Changes' : 'Create Invoice',
-        onSubmit: (data) => {
+        onSubmit: async (data) => {
           const payload = {
             customerId: data.customerId,
             project: data.project,
@@ -120,8 +123,8 @@ export function renderSales(container) {
             status: data.status,
             items: [{ description: data.description, qty: data.qty, price: data.price }],
           };
-          if (record) store.update('invoices', record.id, payload);
-          else store.add('invoices', payload);
+          if (record) await store.update('invoices', record.id, payload);
+          else await store.add('invoices', payload);
           refresh();
         },
       });
@@ -148,10 +151,13 @@ export function renderSales(container) {
             label: '',
             render: (r) => actionButtons({
               onEdit: () => openCustomerForm(r),
-              onDelete: () => {
-                if (confirmDelete(r.name)) {
-                  store.remove('customers', r.id);
+              onDelete: async () => {
+                if (!confirmDelete(r.name)) return;
+                try {
+                  await store.remove('customers', r.id);
                   refresh();
+                } catch (err) {
+                  window.alert(err.message || 'Could not delete this customer.');
                 }
               },
             }),
@@ -168,9 +174,9 @@ export function renderSales(container) {
         fields: CUSTOMER_FIELDS,
         initial: record || {},
         submitLabel: record ? 'Save Changes' : 'Add Customer',
-        onSubmit: (data) => {
-          if (record) store.update('customers', record.id, data);
-          else store.add('customers', data);
+        onSubmit: async (data) => {
+          if (record) await store.update('customers', record.id, data);
+          else await store.add('customers', data);
           refresh();
         },
       });

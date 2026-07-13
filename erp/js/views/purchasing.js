@@ -73,10 +73,13 @@ export function renderPurchasing(container) {
             label: '',
             render: (r) => actionButtons({
               onEdit: () => openOrderForm(r),
-              onDelete: () => {
-                if (confirmDelete(r.id)) {
-                  store.remove('purchaseOrders', r.id);
+              onDelete: async () => {
+                if (!confirmDelete(r.id)) return;
+                try {
+                  await store.remove('purchaseOrders', r.id);
                   refresh();
+                } catch (err) {
+                  window.alert(err.message || 'Could not delete this order.');
                 }
               },
             }),
@@ -100,15 +103,15 @@ export function renderPurchasing(container) {
         fields: poFields(),
         initial,
         submitLabel: record ? 'Save Changes' : 'Create Order',
-        onSubmit: (data) => {
+        onSubmit: async (data) => {
           const payload = {
             supplierId: data.supplierId,
             date: data.date,
             status: data.status,
             items: [{ description: data.description, qty: data.qty, price: data.price }],
           };
-          if (record) store.update('purchaseOrders', record.id, payload);
-          else store.add('purchaseOrders', payload);
+          if (record) await store.update('purchaseOrders', record.id, payload);
+          else await store.add('purchaseOrders', payload);
           refresh();
         },
       });
@@ -135,10 +138,13 @@ export function renderPurchasing(container) {
             label: '',
             render: (r) => actionButtons({
               onEdit: () => openSupplierForm(r),
-              onDelete: () => {
-                if (confirmDelete(r.name)) {
-                  store.remove('suppliers', r.id);
+              onDelete: async () => {
+                if (!confirmDelete(r.name)) return;
+                try {
+                  await store.remove('suppliers', r.id);
                   refresh();
+                } catch (err) {
+                  window.alert(err.message || 'Could not delete this supplier.');
                 }
               },
             }),
@@ -155,9 +161,9 @@ export function renderPurchasing(container) {
         fields: SUPPLIER_FIELDS,
         initial: record || {},
         submitLabel: record ? 'Save Changes' : 'Add Supplier',
-        onSubmit: (data) => {
-          if (record) store.update('suppliers', record.id, data);
-          else store.add('suppliers', data);
+        onSubmit: async (data) => {
+          if (record) await store.update('suppliers', record.id, data);
+          else await store.add('suppliers', data);
           refresh();
         },
       });

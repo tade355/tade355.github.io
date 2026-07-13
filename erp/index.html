@@ -22,7 +22,7 @@
       <nav class="sidebar-nav" id="sidebarNav" aria-label="Main navigation"></nav>
       <div class="sidebar-footer">
         <div id="userBadge"></div>
-        <button type="button" class="btn btn-ghost btn-block" id="resetDataBtn">Reset Demo Data</button>
+        <button type="button" class="btn btn-ghost btn-block" id="refreshDataBtn">↻ Refresh Data</button>
         <a href="https://www.linkedin.com/company/emagrims-companyltd/?originalSubdomain=ng" class="back-link" target="_blank" rel="noopener">↗ Company website (LinkedIn)</a>
       </div>
     </aside>
@@ -43,6 +43,13 @@
   <div id="modalRoot"></div>
   <div id="printArea"></div>
   <div id="userGate" class="gate-overlay"></div>
+  <div id="loadingScreen" class="gate-overlay open">
+    <div class="gate-card">
+      <img src="assets/logo.png" alt="Emagrims Ltd" class="gate-logo">
+      <h2>Loading…</h2>
+      <p class="gate-note" id="loadingMessage">Connecting to the shared database.</p>
+    </div>
+  </div>
 
   <script type="module" src="js/main.js"></script>
 </body>

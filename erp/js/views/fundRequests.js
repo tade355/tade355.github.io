@@ -5,7 +5,6 @@ import { PROJECTS } from '../constants.js';
 import { printFundRequest } from '../print.js';
 import { filterFundRequests, getCurrentUserId, getCurrentTier } from '../session.js';
 import { createAttachmentPicker } from '../attachments.js';
-import { fetchFundRequests, saveFundRequest, deleteFundRequest } from '../remoteStore.js';
 
 function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
@@ -156,7 +155,8 @@ function openRequestForm(record, onSaved) {
         try {
           submitBtn.disabled = true;
           submitBtn.textContent = 'Saving…';
-          await saveFundRequest(payload, record?.id);
+          if (record) await store.update('fundRequests', record.id, payload);
+          else await store.add('fundRequests', payload);
           closeModal();
           onSaved();
         } catch (err) {
@@ -207,22 +207,8 @@ export function renderFundRequests(container) {
     return request.items.reduce((sum, it) => sum + it.amount, 0);
   }
 
-  async function refresh() {
-    tableContainer.innerHTML = '';
-    tableContainer.appendChild(el('p', { class: 'table-empty' }, 'Loading fund requests…'));
-    let allRows;
-    try {
-      allRows = await fetchFundRequests();
-    } catch (err) {
-      tableContainer.innerHTML = '';
-      tableContainer.appendChild(el('div', { class: 'backup-warning' }, [
-        el('p', {}, err.message || 'Could not load fund requests.'),
-        el('button', { class: 'btn btn-ghost', type: 'button', onClick: refresh }, 'Retry'),
-      ]));
-      return;
-    }
-
-    let rows = filterFundRequests(allRows).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+  function refresh() {
+    let rows = filterFundRequests(store.get('fundRequests')).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
     const pending = rows.filter((r) => r.status === 'Pending').length;
     const totalPending = rows.filter((r) => r.status === 'Pending').reduce((sum, r) => sum + totalOf(r), 0);
 
@@ -259,7 +245,7 @@ export function renderFundRequests(container) {
             onDelete: async () => {
               if (!confirmDelete(`Fund request from ${employeeName(r.submittedBy)}`)) return;
               try {
-                await deleteFundRequest(r.id);
+                await store.remove('fundRequests', r.id);
                 refresh();
               } catch (err) {
                 window.alert(err.message || 'Could not delete the fund request.');

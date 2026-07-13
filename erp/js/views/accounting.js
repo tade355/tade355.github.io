@@ -83,10 +83,13 @@ export function renderAccounting(container) {
           label: '',
           render: (r) => actionButtons({
             onEdit: () => openForm(r),
-            onDelete: () => {
-              if (confirmDelete(r.description)) {
-                store.remove('expenses', r.id);
+            onDelete: async () => {
+              if (!confirmDelete(r.description)) return;
+              try {
+                await store.remove('expenses', r.id);
                 refresh();
+              } catch (err) {
+                window.alert(err.message || 'Could not delete this expense.');
               }
             },
           }),
@@ -103,9 +106,9 @@ export function renderAccounting(container) {
       fields: FIELDS,
       initial: record || { date: new Date().toISOString().slice(0, 10) },
       submitLabel: record ? 'Save Changes' : 'Add Expense',
-      onSubmit: (data) => {
-        if (record) store.update('expenses', record.id, data);
-        else store.add('expenses', data);
+      onSubmit: async (data) => {
+        if (record) await store.update('expenses', record.id, data);
+        else await store.add('expenses', data);
         refresh();
       },
     });

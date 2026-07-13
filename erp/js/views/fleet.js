@@ -240,10 +240,13 @@ export function renderFleet(container) {
             label: '',
             render: (r) => actionButtons({
               onEdit: () => openAssetForm(r),
-              onDelete: () => {
-                if (confirmDelete(r.name)) {
-                  store.remove('inventory', r.id);
+              onDelete: async () => {
+                if (!confirmDelete(r.name)) return;
+                try {
+                  await store.remove('inventory', r.id);
                   refresh();
+                } catch (err) {
+                  window.alert(err.message || 'Could not delete this asset.');
                 }
               },
             }),
@@ -261,11 +264,11 @@ export function renderFleet(container) {
         fields: FLEET_FIELDS,
         initial: record || { category: 'Heavy Equipment', ownership: 'Company', fleetStatus: 'Active', serviceIntervalHours: 250 },
         submitLabel: record ? 'Save Changes' : 'Add Asset',
-        onSubmit: (data) => {
+        onSubmit: async (data) => {
           if (record) {
-            store.update('inventory', record.id, data);
+            await store.update('inventory', record.id, data);
           } else {
-            store.add('inventory', { ...data, quantity: 1, unit: 'unit', reorderLevel: 1 });
+            await store.add('inventory', { ...data, quantity: 1, unit: 'unit', reorderLevel: 1 });
           }
           refresh();
         },
@@ -309,10 +312,13 @@ export function renderFleet(container) {
             label: '',
             render: (r) => actionButtons({
               onEdit: () => openLogForm(r),
-              onDelete: () => {
-                if (confirmDelete(`${r.equipment} — ${r.type}`)) {
-                  store.remove('maintenanceLogs', r.id);
+              onDelete: async () => {
+                if (!confirmDelete(`${r.equipment} — ${r.type}`)) return;
+                try {
+                  await store.remove('maintenanceLogs', r.id);
                   refresh();
+                } catch (err) {
+                  window.alert(err.message || 'Could not delete this entry.');
                 }
               },
             }),
@@ -333,9 +339,9 @@ export function renderFleet(container) {
         fields: maintenanceFields(),
         initial: record || { date: new Date().toISOString().slice(0, 10), status: 'Completed' },
         submitLabel: record ? 'Save Changes' : 'Log Maintenance',
-        onSubmit: (data) => {
-          if (record) store.update('maintenanceLogs', record.id, data);
-          else store.add('maintenanceLogs', data);
+        onSubmit: async (data) => {
+          if (record) await store.update('maintenanceLogs', record.id, data);
+          else await store.add('maintenanceLogs', data);
           refresh();
         },
       });
@@ -392,10 +398,13 @@ export function renderFleet(container) {
             label: '',
             render: (r) => actionButtons({
               onEdit: () => openReceiptForm(r),
-              onDelete: () => {
-                if (confirmDelete(`Receipt on ${formatDate(r.date)}`)) {
-                  store.remove('dieselReceipts', r.id);
+              onDelete: async () => {
+                if (!confirmDelete(`Receipt on ${formatDate(r.date)}`)) return;
+                try {
+                  await store.remove('dieselReceipts', r.id);
                   refresh();
+                } catch (err) {
+                  window.alert(err.message || 'Could not delete this receipt.');
                 }
               },
             }),
@@ -429,10 +438,13 @@ export function renderFleet(container) {
             label: '',
             render: (r) => actionButtons({
               onEdit: () => openCountForm(r),
-              onDelete: () => {
-                if (confirmDelete(`Stock count on ${formatDate(r.date)}`)) {
-                  store.remove('dieselStockCounts', r.id);
+              onDelete: async () => {
+                if (!confirmDelete(`Stock count on ${formatDate(r.date)}`)) return;
+                try {
+                  await store.remove('dieselStockCounts', r.id);
                   refresh();
+                } catch (err) {
+                  window.alert(err.message || 'Could not delete this stock count.');
                 }
               },
             }),
@@ -449,9 +461,9 @@ export function renderFleet(container) {
         fields: receiptFields(),
         initial: record || { date: new Date().toISOString().slice(0, 10) },
         submitLabel: record ? 'Save Changes' : 'Log Receipt',
-        onSubmit: (data) => {
-          if (record) store.update('dieselReceipts', record.id, data);
-          else store.add('dieselReceipts', data);
+        onSubmit: async (data) => {
+          if (record) await store.update('dieselReceipts', record.id, data);
+          else await store.add('dieselReceipts', data);
           refresh();
         },
       });
@@ -463,9 +475,9 @@ export function renderFleet(container) {
         fields: countFields(),
         initial: record || { date: new Date().toISOString().slice(0, 10) },
         submitLabel: record ? 'Save Changes' : 'Log Count',
-        onSubmit: (data) => {
-          if (record) store.update('dieselStockCounts', record.id, data);
-          else store.add('dieselStockCounts', data);
+        onSubmit: async (data) => {
+          if (record) await store.update('dieselStockCounts', record.id, data);
+          else await store.add('dieselStockCounts', data);
           refresh();
         },
       });
@@ -511,10 +523,13 @@ export function renderFleet(container) {
                 approvedByName: employees.find((e) => e.id === r.approvedBy)?.name,
               }),
               onEdit: () => openVoucherForm(r),
-              onDelete: () => {
-                if (confirmDelete(`Voucher for ${r.equipment} at ${r.station}`)) {
-                  store.remove('fuelingVouchers', r.id);
+              onDelete: async () => {
+                if (!confirmDelete(`Voucher for ${r.equipment} at ${r.station}`)) return;
+                try {
+                  await store.remove('fuelingVouchers', r.id);
                   refresh();
+                } catch (err) {
+                  window.alert(err.message || 'Could not delete this voucher.');
                 }
               },
             }),
@@ -536,9 +551,9 @@ export function renderFleet(container) {
         fields: voucherFields(),
         initial: record || { date: new Date().toISOString().slice(0, 10), status: 'Pending Approval' },
         submitLabel: record ? 'Save Changes' : 'Submit Voucher',
-        onSubmit: (data) => {
-          if (record) store.update('fuelingVouchers', record.id, data);
-          else store.add('fuelingVouchers', data);
+        onSubmit: async (data) => {
+          if (record) await store.update('fuelingVouchers', record.id, data);
+          else await store.add('fuelingVouchers', data);
           refresh();
         },
       });

@@ -9,7 +9,7 @@ function daysSince(iso) {
 
 export function renderBackup(container) {
   container.innerHTML = '';
-  container.appendChild(sectionHeader('Backup & Data', "Everything here lives only in this browser's local storage — back up regularly so nothing is lost."));
+  container.appendChild(sectionHeader('Backup & Data', 'Everything here lives in the shared Emagrims database — export a backup regularly as a safety copy.'));
 
   const summarySlot = el('div');
   container.appendChild(summarySlot);
@@ -29,8 +29,8 @@ export function renderBackup(container) {
   }
 
   container.appendChild(el('div', { class: 'backup-warning' }, [
-    el('strong', {}, '⚠ Backups are not automatic.'),
-    el('p', {}, "Invoices, payroll, fund requests, operations logs — everything — lives only in this browser. It is not synced to any server. Clearing your browser data, switching devices, or reinstalling the browser erases it permanently. Download a backup regularly and keep it somewhere safe (email it to yourself, save it to cloud storage)."),
+    el('strong', {}, '⚠ Data now lives in a shared database, not just this browser.'),
+    el('p', {}, 'Everyone with access sees and edits the same records in real time. Restoring a backup here replaces data for the whole company, not just this device — export regularly as a safety copy, and only restore one if you know exactly what you\'re doing.'),
   ]));
 
   const exportCard = el('div', { class: 'backup-card' }, [
@@ -43,7 +43,7 @@ export function renderBackup(container) {
 
   const importCard = el('div', { class: 'backup-card' }, [
     el('h3', {}, 'Restore from a Backup'),
-    el('p', {}, 'Replaces everything currently in this browser with the contents of a backup file. This cannot be undone.'),
+    el('p', {}, 'Replaces every record in the shared database — for everyone, on every device — with the contents of a backup file. This cannot be undone.'),
   ]);
   const fileInput = el('input', { type: 'file', accept: 'application/json' });
   const importBtn = el('button', { class: 'btn btn-ghost', type: 'button' }, 'Restore This File');
@@ -68,15 +68,20 @@ export function renderBackup(container) {
   importBtn.addEventListener('click', () => {
     const file = fileInput.files[0];
     if (!file) { window.alert('Choose a backup file first.'); return; }
-    if (!window.confirm('This will replace ALL current data in this browser with the contents of this file. This cannot be undone. Continue?')) return;
+    if (!window.confirm('This will replace EVERY record in the shared database — for the whole company, on every device — with the contents of this file. This cannot be undone. Continue?')) return;
+    if (!window.confirm('Are you absolutely sure? Type OK in the next box only if you want to proceed.')) return;
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
+      importBtn.disabled = true;
+      importBtn.textContent = 'Restoring…';
       try {
-        store.importSnapshot(e.target.result);
+        await store.importSnapshot(e.target.result);
         window.alert('Backup restored. The page will now reload.');
         window.location.reload();
       } catch (err) {
         window.alert(err.message);
+        importBtn.disabled = false;
+        importBtn.textContent = 'Restore This File';
       }
     };
     reader.onerror = () => window.alert('Could not read that file.');

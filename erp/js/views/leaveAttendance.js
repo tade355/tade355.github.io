@@ -3,7 +3,6 @@ import { formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { PROJECTS, LEAVE_TYPES } from '../constants.js';
 import { getCurrentUserId, filterLeaveRequests, getCurrentTier, getAssignedProject } from '../session.js';
-import { fetchLeaveRequests, saveLeaveRequest, deleteLeaveRequest } from '../remoteStore.js';
 
 function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
@@ -116,22 +115,8 @@ export function renderLeaveAttendance(container) {
     actionSlot.innerHTML = '';
     actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openLeaveForm() }, '+ Apply for Leave'));
 
-    let allRows = [];
-
-    async function refresh() {
-      body.innerHTML = '';
-      body.appendChild(el('p', { class: 'table-empty' }, 'Loading leave requests…'));
-      try {
-        allRows = await fetchLeaveRequests();
-      } catch (err) {
-        body.innerHTML = '';
-        body.appendChild(el('div', { class: 'backup-warning' }, [
-          el('p', {}, err.message || 'Could not load leave requests.'),
-          el('button', { class: 'btn btn-ghost', type: 'button', onClick: refresh }, 'Retry'),
-        ]));
-        return;
-      }
-
+    function refresh() {
+      const allRows = store.get('leaveRequests');
       const rows = filterLeaveRequests(allRows).slice().sort((a, b) => (a.startDate < b.startDate ? 1 : -1));
       const pending = rows.filter((r) => r.status === 'Pending').length;
 
@@ -187,7 +172,7 @@ export function renderLeaveAttendance(container) {
               onDelete: async () => {
                 if (!confirmDelete(`${employeeName(r.employeeId)}'s leave request`)) return;
                 try {
-                  await deleteLeaveRequest(r.id);
+                  await store.remove('leaveRequests', r.id);
                   refresh();
                 } catch (err) {
                   window.alert(err.message || 'Could not delete the leave request.');
@@ -213,8 +198,9 @@ export function renderLeaveAttendance(container) {
         submitLabel: record ? 'Save Changes' : 'Submit Request',
         onSubmit: async (data) => {
           const payload = { ...data, appliedDate: record?.appliedDate || todayIso() };
-          await saveLeaveRequest(payload, record?.id);
-          await refresh();
+          if (record) await store.update('leaveRequests', record.id, payload);
+          else await store.add('leaveRequests', payload);
+          refresh();
         },
       });
     }
@@ -271,10 +257,13 @@ export function renderLeaveAttendance(container) {
             label: '',
             render: (r) => actionButtons({
               onEdit: () => window.alert('Edit attendance times directly with the site supervisor if a correction is needed.'),
-              onDelete: () => {
-                if (confirmDelete(`${employeeName(r.employeeId)}'s attendance on ${formatDate(r.date)}`)) {
-                  store.remove('attendanceLogs', r.id);
+              onDelete: async () => {
+                if (!confirmDelete(`${employeeName(r.employeeId)}'s attendance on ${formatDate(r.date)}`)) return;
+                try {
+                  await store.remove('attendanceLogs', r.id);
                   refresh();
+                } catch (err) {
+                  window.alert(err.message || 'Could not delete this attendance record.');
                 }
               },
             }),
@@ -289,40 +278,52 @@ export function renderLeaveAttendance(container) {
       const employeeId = clockEmployee.value;
       if (!employeeId) { window.alert('Select an employee first.'); return; }
       const today = todayIso();
-      const existing = store.get('attendanceLogs').find((a) => a.employeeId === employeeId && a.date === today);
-      if (existing && existing.clockIn) {
-        window.alert(`${employeeName(employeeId)} already clocked in today at ${existing.clockIn}.`);
-        return;
+      try {
+        await store.refreshCollection('attendanceLogs');
+        const existing = store.get('attendanceLogs').find((a) => a.employeeId === employeeId && a.date === today);
+        if (existing && existing.clockIn) {
+          window.alert(`${employeeName(employeeId)} already clocked in today at ${existing.clockIn}.`);
+          return;
+        }
+        statusNote.textContent = 'Capturing location…';
+        const loc = await getLocation();
+        statusNote.textContent = loc ? 'Location captured.' : 'Clocked in without location.';
+        const payload = {
+          employeeId, date: today, project: clockProject.value,
+          clockIn: nowTime(), clockInLat: loc?.lat ?? null, clockInLng: loc?.lng ?? null,
+          clockOut: existing?.clockOut || '', clockOutLat: existing?.clockOutLat ?? null, clockOutLng: existing?.clockOutLng ?? null,
+        };
+        if (existing) await store.update('attendanceLogs', existing.id, payload);
+        else await store.add('attendanceLogs', payload);
+        refresh();
+      } catch (err) {
+        statusNote.textContent = '';
+        window.alert(err.message || 'Could not clock in. Please try again.');
       }
-      statusNote.textContent = 'Capturing location…';
-      const loc = await getLocation();
-      statusNote.textContent = loc ? 'Location captured.' : 'Clocked in without location.';
-      const payload = {
-        employeeId, date: today, project: clockProject.value,
-        clockIn: nowTime(), clockInLat: loc?.lat ?? null, clockInLng: loc?.lng ?? null,
-        clockOut: existing?.clockOut || '', clockOutLat: existing?.clockOutLat ?? null, clockOutLng: existing?.clockOutLng ?? null,
-      };
-      if (existing) store.update('attendanceLogs', existing.id, payload);
-      else store.add('attendanceLogs', payload);
-      refresh();
     }
 
     async function clockOut() {
       const employeeId = clockEmployee.value;
       if (!employeeId) { window.alert('Select an employee first.'); return; }
       const today = todayIso();
-      const existing = store.get('attendanceLogs').find((a) => a.employeeId === employeeId && a.date === today);
-      if (!existing || !existing.clockIn) {
-        window.alert(`${employeeName(employeeId)} has not clocked in today yet.`);
-        return;
+      try {
+        await store.refreshCollection('attendanceLogs');
+        const existing = store.get('attendanceLogs').find((a) => a.employeeId === employeeId && a.date === today);
+        if (!existing || !existing.clockIn) {
+          window.alert(`${employeeName(employeeId)} has not clocked in today yet.`);
+          return;
+        }
+        statusNote.textContent = 'Capturing location…';
+        const loc = await getLocation();
+        statusNote.textContent = loc ? 'Location captured.' : 'Clocked out without location.';
+        await store.update('attendanceLogs', existing.id, {
+          clockOut: nowTime(), clockOutLat: loc?.lat ?? null, clockOutLng: loc?.lng ?? null,
+        });
+        refresh();
+      } catch (err) {
+        statusNote.textContent = '';
+        window.alert(err.message || 'Could not clock out. Please try again.');
       }
-      statusNote.textContent = 'Capturing location…';
-      const loc = await getLocation();
-      statusNote.textContent = loc ? 'Location captured.' : 'Clocked out without location.';
-      store.update('attendanceLogs', existing.id, {
-        clockOut: nowTime(), clockOutLat: loc?.lat ?? null, clockOutLng: loc?.lng ?? null,
-      });
-      refresh();
     }
 
     refresh();

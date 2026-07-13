@@ -49,10 +49,13 @@ export function renderInventory(container) {
           label: '',
           render: (r) => actionButtons({
             onEdit: () => openForm(r),
-            onDelete: () => {
-              if (confirmDelete(r.name)) {
-                store.remove('inventory', r.id);
+            onDelete: async () => {
+              if (!confirmDelete(r.name)) return;
+              try {
+                await store.remove('inventory', r.id);
                 refresh();
+              } catch (err) {
+                window.alert(err.message || 'Could not delete this item.');
               }
             },
           }),
@@ -70,9 +73,9 @@ export function renderInventory(container) {
       fields: FIELDS,
       initial: record || {},
       submitLabel: record ? 'Save Changes' : 'Add Item',
-      onSubmit: (data) => {
-        if (record) store.update('inventory', record.id, data);
-        else store.add('inventory', data);
+      onSubmit: async (data) => {
+        if (record) await store.update('inventory', record.id, data);
+        else await store.add('inventory', data);
         refresh();
       },
     });

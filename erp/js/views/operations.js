@@ -104,10 +104,13 @@ export function renderOperations(container) {
           label: '',
           render: (r) => actionButtons({
             onEdit: () => openForm(r),
-            onDelete: () => {
-              if (confirmDelete(`${r.siteName} — ${formatDate(r.date)}`)) {
-                store.remove('operations', r.id);
+            onDelete: async () => {
+              if (!confirmDelete(`${r.siteName} — ${formatDate(r.date)}`)) return;
+              try {
+                await store.remove('operations', r.id);
                 refresh();
+              } catch (err) {
+                window.alert(err.message || 'Could not delete this report.');
               }
             },
           }),
@@ -128,9 +131,9 @@ export function renderOperations(container) {
       fields: fields(),
       initial: record || { date: new Date().toISOString().slice(0, 10), status: 'Completed', siteName: getAssignedProject() },
       submitLabel: record ? 'Save Changes' : 'Log Report',
-      onSubmit: (data) => {
-        if (record) store.update('operations', record.id, data);
-        else store.add('operations', data);
+      onSubmit: async (data) => {
+        if (record) await store.update('operations', record.id, data);
+        else await store.add('operations', data);
         refresh();
       },
     });

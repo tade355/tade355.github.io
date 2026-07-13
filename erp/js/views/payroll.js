@@ -132,7 +132,7 @@ function openRunForm(record, onSaved) {
       ]);
       const submitBtn = actions.lastChild;
 
-      submitBtn.addEventListener('click', () => {
+      submitBtn.addEventListener('click', async () => {
         const lines = [...itemsContainer.querySelectorAll('.payroll-line-row')].map((row) => ({
           employeeId: row.getAttribute('data-employee-id'),
           baseSalary: Number(row.querySelector('.li-base').value) || 0,
@@ -145,29 +145,37 @@ function openRunForm(record, onSaved) {
         const newStatus = statusSelect.value;
         const payload = { month: monthInput.value, status: newStatus, lines };
 
-        let savedRun;
-        if (record) {
-          store.update('payrollRuns', record.id, payload);
-          savedRun = { ...record, ...payload };
-        } else {
-          savedRun = store.add('payrollRuns', { ...payload, expenseId: '' });
-        }
+        try {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Saving…';
 
-        if (newStatus === 'Paid' && !savedRun.expenseId) {
-          const total = lines.reduce((sum, l) => sum + l.baseSalary + l.bonus - l.deductions, 0);
-          const expense = store.add('expenses', {
-            date: new Date().toISOString().slice(0, 10),
-            category: 'Payroll',
-            description: `Payroll — ${formatMonthLong(savedRun.month)}`,
-            amount: total,
-            paidBy: 'Payroll',
-            project: '',
-          });
-          store.update('payrollRuns', savedRun.id, { expenseId: expense.id });
-        }
+          let savedRun;
+          if (record) {
+            savedRun = await store.update('payrollRuns', record.id, payload);
+          } else {
+            savedRun = await store.add('payrollRuns', { ...payload, expenseId: '' });
+          }
 
-        closeModal();
-        onSaved();
+          if (newStatus === 'Paid' && !savedRun.expenseId) {
+            const total = lines.reduce((sum, l) => sum + l.baseSalary + l.bonus - l.deductions, 0);
+            const expense = await store.add('expenses', {
+              date: new Date().toISOString().slice(0, 10),
+              category: 'Payroll',
+              description: `Payroll — ${formatMonthLong(savedRun.month)}`,
+              amount: total,
+              paidBy: 'Payroll',
+              project: '',
+            });
+            await store.update('payrollRuns', savedRun.id, { expenseId: expense.id });
+          }
+
+          closeModal();
+          onSaved();
+        } catch (err) {
+          window.alert(err.message || 'Could not save this payroll run. Please try again.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = record ? 'Save Changes' : 'Create Run';
+        }
       });
 
       container.appendChild(topGrid);
@@ -216,10 +224,13 @@ export function renderPayroll(container) {
           render: (r) => actionButtons({
             onPrint: () => printPayrollRegister(r, r.lines.map((l) => ({ ...l, employeeName: employeeLabel(l.employeeId) }))),
             onEdit: () => openRunForm(r, refresh),
-            onDelete: () => {
-              if (confirmDelete(`Payroll run for ${formatMonthLong(r.month)}`)) {
-                store.remove('payrollRuns', r.id);
+            onDelete: async () => {
+              if (!confirmDelete(`Payroll run for ${formatMonthLong(r.month)}`)) return;
+              try {
+                await store.remove('payrollRuns', r.id);
                 refresh();
+              } catch (err) {
+                window.alert(err.message || 'Could not delete this payroll run.');
               }
             },
           }),

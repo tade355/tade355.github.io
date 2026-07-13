@@ -56,10 +56,13 @@ export function renderHR(container) {
           label: '',
           render: (r) => actionButtons({
             onEdit: () => openForm(r),
-            onDelete: () => {
-              if (confirmDelete(r.name)) {
-                store.remove('employees', r.id);
+            onDelete: async () => {
+              if (!confirmDelete(r.name)) return;
+              try {
+                await store.remove('employees', r.id);
                 refresh();
+              } catch (err) {
+                window.alert(err.message || 'Could not delete this employee.');
               }
             },
           }),
@@ -76,9 +79,9 @@ export function renderHR(container) {
       fields: FIELDS,
       initial: record || { status: 'Active', accessTier: 'Staff', leaveEntitlement: 21 },
       submitLabel: record ? 'Save Changes' : 'Add Employee',
-      onSubmit: (data) => {
-        if (record) store.update('employees', record.id, data);
-        else store.add('employees', data);
+      onSubmit: async (data) => {
+        if (record) await store.update('employees', record.id, data);
+        else await store.add('employees', data);
         refresh();
       },
     });

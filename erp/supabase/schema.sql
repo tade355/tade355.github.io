@@ -17,10 +17,11 @@
 --  * Nested arrays in the old model (invoice items, PO items, fund request
 --    items, payroll lines) become real child tables with a foreign key back
 --    to the parent, so totals/report queries don't need to unpack JSON.
---  * `equipment`, previously a free-text name copied onto operations /
---    maintenance / fueling records, becomes a proper equipment_id FK into
---    inventory. The migration script is responsible for resolving each
---    existing name to its inventory.id.
+--  * `equipment` on operations/maintenance_logs/fueling_vouchers stays a
+--    plain text column (the fleet asset's display name), matching exactly
+--    how the app already stores it — not a foreign key. This was tried as
+--    an equipment_id FK first, but the app never treats it as an ID
+--    anywhere, so the FK only added conversion risk for no real benefit.
 --  * attachments (receipts/photos) stay as JSONB — they're already
 --    small base64 data URLs from client-side image compression. Moving
 --    them to Supabase Storage buckets is a reasonable future improvement,
@@ -228,7 +229,7 @@ create table operations (
   date           date not null,
   site_name      text not null,
   customer_id    text references customers(id) on delete set null,
-  equipment_id   text references inventory(id) on delete set null,
+  equipment      text,
   operator_id    text references employees(id) on delete set null,
   supervisor_id  text references employees(id) on delete set null,
   hours_worked   numeric,
@@ -240,7 +241,6 @@ create table operations (
   updated_at     timestamptz not null default now()
 );
 create index idx_operations_site on operations(site_name);
-create index idx_operations_equipment on operations(equipment_id);
 create trigger trg_operations_updated_at before update on operations
   for each row execute function set_updated_at();
 
@@ -251,8 +251,8 @@ create trigger trg_operations_updated_at before update on operations
 create table maintenance_logs (
   id           text primary key,
   date         date not null,
-  equipment_id text references inventory(id) on delete set null,
-  type         text check (type in ('Repair', 'Service', 'Inspection')),
+  equipment    text,
+  type         text check (type in ('Repair', 'Service', 'Inspection', 'Breakdown')),
   description  text,
   cost         numeric,
   performed_by text references employees(id) on delete set null,
@@ -260,7 +260,6 @@ create table maintenance_logs (
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
-create index idx_maintenance_equipment on maintenance_logs(equipment_id);
 create trigger trg_maintenance_updated_at before update on maintenance_logs
   for each row execute function set_updated_at();
 
@@ -342,7 +341,7 @@ create table fueling_vouchers (
   date             date not null,
   station          text not null,
   project          text,
-  equipment_id     text references inventory(id) on delete set null,
+  equipment        text,
   litres_requested numeric not null,
   estimated_cost   numeric not null,
   requested_by     text references employees(id) on delete set null,
