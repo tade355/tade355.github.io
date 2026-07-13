@@ -5,6 +5,7 @@ import { PROJECTS } from '../constants.js';
 import { printFundRequest } from '../print.js';
 import { filterFundRequests, getCurrentUserId, getCurrentTier } from '../session.js';
 import { createAttachmentPicker } from '../attachments.js';
+import { fetchFundRequests, saveFundRequest, deleteFundRequest } from '../remoteStore.js';
 
 function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
@@ -129,7 +130,7 @@ function openRequestForm(record, onSaved) {
       ]);
       const submitBtn = actions.lastChild;
 
-      submitBtn.addEventListener('click', () => {
+      submitBtn.addEventListener('click', async () => {
         const items = [...itemsContainer.children].map((row) => ({
           description: row.querySelector('.li-description').value,
           amount: Number(row.querySelector('.li-amount').value) || 0,
@@ -152,10 +153,17 @@ function openRequestForm(record, onSaved) {
           attachments: attachmentPicker.getAttachments(),
         };
 
-        if (record) store.update('fundRequests', record.id, payload);
-        else store.add('fundRequests', payload);
-        closeModal();
-        onSaved();
+        try {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Saving…';
+          await saveFundRequest(payload, record?.id);
+          closeModal();
+          onSaved();
+        } catch (err) {
+          window.alert(err.message || 'Could not save the fund request. Please try again.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = record ? 'Save Changes' : 'Submit Request';
+        }
       });
 
       container.appendChild(topGrid);
@@ -199,8 +207,22 @@ export function renderFundRequests(container) {
     return request.items.reduce((sum, it) => sum + it.amount, 0);
   }
 
-  function refresh() {
-    let rows = filterFundRequests(store.get('fundRequests')).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+  async function refresh() {
+    tableContainer.innerHTML = '';
+    tableContainer.appendChild(el('p', { class: 'table-empty' }, 'Loading fund requests…'));
+    let allRows;
+    try {
+      allRows = await fetchFundRequests();
+    } catch (err) {
+      tableContainer.innerHTML = '';
+      tableContainer.appendChild(el('div', { class: 'backup-warning' }, [
+        el('p', {}, err.message || 'Could not load fund requests.'),
+        el('button', { class: 'btn btn-ghost', type: 'button', onClick: refresh }, 'Retry'),
+      ]));
+      return;
+    }
+
+    let rows = filterFundRequests(allRows).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
     const pending = rows.filter((r) => r.status === 'Pending').length;
     const totalPending = rows.filter((r) => r.status === 'Pending').reduce((sum, r) => sum + totalOf(r), 0);
 
@@ -234,10 +256,13 @@ export function renderFundRequests(container) {
               approvedByName: r.approvedBy ? employeeName(r.approvedBy) : '',
             }),
             onEdit: () => openRequestForm(r, refresh),
-            onDelete: () => {
-              if (confirmDelete(`Fund request from ${employeeName(r.submittedBy)}`)) {
-                store.remove('fundRequests', r.id);
+            onDelete: async () => {
+              if (!confirmDelete(`Fund request from ${employeeName(r.submittedBy)}`)) return;
+              try {
+                await deleteFundRequest(r.id);
                 refresh();
+              } catch (err) {
+                window.alert(err.message || 'Could not delete the fund request.');
               }
             },
           }),

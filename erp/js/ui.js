@@ -82,7 +82,9 @@ export function openModal({ title, fields, initial = {}, onSubmit, submitLabel =
   ]);
   form.appendChild(actions);
 
-  form.addEventListener('submit', (evt) => {
+  const submitBtn = actions.lastChild;
+
+  form.addEventListener('submit', async (evt) => {
     evt.preventDefault();
     const data = new FormData(form);
     const record = {};
@@ -95,8 +97,16 @@ export function openModal({ title, fields, initial = {}, onSubmit, submitLabel =
       if (f.type === 'number') val = Number(val);
       record[f.name] = val;
     });
-    onSubmit(record);
-    closeModal();
+    try {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving…';
+      await onSubmit(record);
+      closeModal();
+    } catch (err) {
+      window.alert(err.message || 'Something went wrong while saving. Please try again.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = submitLabel;
+    }
   });
 
   const dialog = el('div', { class: 'modal-dialog' }, [

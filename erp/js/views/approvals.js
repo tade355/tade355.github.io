@@ -3,6 +3,7 @@ import { formatCurrency, formatDate, el } from '../utils.js';
 import { renderTable, sectionHeader, statCard } from '../ui.js';
 import { getCurrentTier, getCurrentUserId, filterFundRequests, filterByProject, filterLeaveRequests } from '../session.js';
 import { printFundRequest, printFuelingVoucher } from '../print.js';
+import { fetchFundRequests, updateFundRequestStatus, fetchLeaveRequests, updateLeaveRequestStatus } from '../remoteStore.js';
 
 function employeeName(id) {
   return store.get('employees').find((e) => e.id === id)?.name || 'Unknown';
@@ -31,25 +32,43 @@ export function renderApprovals(container) {
   const tableContainer = el('div');
   container.appendChild(tableContainer);
 
-  function decide(row, newStatus) {
+  async function decide(row, newStatus) {
     if (newStatus === 'Rejected' && !window.confirm(`Reject this ${row.type.toLowerCase()}?`)) return;
-    store.update(row.collection, row.record.id, { status: newStatus, approvedBy: getCurrentUserId() });
-    refresh();
+    try {
+      if (row.collection === 'fundRequests') await updateFundRequestStatus(row.record.id, newStatus, getCurrentUserId());
+      else if (row.collection === 'leaveRequests') await updateLeaveRequestStatus(row.record.id, newStatus, getCurrentUserId());
+      else store.update(row.collection, row.record.id, { status: newStatus, approvedBy: getCurrentUserId() });
+      refresh();
+    } catch (err) {
+      window.alert(err.message || 'Could not save that decision. Please try again.');
+    }
   }
 
-  function refresh() {
+  async function refresh() {
+    tableContainer.innerHTML = '';
+    tableContainer.appendChild(el('p', { class: 'table-empty' }, 'Loading approvals…'));
+
     const tier = getCurrentTier();
 
     let fundRequests = [];
     let leaveRequests = [];
     let vouchers = [];
 
-    if (tier === 'Admin') {
-      fundRequests = filterFundRequests(store.get('fundRequests')).filter((r) => r.status === 'Pending');
-    }
-    if (tier === 'Admin' || tier === 'Supervisor') {
-      leaveRequests = filterLeaveRequests(store.get('leaveRequests')).filter((r) => r.status === 'Pending');
-      vouchers = filterByProject(store.get('fuelingVouchers'), 'project').filter((r) => r.status === 'Pending Approval');
+    try {
+      if (tier === 'Admin') {
+        fundRequests = filterFundRequests(await fetchFundRequests()).filter((r) => r.status === 'Pending');
+      }
+      if (tier === 'Admin' || tier === 'Supervisor') {
+        leaveRequests = filterLeaveRequests(await fetchLeaveRequests()).filter((r) => r.status === 'Pending');
+        vouchers = filterByProject(store.get('fuelingVouchers'), 'project').filter((r) => r.status === 'Pending Approval');
+      }
+    } catch (err) {
+      tableContainer.innerHTML = '';
+      tableContainer.appendChild(el('div', { class: 'backup-warning' }, [
+        el('p', {}, err.message || 'Could not load approvals.'),
+        el('button', { class: 'btn btn-ghost', type: 'button', onClick: refresh }, 'Retry'),
+      ]));
+      return;
     }
 
     const rows = [

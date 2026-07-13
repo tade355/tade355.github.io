@@ -37,8 +37,13 @@ create table if not exists id_counters (
   next_value integer not null default 1
 );
 
+-- security definer: Supabase enables RLS by default on every new table,
+-- including this internal id_counters helper table, and no policy below
+-- grants anon/authenticated access to it directly. security definer lets
+-- this function (owned by the table-creating role) bypass that RLS check
+-- so callers never need direct access to id_counters — only through here.
 create or replace function next_record_id(p_prefix text) returns text
-language plpgsql as $$
+language plpgsql security definer set search_path = public as $$
 declare
   v integer;
 begin
@@ -48,6 +53,9 @@ begin
   return p_prefix || '-' || v;
 end;
 $$;
+
+grant execute on function next_record_id(text) to anon, authenticated;
+revoke all on id_counters from anon, authenticated;
 
 create or replace function set_updated_at() returns trigger
 language plpgsql as $$

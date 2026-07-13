@@ -3,6 +3,7 @@ import { formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { PROJECTS, LEAVE_TYPES } from '../constants.js';
 import { getCurrentUserId, filterLeaveRequests, getCurrentTier, getAssignedProject } from '../session.js';
+import { fetchLeaveRequests, saveLeaveRequest, deleteLeaveRequest } from '../remoteStore.js';
 
 function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
@@ -18,14 +19,14 @@ function daysBetween(start, end) {
   return Math.max(0, Math.round(ms / 86400000) + 1);
 }
 
-function usedLeaveDaysThisYear(employeeId) {
+function usedLeaveDaysThisYear(leaveRows, employeeId) {
   const year = String(new Date().getFullYear());
-  return store.get('leaveRequests')
+  return leaveRows
     .filter((r) => r.employeeId === employeeId && r.status === 'Approved' && r.startDate?.slice(0, 4) === year)
     .reduce((sum, r) => sum + daysBetween(r.startDate, r.endDate), 0);
 }
 
-function leaveBalanceRows() {
+function leaveBalanceRows(leaveRows) {
   const tier = getCurrentTier();
   let employees = store.get('employees').filter((e) => e.status !== 'Disengaged');
   if (tier === 'Supervisor') {
@@ -34,7 +35,7 @@ function leaveBalanceRows() {
   }
   return employees.map((e) => {
     const entitlement = e.leaveEntitlement ?? 21;
-    const used = usedLeaveDaysThisYear(e.id);
+    const used = usedLeaveDaysThisYear(leaveRows, e.id);
     return { employee: e, entitlement, used, remaining: entitlement - used };
   });
 }
@@ -115,13 +116,28 @@ export function renderLeaveAttendance(container) {
     actionSlot.innerHTML = '';
     actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openLeaveForm() }, '+ Apply for Leave'));
 
-    function refresh() {
-      const rows = filterLeaveRequests(store.get('leaveRequests')).slice().sort((a, b) => (a.startDate < b.startDate ? 1 : -1));
+    let allRows = [];
+
+    async function refresh() {
+      body.innerHTML = '';
+      body.appendChild(el('p', { class: 'table-empty' }, 'Loading leave requests…'));
+      try {
+        allRows = await fetchLeaveRequests();
+      } catch (err) {
+        body.innerHTML = '';
+        body.appendChild(el('div', { class: 'backup-warning' }, [
+          el('p', {}, err.message || 'Could not load leave requests.'),
+          el('button', { class: 'btn btn-ghost', type: 'button', onClick: refresh }, 'Retry'),
+        ]));
+        return;
+      }
+
+      const rows = filterLeaveRequests(allRows).slice().sort((a, b) => (a.startDate < b.startDate ? 1 : -1));
       const pending = rows.filter((r) => r.status === 'Pending').length;
 
       const currentUserId = getCurrentUserId();
       const myEntitlement = store.find('employees', currentUserId)?.leaveEntitlement ?? 21;
-      const myUsed = currentUserId ? usedLeaveDaysThisYear(currentUserId) : 0;
+      const myUsed = currentUserId ? usedLeaveDaysThisYear(allRows, currentUserId) : 0;
       const myRemaining = myEntitlement - myUsed;
 
       summarySlot.innerHTML = '';
@@ -144,7 +160,7 @@ export function renderLeaveAttendance(container) {
             { key: 'used', label: 'Used (this year)', render: (r) => `${r.used} days` },
             { key: 'remaining', label: 'Remaining', render: (r) => `${r.remaining} days` },
           ],
-          rows: leaveBalanceRows(),
+          rows: leaveBalanceRows(allRows),
           emptyText: 'No employees to show.',
           rowClass: (r) => (r.remaining <= 0 ? 'row-critical' : (r.remaining <= 5 ? 'row-warning' : undefined)),
         });
@@ -168,10 +184,13 @@ export function renderLeaveAttendance(container) {
             label: '',
             render: (r) => actionButtons({
               onEdit: () => openLeaveForm(r),
-              onDelete: () => {
-                if (confirmDelete(`${employeeName(r.employeeId)}'s leave request`)) {
-                  store.remove('leaveRequests', r.id);
+              onDelete: async () => {
+                if (!confirmDelete(`${employeeName(r.employeeId)}'s leave request`)) return;
+                try {
+                  await deleteLeaveRequest(r.id);
                   refresh();
+                } catch (err) {
+                  window.alert(err.message || 'Could not delete the leave request.');
                 }
               },
             }),
@@ -192,11 +211,10 @@ export function renderLeaveAttendance(container) {
         fields: leaveFields(),
         initial: record || { status: 'Pending', startDate: todayIso(), endDate: todayIso(), employeeId: getCurrentUserId() },
         submitLabel: record ? 'Save Changes' : 'Submit Request',
-        onSubmit: (data) => {
+        onSubmit: async (data) => {
           const payload = { ...data, appliedDate: record?.appliedDate || todayIso() };
-          if (record) store.update('leaveRequests', record.id, payload);
-          else store.add('leaveRequests', payload);
-          refresh();
+          await saveLeaveRequest(payload, record?.id);
+          await refresh();
         },
       });
     }
