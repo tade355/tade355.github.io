@@ -12,14 +12,14 @@ const FIELDS = [
     { value: 'Maintenance', label: 'Maintenance' },
     { value: 'Administration', label: 'Administration' },
   ] },
-  { name: 'phone', label: 'Phone', required: true },
+  { name: 'phone', label: 'Phone' },
   { name: 'email', label: 'Email', type: 'email' },
-  { name: 'salary', label: 'Monthly Salary (₦)', type: 'number', required: true, min: 0 },
-  { name: 'dateHired', label: 'Date Hired', type: 'date', required: true },
+  { name: 'salary', label: 'Monthly Salary (₦)', type: 'number', min: 0 },
+  { name: 'dateHired', label: 'Date Hired', type: 'date' },
   { name: 'status', label: 'Status', type: 'select', required: true, options: [
     { value: 'Active', label: 'Active' },
-    { value: 'On Leave', label: 'On Leave' },
-    { value: 'Terminated', label: 'Terminated' },
+    { value: 'Suspended', label: 'Suspended' },
+    { value: 'Disengaged', label: 'Disengaged' },
   ] },
 ];
 
@@ -39,8 +39,8 @@ export function renderHR(container) {
         { key: 'name', label: 'Name' },
         { key: 'role', label: 'Role' },
         { key: 'department', label: 'Department' },
-        { key: 'phone', label: 'Phone' },
-        { key: 'salary', label: 'Salary', render: (r) => formatCurrency(r.salary) },
+        { key: 'phone', label: 'Phone', render: (r) => r.phone || '—' },
+        { key: 'salary', label: 'Salary', render: (r) => (r.salary ? formatCurrency(r.salary) : '—') },
         { key: 'dateHired', label: 'Hired', render: (r) => formatDate(r.dateHired) },
         { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
         {

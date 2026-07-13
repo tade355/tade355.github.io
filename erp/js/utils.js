@@ -49,8 +49,8 @@ export function el(tag, attrs = {}, children = []) {
 export function statusPillClass(status) {
   const map = {
     Paid: 'pill-good', Received: 'pill-good', Completed: 'pill-good', Active: 'pill-good',
-    Unpaid: 'pill-critical', Halted: 'pill-critical',
-    Pending: 'pill-warning', Ongoing: 'pill-warning', 'On Leave': 'pill-warning',
+    Unpaid: 'pill-critical', Halted: 'pill-critical', Disengaged: 'pill-critical',
+    Pending: 'pill-warning', Ongoing: 'pill-warning', 'On Leave': 'pill-warning', Suspended: 'pill-warning',
   };
   return map[status] || 'pill-neutral';
 }
