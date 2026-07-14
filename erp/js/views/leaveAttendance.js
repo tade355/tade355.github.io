@@ -3,6 +3,7 @@ import { formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { PROJECTS, LEAVE_TYPES } from '../constants.js';
 import { getCurrentUserId, filterLeaveRequests, getCurrentTier, getAssignedProject } from '../session.js';
+import { notifyNewLeaveRequest } from '../notifications.js';
 
 function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
@@ -198,8 +199,12 @@ export function renderLeaveAttendance(container) {
         submitLabel: record ? 'Save Changes' : 'Submit Request',
         onSubmit: async (data) => {
           const payload = { ...data, appliedDate: record?.appliedDate || todayIso() };
-          if (record) await store.update('leaveRequests', record.id, payload);
-          else await store.add('leaveRequests', payload);
+          if (record) {
+            await store.update('leaveRequests', record.id, payload);
+          } else {
+            const saved = await store.add('leaveRequests', payload);
+            notifyNewLeaveRequest(saved).catch((err) => console.warn('Leave request notification failed:', err));
+          }
           refresh();
         },
       });

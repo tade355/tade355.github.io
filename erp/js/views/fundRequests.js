@@ -5,6 +5,7 @@ import { PROJECTS } from '../constants.js';
 import { printFundRequest } from '../print.js';
 import { filterFundRequests, getCurrentUserId, getCurrentTier } from '../session.js';
 import { createAttachmentPicker } from '../attachments.js';
+import { notifyNewFundRequest } from '../notifications.js';
 
 function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
@@ -155,8 +156,12 @@ function openRequestForm(record, onSaved) {
         try {
           submitBtn.disabled = true;
           submitBtn.textContent = 'Saving…';
-          if (record) await store.update('fundRequests', record.id, payload);
-          else await store.add('fundRequests', payload);
+          if (record) {
+            await store.update('fundRequests', record.id, payload);
+          } else {
+            const saved = await store.add('fundRequests', payload);
+            notifyNewFundRequest(saved).catch((err) => console.warn('Fund request notification failed:', err));
+          }
           closeModal();
           onSaved();
         } catch (err) {
