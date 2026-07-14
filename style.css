@@ -1,6 +1,6 @@
 :root {
-  --color-primary: #F05F44;
-  --color-primary-dark: #d94a30;
+  --color-primary: #0B4C9C;
+  --color-primary-dark: #083b7a;
   --color-dark: #1c2333;
   --color-text: #333c4d;
   --color-muted: #6b7385;
@@ -64,8 +64,16 @@ a {
 }
 
 .logo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   font-weight: 700;
   font-size: 1.25rem;
+}
+
+.logo-mark {
+  height: 34px;
+  width: auto;
 }
 
 .logo span {
