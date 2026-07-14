@@ -5,15 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Privacy Policy | Fortuity Glee Consult</title>
   <meta name="description" content="Privacy Policy for Fortuity Glee Consult, a Nigerian technology and engineering consulting company.">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#0B1F3A">
+  <link rel="canonical" href="https://tade355.github.io/privacy.html">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Privacy Policy | Fortuity Glee Consult">
+  <meta property="og:description" content="How Fortuity Glee Consult collects, uses, and protects your information.">
+  <meta property="og:url" content="https://tade355.github.io/privacy.html">
+  <meta property="og:image" content="https://tade355.github.io/assets/logo.png">
+  <meta name="twitter:card" content="summary_large_image">
 
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon-180.png">
 
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="style.css" rel="stylesheet">
 </head>
 <body>
+  <a href="#main" class="skip-link">Skip to main content</a>
 
   <!-- Navigation -->
   <header class="navbar">
@@ -28,12 +41,13 @@
         <a href="index.html#blog">Blog</a>
         <a href="index.html#contact" class="nav-cta">Contact Us</a>
       </nav>
-      <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks">
         <span></span><span></span><span></span>
       </button>
     </div>
   </header>
 
+  <main id="main">
   <section class="legal-hero">
     <div class="container">
       <h1>Privacy Policy</h1>
@@ -89,6 +103,7 @@
       <li>Address: 9 Ike Nwachukwu Street, Trademore Estate, Abuja</li>
     </ul>
   </div>
+  </main>
 
   <footer class="footer">
     <div class="container footer-grid">
@@ -111,17 +126,28 @@
       <div class="footer-col">
         <h3>Connect With Us</h3>
         <ul class="footer-list footer-social">
-          <li><a href="#" target="_blank" rel="noopener">Facebook</a></li>
-          <li><a href="#" target="_blank" rel="noopener">LinkedIn</a></li>
-          <li><a href="#" target="_blank" rel="noopener">X</a></li>
-          <li><a href="#" target="_blank" rel="noopener">Instagram</a></li>
-          <li><a href="#" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="#" target="_blank" rel="noopener" aria-label="Fortuity Glee Consult on Facebook">Facebook</a></li>
+          <li><a href="#" target="_blank" rel="noopener" aria-label="Fortuity Glee Consult on LinkedIn">LinkedIn</a></li>
+          <li><a href="#" target="_blank" rel="noopener" aria-label="Fortuity Glee Consult on X">X</a></li>
+          <li><a href="#" target="_blank" rel="noopener" aria-label="Fortuity Glee Consult on Instagram">Instagram</a></li>
+          <li><a href="#" target="_blank" rel="noopener" aria-label="Fortuity Glee Consult on GitHub">GitHub</a></li>
         </ul>
+      </div>
+      <div class="footer-col">
+        <h3>Stay Updated</h3>
+        <p class="footer-newsletter-note">Occasional updates on our work. No spam.</p>
+        <form class="newsletter-form" id="newsletterForm">
+          <label class="visually-hidden" for="newsletterEmail">Email address</label>
+          <input type="email" id="newsletterEmail" name="email" placeholder="Your email address" required>
+          <button type="submit" class="btn btn-primary btn-block">Subscribe</button>
+          <p class="form-note" id="newsletterNote"></p>
+        </form>
       </div>
     </div>
     <div class="container footer-inner">
       <span>© <span id="year"></span> Fortuity Glee Consult. RC 2788269. All rights reserved.</span>
     </div>
+    <button type="button" class="back-to-top" id="backToTop" aria-label="Back to top">↑</button>
   </footer>
 
   <script src="script.js"></script>
