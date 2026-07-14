@@ -19,6 +19,10 @@ function employeeForAuthUser(userId) {
 export async function restoreSession() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return null;
+  // The employees cache from store.init() may have been fetched before this
+  // session was attached to the client (or under different RLS visibility),
+  // so re-fetch under the now-authenticated request before matching.
+  await store.refreshCollection('employees');
   const employee = employeeForAuthUser(session.user.id);
   if (!employee) return null;
   setCurrentEmployeeId(employee.id);
@@ -35,12 +39,12 @@ export async function login(username, password) {
     console.error('Login failed:', error.message);
     throw new Error('Incorrect username or password.');
   }
+  // Re-fetch now that a session is attached — see note in restoreSession().
+  await store.refreshCollection('employees');
   const employee = employeeForAuthUser(data.user.id);
   if (!employee) {
     await supabase.auth.signOut();
-    // TEMPORARY diagnostics while tracking down a login bug — remove once resolved.
-    const all = store.get('employees');
-    throw new Error(`Not linked. auth uid=${data.user.id} | employees loaded=${all.length} | sample authUserIds=${all.slice(0, 3).map((e) => e.authUserId).join(',')}`);
+    throw new Error('This account is not linked to a staff record. Contact an admin.');
   }
   setCurrentEmployeeId(employee.id);
   return employee;
