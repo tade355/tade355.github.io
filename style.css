@@ -442,8 +442,27 @@ a {
 .footer {
   background: var(--color-dark);
   color: rgba(255, 255, 255, 0.7);
-  padding: 2rem 0;
+  padding: 3rem 0 2rem;
   font-size: 0.9rem;
+}
+
+.footer-brand {
+  text-align: center;
+  padding-bottom: 2rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-logo {
+  height: 90px;
+  width: auto;
+}
+
+.footer-tagline {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .footer-inner {
