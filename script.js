@@ -14,11 +14,13 @@ navLinks.querySelectorAll('a').forEach((link) => {
 const contactForm = document.getElementById('contactForm');
 const formNote = document.getElementById('formNote');
 
-contactForm.addEventListener('submit', (event) => {
-  event.preventDefault();
-  formNote.textContent = 'Thanks for reaching out — we will get back to you within one business day.';
-  contactForm.reset();
-});
+if (contactForm) {
+  contactForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    formNote.textContent = 'Thanks for reaching out — we will get back to you within one business day.';
+    contactForm.reset();
+  });
+}
 
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
