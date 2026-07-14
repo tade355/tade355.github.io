@@ -1,6 +1,6 @@
 :root {
-  --color-primary: #F05F44;
-  --color-primary-dark: #d94a30;
+  --color-primary: #0B4C9C;
+  --color-primary-dark: #083b7a;
   --color-dark: #1c2333;
   --color-text: #333c4d;
   --color-muted: #6b7385;
@@ -64,8 +64,16 @@ a {
 }
 
 .logo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   font-weight: 700;
   font-size: 1.25rem;
+}
+
+.logo-mark {
+  height: 34px;
+  width: auto;
 }
 
 .logo span {
@@ -434,8 +442,27 @@ a {
 .footer {
   background: var(--color-dark);
   color: rgba(255, 255, 255, 0.7);
-  padding: 2rem 0;
+  padding: 3rem 0 2rem;
   font-size: 0.9rem;
+}
+
+.footer-brand {
+  text-align: center;
+  padding-bottom: 2rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-logo {
+  height: 90px;
+  width: auto;
+}
+
+.footer-tagline {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .footer-inner {
