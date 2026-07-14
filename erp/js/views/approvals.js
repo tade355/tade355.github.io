@@ -3,6 +3,7 @@ import { formatCurrency, formatDate, el } from '../utils.js';
 import { renderTable, sectionHeader, statCard } from '../ui.js';
 import { getCurrentTier, getCurrentUserId, filterFundRequests, filterByProject, filterLeaveRequests } from '../session.js';
 import { printFundRequest, printFuelingVoucher } from '../print.js';
+import { notifyFundRequestDecision, notifyLeaveRequestDecision } from '../notifications.js';
 
 function employeeName(id) {
   return store.get('employees').find((e) => e.id === id)?.name || 'Unknown';
@@ -34,7 +35,13 @@ export function renderApprovals(container) {
   async function decide(row, newStatus) {
     if (newStatus === 'Rejected' && !window.confirm(`Reject this ${row.type.toLowerCase()}?`)) return;
     try {
-      await store.update(row.collection, row.record.id, { status: newStatus, approvedBy: getCurrentUserId() });
+      const decidedByName = employeeName(getCurrentUserId());
+      const updated = await store.update(row.collection, row.record.id, { status: newStatus, approvedBy: getCurrentUserId() });
+      if (row.collection === 'fundRequests') {
+        notifyFundRequestDecision(updated, decidedByName).catch((err) => console.warn('Fund request decision notification failed:', err));
+      } else if (row.collection === 'leaveRequests') {
+        notifyLeaveRequestDecision(updated, decidedByName).catch((err) => console.warn('Leave request decision notification failed:', err));
+      }
       refresh();
     } catch (err) {
       window.alert(err.message || 'Could not save that decision. Please try again.');

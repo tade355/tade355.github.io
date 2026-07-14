@@ -77,3 +77,29 @@ export async function notifyNewLeaveRequest(record) {
     link_url: 'https://tade355.github.io/erp/#/approvals',
   });
 }
+
+// Decision notifications go to the same admin group (plus, for leave, the
+// relevant Supervisor) so the whole approving circle stays in sync even
+// when only one of them made the call.
+export async function notifyFundRequestDecision(record, decidedByName) {
+  const submitter = store.find('employees', record.submittedBy);
+  const total = (record.items || []).reduce((sum, it) => sum + (it.amount || 0), 0);
+  await sendTo(adminRecipients(), {
+    subject: `Fund Request ${record.status} — ${submitter?.name || 'Staff'}`,
+    request_type: 'Fund Request',
+    submitted_by: submitter?.name || 'Unknown',
+    summary: `${record.status} by ${decidedByName || 'an admin'} — ${record.description || `${(record.items || []).length} item(s), total ₦${total.toLocaleString()}`}`,
+    link_url: 'https://tade355.github.io/erp/#/fundRequests',
+  });
+}
+
+export async function notifyLeaveRequestDecision(record, decidedByName) {
+  const submitter = store.find('employees', record.employeeId);
+  await sendTo(leaveApproverRecipients(record.employeeId), {
+    subject: `Leave Request ${record.status} — ${submitter?.name || 'Staff'}`,
+    request_type: 'Leave Request',
+    submitted_by: submitter?.name || 'Unknown',
+    summary: `${record.status} by ${decidedByName || 'an admin'} — ${record.leaveType} leave, ${record.startDate} to ${record.endDate}`,
+    link_url: 'https://tade355.github.io/erp/#/approvals',
+  });
+}
