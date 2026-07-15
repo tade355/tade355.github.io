@@ -1,8 +1,10 @@
 import { store } from '../store.js';
 import { formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
-import { PROJECTS } from '../constants.js';
+import { PROJECTS, OPERATION_TYPES, unitForOperationType } from '../constants.js';
 import { filterByProject, getAssignedProject } from '../session.js';
+
+const HA_OPERATION_TYPES = OPERATION_TYPES.filter((t) => t.unit === 'Ha').map((t) => t.value);
 
 function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
@@ -28,7 +30,8 @@ function fields() {
     { name: 'operatorId', label: 'Operator', type: 'select', required: true, options: employeeOptions() },
     { name: 'supervisorId', label: 'Supervisor', type: 'select', required: true, options: employeeOptions() },
     { name: 'hoursWorked', label: 'Hours Worked', type: 'number', required: true, min: 0, step: '0.5' },
-    { name: 'areaCleared', label: 'Area Cleared (hectares)', type: 'number', required: true, min: 0, step: '0.1' },
+    { name: 'operationType', label: 'Operation Type', type: 'select', required: true, options: OPERATION_TYPES.map((t) => ({ value: t.value, label: `${t.value} (${t.unit})` })) },
+    { name: 'quantity', label: 'Quantity (Ha for Tree Felling/Stacking/Direct Clearing/Zero Bonding, KM for Road, hrs for Trekking)', type: 'number', required: true, min: 0, step: '0.1' },
     { name: 'fuelUsed', label: 'Fuel Used (litres)', type: 'number', required: true, min: 0 },
     { name: 'status', label: 'Status', type: 'select', required: true, options: [
       { value: 'Completed', label: 'Completed' },
@@ -36,6 +39,7 @@ function fields() {
       { value: 'Halted', label: 'Halted' },
     ] },
     { name: 'notes', label: 'Notes', type: 'textarea' },
+    { name: 'attachments', label: 'KML File / Photos', type: 'attachments' },
   ];
 }
 
@@ -73,17 +77,24 @@ export function renderOperations(container) {
     if (searchQuery) {
       rows = rows.filter((r) => {
         const operatorName = employees.find((e) => e.id === r.operatorId)?.name || '';
-        const haystack = [r.siteName, r.equipment, operatorName, r.notes].join(' ').toLowerCase();
+        const haystack = [r.siteName, r.equipment, r.operationType, operatorName, r.notes].join(' ').toLowerCase();
         return haystack.includes(searchQuery);
       });
     }
 
-    const totalArea = rows.reduce((sum, r) => sum + r.areaCleared, 0);
+    const haRows = rows.filter((r) => HA_OPERATION_TYPES.includes(r.operationType));
+    const roadRows = rows.filter((r) => r.operationType === 'Road');
+    const trekkingRows = rows.filter((r) => r.operationType === 'Trekking');
+    const totalArea = haRows.reduce((sum, r) => sum + r.quantity, 0);
+    const totalRoad = roadRows.reduce((sum, r) => sum + r.quantity, 0);
+    const totalTrekking = trekkingRows.reduce((sum, r) => sum + r.quantity, 0);
     const totalFuel = rows.reduce((sum, r) => sum + r.fuelUsed, 0);
     const ongoing = rows.filter((r) => r.status === 'Ongoing').length;
 
     summaryGrid.innerHTML = '';
-    summaryGrid.appendChild(statCard({ label: 'Total Area Cleared', value: `${totalArea.toFixed(1)} ha` }));
+    summaryGrid.appendChild(statCard({ label: 'Total Area Cleared', value: `${totalArea.toFixed(1)} Ha` }));
+    summaryGrid.appendChild(statCard({ label: 'Total Road', value: `${totalRoad.toFixed(1)} KM` }));
+    summaryGrid.appendChild(statCard({ label: 'Total Trekking', value: `${totalTrekking.toFixed(1)} hrs` }));
     summaryGrid.appendChild(statCard({ label: 'Total Fuel Used', value: `${totalFuel.toLocaleString()} L` }));
     summaryGrid.appendChild(statCard({ label: 'Ongoing Sites', value: String(ongoing) }));
     summaryGrid.appendChild(statCard({ label: 'Reports Logged', value: String(rows.length) }));
@@ -96,9 +107,11 @@ export function renderOperations(container) {
         { key: 'equipment', label: 'Equipment' },
         { key: 'operator', label: 'Operator', render: (r) => employees.find((e) => e.id === r.operatorId)?.name || 'Unknown' },
         { key: 'hoursWorked', label: 'Hours', render: (r) => `${r.hoursWorked} h` },
-        { key: 'areaCleared', label: 'Area', render: (r) => `${r.areaCleared} ha` },
+        { key: 'operationType', label: 'Operation Type' },
+        { key: 'quantity', label: 'Quantity', render: (r) => `${r.quantity} ${unitForOperationType(r.operationType)}` },
         { key: 'fuelUsed', label: 'Fuel', render: (r) => `${r.fuelUsed} L` },
         { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
+        { key: 'attachments', label: 'Files', render: (r) => (r.attachments?.length ? `📎 ${r.attachments.length}` : '—') },
         {
           key: 'actions',
           label: '',

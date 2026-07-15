@@ -5,6 +5,19 @@ export const PROJECTS = [
   'FAYUS Project',
 ];
 
+export const OPERATION_TYPES = [
+  { value: 'Tree Felling', unit: 'Ha' },
+  { value: 'Stacking', unit: 'Ha' },
+  { value: 'Direct Clearing', unit: 'Ha' },
+  { value: 'Zero Bonding', unit: 'Ha' },
+  { value: 'Road', unit: 'KM' },
+  { value: 'Trekking', unit: 'hrs' },
+];
+
+export function unitForOperationType(type) {
+  return OPERATION_TYPES.find((t) => t.value === type)?.unit || '';
+}
+
 export const FUEL_STATIONS = [
   'Midejab Ltd',
   'SK Gold',

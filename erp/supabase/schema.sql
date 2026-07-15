@@ -233,10 +233,12 @@ create table operations (
   operator_id    text references employees(id) on delete set null,
   supervisor_id  text references employees(id) on delete set null,
   hours_worked   numeric,
-  area_cleared   numeric,
+  operation_type text check (operation_type in ('Tree Felling', 'Stacking', 'Direct Clearing', 'Zero Bonding', 'Road', 'Trekking')),
+  quantity       numeric, -- Ha for the four clearing types, KM for Road, hrs for Trekking
   fuel_used      numeric,
   status         text check (status in ('Completed', 'Ongoing', 'Halted')),
   notes          text,
+  attachments    jsonb not null default '[]'::jsonb,
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()
 );

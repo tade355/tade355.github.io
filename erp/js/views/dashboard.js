@@ -3,6 +3,9 @@ import { formatCurrency, invoiceTotal, monthKey, monthLabel } from '../utils.js'
 import { statCard, sectionHeader } from '../ui.js';
 import { renderBarChart, renderLineChart, CATEGORICAL_COLORS } from '../charts.js';
 import { el } from '../utils.js';
+import { OPERATION_TYPES } from '../constants.js';
+
+const HA_OPERATION_TYPES = OPERATION_TYPES.filter((t) => t.unit === 'Ha').map((t) => t.value);
 
 function lastNMonthKeys(n) {
   const keys = [];
@@ -29,7 +32,7 @@ export function renderDashboard(container) {
   const unpaid = invoices.filter((i) => i.status === 'Unpaid');
   const unpaidTotal = unpaid.reduce((sum, i) => sum + invoiceTotal(i), 0);
   const expensesThisMonth = expenses.filter((e) => monthKey(e.date) === currentMonth).reduce((sum, e) => sum + e.amount, 0);
-  const areaThisMonth = operations.filter((o) => monthKey(o.date) === currentMonth).reduce((sum, o) => sum + o.areaCleared, 0);
+  const areaThisMonth = operations.filter((o) => monthKey(o.date) === currentMonth && HA_OPERATION_TYPES.includes(o.operationType)).reduce((sum, o) => sum + o.quantity, 0);
   const activeSites = new Set(operations.filter((o) => o.status === 'Ongoing').map((o) => o.siteName)).size;
 
   container.appendChild(sectionHeader('Dashboard', 'Emagrims Ltd — company overview'));
@@ -90,13 +93,13 @@ export function renderDashboard(container) {
   const opsCol = el('div');
   chartsGrid.appendChild(opsCol);
   const areaBySite = {};
-  operations.forEach((o) => {
-    areaBySite[o.siteName] = (areaBySite[o.siteName] || 0) + o.areaCleared;
+  operations.filter((o) => HA_OPERATION_TYPES.includes(o.operationType)).forEach((o) => {
+    areaBySite[o.siteName] = (areaBySite[o.siteName] || 0) + o.quantity;
   });
   const siteBars = Object.entries(areaBySite).map(([label, value]) => ({ label, value }));
   renderBarChart(opsCol, {
     title: 'Land Cleared by Site',
-    subtitle: 'Hectares, all-time',
+    subtitle: 'Hectares (Tree Felling, Stacking, Direct Clearing, Zero Bonding), all-time',
     bars: siteBars,
     formatValue: (v) => `${v.toFixed(1)} ha`,
   });
