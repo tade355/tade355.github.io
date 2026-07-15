@@ -11,6 +11,7 @@ const CONFIG = {
   inventory: { table: 'inventory', prefix: 'INV' },
   customers: { table: 'customers', prefix: 'CUS' },
   suppliers: { table: 'suppliers', prefix: 'SUP' },
+  projects: { table: 'projects', prefix: 'PRJ' },
   invoices: { table: 'invoices', prefix: 'INV-2024', child: { key: 'items', table: 'invoice_items', fk: 'invoice_id' } },
   purchaseOrders: { table: 'purchase_orders', prefix: 'PO-2024', child: { key: 'items', table: 'purchase_order_items', fk: 'purchase_order_id' } },
   expenses: { table: 'expenses', prefix: 'EXP' },

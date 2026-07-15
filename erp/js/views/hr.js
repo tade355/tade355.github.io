@@ -1,34 +1,40 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete } from '../ui.js';
-import { PROJECTS, ACCESS_TIERS, ACCESS_TIER_LABELS } from '../constants.js';
+import { ACCESS_TIERS, ACCESS_TIER_LABELS } from '../constants.js';
 
-const FIELDS = [
-  { name: 'name', label: 'Full Name', required: true },
-  { name: 'role', label: 'Job Role', required: true },
-  { name: 'department', label: 'Department', type: 'select', required: true, options: [
-    { value: 'Operations', label: 'Operations' },
-    { value: 'Finance', label: 'Finance' },
-    { value: 'Human Resources', label: 'Human Resources' },
-    { value: 'Maintenance', label: 'Maintenance' },
-    { value: 'Administration', label: 'Administration' },
-  ] },
-  { name: 'phone', label: 'Phone' },
-  { name: 'email', label: 'Email', type: 'email' },
-  { name: 'salary', label: 'Monthly Salary (₦)', type: 'number', min: 0 },
-  { name: 'dateHired', label: 'Date Hired', type: 'date' },
-  { name: 'leaveEntitlement', label: 'Annual Leave Entitlement (days/year)', type: 'number', min: 0 },
-  { name: 'status', label: 'Status', type: 'select', required: true, options: [
-    { value: 'Active', label: 'Active' },
-    { value: 'Suspended', label: 'Suspended' },
-    { value: 'Disengaged', label: 'Disengaged' },
-  ] },
-  { name: 'accessTier', label: 'ERP Access Level', type: 'select', required: true, options: ACCESS_TIERS.map((t) => ({ value: t, label: ACCESS_TIER_LABELS[t] })) },
-  { name: 'assignedProject', label: 'Assigned Project (Supervisors only — restricts what they see)', type: 'select', options: [
-    { value: '', label: '— All projects —' },
-    ...PROJECTS.map((p) => ({ value: p, label: p })),
-  ] },
-];
+function projectOptions() {
+  return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
+}
+
+function fields() {
+  return [
+    { name: 'name', label: 'Full Name', required: true },
+    { name: 'role', label: 'Job Role', required: true },
+    { name: 'department', label: 'Department', type: 'select', required: true, options: [
+      { value: 'Operations', label: 'Operations' },
+      { value: 'Finance', label: 'Finance' },
+      { value: 'Human Resources', label: 'Human Resources' },
+      { value: 'Maintenance', label: 'Maintenance' },
+      { value: 'Administration', label: 'Administration' },
+    ] },
+    { name: 'phone', label: 'Phone' },
+    { name: 'email', label: 'Email', type: 'email' },
+    { name: 'salary', label: 'Monthly Salary (₦)', type: 'number', min: 0 },
+    { name: 'dateHired', label: 'Date Hired', type: 'date' },
+    { name: 'leaveEntitlement', label: 'Annual Leave Entitlement (days/year)', type: 'number', min: 0 },
+    { name: 'status', label: 'Status', type: 'select', required: true, options: [
+      { value: 'Active', label: 'Active' },
+      { value: 'Suspended', label: 'Suspended' },
+      { value: 'Disengaged', label: 'Disengaged' },
+    ] },
+    { name: 'accessTier', label: 'ERP Access Level', type: 'select', required: true, options: ACCESS_TIERS.map((t) => ({ value: t, label: ACCESS_TIER_LABELS[t] })) },
+    { name: 'assignedProject', label: 'Assigned Project (Supervisors only — restricts what they see)', type: 'select', options: [
+      { value: '', label: '— All projects —' },
+      ...projectOptions(),
+    ] },
+  ];
+}
 
 export function renderHR(container) {
   container.innerHTML = '';
@@ -76,7 +82,7 @@ export function renderHR(container) {
   function openForm(record) {
     openModal({
       title: record ? 'Edit Employee' : 'Add Employee',
-      fields: FIELDS,
+      fields: fields(),
       initial: record || { status: 'Active', accessTier: 'Staff', leaveEntitlement: 21 },
       submitLabel: record ? 'Save Changes' : 'Add Employee',
       onSubmit: async (data) => {

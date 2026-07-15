@@ -1,4 +1,5 @@
 import { renderDashboard } from './views/dashboard.js';
+import { renderProjects } from './views/projects.js';
 import { renderSales } from './views/sales.js';
 import { renderPurchasing } from './views/purchasing.js';
 import { renderHR } from './views/hr.js';
@@ -15,6 +16,7 @@ import { canAccess, getCurrentTier, defaultRouteForTier } from './session.js';
 
 export const ROUTES = [
   { path: 'dashboard', label: 'Dashboard', icon: '🏠', render: renderDashboard, tiers: ['Admin', 'Accounts'] },
+  { path: 'projects', label: 'Projects', icon: '🗂️', render: renderProjects, tiers: ['Admin', 'Accounts'] },
   { path: 'approvals', label: 'Approvals', icon: '✅', render: renderApprovals, tiers: ['Admin', 'Supervisor'] },
   { path: 'operations', label: 'Daily Operations', icon: '🚜', render: renderOperations, tiers: ['Admin', 'Supervisor'] },
   { path: 'fleet', label: 'Fleet Management', icon: '🔧', render: renderFleet, tiers: ['Admin', 'Supervisor'] },

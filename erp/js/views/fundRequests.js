@@ -1,11 +1,14 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
-import { PROJECTS } from '../constants.js';
 import { printFundRequest } from '../print.js';
 import { filterFundRequests, getCurrentUserId, getCurrentTier } from '../session.js';
 import { createAttachmentPicker } from '../attachments.js';
 import { notifyNewFundRequest } from '../notifications.js';
+
+function projectOptions() {
+  return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
+}
 
 function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
@@ -63,7 +66,7 @@ function openRequestForm(record, onSaved) {
       const dateField = textField('date', 'Date', 'date', record?.date || today, true);
       const projectField = selectField('project', 'Project', [
         { value: '', label: '— Not specified —' },
-        ...PROJECTS.map((p) => ({ value: p, label: p })),
+        ...projectOptions(),
       ], record?.project);
       const submittedByField = selectField('submittedBy', 'Submitted By', employeeOptions(), record?.submittedBy || getCurrentUserId());
       const descriptionInput = el('textarea', { name: 'description', rows: 2 });

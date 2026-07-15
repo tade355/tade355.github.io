@@ -148,6 +148,28 @@ create trigger trg_suppliers_updated_at before update on suppliers
   for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------
+-- projects — a managed entity (not a hardcoded list) since new ones get
+-- added over time, each with its own status, contract state, progress,
+-- and rate.
+-- ---------------------------------------------------------------------
+
+create table projects (
+  id               text primary key,
+  name             text not null unique,
+  status           text not null default 'Active' check (status in ('Active', 'On Hold', 'Completed')),
+  contract_status  text check (contract_status in ('Draft', 'Pending Signature', 'Signed', 'Expired')),
+  percent_complete numeric check (percent_complete >= 0 and percent_complete <= 100),
+  rate             numeric,
+  rate_unit        text,
+  scope            text,
+  notes            text,
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now()
+);
+create trigger trg_projects_updated_at before update on projects
+  for each row execute function set_updated_at();
+
+-- ---------------------------------------------------------------------
 -- invoices (+ line items)
 -- ---------------------------------------------------------------------
 
@@ -432,7 +454,7 @@ declare
 begin
   for t in
     select unnest(array[
-      'employees', 'inventory', 'customers', 'suppliers',
+      'employees', 'inventory', 'customers', 'suppliers', 'projects',
       'invoices', 'invoice_items', 'purchase_orders', 'purchase_order_items',
       'expenses', 'operations', 'maintenance_logs',
       'diesel_receipts', 'diesel_stock_counts',

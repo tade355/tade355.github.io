@@ -2,9 +2,13 @@ import { store } from '../store.js';
 import { formatCurrency, el, dateInRange, invoiceTotal } from '../utils.js';
 import { sectionHeader, statCard, renderTable } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
-import { PROJECTS, OPERATION_TYPES } from '../constants.js';
+import { OPERATION_TYPES } from '../constants.js';
 
 const HA_OPERATION_TYPES = OPERATION_TYPES.filter((t) => t.unit === 'Ha').map((t) => t.value);
+
+function projectNames() {
+  return store.get('projects').map((p) => p.name);
+}
 
 function computeProjectStats(project, from, to) {
   const inventory = store.get('inventory');
@@ -68,7 +72,7 @@ export function renderProfitability(container) {
   const filterBar = el('div', { class: 'filter-bar' });
   const projectSelect = el('select', { name: 'project' }, [
     el('option', { value: 'all' }, 'All Projects'),
-    ...PROJECTS.map((p) => el('option', { value: p }, p)),
+    ...projectNames().map((p) => el('option', { value: p }, p)),
   ]);
   const fromInput = el('input', { type: 'date', name: 'from' });
   const toInput = el('input', { type: 'date', name: 'to' });
@@ -99,7 +103,7 @@ export function renderProfitability(container) {
 }
 
 function renderAllProjects(body, from, to) {
-  const stats = PROJECTS.map((p) => computeProjectStats(p, from, to));
+  const stats = projectNames().map((p) => computeProjectStats(p, from, to));
 
   const chartContainer = el('div', { class: 'charts-grid charts-grid-1' });
   body.appendChild(chartContainer);

@@ -1,11 +1,15 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el, monthKey, statusPillClass } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
-import { PROJECTS, FUEL_STATIONS } from '../constants.js';
+import { FUEL_STATIONS } from '../constants.js';
 import { printFuelingVoucher } from '../print.js';
 import { renderInventory } from './inventory.js';
 
 const FLEET_CATEGORIES = ['Heavy Equipment', 'Vehicles'];
+
+function projectOptions() {
+  return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
+}
 
 function fleetItems() {
   return store.get('inventory').filter((i) => FLEET_CATEGORIES.includes(i.category));
@@ -55,33 +59,35 @@ function serviceStatusFor(item) {
   return { hours, interval, ratio, status };
 }
 
-const FLEET_FIELDS = [
-  { name: 'name', label: 'Asset Name', required: true },
-  { name: 'category', label: 'Type', type: 'select', required: true, options: [
-    { value: 'Heavy Equipment', label: 'Heavy Equipment (Bulldozer, Excavator, etc.)' },
-    { value: 'Vehicles', label: 'Vehicle' },
-  ] },
-  { name: 'sku', label: 'Asset Tag / SKU', required: true },
-  { name: 'ownership', label: 'Ownership', type: 'select', required: true, options: [
-    { value: 'Company', label: 'Company Owned' },
-    { value: '3rd Party', label: '3rd Party Managed' },
-  ] },
-  { name: 'ownerName', label: 'Owner / Contractor Name (if 3rd party)' },
-  { name: 'fleetStatus', label: 'Status', type: 'select', required: true, options: [
-    { value: 'Active', label: 'Active' },
-    { value: 'Under Maintenance', label: 'Under Maintenance' },
-    { value: 'Idle', label: 'Idle' },
-    { value: 'Down', label: 'Down' },
-  ] },
-  { name: 'hourlyRate', label: 'Hourly Rate (₦) — operating cost or rental rate', type: 'number', required: true, min: 0 },
-  { name: 'currentProject', label: 'Current Project', type: 'select', options: [
-    { value: '', label: '— Unassigned —' },
-    ...PROJECTS.map((p) => ({ value: p, label: p })),
-  ] },
-  { name: 'location', label: 'Location', required: true },
-  { name: 'unitCost', label: 'Acquisition Value (₦)', type: 'number', min: 0 },
-  { name: 'serviceIntervalHours', label: 'Service Interval (engine hours)', type: 'number', min: 0 },
-];
+function fleetFields() {
+  return [
+    { name: 'name', label: 'Asset Name', required: true },
+    { name: 'category', label: 'Type', type: 'select', required: true, options: [
+      { value: 'Heavy Equipment', label: 'Heavy Equipment (Bulldozer, Excavator, etc.)' },
+      { value: 'Vehicles', label: 'Vehicle' },
+    ] },
+    { name: 'sku', label: 'Asset Tag / SKU', required: true },
+    { name: 'ownership', label: 'Ownership', type: 'select', required: true, options: [
+      { value: 'Company', label: 'Company Owned' },
+      { value: '3rd Party', label: '3rd Party Managed' },
+    ] },
+    { name: 'ownerName', label: 'Owner / Contractor Name (if 3rd party)' },
+    { name: 'fleetStatus', label: 'Status', type: 'select', required: true, options: [
+      { value: 'Active', label: 'Active' },
+      { value: 'Under Maintenance', label: 'Under Maintenance' },
+      { value: 'Idle', label: 'Idle' },
+      { value: 'Down', label: 'Down' },
+    ] },
+    { name: 'hourlyRate', label: 'Hourly Rate (₦) — operating cost or rental rate', type: 'number', required: true, min: 0 },
+    { name: 'currentProject', label: 'Current Project', type: 'select', options: [
+      { value: '', label: '— Unassigned —' },
+      ...projectOptions(),
+    ] },
+    { name: 'location', label: 'Location', required: true },
+    { name: 'unitCost', label: 'Acquisition Value (₦)', type: 'number', min: 0 },
+    { name: 'serviceIntervalHours', label: 'Service Interval (engine hours)', type: 'number', min: 0 },
+  ];
+}
 
 function maintenanceFields() {
   return [
@@ -130,7 +136,7 @@ function voucherFields() {
     { name: 'station', label: 'Fuel Station', type: 'select', required: true, options: FUEL_STATIONS.map((s) => ({ value: s, label: s })) },
     { name: 'project', label: 'Project', type: 'select', options: [
       { value: '', label: '— Not specified —' },
-      ...PROJECTS.map((p) => ({ value: p, label: p })),
+      ...projectOptions(),
     ] },
     { name: 'equipment', label: 'Dozer / Equipment', type: 'select', required: true, options: fleetOptions() },
     { name: 'litresRequested', label: 'Litres Requested', type: 'number', required: true, min: 0 },
@@ -272,7 +278,7 @@ export function renderFleet(container) {
     function openAssetForm(record) {
       openModal({
         title: record ? 'Edit Fleet Asset' : 'Add Fleet Asset',
-        fields: FLEET_FIELDS,
+        fields: fleetFields(),
         initial: record || { category: 'Heavy Equipment', ownership: 'Company', fleetStatus: 'Active', serviceIntervalHours: 250 },
         submitLabel: record ? 'Save Changes' : 'Add Asset',
         onSubmit: async (data) => {

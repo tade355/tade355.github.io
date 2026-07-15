@@ -1,7 +1,6 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, invoiceTotal, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete } from '../ui.js';
-import { PROJECTS } from '../constants.js';
 import { printInvoice } from '../print.js';
 
 const CUSTOMER_FIELDS = [
@@ -16,12 +15,16 @@ function customerOptions() {
   return store.get('customers').map((c) => ({ value: c.id, label: c.name }));
 }
 
+function projectOptions() {
+  return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
+}
+
 function invoiceFields() {
   return [
     { name: 'customerId', label: 'Customer', type: 'select', required: true, options: customerOptions() },
     { name: 'project', label: 'Project', type: 'select', options: [
       { value: '', label: '— Not linked to a project —' },
-      ...PROJECTS.map((p) => ({ value: p, label: p })),
+      ...projectOptions(),
     ] },
     { name: 'date', label: 'Invoice Date', type: 'date', required: true },
     { name: 'dueDate', label: 'Due Date', type: 'date', required: true },

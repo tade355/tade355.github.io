@@ -2,27 +2,32 @@ import { store } from '../store.js';
 import { formatCurrency, formatDate, invoiceTotal, el } from '../utils.js';
 import { renderTable, actionButtons, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
-import { PROJECTS } from '../constants.js';
 import { renderProfitability } from './profitability.js';
 
-const FIELDS = [
-  { name: 'date', label: 'Date', type: 'date', required: true },
-  { name: 'category', label: 'Category', type: 'select', required: true, options: [
-    { value: 'Fuel', label: 'Fuel' },
-    { value: 'Maintenance', label: 'Maintenance' },
-    { value: 'Payroll', label: 'Payroll' },
-    { value: 'Logistics', label: 'Logistics' },
-    { value: 'Administration', label: 'Administration' },
-    { value: 'Other', label: 'Other' },
-  ] },
-  { name: 'description', label: 'Description', required: true },
-  { name: 'amount', label: 'Amount (₦)', type: 'number', required: true, min: 0 },
-  { name: 'paidBy', label: 'Paid By', required: true },
-  { name: 'project', label: 'Project (for profitability tracking)', type: 'select', options: [
-    { value: '', label: '— Not linked to a project —' },
-    ...PROJECTS.map((p) => ({ value: p, label: p })),
-  ] },
-];
+function projectOptions() {
+  return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
+}
+
+function fields() {
+  return [
+    { name: 'date', label: 'Date', type: 'date', required: true },
+    { name: 'category', label: 'Category', type: 'select', required: true, options: [
+      { value: 'Fuel', label: 'Fuel' },
+      { value: 'Maintenance', label: 'Maintenance' },
+      { value: 'Payroll', label: 'Payroll' },
+      { value: 'Logistics', label: 'Logistics' },
+      { value: 'Administration', label: 'Administration' },
+      { value: 'Other', label: 'Other' },
+    ] },
+    { name: 'description', label: 'Description', required: true },
+    { name: 'amount', label: 'Amount (₦)', type: 'number', required: true, min: 0 },
+    { name: 'paidBy', label: 'Paid By', required: true },
+    { name: 'project', label: 'Project (for profitability tracking)', type: 'select', options: [
+      { value: '', label: '— Not linked to a project —' },
+      ...projectOptions(),
+    ] },
+  ];
+}
 
 export function renderAccounting(container) {
   container.innerHTML = '';
@@ -135,7 +140,7 @@ export function renderAccounting(container) {
     function openForm(record) {
       openModal({
         title: record ? 'Edit Expense' : 'Add Expense',
-        fields: FIELDS,
+        fields: fields(),
         initial: record || { date: new Date().toISOString().slice(0, 10) },
         submitLabel: record ? 'Save Changes' : 'Add Expense',
         onSubmit: async (data) => {

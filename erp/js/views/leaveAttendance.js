@@ -1,9 +1,13 @@
 import { store } from '../store.js';
 import { formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
-import { PROJECTS, LEAVE_TYPES } from '../constants.js';
+import { LEAVE_TYPES } from '../constants.js';
 import { getCurrentUserId, filterLeaveRequests, getCurrentTier, getAssignedProject } from '../session.js';
 import { notifyNewLeaveRequest } from '../notifications.js';
+
+function projectOptions() {
+  return store.get('projects').map((p) => p.name);
+}
 
 function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
@@ -224,7 +228,7 @@ export function renderLeaveAttendance(container) {
     }));
     const clockProject = el('select', { name: 'clockProject' }, [
       el('option', { value: '' }, '— Not site-specific —'),
-      ...PROJECTS.map((p) => el('option', { value: p }, p)),
+      ...projectOptions().map((p) => el('option', { value: p }, p)),
     ]);
     const statusNote = el('span', { class: 'clock-status' });
 

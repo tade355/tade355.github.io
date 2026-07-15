@@ -1,28 +1,32 @@
 import { store } from '../store.js';
 import { formatCurrency, el } from '../utils.js';
 import { renderTable, actionButtons, sectionHeader, openModal, confirmDelete } from '../ui.js';
-import { PROJECTS } from '../constants.js';
+function projectOptions() {
+  return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
+}
 
-const FIELDS = [
-  { name: 'name', label: 'Item Name', required: true },
-  { name: 'category', label: 'Category', type: 'select', required: true, options: [
-    { value: 'Heavy Equipment', label: 'Heavy Equipment' },
-    { value: 'Vehicles', label: 'Vehicles' },
-    { value: 'Tools', label: 'Tools' },
-    { value: 'Consumables', label: 'Consumables' },
-    { value: 'Safety Gear', label: 'Safety Gear' },
-  ] },
-  { name: 'sku', label: 'SKU', required: true },
-  { name: 'quantity', label: 'Quantity', type: 'number', required: true, min: 0 },
-  { name: 'unit', label: 'Unit (e.g. unit, litres, drums)', required: true },
-  { name: 'unitCost', label: 'Unit Cost (₦)', type: 'number', required: true, min: 0 },
-  { name: 'reorderLevel', label: 'Reorder Level', type: 'number', required: true, min: 0 },
-  { name: 'location', label: 'Location', required: true },
-  { name: 'currentProject', label: 'Current Project (for deployed equipment)', type: 'select', options: [
-    { value: '', label: '— Unassigned —' },
-    ...PROJECTS.map((p) => ({ value: p, label: p })),
-  ] },
-];
+function fields() {
+  return [
+    { name: 'name', label: 'Item Name', required: true },
+    { name: 'category', label: 'Category', type: 'select', required: true, options: [
+      { value: 'Heavy Equipment', label: 'Heavy Equipment' },
+      { value: 'Vehicles', label: 'Vehicles' },
+      { value: 'Tools', label: 'Tools' },
+      { value: 'Consumables', label: 'Consumables' },
+      { value: 'Safety Gear', label: 'Safety Gear' },
+    ] },
+    { name: 'sku', label: 'SKU', required: true },
+    { name: 'quantity', label: 'Quantity', type: 'number', required: true, min: 0 },
+    { name: 'unit', label: 'Unit (e.g. unit, litres, drums)', required: true },
+    { name: 'unitCost', label: 'Unit Cost (₦)', type: 'number', required: true, min: 0 },
+    { name: 'reorderLevel', label: 'Reorder Level', type: 'number', required: true, min: 0 },
+    { name: 'location', label: 'Location', required: true },
+    { name: 'currentProject', label: 'Current Project (for deployed equipment)', type: 'select', options: [
+      { value: '', label: '— Unassigned —' },
+      ...projectOptions(),
+    ] },
+  ];
+}
 
 export function renderInventory(container) {
   container.innerHTML = '';

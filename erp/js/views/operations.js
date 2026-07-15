@@ -1,10 +1,14 @@
 import { store } from '../store.js';
 import { formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
-import { PROJECTS, OPERATION_TYPES, unitForOperationType } from '../constants.js';
+import { OPERATION_TYPES, unitForOperationType } from '../constants.js';
 import { filterByProject, getAssignedProject } from '../session.js';
 
 const HA_OPERATION_TYPES = OPERATION_TYPES.filter((t) => t.unit === 'Ha').map((t) => t.value);
+
+function projectOptions() {
+  return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
+}
 
 function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
@@ -24,7 +28,7 @@ function equipmentOptions() {
 function fields() {
   return [
     { name: 'date', label: 'Date', type: 'date', required: true },
-    { name: 'siteName', label: 'Site / Project Name', type: 'select', required: true, options: PROJECTS.map((p) => ({ value: p, label: p })) },
+    { name: 'siteName', label: 'Site / Project Name', type: 'select', required: true, options: projectOptions() },
     { name: 'customerId', label: 'Client', type: 'select', options: customerOptions() },
     { name: 'equipment', label: 'Equipment Used', type: 'select', required: true, options: equipmentOptions() },
     { name: 'operatorId', label: 'Operator', type: 'select', required: true, options: employeeOptions() },
