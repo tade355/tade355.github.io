@@ -53,10 +53,34 @@ const contactForm = document.getElementById('contactForm');
 const formNote = document.getElementById('formNote');
 
 if (contactForm) {
-  contactForm.addEventListener('submit', (event) => {
+  contactForm.addEventListener('submit', async (event) => {
     event.preventDefault();
-    formNote.textContent = 'Thanks for reaching out — we will get back to you within one business day.';
-    contactForm.reset();
+
+    const submitButton = contactForm.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    formNote.textContent = 'Sending…';
+    formNote.classList.remove('form-note-error');
+
+    try {
+      const response = await fetch(contactForm.action, {
+        method: 'POST',
+        body: new FormData(contactForm),
+        headers: { Accept: 'application/json' },
+      });
+
+      if (response.ok) {
+        formNote.textContent = 'Thanks for reaching out — we will get back to you within one business day.';
+        contactForm.reset();
+      } else {
+        formNote.textContent = 'Something went wrong sending your message. Please email us directly at fortuityglee@gmail.com.';
+        formNote.classList.add('form-note-error');
+      }
+    } catch (error) {
+      formNote.textContent = 'Something went wrong sending your message. Please email us directly at fortuityglee@gmail.com.';
+      formNote.classList.add('form-note-error');
+    } finally {
+      submitButton.disabled = false;
+    }
   });
 }
 

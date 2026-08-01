@@ -1061,6 +1061,15 @@ a {
   min-height: 1.2em;
 }
 
+.form-note-error {
+  color: #c0362c;
+}
+
+.contact-form button[type="submit"]:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 /* Footer */
 .footer {
   position: relative;
