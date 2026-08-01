@@ -21,6 +21,7 @@ function fields() {
     { name: 'phone', label: 'Phone' },
     { name: 'email', label: 'Email', type: 'email' },
     { name: 'salary', label: 'Monthly Salary (₦)', type: 'number', min: 0 },
+    { name: 'dayRate', label: 'Day Rate (₦) — for dozer operators paid per day worked instead of monthly salary', type: 'number', min: 0 },
     { name: 'dateHired', label: 'Date Hired', type: 'date' },
     { name: 'leaveEntitlement', label: 'Annual Leave Entitlement (days/year)', type: 'number', min: 0 },
     { name: 'status', label: 'Status', type: 'select', required: true, options: [
@@ -54,6 +55,7 @@ export function renderHR(container) {
         { key: 'department', label: 'Department' },
         { key: 'phone', label: 'Phone', render: (r) => r.phone || '—' },
         { key: 'salary', label: 'Salary', render: (r) => (r.salary ? formatCurrency(r.salary) : '—') },
+        { key: 'dayRate', label: 'Day Rate', render: (r) => (r.dayRate ? formatCurrency(r.dayRate) : '—') },
         { key: 'dateHired', label: 'Hired', render: (r) => formatDate(r.dateHired) },
         { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
         { key: 'accessTier', label: 'ERP Access', render: (r) => r.accessTier || 'Staff' },

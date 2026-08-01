@@ -10,6 +10,11 @@ function projectOptions() {
   return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
 }
 
+function equipmentOptions() {
+  const items = store.get('inventory').filter((i) => ['Heavy Equipment', 'Tools', 'Vehicles'].includes(i.category));
+  return [{ value: '', label: '— Not linked to equipment —' }, ...items.map((i) => ({ value: i.name, label: i.name }))];
+}
+
 function fields() {
   return [
     { name: 'date', label: 'Date', type: 'date', required: true },
@@ -21,6 +26,7 @@ function fields() {
       { value: '', label: '— Not linked to a project —' },
       ...projectOptions(),
     ] },
+    { name: 'equipment', label: 'Equipment (optional — for per-dozer cost tracking)', type: 'select', options: equipmentOptions() },
   ];
 }
 
@@ -110,7 +116,7 @@ export function renderAccounting(container) {
 
       let rows = expenses.slice().sort((a, b) => (a.date < b.date ? 1 : -1));
       if (searchQuery) {
-        rows = rows.filter((r) => [r.description, r.category, r.paidBy, r.project].join(' ').toLowerCase().includes(searchQuery));
+        rows = rows.filter((r) => [r.description, r.category, r.paidBy, r.project, r.equipment].join(' ').toLowerCase().includes(searchQuery));
       }
       renderTable(tableContainer, {
         columns: [
@@ -120,6 +126,7 @@ export function renderAccounting(container) {
           { key: 'amount', label: 'Amount', render: (r) => formatCurrency(r.amount) },
           { key: 'paidBy', label: 'Paid By' },
           { key: 'project', label: 'Project', render: (r) => r.project || '—' },
+          { key: 'equipment', label: 'Equipment', render: (r) => r.equipment || '—' },
           {
             key: 'actions',
             label: '',

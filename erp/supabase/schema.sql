@@ -85,6 +85,7 @@ create table employees (
                       check (access_tier in ('Admin', 'Accounts', 'Supervisor', 'Staff')),
   assigned_project  text,
   leave_entitlement integer not null default 21,
+  day_rate          numeric, -- for dozer operators paid per day worked instead of a monthly salary
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
 );
@@ -106,11 +107,13 @@ create table inventory (
   reorder_level          numeric,
   location               text,
   current_project        text,
-  ownership              text check (ownership in ('Company', '3rd Party')),
+  ownership              text check (ownership in ('Company', 'Partnership', 'Rented')),
   owner_name             text,
   fleet_status           text check (fleet_status in ('Active', 'Idle', 'Under Maintenance', 'Down')),
   hourly_rate            numeric,
   service_interval_hours numeric,
+  rental_rate_per_day    numeric, -- Partnership/Rented: flat day rate paid to the owner
+  management_fee_per_day numeric, -- Partnership only: flat amount the company retains per day
   created_at             timestamptz not null default now(),
   updated_at             timestamptz not null default now()
 );
@@ -235,6 +238,7 @@ create table expenses (
   amount      numeric not null default 0,
   paid_by     text,
   project     text,
+  equipment   text, -- optional: attributes an expense to a specific fleet asset
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
@@ -255,12 +259,14 @@ create table operations (
   operator_id    text references employees(id) on delete set null,
   supervisor_id  text references employees(id) on delete set null,
   hours_worked   numeric,
-  operation_type text check (operation_type in ('Tree Felling', 'Stacking', 'Direct Clearing', 'Zero Bonding', 'Road', 'Trekking')),
-  quantity       numeric, -- Ha for the four clearing types, KM for Road, hrs for Trekking
+  operation_type text check (operation_type in ('Tree Felling', 'Stacking', 'Direct Clearing', 'Phase 1', 'Phase 2', 'Zero Bonding', 'Corrections', 'Road', 'Trekking')),
+  quantity       numeric, -- Ha for the clearing types, KM for Road, hrs for Trekking
   fuel_used      numeric,
   status         text check (status in ('Completed', 'Ongoing', 'Halted')),
   notes          text,
   attachments    jsonb not null default '[]'::jsonb,
+  work_type      text check (work_type in ('Office', 'Business')), -- Partnership/Rented dozers only; null for Company-owned
+  business_amount numeric, -- operator's extra earning for a Business-type day
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()
 );
@@ -460,6 +466,66 @@ create table payroll_lines (
 create index idx_payroll_lines_run on payroll_lines(payroll_run_id);
 
 -- ---------------------------------------------------------------------
+-- Dozer operator day-rate payroll — separate from payroll_runs/lines
+-- (salary-based): runs cover an arbitrary date range, and lines compute
+-- net pay from days worked + overtime + business earnings.
+-- ---------------------------------------------------------------------
+
+create table dozer_payroll_runs (
+  id           text primary key,
+  period_start date not null,
+  period_end   date not null,
+  status       text not null default 'Draft' check (status in ('Draft', 'Approved', 'Paid')),
+  expense_id   text references expenses(id) on delete set null,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+create trigger trg_dozer_payroll_runs_updated_at before update on dozer_payroll_runs
+  for each row execute function set_updated_at();
+
+create table dozer_payroll_lines (
+  id                   uuid primary key default gen_random_uuid(),
+  dozer_payroll_run_id text not null references dozer_payroll_runs(id) on delete cascade,
+  employee_id          text not null references employees(id) on delete cascade,
+  equipment            text,
+  days_worked          numeric not null default 0,
+  day_rate             numeric not null default 0,
+  overtime_hours       numeric not null default 0,
+  overtime_rate        numeric not null default 10000,
+  business_earnings    numeric not null default 0,
+  deductions           numeric not null default 0,
+  amount_paid          numeric not null default 0,
+  sort_order           integer not null default 0
+);
+create index idx_dozer_payroll_lines_run on dozer_payroll_lines(dozer_payroll_run_id);
+
+-- ---------------------------------------------------------------------
+-- Partnership dozer owner settlements — the formal, owner-shareable record
+-- of days worked, rental earned, management fee retained, repairs, and
+-- amount paid. Rates are snapshotted at settlement time (like
+-- payroll_lines.base_salary snapshots employees.salary). Business-day
+-- earnings never appear here — only Office days feed days_worked.
+-- ---------------------------------------------------------------------
+
+create table dozer_owner_settlements (
+  id                     text primary key,
+  equipment              text not null,
+  period_start           date not null,
+  period_end             date not null,
+  days_worked            numeric not null default 0,
+  rental_rate_per_day    numeric not null default 0,
+  management_fee_per_day numeric not null default 0,
+  repairs_cost           numeric not null default 0,
+  amount_paid_to_owner   numeric not null default 0,
+  notes                  text,
+  created_at             timestamptz not null default now(),
+  updated_at             timestamptz not null default now()
+);
+create index idx_dozer_owner_settlements_equipment on dozer_owner_settlements(equipment);
+create trigger trg_dozer_owner_settlements_updated_at before update on dozer_owner_settlements
+  for each row execute function set_updated_at();
+
+-- ---------------------------------------------------------------------
 -- Row Level Security
 -- ---------------------------------------------------------------------
 -- The app has no real login system yet (the "user gate" is just a
@@ -483,7 +549,8 @@ begin
       'diesel_receipts', 'diesel_stock_counts',
       'leave_requests', 'attendance_logs', 'fueling_vouchers',
       'fund_requests', 'fund_request_items', 'payroll_runs', 'payroll_lines',
-      'financial_entries'
+      'financial_entries', 'dozer_payroll_runs', 'dozer_payroll_lines',
+      'dozer_owner_settlements'
     ])
   loop
     execute format('alter table %I enable row level security;', t);

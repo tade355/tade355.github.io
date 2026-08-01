@@ -57,8 +57,22 @@ export const EXPENSE_CATEGORIES = [
   'Payroll',
   'Logistics',
   'Administration',
+  'Equipment Rental',
+  'Mobilization & Demobilization',
   'Other',
 ];
+
+// Fleet ownership categories — see Fleet Management and Dozer Economics.
+// Company: company owns + maintains it, pays operators per day.
+// Partnership: a 2nd-party owner; company pays a day-rate rental, retains
+// a flat management fee, and still pays the operators directly.
+// Rented: a 3rd-party owner who pays their own operators; company just
+// pays a day rate.
+export const OWNERSHIP_CATEGORIES = ['Company', 'Partnership', 'Rented'];
+
+// Default overtime rate for day-rate dozer operators (₦/hr after the first
+// 8 hours in a day) — editable per payroll line for exceptions.
+export const DOZER_OVERTIME_RATE_DEFAULT = 10000;
 
 export const INCOME_CATEGORIES = [
   'Invoicing / Sales',

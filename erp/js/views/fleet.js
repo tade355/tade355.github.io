@@ -1,9 +1,15 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el, monthKey, statusPillClass } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
-import { FUEL_STATIONS } from '../constants.js';
+import { FUEL_STATIONS, OWNERSHIP_CATEGORIES } from '../constants.js';
 import { printFuelingVoucher } from '../print.js';
 import { renderInventory } from './inventory.js';
+
+const OWNERSHIP_LABELS = {
+  Company: 'Company Owned',
+  Partnership: 'Partnership (2nd-party, shared cost)',
+  Rented: 'Rented (3rd-party, fully external)',
+};
 
 const FLEET_CATEGORIES = ['Heavy Equipment', 'Vehicles'];
 
@@ -33,6 +39,21 @@ function totalHoursFor(name) {
 
 function totalFuelFor(name) {
   return store.get('operations').filter((o) => o.equipment === name).reduce((sum, o) => sum + o.fuelUsed, 0);
+}
+
+// Lightweight utilization proxy for Company-owned dozers: distinct days
+// worked in the last 30 days ÷ 30. Partnership/Rented availability is
+// tracked as part of their owner settlement instead (see Dozer Economics).
+function utilization30dFor(name) {
+  const today = new Date();
+  const from = new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const to = today.toISOString().slice(0, 10);
+  const days = new Set(
+    store.get('operations')
+      .filter((o) => o.equipment === name && o.date >= from && o.date <= to)
+      .map((o) => o.date),
+  );
+  return (days.size / 30) * 100;
 }
 
 function lastMaintenanceFor(name) {
@@ -66,19 +87,18 @@ function fleetFields() {
       { value: 'Heavy Equipment', label: 'Heavy Equipment (Bulldozer, Excavator, etc.)' },
       { value: 'Vehicles', label: 'Vehicle' },
     ] },
-    { name: 'sku', label: 'Asset Tag / SKU', required: true },
-    { name: 'ownership', label: 'Ownership', type: 'select', required: true, options: [
-      { value: 'Company', label: 'Company Owned' },
-      { value: '3rd Party', label: '3rd Party Managed' },
-    ] },
-    { name: 'ownerName', label: 'Owner / Contractor Name (if 3rd party)' },
+    { name: 'sku', label: 'Asset Tag / SKU / Dozer Code', required: true },
+    { name: 'ownership', label: 'Ownership', type: 'select', required: true, options: OWNERSHIP_CATEGORIES.map((o) => ({ value: o, label: OWNERSHIP_LABELS[o] })) },
+    { name: 'ownerName', label: 'Owner / Contractor Name (Partnership/Rented)' },
     { name: 'fleetStatus', label: 'Status', type: 'select', required: true, options: [
       { value: 'Active', label: 'Active' },
       { value: 'Under Maintenance', label: 'Under Maintenance' },
       { value: 'Idle', label: 'Idle' },
       { value: 'Down', label: 'Down' },
     ] },
-    { name: 'hourlyRate', label: 'Hourly Rate (₦) — operating cost or rental rate', type: 'number', required: true, min: 0 },
+    { name: 'hourlyRate', label: 'Hourly Rate (₦) — internal operating cost/value used for project profitability', type: 'number', required: true, min: 0 },
+    { name: 'rentalRatePerDay', label: 'Rental Rate/Day (₦) — Partnership or Rented dozers', type: 'number', min: 0 },
+    { name: 'managementFeePerDay', label: 'Management Fee/Day (₦) — Partnership dozers only, retained from the rental rate', type: 'number', min: 0 },
     { name: 'currentProject', label: 'Current Project', type: 'select', options: [
       { value: '', label: '— Unassigned —' },
       ...projectOptions(),
@@ -216,8 +236,9 @@ export function renderFleet(container) {
 
     function refresh() {
       const rows = fleetItems();
-      const companyCount = rows.filter((r) => r.ownership !== '3rd Party').length;
-      const thirdPartyCount = rows.filter((r) => r.ownership === '3rd Party').length;
+      const companyCount = rows.filter((r) => r.ownership === 'Company' || !r.ownership).length;
+      const partnershipCount = rows.filter((r) => r.ownership === 'Partnership').length;
+      const rentedCount = rows.filter((r) => r.ownership === 'Rented').length;
       const downCount = rows.filter((r) => r.fleetStatus === 'Down' || r.fleetStatus === 'Under Maintenance').length;
       const dueForServiceCount = rows.filter((r) => serviceStatusFor(r).status !== 'OK').length;
 
@@ -225,7 +246,8 @@ export function renderFleet(container) {
       const grid = el('div', { class: 'stats-grid' }, [
         statCard({ label: 'Fleet Size', value: String(rows.length) }),
         statCard({ label: 'Company Owned', value: String(companyCount) }),
-        statCard({ label: '3rd Party Managed', value: String(thirdPartyCount) }),
+        statCard({ label: 'Partnership', value: String(partnershipCount) }),
+        statCard({ label: 'Rented', value: String(rentedCount) }),
         statCard({ label: 'Down / Under Maintenance', value: String(downCount), tone: downCount ? 'warning' : 'good' }),
         statCard({ label: 'Due for Service', value: String(dueForServiceCount), tone: dueForServiceCount ? 'warning' : 'good' }),
       ]);
@@ -235,10 +257,11 @@ export function renderFleet(container) {
         columns: [
           { key: 'name', label: 'Asset' },
           { key: 'ownership', label: 'Ownership', render: (r) => statusPill(r.ownership || 'Company') },
-          { key: 'ownerName', label: 'Owner', render: (r) => (r.ownership === '3rd Party' ? (r.ownerName || '—') : '—') },
+          { key: 'ownerName', label: 'Owner', render: (r) => (r.ownership && r.ownership !== 'Company' ? (r.ownerName || '—') : '—') },
           { key: 'fleetStatus', label: 'Status', render: (r) => statusPill(r.fleetStatus || 'Active') },
           { key: 'currentProject', label: 'Current Project', render: (r) => r.currentProject || '—' },
           { key: 'hourlyRate', label: 'Rate/hr', render: (r) => formatCurrency(r.hourlyRate) },
+          { key: 'utilization', label: 'Utilization (30d)', render: (r) => ((r.ownership === 'Company' || !r.ownership) ? `${utilization30dFor(r.name).toFixed(0)}%` : '—') },
           { key: 'totalHours', label: 'Total Hours', render: (r) => `${totalHoursFor(r.name)} h` },
           { key: 'totalFuel', label: 'Total Fuel', render: (r) => `${totalFuelFor(r.name)} L` },
           { key: 'lastMaintenance', label: 'Last Maintenance', render: (r) => formatDate(lastMaintenanceFor(r.name)) },

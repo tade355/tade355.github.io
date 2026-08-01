@@ -1,8 +1,9 @@
 import { store } from '../store.js';
 import { formatDate, el } from '../utils.js';
-import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
+import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
 import { OPERATION_TYPES, unitForOperationType } from '../constants.js';
 import { filterByProject, getAssignedProject } from '../session.js';
+import { createAttachmentPicker } from '../attachments.js';
 
 const HA_OPERATION_TYPES = OPERATION_TYPES.filter((t) => t.unit === 'Ha').map((t) => t.value);
 
@@ -25,37 +26,154 @@ function equipmentOptions() {
     : [{ value: '', label: 'No equipment in inventory' }];
 }
 
-function fields() {
-  return [
-    { name: 'date', label: 'Date', type: 'date', required: true },
-    { name: 'siteName', label: 'Site / Project Name', type: 'select', required: true, options: projectOptions() },
-    { name: 'customerId', label: 'Client', type: 'select', options: customerOptions() },
-    { name: 'equipment', label: 'Equipment Used', type: 'select', required: true, options: equipmentOptions() },
-    { name: 'operatorId', label: 'Operator', type: 'select', required: true, options: employeeOptions() },
-    { name: 'supervisorId', label: 'Supervisor', type: 'select', required: true, options: employeeOptions() },
-    { name: 'hoursWorked', label: 'Hours Worked', type: 'number', required: true, min: 0, step: '0.5' },
-    { name: 'operationType', label: 'Operation Type', type: 'select', required: true, options: OPERATION_TYPES.map((t) => ({ value: t.value, label: `${t.value} (${t.unit})` })) },
-    { name: 'quantity', label: 'Quantity (unit shown next to the selected Operation Type, above)', type: 'number', required: true, min: 0, step: '0.1' },
-    { name: 'fuelUsed', label: 'Fuel Used (litres)', type: 'number', required: true, min: 0 },
-    { name: 'status', label: 'Status', type: 'select', required: true, options: [
-      { value: 'Completed', label: 'Completed' },
-      { value: 'Ongoing', label: 'Ongoing' },
-      { value: 'Halted', label: 'Halted' },
-    ] },
-    { name: 'notes', label: 'Notes', type: 'textarea' },
-    { name: 'attachments', label: 'KML Boundary File / Photos (viewable under Projects → Map View / Photo Gallery)', type: 'attachments' },
-  ];
+function equipmentOwnership(name) {
+  return store.get('inventory').find((i) => i.name === name)?.ownership || 'Company';
+}
+
+function needsWorkType(name) {
+  const ownership = equipmentOwnership(name);
+  return ownership === 'Partnership' || ownership === 'Rented';
+}
+
+function selectField(name, label, options, value) {
+  const select = el('select', { name }, options.map((o) => {
+    const opt = el('option', { value: o.value }, o.label);
+    if (String(o.value) === String(value ?? '')) opt.setAttribute('selected', 'selected');
+    return opt;
+  }));
+  return el('label', { class: 'field' }, [el('span', { class: 'field-label' }, label), select]);
+}
+
+function textField(name, label, type, value, required) {
+  const input = el('input', { type: type || 'text', name, required: required ? 'required' : undefined, step: type === 'number' ? '0.1' : undefined, min: type === 'number' ? 0 : undefined });
+  input.value = value ?? '';
+  return el('label', { class: 'field' }, [el('span', { class: 'field-label' }, label + (required ? ' *' : '')), input]);
+}
+
+function openForm(record, refresh) {
+  if (!employeeOptions().length) {
+    window.alert('Add employees first before logging an operations report.');
+    return;
+  }
+
+  openCustomModal({
+    title: record ? 'Edit Daily Report' : 'Log Daily Report',
+    wide: true,
+    build: (container) => {
+      const today = new Date().toISOString().slice(0, 10);
+      const dateField = textField('date', 'Date', 'date', record?.date || today, true);
+      const siteField = selectField('siteName', 'Site / Project Name', projectOptions(), record?.siteName ?? getAssignedProject());
+      const customerField = selectField('customerId', 'Client', customerOptions(), record?.customerId);
+      const equipmentField = selectField('equipment', 'Equipment Used', equipmentOptions(), record?.equipment);
+      const operatorField = selectField('operatorId', 'Operator', employeeOptions(), record?.operatorId);
+      const supervisorField = selectField('supervisorId', 'Supervisor', employeeOptions(), record?.supervisorId);
+      const hoursField = textField('hoursWorked', 'Hours Worked', 'number', record?.hoursWorked, true);
+      const operationTypeField = selectField('operationType', 'Operation Type', OPERATION_TYPES.map((t) => ({ value: t.value, label: `${t.value} (${t.unit})` })), record?.operationType);
+      const quantityField = textField('quantity', 'Quantity (unit shown next to the selected Operation Type, above)', 'number', record?.quantity, true);
+      const fuelField = textField('fuelUsed', 'Fuel Used (litres)', 'number', record?.fuelUsed, true);
+      const statusField = selectField('status', 'Status', [
+        { value: 'Completed', label: 'Completed' },
+        { value: 'Ongoing', label: 'Ongoing' },
+        { value: 'Halted', label: 'Halted' },
+      ], record?.status || 'Completed');
+
+      const topGrid = el('div', { class: 'form-grid-2' }, [
+        dateField, siteField, customerField, equipmentField, operatorField, supervisorField,
+        hoursField, operationTypeField, quantityField, fuelField, statusField,
+      ]);
+
+      // Only Partnership/Rented dozers need the Office/Business question —
+      // Company-owned dozers have no owner to keep a formal ledger for.
+      const workTypeField = selectField('workType', 'Work Type', [
+        { value: 'Office', label: 'Office — formal, goes on the ledger shared with the owner' },
+        { value: 'Business', label: 'Business — private arrangement, never shown to the owner' },
+      ], record?.workType || 'Office');
+      const businessAmountField = textField('businessAmount', "Business Amount (₦) — operator's additional earning for this day", 'number', record?.businessAmount);
+      const workTypeWrap = el('div', { class: 'form-grid-2' }, [workTypeField, businessAmountField]);
+
+      function updateWorkTypeVisibility() {
+        workTypeWrap.style.display = needsWorkType(equipmentField.querySelector('select').value) ? '' : 'none';
+      }
+      equipmentField.querySelector('select').addEventListener('change', updateWorkTypeVisibility);
+      updateWorkTypeVisibility();
+
+      const notesInput = el('textarea', { name: 'notes', rows: 2 });
+      notesInput.value = record?.notes || '';
+      const notesField = el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Notes'), notesInput]);
+
+      const attachmentPicker = createAttachmentPicker(record?.attachments || []);
+      const attachmentField = el('label', { class: 'field' }, [
+        el('span', { class: 'field-label' }, 'KML Boundary File / Photos (viewable under Projects → Map View / Photo Gallery)'),
+        attachmentPicker.element,
+      ]);
+
+      const actions = el('div', { class: 'modal-actions' }, [
+        el('button', { type: 'button', class: 'btn btn-ghost', onClick: closeModal }, 'Cancel'),
+        el('button', { type: 'button', class: 'btn btn-primary' }, record ? 'Save Changes' : 'Log Report'),
+      ]);
+      const submitBtn = actions.lastChild;
+
+      submitBtn.addEventListener('click', async () => {
+        const equipment = equipmentField.querySelector('select').value;
+        const relevant = needsWorkType(equipment);
+        const workType = relevant ? workTypeField.querySelector('select').value : null;
+
+        const payload = {
+          date: dateField.querySelector('input').value,
+          siteName: siteField.querySelector('select').value,
+          customerId: customerField.querySelector('select').value,
+          equipment,
+          operatorId: operatorField.querySelector('select').value,
+          supervisorId: supervisorField.querySelector('select').value,
+          hoursWorked: Number(hoursField.querySelector('input').value) || 0,
+          operationType: operationTypeField.querySelector('select').value,
+          quantity: Number(quantityField.querySelector('input').value) || 0,
+          fuelUsed: Number(fuelField.querySelector('input').value) || 0,
+          status: statusField.querySelector('select').value,
+          notes: notesInput.value,
+          workType,
+          businessAmount: workType === 'Business' ? (Number(businessAmountField.querySelector('input').value) || 0) : null,
+          attachments: attachmentPicker.getAttachments(),
+        };
+
+        if (!payload.date) { window.alert('Date is required.'); return; }
+        if (!payload.siteName) { window.alert('Site / Project is required.'); return; }
+        if (!payload.equipment) { window.alert('Equipment is required.'); return; }
+        if (!payload.operatorId) { window.alert('Operator is required.'); return; }
+        if (!payload.supervisorId) { window.alert('Supervisor is required.'); return; }
+        if (!payload.operationType) { window.alert('Operation Type is required.'); return; }
+
+        try {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Saving…';
+          if (record) await store.update('operations', record.id, payload);
+          else await store.add('operations', payload);
+          closeModal();
+          refresh();
+        } catch (err) {
+          window.alert(err.message || 'Could not save this report.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = record ? 'Save Changes' : 'Log Report';
+        }
+      });
+
+      container.appendChild(topGrid);
+      container.appendChild(workTypeWrap);
+      container.appendChild(notesField);
+      container.appendChild(attachmentField);
+      container.appendChild(actions);
+    },
+  });
 }
 
 export function renderOperations(container) {
   container.innerHTML = '';
 
-  const addBtn = el('button', { class: 'btn btn-primary', onClick: () => openForm() }, '+ Log Daily Report');
   const assignedProject = getAssignedProject();
   container.appendChild(sectionHeader(
     'Daily Land Clearing Operations',
     assignedProject ? `Showing ${assignedProject} only — site activity, equipment usage, and progress logs` : 'Site activity, equipment usage, and progress logs',
-    addBtn,
+    el('button', { class: 'btn btn-primary', onClick: () => openForm(null, refresh) }, '+ Log Daily Report'),
   ));
 
   const summaryGrid = el('div', { class: 'stats-grid' });
@@ -114,13 +232,14 @@ export function renderOperations(container) {
         { key: 'operationType', label: 'Operation Type' },
         { key: 'quantity', label: 'Quantity', render: (r) => `${r.quantity} ${unitForOperationType(r.operationType)}` },
         { key: 'fuelUsed', label: 'Fuel', render: (r) => `${r.fuelUsed} L` },
+        { key: 'workType', label: 'Work Type', render: (r) => (r.workType ? statusPill(r.workType) : '—') },
         { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
         { key: 'attachments', label: 'Files', render: (r) => (r.attachments?.length ? `📎 ${r.attachments.length}` : '—') },
         {
           key: 'actions',
           label: '',
           render: (r) => actionButtons({
-            onEdit: () => openForm(r),
+            onEdit: () => openForm(r, refresh),
             onDelete: async () => {
               if (!confirmDelete(`${r.siteName} — ${formatDate(r.date)}`)) return;
               try {
@@ -135,24 +254,6 @@ export function renderOperations(container) {
       ],
       rows,
       emptyText: 'No operations logged yet.',
-    });
-  }
-
-  function openForm(record) {
-    if (!employeeOptions().length) {
-      window.alert('Add employees first before logging an operations report.');
-      return;
-    }
-    openModal({
-      title: record ? 'Edit Daily Report' : 'Log Daily Report',
-      fields: fields(),
-      initial: record || { date: new Date().toISOString().slice(0, 10), status: 'Completed', siteName: getAssignedProject() },
-      submitLabel: record ? 'Save Changes' : 'Log Report',
-      onSubmit: async (data) => {
-        if (record) await store.update('operations', record.id, data);
-        else await store.add('operations', data);
-        refresh();
-      },
     });
   }
 

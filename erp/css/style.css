@@ -621,6 +621,34 @@ button { font-family: inherit; }
   box-sizing: border-box;
 }
 
+.dozer-line-header, .dozer-line-row {
+  display: grid;
+  grid-template-columns: 1.6fr 0.7fr 0.9fr 0.8fr 0.9fr 0.9fr 0.9fr 1fr auto;
+  gap: 0.4rem;
+  align-items: center;
+}
+.dozer-line-header {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.4rem;
+}
+.dozer-line-row { margin-bottom: 0.5rem; }
+.dozer-line-row input {
+  padding: 0.4rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--page-plane);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+.dl-biz { font-size: 0.82rem; color: var(--text-secondary); }
+
 .line-items-total {
   display: flex;
   justify-content: flex-end;

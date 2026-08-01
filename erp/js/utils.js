@@ -58,7 +58,8 @@ export function statusPillClass(status) {
     Paid: 'pill-good', Received: 'pill-good', Completed: 'pill-good', Active: 'pill-good', Company: 'pill-good', Approved: 'pill-good', Fulfilled: 'pill-good', Income: 'pill-good',
     Unpaid: 'pill-critical', Halted: 'pill-critical', Disengaged: 'pill-critical', Down: 'pill-critical', Rejected: 'pill-critical', Expenditure: 'pill-critical',
     Pending: 'pill-warning', Ongoing: 'pill-warning', 'On Leave': 'pill-warning', Suspended: 'pill-warning',
-    'Under Maintenance': 'pill-warning', Scheduled: 'pill-warning', 'In Progress': 'pill-warning', '3rd Party': 'pill-warning', 'Pending Approval': 'pill-warning',
+    'Under Maintenance': 'pill-warning', Scheduled: 'pill-warning', 'In Progress': 'pill-warning', Partnership: 'pill-warning', Rented: 'pill-warning', 'Pending Approval': 'pill-warning', Business: 'pill-warning',
+    Office: 'pill-good',
   };
   return map[status] || 'pill-neutral';
 }

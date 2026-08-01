@@ -10,6 +10,8 @@ import { renderLeaveAttendance } from './views/leaveAttendance.js';
 import { renderFundRequests } from './views/fundRequests.js';
 import { renderApprovals } from './views/approvals.js';
 import { renderPayroll } from './views/payroll.js';
+import { renderDozerPayroll } from './views/dozerPayroll.js';
+import { renderDozerEconomics } from './views/dozerEconomics.js';
 import { renderBackup } from './views/backup.js';
 import { closeModal } from './ui.js';
 import { canAccess, getCurrentTier, defaultRouteForTier } from './session.js';
@@ -24,6 +26,8 @@ export const ROUTES = [
   { path: 'purchasing', label: 'Purchasing & Suppliers', icon: '🛒', render: renderPurchasing, tiers: ['Admin', 'Accounts'] },
   { path: 'hr', label: 'HR & Employees', icon: '👷', render: renderHR, tiers: ['Admin'] },
   { path: 'payroll', label: 'Payroll', icon: '🧮', render: renderPayroll, tiers: ['Admin'] },
+  { path: 'dozerPayroll', label: 'Dozer Day-Rate Payroll', icon: '🚧', render: renderDozerPayroll, tiers: ['Admin'] },
+  { path: 'dozerEconomics', label: 'Dozer Economics', icon: '📊', render: renderDozerEconomics, tiers: ['Admin', 'Accounts'] },
   { path: 'leave', label: 'Leave & Attendance', icon: '🕒', render: renderLeaveAttendance, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   { path: 'accounting', label: 'Accounting & Expenses', icon: '💰', render: renderAccounting, tiers: ['Admin', 'Accounts'] },
   { path: 'fundRequests', label: 'Fund Requests', icon: '💵', render: renderFundRequests, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
