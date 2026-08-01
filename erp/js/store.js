@@ -45,7 +45,12 @@ function snakeToCamelKey(key) {
 function rowToDb(record) {
   const out = {};
   Object.entries(record).forEach(([k, v]) => {
-    out[camelToSnakeKey(k)] = v === undefined ? null : v;
+    // '' means "not set" everywhere in this app's forms (e.g. a "— None —"
+    // select option) — treat it the same as undefined so it becomes SQL
+    // NULL, not an empty string. This matters most for nullable foreign
+    // keys (customer_id, approved_by, etc.): a real DB would reject '' as
+    // a violation of the FK constraint since only NULL is exempt from it.
+    out[camelToSnakeKey(k)] = (v === undefined || v === '') ? null : v;
   });
   return out;
 }
