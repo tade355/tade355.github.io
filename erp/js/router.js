@@ -16,24 +16,25 @@ import { renderBackup } from './views/backup.js';
 import { renderNoticeBoard } from './views/noticeBoard.js';
 import { closeModal } from './ui.js';
 import { canAccess, getCurrentTier, defaultRouteForTier } from './session.js';
+import { ICONS } from './icons.js';
 
 export const ROUTES = [
-  { path: 'dashboard', label: 'Dashboard', icon: '🏠', render: renderDashboard, tiers: ['Admin', 'Accounts'] },
-  { path: 'noticeBoard', label: 'Documents and Notices', icon: '📌', render: renderNoticeBoard, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
-  { path: 'projects', label: 'Projects', icon: '🗂️', render: renderProjects, tiers: ['Admin', 'Accounts', 'Supervisor'] },
-  { path: 'approvals', label: 'Approvals', icon: '✅', render: renderApprovals, tiers: ['Admin', 'Supervisor'] },
-  { path: 'operations', label: 'Daily Operations', icon: '🚜', render: renderOperations, tiers: ['Admin', 'Supervisor'] },
-  { path: 'fleet', label: 'Fleet Management', icon: '🔧', render: renderFleet, tiers: ['Admin', 'Supervisor'] },
-  { path: 'sales', label: 'Sales & Invoicing', icon: '🧾', render: renderSales, tiers: ['Admin', 'Accounts'] },
-  { path: 'purchasing', label: 'Purchasing & Suppliers', icon: '🛒', render: renderPurchasing, tiers: ['Admin', 'Accounts'] },
-  { path: 'hr', label: 'HR & Employees', icon: '👷', render: renderHR, tiers: ['Admin'] },
-  { path: 'payroll', label: 'Payroll', icon: '🧮', render: renderPayroll, tiers: ['Admin'] },
-  { path: 'dozerPayroll', label: 'Dozer Day-Rate Payroll', icon: '🚧', render: renderDozerPayroll, tiers: ['Admin'] },
-  { path: 'dozerEconomics', label: 'Dozer Economics', icon: '📊', render: renderDozerEconomics, tiers: ['Admin', 'Accounts'] },
-  { path: 'leave', label: 'Leave & Attendance', icon: '🕒', render: renderLeaveAttendance, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
-  { path: 'accounting', label: 'Accounting & Expenses', icon: '💰', render: renderAccounting, tiers: ['Admin', 'Accounts'] },
-  { path: 'fundRequests', label: 'Fund Requests', icon: '💵', render: renderFundRequests, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
-  { path: 'backup', label: 'Backup & Data', icon: '💾', render: renderBackup, tiers: ['Admin'] },
+  { path: 'dashboard', label: 'Dashboard', icon: ICONS.dashboard, render: renderDashboard, tiers: ['Admin', 'Accounts'] },
+  { path: 'noticeBoard', label: 'Documents and Notices', icon: ICONS.documents, render: renderNoticeBoard, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
+  { path: 'projects', label: 'Projects', icon: ICONS.folder, render: renderProjects, tiers: ['Admin', 'Accounts', 'Supervisor'] },
+  { path: 'approvals', label: 'Approvals', icon: ICONS.checkCircle, render: renderApprovals, tiers: ['Admin', 'Supervisor'] },
+  { path: 'operations', label: 'Daily Operations', icon: ICONS.activity, render: renderOperations, tiers: ['Admin', 'Supervisor'] },
+  { path: 'fleet', label: 'Fleet Management', icon: ICONS.wrench, render: renderFleet, tiers: ['Admin', 'Supervisor'] },
+  { path: 'sales', label: 'Sales & Invoicing', icon: ICONS.receipt, render: renderSales, tiers: ['Admin', 'Accounts'] },
+  { path: 'purchasing', label: 'Purchasing & Suppliers', icon: ICONS.bag, render: renderPurchasing, tiers: ['Admin', 'Accounts'] },
+  { path: 'hr', label: 'HR & Employees', icon: ICONS.users, render: renderHR, tiers: ['Admin'] },
+  { path: 'payroll', label: 'Payroll', icon: ICONS.calculator, render: renderPayroll, tiers: ['Admin'] },
+  { path: 'dozerPayroll', label: 'Dozer Day-Rate Payroll', icon: ICONS.banknote, render: renderDozerPayroll, tiers: ['Admin'] },
+  { path: 'dozerEconomics', label: 'Dozer Economics', icon: ICONS.barChart, render: renderDozerEconomics, tiers: ['Admin', 'Accounts'] },
+  { path: 'leave', label: 'Leave & Attendance', icon: ICONS.clock, render: renderLeaveAttendance, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
+  { path: 'accounting', label: 'Accounting & Expenses', icon: ICONS.wallet, render: renderAccounting, tiers: ['Admin', 'Accounts'] },
+  { path: 'fundRequests', label: 'Fund Requests', icon: ICONS.coins, render: renderFundRequests, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
+  { path: 'backup', label: 'Backup & Data', icon: ICONS.database, render: renderBackup, tiers: ['Admin'] },
 ];
 
 export function initRouter(viewContainer, onRouteChange) {

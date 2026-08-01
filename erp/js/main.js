@@ -68,7 +68,7 @@ function initApp() {
   ROUTES.forEach((route) => {
     if (!canAccess(route.tiers)) return;
     const link = el('a', { href: `#/${route.path}`, class: 'nav-link' }, [
-      el('span', { class: 'nav-icon', 'aria-hidden': 'true' }, route.icon),
+      el('span', { class: 'nav-icon', 'aria-hidden': 'true', html: route.icon }),
       el('span', {}, route.label),
     ]);
     navLinks[route.path] = link;

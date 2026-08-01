@@ -162,7 +162,9 @@ button { font-family: inherit; }
 
 .nav-link:hover { background: var(--sidebar-bg-hover); color: #fff; }
 .nav-link.active { background: var(--brand); color: #fff; }
-.nav-icon { font-size: 1.05rem; }
+.nav-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; opacity: 0.9; }
+.nav-icon svg { width: 18px; height: 18px; }
+.nav-link.active .nav-icon, .nav-link:hover .nav-icon { opacity: 1; }
 
 .sidebar-footer {
   padding: 1rem;
