@@ -13,11 +13,13 @@ import { renderPayroll } from './views/payroll.js';
 import { renderDozerPayroll } from './views/dozerPayroll.js';
 import { renderDozerEconomics } from './views/dozerEconomics.js';
 import { renderBackup } from './views/backup.js';
+import { renderNoticeBoard } from './views/noticeBoard.js';
 import { closeModal } from './ui.js';
 import { canAccess, getCurrentTier, defaultRouteForTier } from './session.js';
 
 export const ROUTES = [
   { path: 'dashboard', label: 'Dashboard', icon: '🏠', render: renderDashboard, tiers: ['Admin', 'Accounts'] },
+  { path: 'noticeBoard', label: 'Notice Board', icon: '📌', render: renderNoticeBoard, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   { path: 'projects', label: 'Projects', icon: '🗂️', render: renderProjects, tiers: ['Admin', 'Accounts', 'Supervisor'] },
   { path: 'approvals', label: 'Approvals', icon: '✅', render: renderApprovals, tiers: ['Admin', 'Supervisor'] },
   { path: 'operations', label: 'Daily Operations', icon: '🚜', render: renderOperations, tiers: ['Admin', 'Supervisor'] },

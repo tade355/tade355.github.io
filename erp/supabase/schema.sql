@@ -581,6 +581,28 @@ create trigger trg_project_rate_history_updated_at before update on project_rate
   for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------
+-- Notice Board — company-wide announcements, policies, adverts, flyers,
+-- and the organogram, visible to every access tier.
+-- ---------------------------------------------------------------------
+
+create table notice_board_posts (
+  id          text primary key,
+  title       text not null,
+  category    text not null default 'Announcement'
+              check (category in ('Announcement', 'Policy', 'Advert', 'Flyer', 'Organogram', 'Other')),
+  body        text,
+  attachments jsonb not null default '[]'::jsonb,
+  pinned      boolean not null default false,
+  date        date not null default current_date,
+  posted_by   text references employees(id) on delete set null,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+create index idx_notice_board_posts_date on notice_board_posts(date);
+create trigger trg_notice_board_posts_updated_at before update on notice_board_posts
+  for each row execute function set_updated_at();
+
+-- ---------------------------------------------------------------------
 -- Row Level Security
 -- ---------------------------------------------------------------------
 -- The app has no real login system yet (the "user gate" is just a
@@ -606,7 +628,7 @@ begin
       'fund_requests', 'fund_request_items', 'payroll_runs', 'payroll_lines',
       'financial_entries', 'dozer_payroll_runs', 'dozer_payroll_lines',
       'dozer_owner_settlements', 'staff_memos', 'dozer_rate_history',
-      'project_rate_history'
+      'project_rate_history', 'notice_board_posts'
     ])
   loop
     execute format('alter table %I enable row level security;', t);

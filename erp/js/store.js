@@ -30,6 +30,7 @@ const CONFIG = {
   staffMemos: { table: 'staff_memos', prefix: 'MEMO' },
   dozerRateHistory: { table: 'dozer_rate_history', prefix: 'DRH' },
   projectRateHistory: { table: 'project_rate_history', prefix: 'PRH' },
+  noticeBoardPosts: { table: 'notice_board_posts', prefix: 'NB' },
 };
 
 const COLLECTIONS = Object.keys(CONFIG);
