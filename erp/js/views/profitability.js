@@ -3,6 +3,7 @@ import { formatCurrency, el, dateInRange, invoiceTotal } from '../utils.js';
 import { sectionHeader, statCard, renderTable } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { OPERATION_TYPES } from '../constants.js';
+import { hourlyRateAsOf, dieselRateAsOf } from '../rateHistory.js';
 
 const HA_OPERATION_TYPES = OPERATION_TYPES.filter((t) => t.unit === 'Ha').map((t) => t.value);
 
@@ -11,7 +12,6 @@ function projectNames() {
 }
 
 function computeProjectStats(project, from, to) {
-  const inventory = store.get('inventory');
   const operations = store.get('operations').filter((o) => o.siteName === project && dateInRange(o.date, from, to));
   const invoices = store.get('invoices').filter((i) => i.project === project && dateInRange(i.date, from, to));
   const expenses = store.get('expenses').filter((e) => e.project === project && dateInRange(e.date, from, to));
@@ -21,17 +21,11 @@ function computeProjectStats(project, from, to) {
   const areaCleared = operations.filter((o) => HA_OPERATION_TYPES.includes(o.operationType)).reduce((sum, o) => sum + o.quantity, 0);
   const fuelUsed = operations.reduce((sum, o) => sum + o.fuelUsed, 0);
 
-  const hoursByEquipment = {};
-  operations.forEach((o) => {
-    hoursByEquipment[o.equipment] = (hoursByEquipment[o.equipment] || 0) + o.hoursWorked;
-  });
-  const dozerCost = Object.entries(hoursByEquipment).reduce((sum, [name, hours]) => {
-    const rate = inventory.find((i) => i.name === name)?.hourlyRate || 0;
-    return sum + hours * rate;
-  }, 0);
-
-  const dieselRate = inventory.find((i) => i.name === 'Diesel (AGO)')?.unitCost || 0;
-  const dieselCost = fuelUsed * dieselRate;
+  // Computed per-day rather than as a single total x current rate, so a
+  // rate change partway through the selected period is reflected correctly
+  // instead of applying today's rate retroactively to the whole range.
+  const dozerCost = operations.reduce((sum, o) => sum + (o.hoursWorked || 0) * hourlyRateAsOf(o.equipment, o.date), 0);
+  const dieselCost = operations.reduce((sum, o) => sum + (o.fuelUsed || 0) * dieselRateAsOf(o.date), 0);
 
   const logisticsCost = expenses.filter((e) => e.category === 'Logistics').reduce((sum, e) => sum + e.amount, 0);
   // Fuel-category expenses are excluded here since Diesel Cost above is already derived
@@ -134,7 +128,7 @@ function renderAllProjects(body, from, to) {
     emptyText: 'No projects to show.',
   });
 
-  body.appendChild(el('p', { class: 'section-subtitle', html: 'Revenue and Logistics/Other costs only include invoices and expenses explicitly tagged to a project on the Sales and Accounting pages. Dozer and Diesel costs are computed automatically from Daily Operations logs, each dozer\'s hourly rate, and the current Diesel unit price in Inventory — Fuel-category expenses are excluded from "Other" to avoid double-counting diesel spend.' }));
+  body.appendChild(el('p', { class: 'section-subtitle', html: 'Revenue and Logistics/Other costs only include invoices and expenses explicitly tagged to a project on the Sales and Accounting pages. Dozer and Diesel costs are computed automatically from Daily Operations logs using the rate/diesel price that was in effect on each day (Fleet Management Rate History, and diesel receipts) — Fuel-category expenses are excluded from "Other" to avoid double-counting diesel spend.' }));
 }
 
 function renderSingleProject(body, project, from, to) {
@@ -166,5 +160,5 @@ function renderSingleProject(body, project, from, to) {
     formatValue: formatCurrency,
   });
 
-  body.appendChild(el('p', { class: 'section-subtitle', html: 'Revenue and Logistics/Other costs only include invoices and expenses explicitly tagged to this project on the Sales and Accounting pages. Dozer and Diesel costs are computed automatically from Daily Operations logs, each dozer\'s hourly rate, and the current Diesel unit price in Inventory — Fuel-category expenses are excluded from "Other" to avoid double-counting diesel spend.' }));
+  body.appendChild(el('p', { class: 'section-subtitle', html: 'Revenue and Logistics/Other costs only include invoices and expenses explicitly tagged to this project on the Sales and Accounting pages. Dozer and Diesel costs are computed automatically from Daily Operations logs using the rate/diesel price that was in effect on each day (Fleet Management Rate History, and diesel receipts) — Fuel-category expenses are excluded from "Other" to avoid double-counting diesel spend.' }));
 }

@@ -28,6 +28,8 @@ const CONFIG = {
   dozerPayrollRuns: { table: 'dozer_payroll_runs', prefix: 'DPR', child: { key: 'lines', table: 'dozer_payroll_lines', fk: 'dozer_payroll_run_id' } },
   dozerOwnerSettlements: { table: 'dozer_owner_settlements', prefix: 'DOS' },
   staffMemos: { table: 'staff_memos', prefix: 'MEMO' },
+  dozerRateHistory: { table: 'dozer_rate_history', prefix: 'DRH' },
+  projectRateHistory: { table: 'project_rate_history', prefix: 'PRH' },
 };
 
 const COLLECTIONS = Object.keys(CONFIG);

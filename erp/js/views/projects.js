@@ -4,6 +4,7 @@ import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confi
 import { renderOperationsMap } from './operationsMap.js';
 import { renderOperationsGallery } from './operationsGallery.js';
 import { getCurrentTier } from '../session.js';
+import { formatDate } from '../utils.js';
 
 const FIELDS = [
   { name: 'name', label: 'Project Name', required: true },
@@ -44,9 +45,13 @@ export function renderProjects(container) {
     : null;
   const mapTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('map') }, 'Map View');
   const galleryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('gallery') }, 'Photo Gallery');
+  const rateHistoryTabBtn = canManageProjects
+    ? el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('rateHistory') }, 'Rate History')
+    : null;
   if (projectsTabBtn) tabBar.appendChild(projectsTabBtn);
   tabBar.appendChild(mapTabBtn);
   tabBar.appendChild(galleryTabBtn);
+  if (rateHistoryTabBtn) tabBar.appendChild(rateHistoryTabBtn);
   container.appendChild(tabBar);
 
   const body = el('div');
@@ -57,8 +62,10 @@ export function renderProjects(container) {
     if (projectsTabBtn) projectsTabBtn.classList.toggle('active', tab === 'projects');
     mapTabBtn.classList.toggle('active', tab === 'map');
     galleryTabBtn.classList.toggle('active', tab === 'gallery');
+    if (rateHistoryTabBtn) rateHistoryTabBtn.classList.toggle('active', tab === 'rateHistory');
     if (tab === 'projects') renderProjectsTab();
     else if (tab === 'map') renderMapTab();
+    else if (tab === 'rateHistory') renderRateHistoryTab();
     else renderGalleryTab();
   }
 
@@ -72,6 +79,82 @@ export function renderProjects(container) {
     actionSlot.innerHTML = '';
     body.innerHTML = '';
     renderOperationsGallery(body);
+  }
+
+  function renderRateHistoryTab() {
+    actionSlot.innerHTML = '';
+    actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openRateHistoryForm() }, '+ Log Rate Change'));
+
+    body.innerHTML = '';
+    body.appendChild(el('p', { class: 'section-subtitle' }, 'Every contract rate change, by project and effective date. Operation Profitability uses the rate that was in effect on each day\'s operations, not just the project\'s current rate.'));
+
+    const projectSelect = el('select', {}, [
+      el('option', { value: 'all' }, 'All Projects'),
+      ...store.get('projects').map((p) => el('option', { value: p.name }, p.name)),
+    ]);
+    body.appendChild(el('div', { class: 'filter-bar' }, [
+      el('label', { class: 'filter-field' }, [el('span', {}, 'Project'), projectSelect]),
+    ]));
+
+    const tableContainer = el('div');
+    body.appendChild(tableContainer);
+
+    function refresh() {
+      let rows = store.get('projectRateHistory').slice().sort((a, b) => (a.effectiveDate < b.effectiveDate ? 1 : -1));
+      if (projectSelect.value !== 'all') rows = rows.filter((r) => r.project === projectSelect.value);
+
+      renderTable(tableContainer, {
+        columns: [
+          { key: 'project', label: 'Project' },
+          { key: 'effectiveDate', label: 'Effective From', render: (r) => formatDate(r.effectiveDate) },
+          { key: 'rate', label: 'Rate', render: (r) => (r.rate ? `${formatCurrency(r.rate)} ${r.rateUnit || ''}`.trim() : '—') },
+          { key: 'notes', label: 'Notes', render: (r) => r.notes || '—' },
+          {
+            key: 'actions',
+            label: '',
+            render: (r) => actionButtons({
+              onEdit: () => openRateHistoryForm(r),
+              onDelete: async () => {
+                if (!confirmDelete(`${r.project} rate change on ${formatDate(r.effectiveDate)}`)) return;
+                try {
+                  await store.remove('projectRateHistory', r.id);
+                  refresh();
+                } catch (err) {
+                  window.alert(err.message || 'Could not delete this rate history entry.');
+                }
+              },
+            }),
+          },
+        ],
+        rows,
+        emptyText: 'No rate changes logged yet.',
+      });
+    }
+
+    projectSelect.addEventListener('change', refresh);
+
+    function openRateHistoryForm(record) {
+      if (!store.get('projects').length) { window.alert('Add a project first.'); return; }
+      openModal({
+        title: record ? 'Edit Rate Change' : 'Log Rate Change',
+        fields: [
+          { name: 'project', label: 'Project', type: 'select', required: true, options: store.get('projects').map((p) => ({ value: p.name, label: p.name })) },
+          { name: 'effectiveDate', label: 'Effective From', type: 'date', required: true },
+          { name: 'rate', label: 'Rate (₦)', type: 'number', min: 0 },
+          { name: 'rateUnit', label: 'Rate Unit (e.g. per Ha, per KM)' },
+          { name: 'notes', label: 'Notes', type: 'textarea' },
+        ],
+        initial: record || { effectiveDate: new Date().toISOString().slice(0, 10) },
+        submitLabel: record ? 'Save Changes' : 'Log Rate Change',
+        onSubmit: async (data) => {
+          if (record) await store.update('projectRateHistory', record.id, data);
+          else await store.add('projectRateHistory', data);
+          refresh();
+        },
+      });
+    }
+
+    refresh();
   }
 
   function renderProjectsTab() {
@@ -132,8 +215,21 @@ export function renderProjects(container) {
         initial: record || { status: 'Active' },
         submitLabel: record ? 'Save Changes' : 'Add Project',
         onSubmit: async (data) => {
+          // Mirrors the Fleet Asset rate-history auto-log: a new project always
+          // gets an opening rate entry, an edit only logs one if the rate
+          // actually moved, so untouched saves don't clutter Rate History.
+          const rateChanged = !record || Number(data.rate || 0) !== Number(record.rate || 0) || (data.rateUnit || '') !== (record.rateUnit || '');
           if (record) await store.update('projects', record.id, data);
           else await store.add('projects', data);
+          if (rateChanged && data.rate) {
+            await store.add('projectRateHistory', {
+              project: data.name,
+              effectiveDate: new Date().toISOString().slice(0, 10),
+              rate: data.rate || 0,
+              rateUnit: data.rateUnit || '',
+              notes: record ? 'Auto-logged from Project edit' : 'Initial rate on project creation',
+            });
+          }
           refresh();
         },
       });

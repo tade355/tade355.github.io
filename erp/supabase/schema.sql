@@ -545,6 +545,42 @@ create trigger trg_staff_memos_updated_at before update on staff_memos
   for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------
+-- Rate/price history — lets profitability and settlement calculations use
+-- the rate in effect on a given day rather than today's rate. Diesel price
+-- deliberately has no table here — it's derived from diesel_receipts
+-- (date + unit_cost already captured on every purchase).
+-- ---------------------------------------------------------------------
+
+create table dozer_rate_history (
+  id                     text primary key,
+  equipment              text not null,
+  effective_date         date not null,
+  hourly_rate            numeric not null default 0,
+  rental_rate_per_day    numeric not null default 0,
+  management_fee_per_day numeric not null default 0,
+  notes                  text,
+  created_at             timestamptz not null default now(),
+  updated_at             timestamptz not null default now()
+);
+create index idx_dozer_rate_history_equipment on dozer_rate_history(equipment, effective_date);
+create trigger trg_dozer_rate_history_updated_at before update on dozer_rate_history
+  for each row execute function set_updated_at();
+
+create table project_rate_history (
+  id             text primary key,
+  project        text not null,
+  effective_date date not null,
+  rate           numeric,
+  rate_unit      text,
+  notes          text,
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now()
+);
+create index idx_project_rate_history_project on project_rate_history(project, effective_date);
+create trigger trg_project_rate_history_updated_at before update on project_rate_history
+  for each row execute function set_updated_at();
+
+-- ---------------------------------------------------------------------
 -- Row Level Security
 -- ---------------------------------------------------------------------
 -- The app has no real login system yet (the "user gate" is just a
@@ -569,7 +605,8 @@ begin
       'leave_requests', 'attendance_logs', 'fueling_vouchers',
       'fund_requests', 'fund_request_items', 'payroll_runs', 'payroll_lines',
       'financial_entries', 'dozer_payroll_runs', 'dozer_payroll_lines',
-      'dozer_owner_settlements', 'staff_memos'
+      'dozer_owner_settlements', 'staff_memos', 'dozer_rate_history',
+      'project_rate_history'
     ])
   loop
     execute format('alter table %I enable row level security;', t);

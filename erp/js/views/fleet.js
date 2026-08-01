@@ -194,11 +194,13 @@ export function renderFleet(container) {
   const dieselTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('diesel') }, 'Diesel Tracking');
   const voucherTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('vouchers') }, 'Fueling Vouchers');
   const inventoryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('inventory') }, 'Inventory & Equipment');
+  const rateHistoryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('rateHistory') }, 'Rate History');
   tabBar.appendChild(rosterTabBtn);
   tabBar.appendChild(maintenanceTabBtn);
   tabBar.appendChild(dieselTabBtn);
   tabBar.appendChild(voucherTabBtn);
   tabBar.appendChild(inventoryTabBtn);
+  tabBar.appendChild(rateHistoryTabBtn);
 
   const actionSlot = el('div');
   container.appendChild(sectionHeader('Fleet Management', 'Dozer status, ownership, maintenance, diesel accountability, and inventory', actionSlot));
@@ -216,11 +218,13 @@ export function renderFleet(container) {
     dieselTabBtn.classList.toggle('active', tab === 'diesel');
     voucherTabBtn.classList.toggle('active', tab === 'vouchers');
     inventoryTabBtn.classList.toggle('active', tab === 'inventory');
+    rateHistoryTabBtn.classList.toggle('active', tab === 'rateHistory');
     summarySlot.innerHTML = '';
     if (tab === 'roster') renderRosterTab();
     else if (tab === 'maintenance') renderMaintenanceTab();
     else if (tab === 'diesel') renderDieselTab();
     else if (tab === 'vouchers') renderVouchersTab();
+    else if (tab === 'rateHistory') renderRateHistoryTab();
     else renderInventoryTab();
   }
 
@@ -228,6 +232,85 @@ export function renderFleet(container) {
     actionSlot.innerHTML = '';
     body.innerHTML = '';
     renderInventory(body);
+  }
+
+  function renderRateHistoryTab() {
+    actionSlot.innerHTML = '';
+    actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openRateHistoryForm() }, '+ Log Rate Change'));
+
+    body.innerHTML = '';
+    const filterBar = el('div', { class: 'filter-bar' });
+    const equipmentSelect = el('select', {}, [
+      el('option', { value: '' }, 'All Equipment'),
+      ...fleetItems().map((i) => el('option', { value: i.name }, i.name)),
+    ]);
+    filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Equipment'), equipmentSelect]));
+    body.appendChild(filterBar);
+
+    const tableContainer = el('div');
+    body.appendChild(tableContainer);
+
+    function refresh() {
+      const equipment = equipmentSelect.value;
+      let rows = store.get('dozerRateHistory').slice().sort((a, b) => (a.effectiveDate < b.effectiveDate ? 1 : -1));
+      if (equipment) rows = rows.filter((r) => r.equipment === equipment);
+      renderTable(tableContainer, {
+        columns: [
+          { key: 'equipment', label: 'Equipment' },
+          { key: 'effectiveDate', label: 'Effective From', render: (r) => formatDate(r.effectiveDate) },
+          { key: 'hourlyRate', label: 'Hourly Rate', render: (r) => formatCurrency(r.hourlyRate) },
+          { key: 'rentalRatePerDay', label: 'Rental Rate/Day', render: (r) => formatCurrency(r.rentalRatePerDay) },
+          { key: 'managementFeePerDay', label: 'Mgmt Fee/Day', render: (r) => formatCurrency(r.managementFeePerDay) },
+          { key: 'notes', label: 'Notes', render: (r) => r.notes || '—' },
+          {
+            key: 'actions',
+            label: '',
+            render: (r) => actionButtons({
+              onEdit: () => openRateHistoryForm(r),
+              onDelete: async () => {
+                if (!confirmDelete(`${r.equipment} rate change on ${formatDate(r.effectiveDate)}`)) return;
+                try {
+                  await store.remove('dozerRateHistory', r.id);
+                  refresh();
+                } catch (err) {
+                  window.alert(err.message || 'Could not delete this entry.');
+                }
+              },
+            }),
+          },
+        ],
+        rows,
+        emptyText: "No rate changes logged yet. A rate change is logged automatically whenever you edit a fleet asset's rates in the Roster tab, or you can add one manually here (useful for backdating a correction).",
+      });
+    }
+
+    function openRateHistoryForm(record) {
+      if (!fleetOptions().length) {
+        window.alert('Add a fleet asset first.');
+        return;
+      }
+      openModal({
+        title: record ? 'Edit Rate Change' : 'Log Rate Change',
+        fields: [
+          { name: 'equipment', label: 'Equipment', type: 'select', required: true, options: fleetOptions() },
+          { name: 'effectiveDate', label: 'Effective From', type: 'date', required: true },
+          { name: 'hourlyRate', label: 'Hourly Rate (₦)', type: 'number', min: 0 },
+          { name: 'rentalRatePerDay', label: 'Rental Rate/Day (₦)', type: 'number', min: 0 },
+          { name: 'managementFeePerDay', label: 'Management Fee/Day (₦)', type: 'number', min: 0 },
+          { name: 'notes', label: 'Notes', type: 'textarea' },
+        ],
+        initial: record || { effectiveDate: new Date().toISOString().slice(0, 10) },
+        submitLabel: record ? 'Save Changes' : 'Log Rate Change',
+        onSubmit: async (data) => {
+          if (record) await store.update('dozerRateHistory', record.id, data);
+          else await store.add('dozerRateHistory', data);
+          refresh();
+        },
+      });
+    }
+
+    equipmentSelect.addEventListener('change', refresh);
+    refresh();
   }
 
   function renderRosterTab() {
@@ -305,10 +388,25 @@ export function renderFleet(container) {
         initial: record || { category: 'Heavy Equipment', ownership: 'Company', fleetStatus: 'Active', serviceIntervalHours: 250 },
         submitLabel: record ? 'Save Changes' : 'Add Asset',
         onSubmit: async (data) => {
+          // A brand-new asset always gets an opening history entry; an edit
+          // only logs one if a rate actually moved, so untouched saves don't
+          // clutter Rate History with duplicate same-rate rows.
+          const rateFields = ['hourlyRate', 'rentalRatePerDay', 'managementFeePerDay'];
+          const ratesChanged = !record || rateFields.some((k) => Number(data[k] || 0) !== Number(record[k] || 0));
           if (record) {
             await store.update('inventory', record.id, data);
           } else {
             await store.add('inventory', { ...data, quantity: 1, unit: 'unit', reorderLevel: 1 });
+          }
+          if (ratesChanged) {
+            await store.add('dozerRateHistory', {
+              equipment: data.name,
+              effectiveDate: new Date().toISOString().slice(0, 10),
+              hourlyRate: data.hourlyRate || 0,
+              rentalRatePerDay: data.rentalRatePerDay || 0,
+              managementFeePerDay: data.managementFeePerDay || 0,
+              notes: record ? 'Auto-logged from Fleet Asset edit' : 'Initial rate on asset creation',
+            });
           }
           refresh();
         },

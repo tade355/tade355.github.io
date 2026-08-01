@@ -3,6 +3,7 @@ import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
 import { sectionHeader, statCard, renderTable, actionButtons, openCustomModal, closeModal, confirmDelete, statusPill } from '../ui.js';
 import { getCurrentTier } from '../session.js';
 import { printDozerSettlement } from '../print.js';
+import { dozerRatesAsOf, hourlyRateAsOf } from '../rateHistory.js';
 
 function companyDozers() {
   return store.get('inventory').filter((i) => i.ownership === 'Company' || !i.ownership);
@@ -85,7 +86,7 @@ function openSettlementForm(record, refresh) {
       }
       [daysField, rentalField, feeField, repairsField, paidField].forEach((f) => f.querySelector('input').addEventListener('input', recomputeBalance));
 
-      const recomputeBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '↻ Fill Days & Repairs from Records');
+      const recomputeBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '↻ Fill Days, Repairs & Rates from Records');
       recomputeBtn.addEventListener('click', () => {
         const equipment = equipmentField.querySelector('select').value;
         const from = periodStartField.querySelector('input').value;
@@ -93,19 +94,25 @@ function openSettlementForm(record, refresh) {
         if (!equipment || !from || !to) { window.alert('Pick a dozer and both period dates first.'); return; }
         daysField.querySelector('input').value = officeDaysWorked(equipment, from, to);
         repairsField.querySelector('input').value = maintenanceCostFor(equipment, from, to);
+        const rates = dozerRatesAsOf(equipment, from);
+        rentalField.querySelector('input').value = rates.rentalRatePerDay ?? 0;
+        feeField.querySelector('input').value = rates.managementFeePerDay ?? 0;
         recomputeBalance();
       });
 
+      // Pre-fill using the rate in effect at the start of the chosen period
+      // (Rate History in Fleet Management), not necessarily today's rate.
       function fillDefaultRates() {
-        const dozer = dozers.find((d) => d.name === equipmentField.querySelector('select').value);
-        if (!dozer) return;
-        if (!record) {
-          rentalField.querySelector('input').value = dozer.rentalRatePerDay ?? 0;
-          feeField.querySelector('input').value = dozer.managementFeePerDay ?? 0;
-          recomputeBalance();
-        }
+        const equipment = equipmentField.querySelector('select').value;
+        if (!equipment || record) return;
+        const asOf = periodStartField.querySelector('input').value || new Date().toISOString().slice(0, 10);
+        const rates = dozerRatesAsOf(equipment, asOf);
+        rentalField.querySelector('input').value = rates.rentalRatePerDay ?? 0;
+        feeField.querySelector('input').value = rates.managementFeePerDay ?? 0;
+        recomputeBalance();
       }
       equipmentField.querySelector('select').addEventListener('change', fillDefaultRates);
+      periodStartField.querySelector('input').addEventListener('change', fillDefaultRates);
       if (!record) fillDefaultRates();
       recomputeBalance();
 
@@ -162,14 +169,14 @@ function renderCompanyPerformance(container, from, to) {
   const rows = companyDozers().map((d) => {
     const operations = store.get('operations').filter((o) => o.equipment === d.name && dateInRange(o.date, from, to));
     const hours = operations.reduce((sum, o) => sum + (o.hoursWorked || 0), 0);
-    const revenueProxy = hours * (d.hourlyRate || 0);
+    const revenueProxy = operations.reduce((sum, o) => sum + (o.hoursWorked || 0) * hourlyRateAsOf(o.equipment, o.date), 0);
     const maintenanceCost = maintenanceCostFor(d.name, from, to);
     const profit = revenueProxy - maintenanceCost;
     return { name: d.name, hours, revenueProxy, maintenanceCost, profit };
   });
 
   container.appendChild(el('h3', { class: 'subsection-title' }, 'Company-Owned Dozer Performance'));
-  container.appendChild(el('p', { class: 'section-subtitle' }, 'Revenue is an estimate (hours worked × the dozer\'s internal ₦/hr rate from Fleet Management), not real billed revenue — clients are invoiced per project, not per machine. See Fleet Roster for utilization/availability.'));
+  container.appendChild(el('p', { class: 'section-subtitle' }, 'Revenue is an estimate (hours worked × the dozer\'s ₦/hr rate in effect on each day — see Fleet Management → Rate History), not real billed revenue — clients are invoiced per project, not per machine. See Fleet Roster for utilization/availability.'));
   const tableContainer = el('div');
   container.appendChild(tableContainer);
   renderTable(tableContainer, {
