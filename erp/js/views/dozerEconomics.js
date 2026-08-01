@@ -2,6 +2,7 @@ import { store } from '../store.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
 import { sectionHeader, statCard, renderTable, actionButtons, openCustomModal, closeModal, confirmDelete, statusPill } from '../ui.js';
 import { getCurrentTier } from '../session.js';
+import { printDozerSettlement } from '../print.js';
 
 function companyDozers() {
   return store.get('inventory').filter((i) => i.ownership === 'Company' || !i.ownership);
@@ -232,6 +233,7 @@ function renderOwnerSettlements(container, refresh) {
         key: 'actions',
         label: '',
         render: (r) => actionButtons({
+          onPrint: () => printDozerSettlement(r, store.get('inventory').find((i) => i.name === r.equipment)?.ownerName),
           onEdit: () => openSettlementForm(r, refresh),
           onDelete: async () => {
             if (!confirmDelete(`${r.equipment} settlement (${formatDate(r.periodStart)} – ${formatDate(r.periodEnd)})`)) return;

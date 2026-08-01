@@ -526,6 +526,25 @@ create trigger trg_dozer_owner_settlements_updated_at before update on dozer_own
   for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------
+-- Staff memos & notices — printable internal correspondence addressed to
+-- one employee or to all staff (employee_id null).
+-- ---------------------------------------------------------------------
+
+create table staff_memos (
+  id          text primary key,
+  date        date not null,
+  type        text not null check (type in ('Memo', 'Notice', 'Warning Letter', 'Query Letter', 'Confirmation Letter', 'Other')),
+  employee_id text references employees(id) on delete set null,
+  subject     text not null,
+  body        text not null,
+  issued_by   text references employees(id) on delete set null,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+create trigger trg_staff_memos_updated_at before update on staff_memos
+  for each row execute function set_updated_at();
+
+-- ---------------------------------------------------------------------
 -- Row Level Security
 -- ---------------------------------------------------------------------
 -- The app has no real login system yet (the "user gate" is just a
@@ -550,7 +569,7 @@ begin
       'leave_requests', 'attendance_logs', 'fueling_vouchers',
       'fund_requests', 'fund_request_items', 'payroll_runs', 'payroll_lines',
       'financial_entries', 'dozer_payroll_runs', 'dozer_payroll_lines',
-      'dozer_owner_settlements'
+      'dozer_owner_settlements', 'staff_memos'
     ])
   loop
     execute format('alter table %I enable row level security;', t);

@@ -1,6 +1,7 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, poTotal, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete } from '../ui.js';
+import { printPurchaseOrder } from '../print.js';
 
 const SUPPLIER_FIELDS = [
   { name: 'name', label: 'Supplier Name', required: true },
@@ -72,6 +73,7 @@ export function renderPurchasing(container) {
             key: 'actions',
             label: '',
             render: (r) => actionButtons({
+              onPrint: () => printPurchaseOrder(r, suppliers.find((s) => s.id === r.supplierId)),
               onEdit: () => openOrderForm(r),
               onDelete: async () => {
                 if (!confirmDelete(r.id)) return;

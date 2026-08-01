@@ -1,4 +1,4 @@
-import { formatCurrency, formatDate, formatMonthLong } from './utils.js';
+import { formatCurrency, formatDate, formatMonthLong, poTotal } from './utils.js';
 
 function render(html) {
   const area = document.getElementById('printArea');
@@ -180,6 +180,155 @@ export function printPayrollRegister(run, lines) {
       <tfoot><tr><td colspan="4">Total</td><td>${formatCurrency(totalNet)}</td></tr></tfoot>
     </table>
     ${signatureBlock(['Prepared By', 'Approved By'])}
+  `;
+  render(html);
+}
+
+export function printPurchaseOrder(po, supplier) {
+  const total = poTotal(po);
+  const html = `
+    ${letterhead('PURCHASE ORDER', po.id)}
+    <div class="print-meta-grid">
+      <div><strong>Order Date:</strong> ${formatDate(po.date)}</div>
+      <div><strong>Status:</strong> ${po.status}</div>
+    </div>
+    <div class="print-block">
+      <strong>Supplier:</strong>
+      <p>${supplier?.name || 'Unknown Supplier'}<br>
+      ${supplier?.contact ? `${supplier.contact}<br>` : ''}
+      ${supplier?.phone ? `${supplier.phone}<br>` : ''}
+      ${supplier?.email ? `${supplier.email}<br>` : ''}
+      ${supplier?.address || ''}</p>
+    </div>
+    <table class="print-table">
+      <thead><tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead>
+      <tbody>
+        ${po.items.map((it) => `
+          <tr>
+            <td>${it.description}</td>
+            <td>${it.qty}</td>
+            <td>${formatCurrency(it.price)}</td>
+            <td>${formatCurrency(it.qty * it.price)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+      <tfoot><tr><td colspan="3">Total</td><td>${formatCurrency(total)}</td></tr></tfoot>
+    </table>
+    ${signatureBlock(['Authorized Signature', 'Supplier Signature'])}
+  `;
+  render(html);
+}
+
+export function printDozerPayslip(run, line, employeeName) {
+  const netPay = (line.daysWorked || 0) * (line.dayRate || 0)
+    + (line.overtimeHours || 0) * (line.overtimeRate || 0)
+    + (line.businessEarnings || 0)
+    - (line.deductions || 0);
+  const html = `
+    ${letterhead('DOZER OPERATOR PAYSLIP', run.id)}
+    <div class="print-meta-grid">
+      <div><strong>Operator:</strong> ${employeeName}</div>
+      <div><strong>Period:</strong> ${formatDate(run.periodStart)} to ${formatDate(run.periodEnd)}</div>
+      <div><strong>Status:</strong> ${run.status}</div>
+      ${line.equipment ? `<div><strong>Equipment:</strong> ${line.equipment}</div>` : ''}
+    </div>
+    <table class="print-table">
+      <thead><tr><th>Item</th><th>Amount</th></tr></thead>
+      <tbody>
+        <tr><td>Days Worked (${line.daysWorked || 0} × ${formatCurrency(line.dayRate)})</td><td>${formatCurrency((line.daysWorked || 0) * (line.dayRate || 0))}</td></tr>
+        <tr><td>Overtime (${line.overtimeHours || 0} h × ${formatCurrency(line.overtimeRate)})</td><td>${formatCurrency((line.overtimeHours || 0) * (line.overtimeRate || 0))}</td></tr>
+        <tr><td>Business Earnings</td><td>${formatCurrency(line.businessEarnings)}</td></tr>
+        <tr><td>Deductions</td><td>-${formatCurrency(line.deductions)}</td></tr>
+      </tbody>
+      <tfoot><tr><td>Net Pay</td><td>${formatCurrency(netPay)}</td></tr></tfoot>
+    </table>
+    <div class="print-block">
+      <strong>Amount Paid:</strong> ${formatCurrency(line.amountPaid)}
+    </div>
+    ${signatureBlock(['Operator Signature', 'Authorized Signature'])}
+  `;
+  render(html);
+}
+
+export function printDozerPayrollRegister(run, lines) {
+  const netPayOf = (l) => (l.daysWorked || 0) * (l.dayRate || 0)
+    + (l.overtimeHours || 0) * (l.overtimeRate || 0)
+    + (l.businessEarnings || 0)
+    - (l.deductions || 0);
+  const totalNet = lines.reduce((sum, l) => sum + netPayOf(l), 0);
+  const html = `
+    ${letterhead('DOZER PAYROLL REGISTER', run.id)}
+    <div class="print-meta-grid">
+      <div><strong>Period:</strong> ${formatDate(run.periodStart)} to ${formatDate(run.periodEnd)}</div>
+      <div><strong>Status:</strong> ${run.status}</div>
+      <div><strong>Operators:</strong> ${lines.length}</div>
+    </div>
+    <table class="print-table">
+      <thead><tr><th>Operator</th><th>Days</th><th>Day Rate</th><th>OT Hours</th><th>Business</th><th>Deductions</th><th>Net Pay</th></tr></thead>
+      <tbody>
+        ${lines.map((l) => `
+          <tr>
+            <td>${l.employeeName}</td>
+            <td>${l.daysWorked || 0}</td>
+            <td>${formatCurrency(l.dayRate)}</td>
+            <td>${l.overtimeHours || 0}</td>
+            <td>${formatCurrency(l.businessEarnings)}</td>
+            <td>-${formatCurrency(l.deductions)}</td>
+            <td>${formatCurrency(netPayOf(l))}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+      <tfoot><tr><td colspan="6">Total</td><td>${formatCurrency(totalNet)}</td></tr></tfoot>
+    </table>
+    ${signatureBlock(['Prepared By', 'Approved By'])}
+  `;
+  render(html);
+}
+
+export function printDozerSettlement(settlement, ownerName) {
+  const grossRental = settlement.daysWorked * settlement.rentalRatePerDay;
+  const managementRetained = settlement.daysWorked * settlement.managementFeePerDay;
+  const balance = grossRental - managementRetained - settlement.repairsCost - settlement.amountPaidToOwner;
+  const html = `
+    ${letterhead('DOZER OWNER SETTLEMENT STATEMENT', settlement.id)}
+    <div class="print-meta-grid">
+      <div><strong>Dozer:</strong> ${settlement.equipment}</div>
+      <div><strong>Owner:</strong> ${ownerName || '—'}</div>
+      <div><strong>Period:</strong> ${formatDate(settlement.periodStart)} to ${formatDate(settlement.periodEnd)}</div>
+    </div>
+    <table class="print-table">
+      <thead><tr><th>Item</th><th>Amount</th></tr></thead>
+      <tbody>
+        <tr><td>Days Worked</td><td>${settlement.daysWorked}</td></tr>
+        <tr><td>Rental Rate / Day</td><td>${formatCurrency(settlement.rentalRatePerDay)}</td></tr>
+        <tr><td>Gross Rental (${settlement.daysWorked} days)</td><td>${formatCurrency(grossRental)}</td></tr>
+        <tr><td>Management Fee Retained</td><td>-${formatCurrency(managementRetained)}</td></tr>
+        <tr><td>Repairs Cost</td><td>-${formatCurrency(settlement.repairsCost)}</td></tr>
+        <tr><td>Amount Already Paid</td><td>-${formatCurrency(settlement.amountPaidToOwner)}</td></tr>
+      </tbody>
+      <tfoot><tr><td>Balance Payable to Owner</td><td>${formatCurrency(balance)}</td></tr></tfoot>
+    </table>
+    ${settlement.notes ? `<div class="print-block"><strong>Notes:</strong><p>${settlement.notes}</p></div>` : ''}
+    ${signatureBlock(['Prepared By', 'Owner Acknowledgement'])}
+  `;
+  render(html);
+}
+
+export function printStaffMemo(memo, { employeeName, issuedByName }) {
+  const html = `
+    ${letterhead(memo.type.toUpperCase(), memo.id)}
+    <div class="print-meta-grid">
+      <div><strong>Date:</strong> ${formatDate(memo.date)}</div>
+      <div><strong>To:</strong> ${employeeName || 'All Staff'}</div>
+      <div><strong>From:</strong> ${issuedByName || 'Management'}</div>
+    </div>
+    <div class="print-block">
+      <strong>Subject:</strong> ${memo.subject}
+    </div>
+    <div class="print-block">
+      <p>${memo.body.replace(/\n/g, '<br>')}</p>
+    </div>
+    ${signatureBlock(['Issued By', 'Received By'])}
   `;
   render(html);
 }

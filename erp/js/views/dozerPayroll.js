@@ -2,10 +2,15 @@ import { store } from '../store.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
 import { DOZER_OVERTIME_RATE_DEFAULT } from '../constants.js';
+import { printDozerPayslip, printDozerPayrollRegister } from '../print.js';
 
 function employeeLabel(id) {
   const e = store.get('employees').find((x) => x.id === id);
   return e ? `${e.name} (${e.role})` : 'Unknown';
+}
+
+function employeeNameOnly(id) {
+  return store.get('employees').find((x) => x.id === id)?.name || 'Unknown';
 }
 
 // Operators paid per day only make sense for Company/Partnership dozers —
@@ -55,7 +60,7 @@ function balanceOwed(employeeId) {
   return earned - paid;
 }
 
-function buildLineRow(line, onChange, getPeriod, getOvertimeRate) {
+function buildLineRow(line, onChange, getPeriod, getOvertimeRate, getRunContext) {
   const employee = store.get('employees').find((e) => e.id === line.employeeId);
   const days = el('input', { type: 'number', class: 'dl-days', min: 0 });
   days.value = line.daysWorked ?? 0;
@@ -69,6 +74,7 @@ function buildLineRow(line, onChange, getPeriod, getOvertimeRate) {
   const paid = el('input', { type: 'number', class: 'dl-paid', min: 0 });
   paid.value = line.amountPaid ?? 0;
   const netSpan = el('strong', { class: 'dl-net' }, formatCurrency(0));
+  const printBtn = el('button', { type: 'button', class: 'icon-btn', title: 'Print payslip' }, '🖨');
   const removeBtn = el('button', { type: 'button', class: 'icon-btn icon-btn-danger', title: 'Remove' }, '✕');
 
   let businessEarnings = line.businessEarnings || 0;
@@ -76,8 +82,21 @@ function buildLineRow(line, onChange, getPeriod, getOvertimeRate) {
 
   const row = el('div', { class: 'dozer-line-row', 'data-employee-id': line.employeeId }, [
     el('span', {}, employee ? `${employee.name} (${employee.role})` : 'Unknown'),
-    days, rate, otHours, bizSpan, deductions, paid, netSpan, removeBtn,
+    days, rate, otHours, bizSpan, deductions, paid, netSpan, printBtn, removeBtn,
   ]);
+
+  printBtn.addEventListener('click', () => {
+    printDozerPayslip(getRunContext(), {
+      daysWorked: Number(days.value) || 0,
+      dayRate: Number(rate.value) || 0,
+      overtimeHours: Number(otHours.value) || 0,
+      overtimeRate: getOvertimeRate(),
+      businessEarnings,
+      deductions: Number(deductions.value) || 0,
+      amountPaid: Number(paid.value) || 0,
+      equipment,
+    }, employeeNameOnly(line.employeeId));
+  });
 
   function recompute() {
     netSpan.textContent = formatCurrency(
@@ -143,10 +162,11 @@ function openRunForm(record, onSaved) {
 
       const getPeriod = () => ({ from: startInput.value, to: endInput.value });
       const getOvertimeRate = () => Number(overtimeRateInput.value) || DOZER_OVERTIME_RATE_DEFAULT;
+      const getRunContext = () => ({ id: record?.id || 'DRAFT', periodStart: startInput.value, periodEnd: endInput.value, status: statusSelect.value });
 
       const itemsHeader = el('div', { class: 'dozer-line-header' }, [
         el('span', {}, 'Operator'), el('span', {}, 'Days'), el('span', {}, 'Day Rate'), el('span', {}, 'OT Hours'),
-        el('span', {}, 'Business'), el('span', {}, 'Deductions'), el('span', {}, 'Paid'), el('span', {}, 'Net Pay'), el('span', {}, ''),
+        el('span', {}, 'Business'), el('span', {}, 'Deductions'), el('span', {}, 'Paid'), el('span', {}, 'Net Pay'), el('span', {}, ''), el('span', {}, ''),
       ]);
       const itemsContainer = el('div', { class: 'line-items-container' });
       const totalDisplay = el('strong', {}, formatCurrency(0));
@@ -165,7 +185,7 @@ function openRunForm(record, onSaved) {
       const initialLines = record?.lines?.length
         ? record.lines
         : [];
-      initialLines.forEach((line) => itemsContainer.appendChild(buildLineRow(line, recomputeTotal, getPeriod, getOvertimeRate)));
+      initialLines.forEach((line) => itemsContainer.appendChild(buildLineRow(line, recomputeTotal, getPeriod, getOvertimeRate, getRunContext)));
       recomputeTotal();
 
       const addSelect = el('select', {}, [
@@ -187,7 +207,7 @@ function openRunForm(record, onSaved) {
           equipment: stats.equipment,
           deductions: 0,
           amountPaid: 0,
-        }, recomputeTotal, getPeriod, getOvertimeRate);
+        }, recomputeTotal, getPeriod, getOvertimeRate, getRunContext);
         itemsContainer.appendChild(row);
         recomputeTotal();
         addSelect.querySelectorAll(`option[value="${addSelect.value}"]`).forEach((o) => o.remove());
@@ -313,6 +333,7 @@ export function renderDozerPayroll(container) {
           key: 'actions',
           label: '',
           render: (r) => actionButtons({
+            onPrint: () => printDozerPayrollRegister(r, r.lines.map((l) => ({ ...l, employeeName: employeeLabel(l.employeeId) }))),
             onEdit: () => openRunForm(r, refresh),
             onDelete: async () => {
               if (!confirmDelete(`Day-rate run for ${formatDate(r.periodStart)} – ${formatDate(r.periodEnd)}`)) return;
