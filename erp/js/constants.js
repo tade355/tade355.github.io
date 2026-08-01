@@ -2,13 +2,35 @@ export const OPERATION_TYPES = [
   { value: 'Tree Felling', unit: 'Ha' },
   { value: 'Stacking', unit: 'Ha' },
   { value: 'Direct Clearing', unit: 'Ha' },
+  { value: 'Phase 1', unit: 'Ha' },
+  { value: 'Phase 2', unit: 'Ha' },
   { value: 'Zero Bonding', unit: 'Ha' },
+  { value: 'Corrections', unit: 'Ha' },
   { value: 'Road', unit: 'KM' },
   { value: 'Trekking', unit: 'hrs' },
 ];
 
 export function unitForOperationType(type) {
   return OPERATION_TYPES.find((t) => t.value === type)?.unit || '';
+}
+
+// Fixed hex colors (not the themed --series-N chart vars) so each
+// operation type reads consistently on the map regardless of light/dark
+// mode and works as a plain SVG path color in Leaflet.
+const OPERATION_TYPE_COLORS = {
+  'Tree Felling': '#2a78d6',
+  Stacking: '#1baf7a',
+  'Direct Clearing': '#eda100',
+  'Phase 1': '#4a3aa7',
+  'Phase 2': '#8e44ad',
+  'Zero Bonding': '#e34948',
+  Corrections: '#eb6834',
+  Road: '#3d3d3d',
+  Trekking: '#e87ba4',
+};
+
+export function colorForOperationType(type) {
+  return OPERATION_TYPE_COLORS[type] || '#607d8b';
 }
 
 export const FUEL_STATIONS = [
