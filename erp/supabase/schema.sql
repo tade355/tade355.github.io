@@ -581,15 +581,19 @@ create trigger trg_project_rate_history_updated_at before update on project_rate
   for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------
--- Notice Board — company-wide announcements, policies, adverts, flyers,
--- and the organogram, visible to every access tier.
+-- Notice Board — company-wide announcements, meeting notices/agendas/
+-- minutes, policies, SOPs, templates, adverts, flyers, and the organogram,
+-- visible to every access tier.
 -- ---------------------------------------------------------------------
 
 create table notice_board_posts (
   id          text primary key,
   title       text not null,
   category    text not null default 'Announcement'
-              check (category in ('Announcement', 'Policy', 'Advert', 'Flyer', 'Organogram', 'Other')),
+              check (category in (
+                'Announcement', 'Meeting Notice', 'Agenda', 'Minutes', 'Policy',
+                'SOP', 'Template', 'Organogram', 'Advert', 'Flyer', 'Other'
+              )),
   body        text,
   attachments jsonb not null default '[]'::jsonb,
   pinned      boolean not null default false,

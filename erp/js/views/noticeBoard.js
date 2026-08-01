@@ -3,7 +3,10 @@ import { formatDate, el } from '../utils.js';
 import { sectionHeader, openModal, openCustomModal, actionButtons, confirmDelete } from '../ui.js';
 import { getCurrentTier, getCurrentUserId } from '../session.js';
 
-const CATEGORIES = ['Announcement', 'Policy', 'Advert', 'Flyer', 'Organogram', 'Other'];
+const CATEGORIES = [
+  'Announcement', 'Meeting Notice', 'Agenda', 'Minutes', 'Policy', 'SOP',
+  'Template', 'Organogram', 'Advert', 'Flyer', 'Other',
+];
 
 function employeeName(id) {
   return store.get('employees').find((e) => e.id === id)?.name || '';
@@ -114,7 +117,7 @@ export function renderNoticeBoard(container) {
   const canManage = ['Admin', 'Accounts'].includes(getCurrentTier());
 
   const actionSlot = el('div');
-  container.appendChild(sectionHeader('Notice Board', 'Company announcements, policies, adverts, flyers, and the organogram — visible to everyone.', actionSlot));
+  container.appendChild(sectionHeader('Notice Board', 'Announcements, meeting notices, agendas, minutes, policies, SOPs, templates, adverts, flyers, and the organogram — visible to everyone.', actionSlot));
   if (canManage) {
     actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openNoticeForm(null, refresh) }, '+ Post Notice'));
   }

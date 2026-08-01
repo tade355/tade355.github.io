@@ -1,14 +1,18 @@
--- Notice Board — company-wide announcements, policies, adverts, flyers, and
--- the organogram. Unlike staff_memos (HR-only, addressed to one employee or
--- everyone, no attachments), this is visible to every access tier and
--- supports image/PDF attachments so flyers and the org chart can be posted
--- directly instead of just described in text.
+-- Notice Board — company-wide announcements, meeting notices/agendas/minutes,
+-- policies, SOPs, templates, adverts, flyers, and the organogram. Unlike
+-- staff_memos (HR-only, addressed to one employee or everyone, no
+-- attachments), this is visible to every access tier and supports
+-- image/PDF attachments so documents can be posted directly instead of
+-- just described in text.
 
 create table notice_board_posts (
   id          text primary key,
   title       text not null,
   category    text not null default 'Announcement'
-              check (category in ('Announcement', 'Policy', 'Advert', 'Flyer', 'Organogram', 'Other')),
+              check (category in (
+                'Announcement', 'Meeting Notice', 'Agenda', 'Minutes', 'Policy',
+                'SOP', 'Template', 'Organogram', 'Advert', 'Flyer', 'Other'
+              )),
   body        text,
   attachments jsonb not null default '[]'::jsonb,
   pinned      boolean not null default false,
