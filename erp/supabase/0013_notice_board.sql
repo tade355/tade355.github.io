@@ -1,5 +1,5 @@
--- Notice Board — company-wide announcements, meeting notices/agendas/minutes,
--- policies, SOPs, templates, adverts, flyers, and the organogram. Unlike
+-- Documents and Notices — company-wide announcements, meeting notices/agendas/
+-- minutes, policies, SOPs, templates, adverts, flyers, and the organogram. Unlike
 -- staff_memos (HR-only, addressed to one employee or everyone, no
 -- attachments), this is visible to every access tier and supports
 -- image/PDF attachments so documents can be posted directly instead of

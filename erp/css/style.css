@@ -884,7 +884,7 @@ button { font-family: inherit; }
 .lightbox-caption { margin-top: 0.6rem; font-size: 0.88rem; color: var(--text-secondary); }
 .lightbox-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 0.75rem; font-size: 0.85rem; }
 
-/* Notice Board */
+/* Documents and Notices (notice-board-*/notice-card* classes) */
 .notice-board-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

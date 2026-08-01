@@ -581,7 +581,7 @@ create trigger trg_project_rate_history_updated_at before update on project_rate
   for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------
--- Notice Board — company-wide announcements, meeting notices/agendas/
+-- Documents and Notices — company-wide announcements, meeting notices/agendas/
 -- minutes, policies, SOPs, templates, adverts, flyers, and the organogram,
 -- visible to every access tier.
 -- ---------------------------------------------------------------------

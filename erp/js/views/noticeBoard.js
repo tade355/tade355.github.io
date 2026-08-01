@@ -117,7 +117,7 @@ export function renderNoticeBoard(container) {
   const canManage = ['Admin', 'Accounts'].includes(getCurrentTier());
 
   const actionSlot = el('div');
-  container.appendChild(sectionHeader('Notice Board', 'Announcements, meeting notices, agendas, minutes, policies, SOPs, templates, adverts, flyers, and the organogram — visible to everyone.', actionSlot));
+  container.appendChild(sectionHeader('Documents and Notices', 'Announcements, meeting notices, agendas, minutes, policies, SOPs, templates, adverts, flyers, and the organogram — visible to everyone.', actionSlot));
   if (canManage) {
     actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openNoticeForm(null, refresh) }, '+ Post Notice'));
   }
