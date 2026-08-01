@@ -2,7 +2,9 @@ import { store } from '../store.js';
 import { formatCurrency, formatDate, invoiceTotal, el } from '../utils.js';
 import { renderTable, actionButtons, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
+import { EXPENSE_CATEGORIES } from '../constants.js';
 import { renderProfitability } from './profitability.js';
+import { renderIncomeExpenditure } from './incomeExpenditure.js';
 
 function projectOptions() {
   return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
@@ -11,14 +13,7 @@ function projectOptions() {
 function fields() {
   return [
     { name: 'date', label: 'Date', type: 'date', required: true },
-    { name: 'category', label: 'Category', type: 'select', required: true, options: [
-      { value: 'Fuel', label: 'Fuel' },
-      { value: 'Maintenance', label: 'Maintenance' },
-      { value: 'Payroll', label: 'Payroll' },
-      { value: 'Logistics', label: 'Logistics' },
-      { value: 'Administration', label: 'Administration' },
-      { value: 'Other', label: 'Other' },
-    ] },
+    { name: 'category', label: 'Category', type: 'select', required: true, options: EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c })) },
     { name: 'description', label: 'Description', required: true },
     { name: 'amount', label: 'Amount (₦)', type: 'number', required: true, min: 0 },
     { name: 'paidBy', label: 'Paid By', required: true },
@@ -36,8 +31,10 @@ export function renderAccounting(container) {
 
   const tabBar = el('div', { class: 'tab-bar' });
   const expensesTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('expenses') }, 'Expenses');
+  const incomeExpenditureTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('incomeExpenditure') }, 'Income & Expenditure');
   const profitabilityTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('profitability') }, 'Profitability');
   tabBar.appendChild(expensesTabBtn);
+  tabBar.appendChild(incomeExpenditureTabBtn);
   tabBar.appendChild(profitabilityTabBtn);
 
   const actionSlot = el('div');
@@ -50,9 +47,17 @@ export function renderAccounting(container) {
   function setTab(next) {
     tab = next;
     expensesTabBtn.classList.toggle('active', tab === 'expenses');
+    incomeExpenditureTabBtn.classList.toggle('active', tab === 'incomeExpenditure');
     profitabilityTabBtn.classList.toggle('active', tab === 'profitability');
     if (tab === 'expenses') renderExpensesTab();
+    else if (tab === 'incomeExpenditure') renderIncomeExpenditureTab();
     else renderProfitabilityTab();
+  }
+
+  function renderIncomeExpenditureTab() {
+    actionSlot.innerHTML = '';
+    body.innerHTML = '';
+    renderIncomeExpenditure(body);
   }
 
   function renderProfitabilityTab() {

@@ -26,6 +26,26 @@ export const LEAVE_TYPES = [
   'Unpaid',
 ];
 
+// Shared "cost head" categories — used by Expenses, Fund Requests (once
+// approved/disbursed), and manual entries so all three group together
+// consistently on the Income & Expenditure report.
+export const EXPENSE_CATEGORIES = [
+  'Fuel',
+  'Maintenance',
+  'Payroll',
+  'Logistics',
+  'Administration',
+  'Other',
+];
+
+export const INCOME_CATEGORIES = [
+  'Invoicing / Sales',
+  'Loan / Advance',
+  'Equity Injection',
+  'Interest Income',
+  'Other Income',
+];
+
 // Soft, UI-level access tiers only — not real security. See session.js.
 export const ACCESS_TIERS = ['Admin', 'Accounts', 'Supervisor', 'Staff'];
 

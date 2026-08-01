@@ -390,6 +390,7 @@ create table fund_requests (
   project      text,
   submitted_by text references employees(id) on delete set null,
   description  text,
+  cost_head    text,
   status       text not null default 'Pending' check (status in ('Pending', 'Approved', 'Rejected', 'Paid')),
   approved_by  text references employees(id) on delete set null,
   attachments  jsonb not null default '[]'::jsonb,
@@ -410,6 +411,28 @@ create table fund_request_items (
   sort_order      integer not null default 0
 );
 create index idx_fund_request_items_request on fund_request_items(fund_request_id);
+
+-- ---------------------------------------------------------------------
+-- financial_entries — manual income/expenditure entries the accountant
+-- records directly for cash movements not captured by an Invoice,
+-- Expense, or Fund Request. Feeds the Income & Expenditure report
+-- alongside those three sources.
+-- ---------------------------------------------------------------------
+
+create table financial_entries (
+  id          text primary key,
+  date        date not null,
+  type        text not null check (type in ('Income', 'Expenditure')),
+  project     text,
+  cost_head   text not null,
+  amount      numeric not null check (amount >= 0),
+  description text,
+  notes       text,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+create trigger trg_financial_entries_updated_at before update on financial_entries
+  for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------
 -- payroll (+ per-employee lines)
@@ -459,7 +482,8 @@ begin
       'expenses', 'operations', 'maintenance_logs',
       'diesel_receipts', 'diesel_stock_counts',
       'leave_requests', 'attendance_logs', 'fueling_vouchers',
-      'fund_requests', 'fund_request_items', 'payroll_runs', 'payroll_lines'
+      'fund_requests', 'fund_request_items', 'payroll_runs', 'payroll_lines',
+      'financial_entries'
     ])
   loop
     execute format('alter table %I enable row level security;', t);

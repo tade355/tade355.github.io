@@ -5,6 +5,11 @@ import { printFundRequest } from '../print.js';
 import { filterFundRequests, getCurrentUserId, getCurrentTier } from '../session.js';
 import { createAttachmentPicker } from '../attachments.js';
 import { notifyNewFundRequest } from '../notifications.js';
+import { EXPENSE_CATEGORIES } from '../constants.js';
+
+function costHeadOptions() {
+  return [{ value: '', label: '— Not categorized —' }, ...EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }))];
+}
 
 function projectOptions() {
   return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
@@ -69,11 +74,12 @@ function openRequestForm(record, onSaved) {
         ...projectOptions(),
       ], record?.project);
       const submittedByField = selectField('submittedBy', 'Submitted By', employeeOptions(), record?.submittedBy || getCurrentUserId());
+      const costHeadField = selectField('costHead', 'Cost Head (for Income & Expenditure reporting)', costHeadOptions(), record?.costHead);
       const descriptionInput = el('textarea', { name: 'description', rows: 2 });
       descriptionInput.value = record?.description || '';
       const descriptionField = el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Description'), descriptionInput]);
 
-      const topGrid = el('div', { class: 'form-grid-2' }, [dateField, projectField, submittedByField]);
+      const topGrid = el('div', { class: 'form-grid-2' }, [dateField, projectField, submittedByField, costHeadField]);
 
       const itemsHeader = el('div', { class: 'line-items-header' }, [
         el('span', {}, 'Description'), el('span', {}, 'Amount (₦)'), el('span', {}, 'Account Name'), el('span', {}, 'Account Number'), el('span', {}, 'Bank'), el('span', {}, ''),
@@ -149,6 +155,7 @@ function openRequestForm(record, onSaved) {
           date: dateField.querySelector('input').value,
           project: projectField.querySelector('select').value,
           submittedBy: submittedByField.querySelector('select').value,
+          costHead: costHeadField.querySelector('select').value,
           description: descriptionInput.value,
           items,
           status: isAdmin ? statusField.querySelector('select').value : (record?.status || 'Pending'),
@@ -237,6 +244,7 @@ export function renderFundRequests(container) {
         { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
         { key: 'project', label: 'Project', render: (r) => r.project || '—' },
         { key: 'submittedBy', label: 'Submitted By', render: (r) => employeeName(r.submittedBy) },
+        { key: 'costHead', label: 'Cost Head', render: (r) => r.costHead || '—' },
         { key: 'description', label: 'Description', render: (r) => r.description || `${r.items.length} item(s)` },
         { key: 'total', label: 'Total', render: (r) => formatCurrency(totalOf(r)) },
         { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },

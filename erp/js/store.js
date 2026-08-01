@@ -24,6 +24,7 @@ const CONFIG = {
   fuelingVouchers: { table: 'fueling_vouchers', prefix: 'FV' },
   fundRequests: { table: 'fund_requests', prefix: 'FR', child: { key: 'items', table: 'fund_request_items', fk: 'fund_request_id' } },
   payrollRuns: { table: 'payroll_runs', prefix: 'PR', child: { key: 'lines', table: 'payroll_lines', fk: 'payroll_run_id' } },
+  financialEntries: { table: 'financial_entries', prefix: 'FE' },
 };
 
 const COLLECTIONS = Object.keys(CONFIG);
