@@ -8,6 +8,14 @@
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="css/style.css" rel="stylesheet">
+  <script>
+    // Applied synchronously, before the stylesheet paints, so a saved Dark
+    // preference doesn't flash Light first on load.
+    (function () {
+      var saved = localStorage.getItem('emagrims_theme');
+      if (saved === 'light' || saved === 'dark') document.documentElement.setAttribute('data-theme', saved);
+    })();
+  </script>
 </head>
 <body>
   <div class="app-shell">
@@ -22,6 +30,11 @@
       <nav class="sidebar-nav" id="sidebarNav" aria-label="Main navigation"></nav>
       <div class="sidebar-footer">
         <div id="userBadge"></div>
+        <div class="theme-switch" id="themeSwitch" role="group" aria-label="Theme">
+          <button type="button" data-theme-choice="system">🖥 Auto</button>
+          <button type="button" data-theme-choice="light">☀ Light</button>
+          <button type="button" data-theme-choice="dark">🌙 Dark</button>
+        </div>
         <button type="button" class="btn btn-ghost btn-block" id="refreshDataBtn">↻ Refresh Data</button>
         <a href="https://www.linkedin.com/company/emagrims-companyltd/?originalSubdomain=ng" class="back-link" target="_blank" rel="noopener">↗ Company website (LinkedIn)</a>
       </div>

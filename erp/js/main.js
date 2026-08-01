@@ -5,6 +5,7 @@ import { el } from './utils.js';
 import { getCurrentUser, getCurrentTier, canAccess } from './session.js';
 import { showLoginForm } from './userGate.js';
 import { restoreSession, logout, changePassword } from './auth.js';
+import { initThemeSwitch } from './theme.js';
 
 const sidebarNav = document.getElementById('sidebarNav');
 const viewContainer = document.getElementById('view');
@@ -16,6 +17,7 @@ const loadingScreen = document.getElementById('loadingScreen');
 const loadingMessage = document.getElementById('loadingMessage');
 
 initModalRoot();
+initThemeSwitch();
 
 function openChangePasswordForm() {
   openModal({

@@ -32,8 +32,13 @@
   --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
+/* Dark palette applies automatically by system preference (when the user
+   hasn't picked a theme via the sidebar switch, i.e. no [data-theme] is
+   set), or whenever [data-theme="dark"] is set explicitly regardless of
+   system preference. [data-theme="light"] forces the :root defaults above
+   even on a dark system, by simply not matching either rule below. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --surface-1: #1a1a19;
     --page-plane: #0d0d0d;
     --sidebar-bg: #0e1a13;
@@ -59,6 +64,33 @@
     --serious: #ec835a;
     --critical: #e66767;
   }
+}
+
+:root[data-theme="dark"] {
+  --surface-1: #1a1a19;
+  --page-plane: #0d0d0d;
+  --sidebar-bg: #0e1a13;
+  --sidebar-bg-hover: #16281c;
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #898781;
+  --border: rgba(255, 255, 255, 0.10);
+  --gridline: #2c2c2a;
+  --baseline: #383835;
+
+  --series-1: #3987e5;
+  --series-2: #199e70;
+  --series-3: #c98500;
+  --series-4: #008300;
+  --series-5: #9085e9;
+  --series-6: #e66767;
+  --series-7: #d55181;
+  --series-8: #d95926;
+
+  --good: #0ca30c;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #e66767;
 }
 
 * { box-sizing: border-box; }
@@ -147,6 +179,25 @@ button { font-family: inherit; }
   border-color: rgba(255,255,255,0.2);
 }
 .sidebar-footer .btn-ghost:hover { background: var(--sidebar-bg-hover); }
+
+.theme-switch {
+  display: flex;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.theme-switch button {
+  flex: 1;
+  background: transparent;
+  color: rgba(255,255,255,0.65);
+  border: none;
+  padding: 0.4rem 0.25rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+.theme-switch button + button { border-left: 1px solid rgba(255,255,255,0.2); }
+.theme-switch button:hover { background: var(--sidebar-bg-hover); color: #fff; }
+.theme-switch button.active { background: var(--brand); color: #fff; }
 
 .app-main {
   flex: 1;
