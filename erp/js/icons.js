@@ -25,6 +25,6 @@ export const ICONS = {
   barChart: icon('<line x1="4" y1="21" x2="4" y2="10"/><line x1="12" y1="21" x2="12" y2="4"/><line x1="20" y1="21" x2="20" y2="14"/><line x1="2" y1="21" x2="22" y2="21"/>'),
   clock: icon('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>'),
   wallet: icon('<path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h13A1.5 1.5 0 0 1 19 7.5V9h1.5A1.5 1.5 0 0 1 22 10.5v7A1.5 1.5 0 0 1 20.5 19h-16A1.5 1.5 0 0 1 3 17.5v-10Z"/><circle cx="17.5" cy="14" r="1.2" fill="currentColor" stroke="none"/>'),
-  coins: icon('<ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/>'),
+  nairaPaper: icon('<path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/><text x="13" y="18" font-size="9.5" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="Inter, system-ui, sans-serif">₦</text>'),
   database: icon('<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>'),
 };

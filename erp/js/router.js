@@ -33,7 +33,7 @@ export const ROUTES = [
   { path: 'dozerEconomics', label: 'Dozer Economics', icon: ICONS.barChart, render: renderDozerEconomics, tiers: ['Admin', 'Accounts'] },
   { path: 'leave', label: 'Leave & Attendance', icon: ICONS.clock, render: renderLeaveAttendance, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   { path: 'accounting', label: 'Accounting & Expenses', icon: ICONS.wallet, render: renderAccounting, tiers: ['Admin', 'Accounts'] },
-  { path: 'fundRequests', label: 'Fund Requests', icon: ICONS.coins, render: renderFundRequests, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
+  { path: 'fundRequests', label: 'Fund Requests', icon: ICONS.nairaPaper, render: renderFundRequests, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   { path: 'backup', label: 'Backup & Data', icon: ICONS.database, render: renderBackup, tiers: ['Admin'] },
 ];
 
