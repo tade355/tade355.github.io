@@ -467,7 +467,9 @@
           </ul>
         </div>
       </div>
-      <form class="contact-form" id="contactForm">
+      <form class="contact-form" id="contactForm" action="https://formspree.io/f/xzdnlybw" method="POST">
+        <input type="hidden" name="_subject" value="New enquiry from tade355.github.io">
+        <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
         <label>
           Name
           <input type="text" name="name" required>
@@ -481,7 +483,7 @@
           <textarea name="message" rows="5" required></textarea>
         </label>
         <button type="submit" class="btn btn-primary btn-block">Send Message</button>
-        <p class="form-note" id="formNote"></p>
+        <p class="form-note" id="formNote" role="status" aria-live="polite"></p>
       </form>
     </div>
   </section>
