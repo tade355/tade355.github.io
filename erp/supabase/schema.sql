@@ -607,6 +607,41 @@ create trigger trg_notice_board_posts_updated_at before update on notice_board_p
   for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------
+-- Fuel Credit Tracking — diesel/PMS collected on credit from filling
+-- stations, and payments made toward settling the resulting balance.
+-- ---------------------------------------------------------------------
+
+create table fuel_credit_collections (
+  id         text primary key,
+  date       date not null,
+  station    text not null,
+  fuel_type  text not null check (fuel_type in ('Diesel', 'PMS')),
+  litres     numeric not null default 0,
+  unit_price numeric not null default 0,
+  reference  text,
+  notes      text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index idx_fuel_credit_collections_station on fuel_credit_collections(station, date);
+create trigger trg_fuel_credit_collections_updated_at before update on fuel_credit_collections
+  for each row execute function set_updated_at();
+
+create table fuel_credit_payments (
+  id         text primary key,
+  date       date not null,
+  station    text not null,
+  amount     numeric not null default 0,
+  reference  text,
+  notes      text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index idx_fuel_credit_payments_station on fuel_credit_payments(station, date);
+create trigger trg_fuel_credit_payments_updated_at before update on fuel_credit_payments
+  for each row execute function set_updated_at();
+
+-- ---------------------------------------------------------------------
 -- Row Level Security
 -- ---------------------------------------------------------------------
 -- The app has no real login system yet (the "user gate" is just a
@@ -632,7 +667,8 @@ begin
       'fund_requests', 'fund_request_items', 'payroll_runs', 'payroll_lines',
       'financial_entries', 'dozer_payroll_runs', 'dozer_payroll_lines',
       'dozer_owner_settlements', 'staff_memos', 'dozer_rate_history',
-      'project_rate_history', 'notice_board_posts'
+      'project_rate_history', 'notice_board_posts',
+      'fuel_credit_collections', 'fuel_credit_payments'
     ])
   loop
     execute format('alter table %I enable row level security;', t);

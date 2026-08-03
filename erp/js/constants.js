@@ -38,7 +38,13 @@ export const FUEL_STATIONS = [
   'SK Gold',
   'Asolak Ltd',
   'Iloamachi Ltd',
+  'Total Enugu',
+  'Akuebuolo Ltd',
+  'Kabir Ltd',
 ];
+
+// Fuel types tracked on credit from filling stations — see Fuel Credit Tracking.
+export const FUEL_TYPES = ['Diesel', 'PMS'];
 
 export const LEAVE_TYPES = [
   'Annual',

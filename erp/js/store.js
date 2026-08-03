@@ -31,6 +31,8 @@ const CONFIG = {
   dozerRateHistory: { table: 'dozer_rate_history', prefix: 'DRH' },
   projectRateHistory: { table: 'project_rate_history', prefix: 'PRH' },
   noticeBoardPosts: { table: 'notice_board_posts', prefix: 'NB' },
+  fuelCreditCollections: { table: 'fuel_credit_collections', prefix: 'FCC' },
+  fuelCreditPayments: { table: 'fuel_credit_payments', prefix: 'FCP' },
 };
 
 const COLLECTIONS = Object.keys(CONFIG);

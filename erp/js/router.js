@@ -14,6 +14,7 @@ import { renderDozerPayroll } from './views/dozerPayroll.js';
 import { renderDozerEconomics } from './views/dozerEconomics.js';
 import { renderBackup } from './views/backup.js';
 import { renderNoticeBoard } from './views/noticeBoard.js';
+import { renderFuelCredit } from './views/fuelCredit.js';
 import { closeModal } from './ui.js';
 import { canAccess, getCurrentTier, defaultRouteForTier } from './session.js';
 import { ICONS } from './icons.js';
@@ -25,6 +26,7 @@ export const ROUTES = [
   { path: 'approvals', label: 'Approvals', icon: ICONS.checkCircle, render: renderApprovals, tiers: ['Admin', 'Supervisor'] },
   { path: 'operations', label: 'Daily Operations', icon: ICONS.activity, render: renderOperations, tiers: ['Admin', 'Supervisor'] },
   { path: 'fleet', label: 'Fleet Management', icon: ICONS.wrench, render: renderFleet, tiers: ['Admin', 'Supervisor'] },
+  { path: 'fuelCredit', label: 'Fuel Credit', icon: ICONS.fuelCan, render: renderFuelCredit, tiers: ['Admin', 'Accounts', 'Supervisor'] },
   { path: 'sales', label: 'Sales & Invoicing', icon: ICONS.receipt, render: renderSales, tiers: ['Admin', 'Accounts'] },
   { path: 'purchasing', label: 'Purchasing & Suppliers', icon: ICONS.bag, render: renderPurchasing, tiers: ['Admin', 'Accounts'] },
   { path: 'hr', label: 'HR & Employees', icon: ICONS.users, render: renderHR, tiers: ['Admin'] },
