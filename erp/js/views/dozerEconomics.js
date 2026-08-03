@@ -166,24 +166,41 @@ function openSettlementForm(record, refresh) {
 }
 
 function renderCompanyPerformance(container, from, to) {
+  // Days Available / % Optimization / Potential Revenue only mean something
+  // over a bounded period (a calendar day count) — left blank (all-time),
+  // so those columns show "—" rather than a meaningless "days since forever".
+  const hasRange = Boolean(from && to);
+  const daysInPeriod = hasRange ? Math.round((new Date(to) - new Date(from)) / 86400000) + 1 : null;
+
   const rows = companyDozers().map((d) => {
     const operations = store.get('operations').filter((o) => o.equipment === d.name && dateInRange(o.date, from, to));
     const hours = operations.reduce((sum, o) => sum + (o.hoursWorked || 0), 0);
     const revenueProxy = operations.reduce((sum, o) => sum + (o.hoursWorked || 0) * hourlyRateAsOf(o.equipment, o.date), 0);
     const maintenanceCost = maintenanceCostFor(d.name, from, to);
     const profit = revenueProxy - maintenanceCost;
-    return { name: d.name, hours, revenueProxy, maintenanceCost, profit };
+    const daysWorked = new Set(operations.map((o) => o.date)).size;
+    const downtimeDays = hasRange ? Math.max(0, daysInPeriod - daysWorked) : null;
+    const optimizationPct = hasRange && daysInPeriod ? (daysWorked / daysInPeriod) * 100 : null;
+    // Potential revenue: what this dozer would have earned at its current
+    // hourly rate had it worked a full 8h day every day of the period.
+    const potentialRevenue = hasRange ? daysInPeriod * 8 * (d.hourlyRate || 0) : null;
+    const shortfall = hasRange ? potentialRevenue - revenueProxy : null;
+    return { name: d.name, hours, revenueProxy, maintenanceCost, profit, daysInPeriod, downtimeDays, optimizationPct, potentialRevenue, shortfall };
   });
 
   container.appendChild(el('h3', { class: 'subsection-title' }, 'Company-Owned Dozer Performance'));
-  container.appendChild(el('p', { class: 'section-subtitle' }, 'Revenue is an estimate (hours worked × the dozer\'s ₦/hr rate in effect on each day — see Fleet Management → Rate History), not real billed revenue — clients are invoiced per project, not per machine. See Fleet Roster for utilization/availability.'));
+  container.appendChild(el('p', { class: 'section-subtitle' }, 'Revenue is an estimate (hours worked × the dozer\'s ₦/hr rate in effect on each day — see Fleet Management → Rate History), not real billed revenue — clients are invoiced per project, not per machine. Days Available, % Optimization, Potential Revenue, and Shortfall need both From and To set — Downtime here means calendar days with no daily operations report, not specifically repair time (see Maintenance Log for that).'));
   const tableContainer = el('div');
   container.appendChild(tableContainer);
   renderTable(tableContainer, {
     columns: [
       { key: 'name', label: 'Dozer' },
       { key: 'hours', label: 'Hours Worked', render: (r) => `${r.hours} h` },
-      { key: 'revenueProxy', label: 'Revenue (est.)', render: (r) => formatCurrency(r.revenueProxy) },
+      { key: 'downtimeDays', label: 'Downtime (days)', render: (r) => (r.downtimeDays === null ? '—' : String(r.downtimeDays)) },
+      { key: 'optimizationPct', label: '% Optimization', render: (r) => (r.optimizationPct === null ? '—' : `${r.optimizationPct.toFixed(0)}%`) },
+      { key: 'revenueProxy', label: 'Actual Revenue (est.)', render: (r) => formatCurrency(r.revenueProxy) },
+      { key: 'potentialRevenue', label: 'Potential Revenue', render: (r) => (r.potentialRevenue === null ? '—' : formatCurrency(r.potentialRevenue)) },
+      { key: 'shortfall', label: 'Shortfall', render: (r) => (r.shortfall === null ? '—' : el('strong', { class: r.shortfall > 0 ? 'text-critical' : 'text-good' }, formatCurrency(r.shortfall))) },
       { key: 'maintenanceCost', label: 'Maintenance Cost', render: (r) => formatCurrency(r.maintenanceCost) },
       { key: 'profit', label: 'Profit (est.)', render: (r) => el('strong', { class: r.profit >= 0 ? 'text-good' : 'text-critical' }, formatCurrency(r.profit)) },
     ],
