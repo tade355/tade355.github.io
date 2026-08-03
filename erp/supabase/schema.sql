@@ -259,7 +259,12 @@ create table operations (
   operator_id    text references employees(id) on delete set null,
   supervisor_id  text references employees(id) on delete set null,
   hours_worked   numeric,
-  operation_type text check (operation_type in ('Tree Felling', 'Stacking', 'Direct Clearing', 'Phase 1', 'Phase 2', 'Zero Bonding', 'Corrections', 'Road', 'Trekking')),
+  -- Old values (Tree Felling, Direct Clearing, Phase 1, Phase 2, Corrections)
+  -- kept valid alongside the corrected names — see 0015_operation_type_rename.sql.
+  operation_type text check (operation_type in (
+    'Felling', 'Stacking', 'Direct Stacking', 'Root Picking', 'Zero Bonding', 'Nursery', 'Road', 'Trekking',
+    'Tree Felling', 'Direct Clearing', 'Phase 1', 'Phase 2', 'Corrections'
+  )),
   quantity       numeric, -- Ha for the clearing types, KM for Road, hrs for Trekking
   fuel_used      numeric,
   status         text check (status in ('Completed', 'Ongoing', 'Halted')),

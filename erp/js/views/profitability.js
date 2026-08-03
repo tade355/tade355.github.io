@@ -2,10 +2,8 @@ import { store } from '../store.js';
 import { formatCurrency, el, dateInRange, invoiceTotal } from '../utils.js';
 import { sectionHeader, statCard, renderTable } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
-import { OPERATION_TYPES } from '../constants.js';
+import { isHaOperationType } from '../constants.js';
 import { hourlyRateAsOf, dieselRateAsOf } from '../rateHistory.js';
-
-const HA_OPERATION_TYPES = OPERATION_TYPES.filter((t) => t.unit === 'Ha').map((t) => t.value);
 
 function projectNames() {
   return store.get('projects').map((p) => p.name);
@@ -18,7 +16,7 @@ function computeProjectStats(project, from, to) {
 
   // Only Ha-unit operation types count as "area cleared" — Road (KM) and
   // Trekking (hrs) use different units and would corrupt this total if summed in.
-  const areaCleared = operations.filter((o) => HA_OPERATION_TYPES.includes(o.operationType)).reduce((sum, o) => sum + o.quantity, 0);
+  const areaCleared = operations.filter((o) => isHaOperationType(o.operationType)).reduce((sum, o) => sum + o.quantity, 0);
   const fuelUsed = operations.reduce((sum, o) => sum + o.fuelUsed, 0);
 
   // Computed per-day rather than as a single total x current rate, so a

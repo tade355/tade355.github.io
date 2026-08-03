@@ -1,32 +1,57 @@
+// Matches the terminology actually used on the field (daily logs, milestone
+// trackers) rather than the placeholder names this app originally shipped
+// with. "Tree Felling", "Direct Clearing", "Phase 1", "Phase 2", and
+// "Corrections" never appear in any real record — see LEGACY_OPERATION_TYPE_UNITS
+// below for why they're still recognized even though they're gone from this list.
 export const OPERATION_TYPES = [
-  { value: 'Tree Felling', unit: 'Ha' },
+  { value: 'Felling', unit: 'Ha' },
   { value: 'Stacking', unit: 'Ha' },
-  { value: 'Direct Clearing', unit: 'Ha' },
-  { value: 'Phase 1', unit: 'Ha' },
-  { value: 'Phase 2', unit: 'Ha' },
+  { value: 'Direct Stacking', unit: 'Ha' },
+  { value: 'Root Picking', unit: 'Ha' },
   { value: 'Zero Bonding', unit: 'Ha' },
-  { value: 'Corrections', unit: 'Ha' },
+  { value: 'Nursery', unit: 'Ha' },
   { value: 'Road', unit: 'KM' },
   { value: 'Trekking', unit: 'hrs' },
 ];
 
+// Old operation-type names this app used to offer, kept resolvable (unit
+// only, not relabeled) so any report already saved under one of these
+// still counts toward Ha totals and Profitability instead of silently
+// dropping out after the rename above. Never shown in the dropdown.
+const LEGACY_OPERATION_TYPE_UNITS = {
+  'Tree Felling': 'Ha',
+  'Direct Clearing': 'Ha',
+  'Phase 1': 'Ha',
+  'Phase 2': 'Ha',
+  Corrections: 'Ha',
+};
+
 export function unitForOperationType(type) {
-  return OPERATION_TYPES.find((t) => t.value === type)?.unit || '';
+  return OPERATION_TYPES.find((t) => t.value === type)?.unit || LEGACY_OPERATION_TYPE_UNITS[type] || '';
+}
+
+export function isHaOperationType(type) {
+  return unitForOperationType(type) === 'Ha';
 }
 
 // Fixed hex colors (not the themed --series-N chart vars) so each
 // operation type reads consistently on the map regardless of light/dark
-// mode and works as a plain SVG path color in Leaflet.
+// mode and works as a plain SVG path color in Leaflet. Legacy names keep
+// their original color too, for the same backward-compatibility reason.
 const OPERATION_TYPE_COLORS = {
-  'Tree Felling': '#2a78d6',
+  Felling: '#2a78d6',
   Stacking: '#1baf7a',
+  'Direct Stacking': '#eda100',
+  'Root Picking': '#4a3aa7',
+  'Zero Bonding': '#e34948',
+  Nursery: '#2fa84f',
+  Road: '#3d3d3d',
+  Trekking: '#e87ba4',
+  'Tree Felling': '#2a78d6',
   'Direct Clearing': '#eda100',
   'Phase 1': '#4a3aa7',
   'Phase 2': '#8e44ad',
-  'Zero Bonding': '#e34948',
   Corrections: '#eb6834',
-  Road: '#3d3d3d',
-  Trekking: '#e87ba4',
 };
 
 export function colorForOperationType(type) {

@@ -1,11 +1,9 @@
 import { store } from '../store.js';
 import { formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
-import { OPERATION_TYPES, unitForOperationType } from '../constants.js';
+import { OPERATION_TYPES, unitForOperationType, isHaOperationType } from '../constants.js';
 import { filterByProject, getAssignedProject } from '../session.js';
 import { createAttachmentPicker } from '../attachments.js';
-
-const HA_OPERATION_TYPES = OPERATION_TYPES.filter((t) => t.unit === 'Ha').map((t) => t.value);
 
 function projectOptions() {
   return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
@@ -204,7 +202,7 @@ export function renderOperations(container) {
       });
     }
 
-    const haRows = rows.filter((r) => HA_OPERATION_TYPES.includes(r.operationType));
+    const haRows = rows.filter((r) => isHaOperationType(r.operationType));
     const roadRows = rows.filter((r) => r.operationType === 'Road');
     const trekkingRows = rows.filter((r) => r.operationType === 'Trekking');
     const totalArea = haRows.reduce((sum, r) => sum + r.quantity, 0);
