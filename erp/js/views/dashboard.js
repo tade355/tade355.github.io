@@ -97,7 +97,7 @@ export function renderDashboard(container) {
   const siteBars = Object.entries(areaBySite).map(([label, value]) => ({ label, value }));
   renderBarChart(opsCol, {
     title: 'Land Cleared by Site',
-    subtitle: 'Hectares (Felling, Stacking, Direct Stacking, Root Picking, Zero Bonding, Nursery), all-time',
+    subtitle: 'Hectares (Felling, Stacking, Direct Stacking, Root Picking, Bonding), all-time',
     bars: siteBars,
     formatValue: (v) => `${v.toFixed(1)} ha`,
   });

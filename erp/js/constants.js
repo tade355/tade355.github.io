@@ -8,8 +8,7 @@ export const OPERATION_TYPES = [
   { value: 'Stacking', unit: 'Ha' },
   { value: 'Direct Stacking', unit: 'Ha' },
   { value: 'Root Picking', unit: 'Ha' },
-  { value: 'Zero Bonding', unit: 'Ha' },
-  { value: 'Nursery', unit: 'Ha' },
+  { value: 'Bonding', unit: 'Ha' },
   { value: 'Road', unit: 'KM' },
   { value: 'Trekking', unit: 'hrs' },
 ];
@@ -24,6 +23,7 @@ const LEGACY_OPERATION_TYPE_UNITS = {
   'Phase 1': 'Ha',
   'Phase 2': 'Ha',
   Corrections: 'Ha',
+  'Zero Bonding': 'Ha',
 };
 
 export function unitForOperationType(type) {
@@ -43,8 +43,7 @@ const OPERATION_TYPE_COLORS = {
   Stacking: '#1baf7a',
   'Direct Stacking': '#eda100',
   'Root Picking': '#4a3aa7',
-  'Zero Bonding': '#e34948',
-  Nursery: '#2fa84f',
+  Bonding: '#e34948',
   Road: '#3d3d3d',
   Trekking: '#e87ba4',
   'Tree Felling': '#2a78d6',
@@ -52,6 +51,7 @@ const OPERATION_TYPE_COLORS = {
   'Phase 1': '#4a3aa7',
   'Phase 2': '#8e44ad',
   Corrections: '#eb6834',
+  'Zero Bonding': '#e34948',
 };
 
 export function colorForOperationType(type) {
