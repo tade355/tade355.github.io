@@ -86,9 +86,9 @@ if (contactForm) {
 
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const staggerParents = ['cards-grid', 'why-grid', 'team-grid', 'testimonials-grid', 'pricing-grid', 'industries-grid', 'stats-grid'];
+const staggerParents = ['cards-grid', 'why-grid', 'team-grid', 'testimonials-grid', 'pricing-grid', 'industries-grid', 'stats-grid', 'careers-grid'];
 const revealEls = document.querySelectorAll(
-  '.section .eyebrow, .section h2, .section-sub, .card, .why-item, .team-card, .testimonial, .pricing-card, .stat-card, .industry-chip'
+  '.section .eyebrow, .section h2, .section-sub, .card, .why-item, .team-card, .testimonial, .pricing-card, .stat-card, .industry-chip, .career-card'
 );
 
 revealEls.forEach((el) => {
