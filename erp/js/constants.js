@@ -81,15 +81,28 @@ export const LEAVE_TYPES = [
 
 // Shared "cost head" categories — used by Expenses, Fund Requests (once
 // approved/disbursed), and manual entries so all three group together
-// consistently on the Income & Expenditure report.
+// consistently on the Income & Expenditure report. Matches the real
+// Project Expenditure ledger's cost heads. "Fuel" and "Logistics" are
+// read by name in Profitability's cost split (erp/js/views/profitability.js)
+// and "Payroll" is written by name when a Payroll/Dozer Payroll run is
+// marked Paid (erp/js/views/payroll.js, dozerPayroll.js) — don't rename
+// those three without updating that code too. "Equipment Rental" was
+// renamed to "Bull Dozer Rentals" to match the real term; nothing reads
+// it by name, and expenses.category has no DB constraint, so this is
+// purely a dropdown-label change — no migration needed.
 export const EXPENSE_CATEGORIES = [
   'Fuel',
   'Maintenance',
   'Payroll',
   'Logistics',
   'Administration',
-  'Equipment Rental',
+  'Bull Dozer Rentals',
   'Mobilization & Demobilization',
+  'Salary and Allowance',
+  'Labour',
+  'MSc',
+  'M&E',
+  'IMPREST',
   'Other',
 ];
 
