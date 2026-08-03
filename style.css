@@ -873,6 +873,83 @@ a {
   font-size: 0.85rem;
 }
 
+.career-link {
+  display: block;
+  text-align: left;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-secondary);
+}
+
+.career-link:hover {
+  text-decoration: underline;
+}
+
+/* Careers */
+.careers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2.5rem;
+}
+
+.career-card {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease), border-color 0.3s var(--ease);
+}
+
+.career-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-secondary);
+}
+
+.career-tag {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin: 0 0 0.5rem;
+}
+
+.career-card h3 {
+  font-size: 1.15rem;
+  margin-bottom: 0.5rem;
+}
+
+.career-card > p:not(.career-tag) {
+  color: var(--color-muted);
+  font-size: 0.95rem;
+  margin-bottom: 1.25rem;
+}
+
+.career-card .expertise-tags {
+  margin-bottom: 1.5rem;
+}
+
+.careers-note {
+  margin-top: 2.5rem;
+  color: var(--color-muted);
+  max-width: 620px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.careers-note a {
+  color: var(--color-secondary);
+  font-weight: 600;
+}
+
+.careers-note a:hover {
+  text-decoration: underline;
+}
+
 /* Testimonials */
 .testimonials-grid {
   display: grid;
