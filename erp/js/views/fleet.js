@@ -1,5 +1,5 @@
 import { store } from '../store.js';
-import { formatCurrency, formatDate, el, monthKey, statusPillClass } from '../utils.js';
+import { formatCurrency, formatDate, el, monthKey, statusPillClass, dateInRange } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { FUEL_STATIONS, OWNERSHIP_CATEGORIES } from '../constants.js';
 import { printFuelingVoucher } from '../print.js';
@@ -591,6 +591,45 @@ export function renderFleet(container) {
         rows: counts,
         emptyText: 'No stock counts logged yet. Log a physical tank reading to check for variance.',
       });
+
+      body.appendChild(el('h3', { class: 'subsection-title' }, 'Diesel Ledger by Asset'));
+      body.appendChild(el('p', { class: 'section-subtitle' }, "Per-dozer running balance — New comes from Fulfilled fueling vouchers issued to that asset, Used comes from its daily operation reports. Opening is derived from everything before the selected start date, so nothing here is entered by hand."));
+      const ledgerFilterBar = el('div', { class: 'filter-bar' });
+      const ledgerFrom = el('input', { type: 'date' });
+      const ledgerTo = el('input', { type: 'date' });
+      ledgerFilterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'From'), ledgerFrom]));
+      ledgerFilterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), ledgerTo]));
+      body.appendChild(ledgerFilterBar);
+      const ledgerContainer = el('div');
+      body.appendChild(ledgerContainer);
+
+      function refreshLedger() {
+        const from = ledgerFrom.value;
+        const to = ledgerTo.value;
+        const fulfilledVouchers = store.get('fuelingVouchers').filter((v) => v.status === 'Fulfilled');
+        const allOperations = store.get('operations');
+        const ledgerRows = fleetItems().map((d) => {
+          const newBefore = from ? fulfilledVouchers.filter((v) => v.equipment === d.name && v.date < from).reduce((sum, v) => sum + v.litresRequested, 0) : 0;
+          const usedBefore = from ? allOperations.filter((o) => o.equipment === d.name && o.date < from).reduce((sum, o) => sum + (o.fuelUsed || 0), 0) : 0;
+          const opening = newBefore - usedBefore;
+          const newInRange = fulfilledVouchers.filter((v) => v.equipment === d.name && dateInRange(v.date, from, to)).reduce((sum, v) => sum + v.litresRequested, 0);
+          const usedInRange = allOperations.filter((o) => o.equipment === d.name && dateInRange(o.date, from, to)).reduce((sum, o) => sum + (o.fuelUsed || 0), 0);
+          return { name: d.name, opening, newInRange, usedInRange, closing: opening + newInRange - usedInRange };
+        });
+        renderTable(ledgerContainer, {
+          columns: [
+            { key: 'name', label: 'Asset' },
+            { key: 'opening', label: 'Opening', render: (r) => `${r.opening.toLocaleString()} L` },
+            { key: 'newInRange', label: 'New', render: (r) => `${r.newInRange.toLocaleString()} L` },
+            { key: 'usedInRange', label: 'Used', render: (r) => `${r.usedInRange.toLocaleString()} L` },
+            { key: 'closing', label: 'Closing', render: (r) => el('strong', {}, `${r.closing.toLocaleString()} L`) },
+          ],
+          rows: ledgerRows,
+          emptyText: 'No fleet assets yet.',
+        });
+      }
+      [ledgerFrom, ledgerTo].forEach((input) => input.addEventListener('change', refreshLedger));
+      refreshLedger();
     }
 
     function openReceiptForm(record) {
