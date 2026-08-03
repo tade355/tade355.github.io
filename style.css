@@ -858,9 +858,17 @@ a {
   background: var(--color-secondary);
 }
 
-.portfolio-cta {
+.portfolio-cta,
+.section-cta {
   display: flex;
   justify-content: center;
+  margin-top: 2.5rem;
+}
+
+.portfolio-teaser-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
   margin-top: 2.5rem;
 }
 
@@ -1487,7 +1495,8 @@ a {
     padding: 2rem;
   }
 
-  .portfolio-grid {
+  .portfolio-grid,
+  .portfolio-teaser-grid {
     grid-template-columns: 1fr;
   }
 
