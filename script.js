@@ -53,18 +53,42 @@ const contactForm = document.getElementById('contactForm');
 const formNote = document.getElementById('formNote');
 
 if (contactForm) {
-  contactForm.addEventListener('submit', (event) => {
+  contactForm.addEventListener('submit', async (event) => {
     event.preventDefault();
-    formNote.textContent = 'Thanks for reaching out — we will get back to you within one business day.';
-    contactForm.reset();
+
+    const submitButton = contactForm.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    formNote.textContent = 'Sending…';
+    formNote.classList.remove('form-note-error');
+
+    try {
+      const response = await fetch(contactForm.action, {
+        method: 'POST',
+        body: new FormData(contactForm),
+        headers: { Accept: 'application/json' },
+      });
+
+      if (response.ok) {
+        formNote.textContent = 'Thanks for reaching out — we will get back to you within one business day.';
+        contactForm.reset();
+      } else {
+        formNote.textContent = 'Something went wrong sending your message. Please email us directly at fortuityglee@gmail.com.';
+        formNote.classList.add('form-note-error');
+      }
+    } catch (error) {
+      formNote.textContent = 'Something went wrong sending your message. Please email us directly at fortuityglee@gmail.com.';
+      formNote.classList.add('form-note-error');
+    } finally {
+      submitButton.disabled = false;
+    }
   });
 }
 
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const staggerParents = ['cards-grid', 'why-grid', 'team-grid', 'testimonials-grid', 'pricing-grid', 'industries-grid', 'stats-grid'];
+const staggerParents = ['cards-grid', 'why-grid', 'team-grid', 'testimonials-grid', 'pricing-grid', 'industries-grid', 'stat-band-grid', 'careers-grid', 'portfolio-grid', 'portfolio-teaser-grid'];
 const revealEls = document.querySelectorAll(
-  '.section .eyebrow, .section h2, .section-sub, .card, .why-item, .team-card, .testimonial, .pricing-card, .stat-card, .industry-chip'
+  '.section .eyebrow, .section h2, .section-sub, .card, .why-item, .team-card, .testimonial, .pricing-card, .stat-band-item, .industry-chip, .career-card, .portfolio-card, .portfolio-featured'
 );
 
 revealEls.forEach((el) => {
@@ -93,7 +117,7 @@ if (!prefersReducedMotion && 'IntersectionObserver' in window) {
   revealEls.forEach((el) => el.classList.add('is-visible'));
 }
 
-const statNumbers = document.querySelectorAll('.stat-number');
+const statNumbers = document.querySelectorAll('.stat-band-number');
 
 if (!prefersReducedMotion && 'IntersectionObserver' in window) {
   const counterObserver = new IntersectionObserver(
