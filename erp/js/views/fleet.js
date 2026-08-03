@@ -120,8 +120,10 @@ function maintenanceFields() {
       { value: 'Breakdown', label: 'Breakdown' },
     ] },
     { name: 'description', label: 'Description', required: true },
-    { name: 'cost', label: 'Cost (₦)', type: 'number', required: true, min: 0 },
-    { name: 'performedBy', label: 'Performed By', type: 'select', required: true, options: employeeOptions() },
+    { name: 'partsCost', label: 'Parts Cost (₦)', type: 'number', min: 0 },
+    { name: 'laborCost', label: 'Labor Cost (₦)', type: 'number', min: 0 },
+    { name: 'performedBy', label: 'Performed By (Staff)', type: 'select', options: [{ value: '', label: '— External contractor (enter below) —' }, ...employeeOptions()] },
+    { name: 'contractorName', label: 'External Contractor / Vendor (if not staff)' },
     { name: 'status', label: 'Status', type: 'select', required: true, options: [
       { value: 'Completed', label: 'Completed' },
       { value: 'Scheduled', label: 'Scheduled' },
@@ -442,8 +444,10 @@ export function renderFleet(container) {
           { key: 'equipment', label: 'Dozer' },
           { key: 'type', label: 'Type' },
           { key: 'description', label: 'Description' },
-          { key: 'cost', label: 'Cost', render: (r) => formatCurrency(r.cost) },
-          { key: 'performedBy', label: 'Performed By', render: (r) => employees.find((e) => e.id === r.performedBy)?.name || r.performedBy || 'Unknown' },
+          { key: 'partsCost', label: 'Parts', render: (r) => formatCurrency(r.partsCost || 0) },
+          { key: 'laborCost', label: 'Labor', render: (r) => formatCurrency(r.laborCost || 0) },
+          { key: 'cost', label: 'Total Cost', render: (r) => formatCurrency(r.cost) },
+          { key: 'performedBy', label: 'Performed By', render: (r) => employees.find((e) => e.id === r.performedBy)?.name || (r.contractorName ? `${r.contractorName} (external)` : 'Unknown') },
           { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
           {
             key: 'actions',
@@ -478,8 +482,13 @@ export function renderFleet(container) {
         initial: record || { date: new Date().toISOString().slice(0, 10), status: 'Completed' },
         submitLabel: record ? 'Save Changes' : 'Log Maintenance',
         onSubmit: async (data) => {
-          if (record) await store.update('maintenanceLogs', record.id, data);
-          else await store.add('maintenanceLogs', data);
+          // "Cost" is kept as a derived total (rather than dropped) so every
+          // existing reader of maintenanceLogs.cost — Dozer Economics'
+          // maintenance-cost-per-dozer, this tab's spend summary cards —
+          // keeps working unchanged now that entry happens as parts/labor.
+          const payload = { ...data, cost: (Number(data.partsCost) || 0) + (Number(data.laborCost) || 0) };
+          if (record) await store.update('maintenanceLogs', record.id, payload);
+          else await store.add('maintenanceLogs', payload);
           refresh();
         },
       });

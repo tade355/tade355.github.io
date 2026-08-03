@@ -285,16 +285,19 @@ create trigger trg_operations_updated_at before update on operations
 -- ---------------------------------------------------------------------
 
 create table maintenance_logs (
-  id           text primary key,
-  date         date not null,
-  equipment    text,
-  type         text check (type in ('Repair', 'Service', 'Inspection', 'Breakdown')),
-  description  text,
-  cost         numeric,
-  performed_by text references employees(id) on delete set null,
-  status       text check (status in ('Scheduled', 'In Progress', 'Completed')),
-  created_at   timestamptz not null default now(),
-  updated_at   timestamptz not null default now()
+  id              text primary key,
+  date            date not null,
+  equipment       text,
+  type            text check (type in ('Repair', 'Service', 'Inspection', 'Breakdown')),
+  description     text,
+  cost            numeric,
+  parts_cost      numeric,
+  labor_cost      numeric,
+  performed_by    text references employees(id) on delete set null,
+  contractor_name text,
+  status          text check (status in ('Scheduled', 'In Progress', 'Completed')),
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
 );
 create trigger trg_maintenance_updated_at before update on maintenance_logs
   for each row execute function set_updated_at();
