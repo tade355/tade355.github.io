@@ -1,5 +1,5 @@
 import { store } from '../store.js';
-import { formatCurrency, el, dateInRange, invoiceTotal } from '../utils.js';
+import { formatCurrency, formatDate, el, dateInRange, invoiceTotal } from '../utils.js';
 import { sectionHeader, statCard, renderTable } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { isHaOperationType } from '../constants.js';
@@ -54,6 +54,42 @@ function computeProjectStats(project, from, to) {
 
 function formatMaybe(value, suffix = '') {
   return value === null || value === undefined ? '—' : `${formatCurrency(value)}${suffix}`;
+}
+
+// Monday-start week containing `iso`, as a stable sort/group key (the
+// Monday's date) plus a human-readable "Mon – Sun" label.
+function weekOf(iso) {
+  const d = new Date(`${iso}T00:00:00`);
+  const diffToMonday = d.getDay() === 0 ? 6 : d.getDay() - 1;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - diffToMonday);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const key = monday.toISOString().slice(0, 10);
+  return { key, label: `${formatDate(key)} – ${formatDate(sunday.toISOString().slice(0, 10))}` };
+}
+
+// Weekly actual Ha cleared vs. the project's Expected Rate/Day x 7 target —
+// only meaningful for Ha-unit operation types and only if the project has a
+// target set (it's optional, see 0016_project_expected_rate.sql).
+function computeWeeklyProductivity(project, from, to) {
+  const target = store.get('projects').find((p) => p.name === project)?.expectedRatePerDay || 0;
+  if (!target) return { target, rows: [] };
+
+  const byWeek = {};
+  store.get('operations')
+    .filter((o) => o.siteName === project && dateInRange(o.date, from, to) && isHaOperationType(o.operationType))
+    .forEach((o) => {
+      const { key, label } = weekOf(o.date);
+      if (!byWeek[key]) byWeek[key] = { key, label, actual: 0 };
+      byWeek[key].actual += o.quantity;
+    });
+
+  const targetForWeek = target * 7;
+  const rows = Object.values(byWeek)
+    .sort((a, b) => (a.key < b.key ? -1 : 1))
+    .map((w) => ({ ...w, target: targetForWeek, variance: w.actual - targetForWeek }));
+  return { target, rows };
 }
 
 export function renderProfitability(container) {
@@ -159,4 +195,24 @@ function renderSingleProject(body, project, from, to) {
   });
 
   body.appendChild(el('p', { class: 'section-subtitle', html: 'Revenue and Logistics/Other costs only include invoices and expenses explicitly tagged to this project on the Sales and Accounting pages. Dozer and Diesel costs are computed automatically from Daily Operations logs using the rate/diesel price that was in effect on each day (Fleet Management Rate History, and diesel receipts) — Fuel-category expenses are excluded from "Other" to avoid double-counting diesel spend.' }));
+
+  body.appendChild(el('h3', { class: 'subsection-title' }, 'Weekly Productivity'));
+  const { target, rows: weeklyRows } = computeWeeklyProductivity(project, from, to);
+  if (!target) {
+    body.appendChild(el('p', { class: 'section-subtitle' }, 'Set an "Expected Rate/Day (Ha)" on this project (Projects → Edit Project) to track weekly area cleared against a target pace.'));
+  } else {
+    body.appendChild(el('p', { class: 'section-subtitle' }, `Target: ${target} ha/day x 7 = ${(target * 7).toFixed(1)} ha/week. Only Ha-unit operation types (Felling, Stacking, Direct Stacking, Root Picking, Bonding) count toward this.`));
+    const weeklyContainer = el('div');
+    body.appendChild(weeklyContainer);
+    renderTable(weeklyContainer, {
+      columns: [
+        { key: 'label', label: 'Week' },
+        { key: 'actual', label: 'Actual Cleared', render: (r) => `${r.actual.toFixed(1)} ha` },
+        { key: 'target', label: 'Target', render: (r) => `${r.target.toFixed(1)} ha` },
+        { key: 'variance', label: 'Variance', render: (r) => el('strong', { class: r.variance >= 0 ? 'text-good' : 'text-critical' }, `${r.variance >= 0 ? '+' : ''}${r.variance.toFixed(1)} ha`) },
+      ],
+      rows: weeklyRows,
+      emptyText: 'No Ha-unit operations logged for this project in this period yet.',
+    });
+  }
 }

@@ -164,6 +164,7 @@ create table projects (
   percent_complete numeric check (percent_complete >= 0 and percent_complete <= 100),
   rate             numeric,
   rate_unit        text,
+  expected_rate_per_day numeric,
   scope            text,
   notes            text,
   created_at       timestamptz not null default now(),

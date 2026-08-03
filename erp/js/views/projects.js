@@ -23,6 +23,7 @@ const FIELDS = [
   { name: 'percentComplete', label: 'Percent Complete (%)', type: 'number', min: 0, step: '1' },
   { name: 'rate', label: 'Rate (₦)', type: 'number', min: 0 },
   { name: 'rateUnit', label: 'Rate Unit (e.g. per Ha, per KM)', },
+  { name: 'expectedRatePerDay', label: 'Expected Rate/Day (Ha) — for weekly productivity tracking', type: 'number', min: 0, step: '0.1' },
   { name: 'scope', label: 'Scope of Work', type: 'textarea' },
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
