@@ -86,9 +86,9 @@ if (contactForm) {
 
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const staggerParents = ['cards-grid', 'why-grid', 'team-grid', 'testimonials-grid', 'pricing-grid', 'industries-grid', 'stats-grid', 'careers-grid'];
+const staggerParents = ['cards-grid', 'why-grid', 'team-grid', 'testimonials-grid', 'pricing-grid', 'industries-grid', 'stat-band-grid', 'careers-grid', 'portfolio-grid'];
 const revealEls = document.querySelectorAll(
-  '.section .eyebrow, .section h2, .section-sub, .card, .why-item, .team-card, .testimonial, .pricing-card, .stat-card, .industry-chip, .career-card'
+  '.section .eyebrow, .section h2, .section-sub, .card, .why-item, .team-card, .testimonial, .pricing-card, .stat-band-item, .industry-chip, .career-card, .portfolio-card, .portfolio-featured'
 );
 
 revealEls.forEach((el) => {
@@ -117,7 +117,7 @@ if (!prefersReducedMotion && 'IntersectionObserver' in window) {
   revealEls.forEach((el) => el.classList.add('is-visible'));
 }
 
-const statNumbers = document.querySelectorAll('.stat-number');
+const statNumbers = document.querySelectorAll('.stat-band-number');
 
 if (!prefersReducedMotion && 'IntersectionObserver' in window) {
   const counterObserver = new IntersectionObserver(
