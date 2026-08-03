@@ -27,8 +27,24 @@ function operatorStatsFor(employeeId, from, to) {
   // company. Business-day earnings are tracked regardless of dozer category,
   // since that's the operator's side arrangement, not the normal wage.
   const payRows = allRows.filter((o) => equipmentNames.has(o.equipment));
-  const daysWorked = new Set(payRows.map((o) => o.date)).size;
-  const overtimeHours = payRows.reduce((sum, o) => sum + Math.max(0, (o.hoursWorked || 0) - 8), 0);
+
+  // Field logs report a fractional "Comb Work Day" (e.g. a half day), not a
+  // flat 1.0 for any date with a report — so days worked is hours-based.
+  // Hours are summed per calendar date first (an operator can have more
+  // than one report on the same date) before splitting each date into a
+  // fractional day (capped at 1.0, i.e. 8h/day) and overtime beyond 8h.
+  const hoursByDate = {};
+  payRows.forEach((o) => {
+    hoursByDate[o.date] = (hoursByDate[o.date] || 0) + (o.hoursWorked || 0);
+  });
+  let daysWorked = 0;
+  let overtimeHours = 0;
+  Object.values(hoursByDate).forEach((hours) => {
+    daysWorked += Math.min(hours, 8) / 8;
+    overtimeHours += Math.max(0, hours - 8);
+  });
+  daysWorked = Math.round(daysWorked * 100) / 100;
+
   const businessEarnings = allRows.filter((o) => o.workType === 'Business').reduce((sum, o) => sum + (o.businessAmount || 0), 0);
   const equipment = [...new Set(allRows.map((o) => o.equipment))].join(', ');
   return { daysWorked, overtimeHours, businessEarnings, equipment };
@@ -62,7 +78,7 @@ function balanceOwed(employeeId) {
 
 function buildLineRow(line, onChange, getPeriod, getOvertimeRate, getRunContext) {
   const employee = store.get('employees').find((e) => e.id === line.employeeId);
-  const days = el('input', { type: 'number', class: 'dl-days', min: 0 });
+  const days = el('input', { type: 'number', class: 'dl-days', min: 0, step: '0.01' });
   days.value = line.daysWorked ?? 0;
   const rate = el('input', { type: 'number', class: 'dl-rate', min: 0 });
   rate.value = line.dayRate ?? employee?.dayRate ?? 0;
