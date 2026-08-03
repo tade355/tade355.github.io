@@ -237,6 +237,7 @@ create table expenses (
   category    text,
   description text,
   amount      numeric not null default 0,
+  payee       text, -- who the money went to (vendor/contractor/person) — distinct from paid_by (how/by whom it was disbursed)
   paid_by     text,
   project     text,
   equipment   text, -- optional: attributes an expense to a specific fleet asset

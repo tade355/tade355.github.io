@@ -21,6 +21,7 @@ function fields() {
     { name: 'category', label: 'Category', type: 'select', required: true, options: EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c })) },
     { name: 'description', label: 'Description', required: true },
     { name: 'amount', label: 'Amount (₦)', type: 'number', required: true, min: 0 },
+    { name: 'payee', label: 'Paid To / Recipient (vendor, contractor, or person)' },
     { name: 'paidBy', label: 'Paid By', required: true },
     { name: 'project', label: 'Project (for profitability tracking)', type: 'select', options: [
       { value: '', label: '— Not linked to a project —' },
@@ -116,7 +117,7 @@ export function renderAccounting(container) {
 
       let rows = expenses.slice().sort((a, b) => (a.date < b.date ? 1 : -1));
       if (searchQuery) {
-        rows = rows.filter((r) => [r.description, r.category, r.paidBy, r.project, r.equipment].join(' ').toLowerCase().includes(searchQuery));
+        rows = rows.filter((r) => [r.description, r.category, r.payee, r.paidBy, r.project, r.equipment].join(' ').toLowerCase().includes(searchQuery));
       }
       renderTable(tableContainer, {
         columns: [
@@ -124,6 +125,7 @@ export function renderAccounting(container) {
           { key: 'category', label: 'Category' },
           { key: 'description', label: 'Description' },
           { key: 'amount', label: 'Amount', render: (r) => formatCurrency(r.amount) },
+          { key: 'payee', label: 'Paid To', render: (r) => r.payee || '—' },
           { key: 'paidBy', label: 'Paid By' },
           { key: 'project', label: 'Project', render: (r) => r.project || '—' },
           { key: 'equipment', label: 'Equipment', render: (r) => r.equipment || '—' },
