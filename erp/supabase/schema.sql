@@ -86,9 +86,12 @@ create table employees (
   assigned_project  text,
   leave_entitlement integer not null default 21,
   day_rate          numeric, -- for dozer operators paid per day worked instead of a monthly salary
+  username          text unique, -- login username; Supabase Auth needs an email, so a synthetic one is built from this (see auth.js)
+  auth_user_id      uuid unique, -- links this record to its Supabase Auth account
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
 );
+create index idx_employees_auth_user on employees(auth_user_id);
 create trigger trg_employees_updated_at before update on employees
   for each row execute function set_updated_at();
 
