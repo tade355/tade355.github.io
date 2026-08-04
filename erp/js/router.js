@@ -21,23 +21,30 @@ import { canAccess, getCurrentTier, defaultRouteForTier } from './session.js';
 import { ICONS } from './icons.js';
 
 export const ROUTES = [
+  // Overview + daily action items
   { path: 'dashboard', label: 'Dashboard', icon: ICONS.dashboard, render: renderDashboard, tiers: ['Admin', 'Accounts'] },
-  { path: 'noticeBoard', label: 'Documents and Notices', icon: ICONS.documents, render: renderNoticeBoard, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
-  { path: 'projects', label: 'Projects', icon: ICONS.folder, render: renderProjects, tiers: ['Admin', 'Accounts', 'Supervisor'] },
-  { path: 'weeklyReport', label: 'Weekly Report', icon: ICONS.calendar, render: renderWeeklyReport, tiers: ['Admin', 'Accounts', 'Supervisor'] },
   { path: 'approvals', label: 'Approvals', icon: ICONS.checkCircle, render: renderApprovals, tiers: ['Admin', 'Supervisor'] },
+  { path: 'noticeBoard', label: 'Documents and Notices', icon: ICONS.documents, render: renderNoticeBoard, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
+  // Core operations: the job, the work done against it, the equipment doing it, and reporting over all three
+  { path: 'projects', label: 'Projects', icon: ICONS.folder, render: renderProjects, tiers: ['Admin', 'Accounts', 'Supervisor'] },
   { path: 'operations', label: 'Daily Operations', icon: ICONS.activity, render: renderOperations, tiers: ['Admin', 'Supervisor'] },
   { path: 'fleet', label: 'Fleet Management', icon: ICONS.wrench, render: renderFleet, tiers: ['Admin', 'Supervisor'] },
   { path: 'fuelCredit', label: 'Fuel Credit', icon: ICONS.fuelCan, render: renderFuelCredit, tiers: ['Admin', 'Accounts', 'Supervisor'] },
+  { path: 'weeklyReport', label: 'Weekly Report', icon: ICONS.calendar, render: renderWeeklyReport, tiers: ['Admin', 'Accounts', 'Supervisor'] },
+  // Field submissions that feed the Approvals inbox above
+  { path: 'fundRequests', label: 'Fund Requests', icon: ICONS.nairaPaper, render: renderFundRequests, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
+  { path: 'leave', label: 'Leave & Attendance', icon: ICONS.clock, render: renderLeaveAttendance, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
+  // Commercial
   { path: 'sales', label: 'Sales & Invoicing', icon: ICONS.receipt, render: renderSales, tiers: ['Admin', 'Accounts'] },
   { path: 'purchasing', label: 'Purchasing & Suppliers', icon: ICONS.bag, render: renderPurchasing, tiers: ['Admin', 'Accounts'] },
+  // Finance / back-office
+  { path: 'accounting', label: 'Accounting & Expenses', icon: ICONS.wallet, render: renderAccounting, tiers: ['Admin', 'Accounts'] },
+  { path: 'dozerEconomics', label: 'Dozer Economics', icon: ICONS.barChart, render: renderDozerEconomics, tiers: ['Admin', 'Accounts'] },
+  // People + pay
   { path: 'hr', label: 'HR & Employees', icon: ICONS.users, render: renderHR, tiers: ['Admin'] },
   { path: 'payroll', label: 'Payroll', icon: ICONS.calculator, render: renderPayroll, tiers: ['Admin'] },
   { path: 'dozerPayroll', label: 'Dozer Day-Rate Payroll', icon: ICONS.banknote, render: renderDozerPayroll, tiers: ['Admin'] },
-  { path: 'dozerEconomics', label: 'Dozer Economics', icon: ICONS.barChart, render: renderDozerEconomics, tiers: ['Admin', 'Accounts'] },
-  { path: 'leave', label: 'Leave & Attendance', icon: ICONS.clock, render: renderLeaveAttendance, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
-  { path: 'accounting', label: 'Accounting & Expenses', icon: ICONS.wallet, render: renderAccounting, tiers: ['Admin', 'Accounts'] },
-  { path: 'fundRequests', label: 'Fund Requests', icon: ICONS.nairaPaper, render: renderFundRequests, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
+  // System
   { path: 'backup', label: 'Backup & Data', icon: ICONS.database, render: renderBackup, tiers: ['Admin'] },
 ];
 
