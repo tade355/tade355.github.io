@@ -17,7 +17,7 @@ function projectOptions() {
   return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
 }
 
-function fleetItems() {
+export function fleetItems() {
   return store.get('inventory').filter((i) => FLEET_CATEGORIES.includes(i.category));
 }
 
@@ -138,7 +138,7 @@ function hoursSinceLastServiceFor(name) {
     .reduce((sum, o) => sum + o.hoursWorked, 0);
 }
 
-function serviceStatusFor(item) {
+export function serviceStatusFor(item) {
   const interval = item.serviceIntervalHours || 250;
   const hours = hoursSinceLastServiceFor(item.name);
   const ratio = hours / interval;

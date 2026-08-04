@@ -176,6 +176,99 @@ export function renderLineChart(container, { title, subtitle, points, formatValu
   root.appendChild(chart);
 }
 
+/**
+ * Multi-series line/trend chart on one shared y-axis. `categories`: x-axis
+ * labels. `series`: [{ name, colorVar, values }], values aligned to
+ * categories by index. Always show a legend (2+ series) — color is the only
+ * thing distinguishing lines here, so it can never be optional.
+ */
+export function renderMultiLineChart(container, { title, subtitle, categories, series, formatValue = (v) => v, height = 220 }) {
+  container.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'chart-card';
+  if (title) {
+    const h = document.createElement('h3');
+    h.className = 'chart-title';
+    h.textContent = title;
+    wrap.appendChild(h);
+  }
+  if (subtitle) {
+    const s = document.createElement('p');
+    s.className = 'chart-subtitle';
+    s.textContent = subtitle;
+    wrap.appendChild(s);
+  }
+
+  if (series.length > 1) {
+    const legend = document.createElement('div');
+    legend.className = 'chart-legend';
+    series.forEach((s) => {
+      const item = document.createElement('span');
+      item.className = 'chart-legend-item';
+      const swatch = document.createElement('span');
+      swatch.className = 'chart-legend-swatch';
+      swatch.style.background = s.colorVar;
+      item.appendChild(swatch);
+      item.appendChild(document.createTextNode(s.name));
+      legend.appendChild(item);
+    });
+    wrap.appendChild(legend);
+  }
+
+  const root = document.createElement('div');
+  root.className = 'chart-root';
+  wrap.appendChild(root);
+  container.appendChild(wrap);
+
+  const allValues = series.flatMap((s) => s.values);
+  if (!categories.length || !allValues.length) {
+    root.innerHTML = '<p class="chart-empty">No data yet.</p>';
+    return;
+  }
+
+  const maxVal = Math.max(...allValues, 1);
+  const padTop = 24, padBottom = 32, padLeft = 16, padRight = 16;
+  const width = 560;
+  const plotH = height - padTop - padBottom;
+  const plotW = width - padLeft - padRight;
+  const step = categories.length > 1 ? plotW / (categories.length - 1) : 0;
+
+  const chart = svg('svg', { viewBox: `0 0 ${width} ${height}`, class: 'chart-svg', role: 'img', 'aria-label': title || 'line chart' });
+
+  for (let i = 0; i <= 4; i += 1) {
+    const y = padTop + (plotH / 4) * i;
+    chart.appendChild(svg('line', { x1: padLeft, x2: width - padRight, y1: y, y2: y, class: 'chart-grid' }));
+  }
+
+  const tip = makeTooltip(wrap);
+
+  series.forEach((s) => {
+    const coords = s.values.map((v, i) => ({
+      x: padLeft + step * i,
+      y: padTop + plotH - (v / maxVal) * plotH,
+      value: v,
+      label: categories[i],
+    }));
+    const linePath = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x},${c.y}`).join(' ');
+    chart.appendChild(svg('path', { d: linePath, class: 'chart-line', fill: 'none', stroke: s.colorVar }));
+    coords.forEach((c) => {
+      const dot = svg('circle', { cx: c.x, cy: c.y, r: 4, fill: s.colorVar, class: 'chart-dot' });
+      dot.addEventListener('mousemove', (evt) => showTooltip(tip, wrap, evt, `<strong>${s.name} — ${c.label}</strong><br>${formatValue(c.value)}`));
+      dot.addEventListener('mouseleave', () => hideTooltip(tip));
+      chart.appendChild(dot);
+    });
+  });
+
+  categories.forEach((label, i) => {
+    const x = padLeft + step * i;
+    const text = svg('text', { x, y: height - 10, class: 'chart-axis-label', 'text-anchor': 'middle' });
+    text.textContent = label;
+    chart.appendChild(text);
+  });
+
+  root.appendChild(chart);
+}
+
 export const CATEGORICAL_COLORS = [
   'var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)',
   'var(--series-5)', 'var(--series-6)', 'var(--series-7)', 'var(--series-8)',

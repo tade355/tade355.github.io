@@ -33,7 +33,7 @@ function collectionAmount(c) {
 // payment on record — never stored — so it's always correct with no
 // separate reconciliation step, the same "derive, don't persist" approach
 // used for diesel stock reconciliation and dozer owner settlements.
-function stationBalances() {
+export function stationBalances() {
   const collections = store.get('fuelCreditCollections');
   const payments = store.get('fuelCreditPayments');
   const stations = [...new Set([...collections.map((c) => c.station), ...payments.map((p) => p.station)])];

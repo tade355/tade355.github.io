@@ -209,13 +209,13 @@ function renderCompanyPerformance(container, from, to) {
   });
 }
 
-function renderOwnerSettlements(container, refresh) {
-  const dozers = partnershipDozers();
-  const settlements = store.get('dozerOwnerSettlements').slice().sort((a, b) => (a.periodStart < b.periodStart ? 1 : -1));
-
-  container.appendChild(sectionHeader('Partnership Owner Settlements', 'Formal, owner-shareable record of days worked, rental earned, management fee retained, repairs, and amount paid', el('button', { class: 'btn btn-primary', onClick: () => openSettlementForm(null, refresh) }, '+ New Settlement')));
-
-  const balanceRows = dozers.map((d) => {
+// Per-Partnership-dozer running balance owed to its owner — generated
+// rental minus management fee retained, repairs, and what's already been
+// paid out. Exported so the Dashboard can surface the company-wide total
+// without duplicating this logic.
+export function ownerSettlementBalances() {
+  const settlements = store.get('dozerOwnerSettlements');
+  return partnershipDozers().map((d) => {
     const own = settlements.filter((s) => s.equipment === d.name);
     const generated = own.reduce((sum, s) => sum + (s.daysWorked * s.rentalRatePerDay), 0);
     const retained = own.reduce((sum, s) => sum + (s.daysWorked * s.managementFeePerDay), 0);
@@ -223,6 +223,14 @@ function renderOwnerSettlements(container, refresh) {
     const paid = own.reduce((sum, s) => sum + s.amountPaidToOwner, 0);
     return { name: d.name, owner: d.ownerName || '—', generated, retained, repairs, paid, balance: generated - retained - repairs - paid };
   });
+}
+
+function renderOwnerSettlements(container, refresh) {
+  const settlements = store.get('dozerOwnerSettlements').slice().sort((a, b) => (a.periodStart < b.periodStart ? 1 : -1));
+
+  container.appendChild(sectionHeader('Partnership Owner Settlements', 'Formal, owner-shareable record of days worked, rental earned, management fee retained, repairs, and amount paid', el('button', { class: 'btn btn-primary', onClick: () => openSettlementForm(null, refresh) }, '+ New Settlement')));
+
+  const balanceRows = ownerSettlementBalances();
 
   const summaryContainer = el('div');
   container.appendChild(summaryContainer);

@@ -5,11 +5,11 @@ import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { isHaOperationType } from '../constants.js';
 import { hourlyRateAsOf, dieselRateAsOf } from '../rateHistory.js';
 
-function projectNames() {
+export function projectNames() {
   return store.get('projects').map((p) => p.name);
 }
 
-function computeProjectStats(project, from, to) {
+export function computeProjectStats(project, from, to) {
   const operations = store.get('operations').filter((o) => o.siteName === project && dateInRange(o.date, from, to));
   const invoices = store.get('invoices').filter((i) => i.project === project && dateInRange(i.date, from, to));
   const expenses = store.get('expenses').filter((e) => e.project === project && dateInRange(e.date, from, to));
