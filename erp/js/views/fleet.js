@@ -61,6 +61,18 @@ function utilization30dFor(name) {
 // over days actually worked in the last 30 days, not calendar days, so an
 // idle weekend doesn't drag down the rate. Applies to every fleet asset
 // regardless of ownership (unlike Utilization, which is Company-only).
+function timeToMinutes(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function minutesToTime(mins) {
+  const wrapped = ((Math.round(mins) % 1440) + 1440) % 1440;
+  const h = Math.floor(wrapped / 60);
+  const m = wrapped % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
 function avgWorkRateFor(name) {
   const today = new Date();
   const from = new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -69,9 +81,11 @@ function avgWorkRateFor(name) {
 
   const hoursByDate = {};
   const haByDate = {};
+  const resumptionMinutes = [];
   rows.forEach((o) => {
     hoursByDate[o.date] = (hoursByDate[o.date] || 0) + (o.hoursWorked || 0);
     if (isHaOperationType(o.operationType)) haByDate[o.date] = (haByDate[o.date] || 0) + (o.quantity || 0);
+    if (o.timeResumed) resumptionMinutes.push(timeToMinutes(o.timeResumed));
   });
 
   const workDays = Object.keys(hoursByDate).length;
@@ -79,6 +93,9 @@ function avgWorkRateFor(name) {
   return {
     avgHoursPerDay: workDays ? Object.values(hoursByDate).reduce((a, b) => a + b, 0) / workDays : null,
     avgHaPerDay: haDays ? Object.values(haByDate).reduce((a, b) => a + b, 0) / haDays : null,
+    avgResumptionTime: resumptionMinutes.length
+      ? minutesToTime(resumptionMinutes.reduce((a, b) => a + b, 0) / resumptionMinutes.length)
+      : null,
   };
 }
 
@@ -398,6 +415,7 @@ export function renderFleet(container) {
           { key: 'utilization', label: 'Utilization (30d)', render: (r) => ((r.ownership === 'Company' || !r.ownership) ? `${utilization30dFor(r.name).toFixed(0)}%` : '—') },
           { key: 'avgHoursPerDay', label: 'Avg Hrs/Day (30d)', render: (r) => { const v = avgWorkRateFor(r.name).avgHoursPerDay; return v === null ? '—' : `${v.toFixed(1)} h`; } },
           { key: 'avgHaPerDay', label: 'Avg Ha/Day (30d)', render: (r) => { const v = avgWorkRateFor(r.name).avgHaPerDay; return v === null ? '—' : `${v.toFixed(2)} ha`; } },
+          { key: 'avgResumptionTime', label: 'Avg Resumption (30d)', render: (r) => avgWorkRateFor(r.name).avgResumptionTime || '—' },
           { key: 'totalHours', label: 'Total Hours', render: (r) => `${totalHoursFor(r.name)} h` },
           { key: 'totalFuel', label: 'Total Fuel', render: (r) => `${totalFuelFor(r.name)} L` },
           { key: 'lastMaintenance', label: 'Last Maintenance', render: (r) => formatDate(lastMaintenanceFor(r.name)) },

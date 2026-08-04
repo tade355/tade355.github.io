@@ -261,6 +261,7 @@ create table operations (
   operator_id    text references employees(id) on delete set null,
   supervisor_id  text references employees(id) on delete set null,
   hours_worked   numeric,
+  time_resumed   text, -- "HH:MM" 24h, optional — for average resumption-time tracking (Fleet Roster)
   -- Old values (Tree Felling, Direct Clearing, Phase 1, Phase 2, Corrections,
   -- Zero Bonding) kept valid alongside the corrected names — see 0015_operation_type_rename.sql.
   operation_type text check (operation_type in (
