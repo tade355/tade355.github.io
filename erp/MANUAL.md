@@ -89,7 +89,7 @@ These conventions repeat across almost every module — learn them once here ins
 - **Status pills** — colored badges showing a record's status. As a rough guide: **green** = good/complete/paid/active, **amber** = pending/in-progress/needs attention, **red** = a problem, rejected, overdue, or unpaid.
 - **Search and filter bars** — most list screens have a search box and/or dropdown filters just above the table. These only change what's *displayed*; they never delete or alter data.
 - **Row highlighting** — some tables tint a whole row amber or red to flag something (e.g. low stock, overdue invoice, pending approval) without you having to read every column.
-- **Tabs** — most modules are split into tabs (e.g. Fleet Management has 7). The tab bar sits just under the page title. Which tabs you see can depend on your access tier.
+- **Tabs** — most modules are split into tabs (e.g. Fleet Management has 5). The tab bar sits just under the page title. Which tabs you see can depend on your access tier. A couple of screens go one level deeper — Resource Management's Diesel Management tab has its own row of sub-tabs beneath the main one.
 
 ---
 
@@ -233,7 +233,7 @@ This is the field log book — one entry per piece of equipment per day, capturi
 | Diesel Supplied (litres) | **auto-fills** from any matching Resource Management → Diesel Management → Site Distribution entry logged for this exact equipment/date/site — still a plain editable field if nothing was logged there, or a hand count differs |
 | Opening Diesel (litres) | **auto-fills** as this dozer's last logged Closing Diesel (its most recent prior report) **+ today's Diesel Supplied** — still a plain editable field if you have an actual reading instead |
 | Fuel/Diesel Used (litres) | **auto-calculates** as the equipment's configured Diesel Consumption Rate (set on Fleet Management → Fleet Roster) **× Hours Worked**, tiered around the first 8 hrs/day — Trekking uses its own flat rate instead. If the selected equipment has no consumption rate configured yet, this stays a manual entry. |
-| Closing Diesel (litres) | **auto-calculates** as Opening Diesel − Fuel Used — overwrite it with an actual tank dip whenever you have one; this is the figure the Diesel Replenishment Request (Fleet Management → Diesel Tracking) uses as "what's currently in the tank" |
+| Closing Diesel (litres) | **auto-calculates** as Opening Diesel − Fuel Used — overwrite it with an actual tank dip whenever you have one; this is the figure the Diesel Replenishment Request (Resource Management → Diesel Management → Diesel Tracking) uses as "what's currently in the tank" |
 | Status | Completed, Ongoing, or Halted (defaults to Completed) |
 | Work Type + Business Amount (₦) | **only appears if the selected equipment's Ownership is Partnership or Rented.** Choose "Office" for the normal, owner-shareable arrangement, or "Business" for a private arrangement that's never shown to the owner (and pays the operator an extra Business Amount for that day). See Dozer Economics (Fleet Management) and [Dozer Rent Payments](#10-resource-management) for how this splits downstream. |
 | Notes | free text |
@@ -251,7 +251,9 @@ No print button on this screen.
 
 **Who sees it:** Admin, Supervisor.
 
-Seven tabs cover everything about the company's dozers, excavators, and vehicles: **Fleet Roster, Maintenance Log, Diesel Tracking, Fueling Vouchers, Inventory & Equipment, Rate History, Dozer Economics.**
+Five tabs cover everything about the company's dozers, excavators, and vehicles: **Fleet Roster, Maintenance Log, Inventory & Equipment, Rate History, Dozer Economics.**
+
+> **Diesel Tracking and Fueling Vouchers moved.** Both now live under [Resource Management → Diesel Management](#10-resource-management), alongside the Station Ledger and Site Distribution tabs they feed. Nothing about how they work changed — only where you find them.
 
 ### Fleet Roster tab
 
@@ -296,38 +298,6 @@ Stat cards: Total Maintenance Spend (all-time), This Month, Scheduled / In Progr
 
 The record's total cost is always Parts Cost + Labor Cost added automatically — there's no separate "total" field to fill in. No print button.
 
-### Diesel Tracking tab
-
-Buttons: **+ Log Diesel Receipt**, **+ Log Stock Count**.
-
-Stat cards: Total Received (All-Time), Total Issued (from Daily Logs), Expected Balance, and — once at least one physical count has been logged — Last Count Variance.
-
-**"+ Log Diesel Receipt" fields:** Date, Litres Received, Unit Cost (₦/litre), Supplier, Filling Station (optional — draws down that station's prepayment balance), Site / Project (optional — replenishes that site's dump tank), Reference (PO #, waybill, etc.), Notes.
-
-> Tagging a receipt with a **Filling Station** and/or **Site / Project** is what feeds Resource Management → Diesel Management's Station Ledger (Level 1) and Site Distribution (Level 2) — this same receipt is the single record used everywhere; there's no separate ledger to keep in sync.
-
-**"+ Log Stock Count" fields:** Date, Counted Litres (the physical tank reading), Counted By, Notes.
-
-Below the buttons, four sections:
-1. **Diesel Receipts** — every delivery logged.
-2. **Stock Counts & Reconciliation** — every physical count, compared against what the records say *should* be in the tank as of that date, with a Variance pill (green if under 1 L off, amber if under 2% off, red if worse).
-3. **Diesel Ledger by Asset** — filter by date range; shows each dozer's Opening / New / Used / Closing litre balances over that period. "New" comes from Fulfilled fueling vouchers issued to that asset; "Used" comes from its Daily Operations fuel figures; "Opening" is derived from everything before your start date — none of this is entered by hand.
-4. **Diesel Replenishment Request — &lt;tomorrow's date&gt;** — for every fleet asset, shows **C. Diesel** (its most recent actual Closing Diesel reading from Daily Operations), **Tomorrow** (the top-up still needed on top of that), **Next Day** (the full amount needed the day after, assuming the tank is empty by then), **Total**, and **Status**. Two inputs — **Target Hrs — Tomorrow** and **Target Hrs — Next Day** (both default to 8) — let you adjust the planning assumption; a **Station** and **Staff (requested by)** dropdown feed the printed document. Click **🖨 Print Request** for a "DIESEL REQUEST" document itemized per asset with a total, ready to send for approval and on to the station. This is a planning estimate, not a confirmed work schedule.
->
-> **How Tomorrow/Next Day are calculated:** each asset's own recent litres-per-hour rate (from its last 14 worked days) × your Target Hours, minus what's already in its tank (Tomorrow only — Next Day assumes a near-empty tank by then, so it's the full amount). An asset with no Closing Diesel reading yet is treated as having 0 in the tank. Assets that aren't currently Active always show 0/0/0.
-
-> **Expected Balance** is always calculated, never typed in: total litres received (up to a date) minus total litres used on Daily Operations reports (up to that date).
-
-### Fueling Vouchers tab
-
-**Purpose:** an authorization slip a driver/operator takes to a filling station to get fuel on the company's account.
-
-**"+ New Fueling Voucher" fields:** Date, Fuel Station (Midejab Ltd, SK Gold, Asolak Ltd, Iloamachi Ltd, Total Enugu, Akuebuolo Ltd, Kabir Ltd), Project, Dozer/Equipment, Litres Requested, Estimated Cost (₦), Requested By, Status (Pending Approval / Approved / Rejected / Fulfilled), Approved By, Notes, Receipts / Photos.
-
-A voucher only counts toward the Diesel Ledger's "New" litres once it's marked **Fulfilled**. Approving or rejecting a pending voucher is normally done from the [Approvals inbox](#14-fund-requests--approvals) rather than from here.
-
-**Print** (🖨 on any row) produces a "FUELING VOUCHER" document to hand to the station attendant, with signature lines for Requested By, Approved By, and Station Attendant.
-
 ### Inventory & Equipment tab
 
 The master stock list of everything the company owns or holds: machinery, vehicles, tools, consumables, and safety gear. (Fleet Roster above is this same list, filtered to just Heavy Equipment + Vehicles.)
@@ -368,13 +338,47 @@ Four tabs: **Diesel Management, Bulldozer Parts & Supplies, Dozer Rent Payments,
 
 **Purpose:** a 3-level accountability chain that tracks diesel from a filling station relationship, through a project site's bulk tank, down to what an individual dozer actually burned — each level built from the same underlying receipts and daily reports rather than three separate ledgers, so logging a delivery or a report in one place automatically updates the others.
 
-**Station Ledger (Level 1)** — a *prepay* relationship: you pay a filling station up front, and it owes back litres/funds as it supplies diesel over the following days. **"+ Log Prepayment" fields:** Date, Filling Station, Amount Paid (₦), Agreed Unit Price (₦/litre), Reference, Notes. A balances table shows, per station: Total Prepaid, Litres Purchased, Litres Supplied, Balance (Diesel), Balance (Funds), and Status (Fully Settled / Partially Settled / Outstanding). "Litres Supplied" comes from **Diesel Receipts** (Fleet Management → Diesel Tracking) tagged with that station — there's nothing extra to log here once a receipt is tagged. Note the balance direction is the opposite of the existing Fuel Credit tab in Purchasing & Suppliers: there, a balance means *you* owe the station (credit collected, paid later); here, a balance means *the station* still owes *you* (paid up front, not yet fully supplied). Use whichever matches how a given station actually does business with you.
+This tab has its own row of **five sub-tabs** beneath the main Resource Management tab bar: **Station Ledger, Site Distribution, Dozer Discrepancy Report, Diesel Tracking, Fueling Vouchers.** The first three are the accountability chain; the last two are the day-to-day records that feed it (both moved here from Fleet Management — unchanged apart from their location).
+
+**Station Ledger (Level 1)** — a *prepay* relationship: you pay a filling station up front, and it owes back litres/funds as it supplies diesel over the following days. **"+ Log Prepayment" fields:** Date, Filling Station, Amount Paid (₦), Agreed Unit Price (₦/litre), Reference, Notes. A balances table shows, per station: Total Prepaid, Litres Purchased, Litres Supplied, Balance (Diesel), Balance (Funds), and Status (Fully Settled / Partially Settled / Outstanding). "Litres Supplied" comes from **Diesel Receipts** (the Diesel Tracking sub-tab) tagged with that station — there's nothing extra to log here once a receipt is tagged. Note the balance direction is the opposite of the existing Fuel Credit tab in Purchasing & Suppliers: there, a balance means *you* owe the station (credit collected, paid later); here, a balance means *the station* still owes *you* (paid up front, not yet fully supplied). Use whichever matches how a given station actually does business with you.
 
 **Site Distribution (Level 2)** — each project's dump-tank stock. Opening + New Supply − Distributed = Closing, filterable by date range. "New Supply" comes from Diesel Receipts tagged with that Site/Project (same receipts as Level 1, just tagged with a project instead of/as well as a station). "Distributed" is a new log of diesel handed from the site tank to an individual dozer. **"+ Log Distribution" fields:** Date, Site/Project, Dozer/Equipment, Litres Distributed, Distributed By, Notes.
 
 > Logging a distribution here is what auto-fills that dozer's **Diesel Supplied** field on its next matching Daily Operations report (same equipment, date, and site) — see [Daily Operations](#8-daily-operations).
 
 **Dozer Discrepancy Report (Level 3)** — a read-only report, filterable by date range and dozer, built entirely from existing Daily Operations figures (nothing new to log here): Distributed, Used, Closing Expected (opening + supplied − used, recomputed the same way the Daily Operations form auto-fills it), Closing Reported (whatever was actually saved — a real tank dip if one overrode the estimate), and Discrepancy (Reported − Expected). Status is **OK**, **Minor Variance**, or **Variance** (flagged red once the gap exceeds roughly 2% of the expected figure, or 5 litres, whichever is larger) — this is the theft/leak signal: a real tank reading that doesn't match what the math says should be there.
+
+#### Diesel Tracking sub-tab
+
+Buttons: **+ Log Diesel Receipt**, **+ Log Stock Count**.
+
+Stat cards: Total Received (All-Time), Total Issued (from Daily Logs), Expected Balance, and — once at least one physical count has been logged — Last Count Variance.
+
+**"+ Log Diesel Receipt" fields:** Date, Litres Received, Unit Cost (₦/litre), Supplier, Filling Station (optional — draws down that station's prepayment balance), Site / Project (optional — replenishes that site's dump tank), Reference (PO #, waybill, etc.), Notes.
+
+> Tagging a receipt with a **Filling Station** and/or **Site / Project** is what feeds the Station Ledger (Level 1) and Site Distribution (Level 2) sub-tabs — this same receipt is the single record used everywhere; there's no separate ledger to keep in sync.
+
+**"+ Log Stock Count" fields:** Date, Counted Litres (the physical tank reading), Counted By, Notes.
+
+Below the buttons, four sections:
+1. **Diesel Receipts** — every delivery logged.
+2. **Stock Counts & Reconciliation** — every physical count, compared against what the records say *should* be in the tank as of that date, with a Variance pill (green if under 1 L off, amber if under 2% off, red if worse).
+3. **Diesel Ledger by Asset** — filter by date range; shows each dozer's Opening / New / Used / Closing litre balances over that period. "New" comes from Fulfilled fueling vouchers issued to that asset; "Used" comes from its Daily Operations fuel figures; "Opening" is derived from everything before your start date — none of this is entered by hand.
+4. **Diesel Replenishment Request — &lt;tomorrow's date&gt;** — for every fleet asset, shows **C. Diesel** (its most recent actual Closing Diesel reading from Daily Operations), **Tomorrow** (the top-up still needed on top of that), **Next Day** (the full amount needed the day after, assuming the tank is empty by then), **Total**, and **Status**. Two inputs — **Target Hrs — Tomorrow** and **Target Hrs — Next Day** (both default to 8) — let you adjust the planning assumption; a **Station** and **Staff (requested by)** dropdown feed the printed document. Click **🖨 Print Request** for a "DIESEL REQUEST" document itemized per asset with a total, ready to send for approval and on to the station. This is a planning estimate, not a confirmed work schedule.
+>
+> **How Tomorrow/Next Day are calculated:** each asset's own recent litres-per-hour rate (from its last 14 worked days) × your Target Hours, minus what's already in its tank (Tomorrow only — Next Day assumes a near-empty tank by then, so it's the full amount). An asset with no Closing Diesel reading yet is treated as having 0 in the tank. Assets that aren't currently Active always show 0/0/0.
+
+> **Expected Balance** is always calculated, never typed in: total litres received (up to a date) minus total litres used on Daily Operations reports (up to that date).
+
+#### Fueling Vouchers sub-tab
+
+**Purpose:** an authorization slip a driver/operator takes to a filling station to get fuel on the company's account.
+
+**"+ New Fueling Voucher" fields:** Date, Fuel Station (Midejab Ltd, SK Gold, Asolak Ltd, Iloamachi Ltd, Total Enugu, Akuebuolo Ltd, Kabir Ltd), Project, Dozer/Equipment, Litres Requested, Estimated Cost (₦), Requested By, Status (Pending Approval / Approved / Rejected / Fulfilled), Approved By, Notes, Receipts / Photos.
+
+A voucher only counts toward the Diesel Ledger's "New" litres once it's marked **Fulfilled**. Approving or rejecting a pending voucher is normally done from the [Approvals inbox](#14-fund-requests--approvals) rather than from here.
+
+**Print** (🖨 on any row) produces a "FUELING VOUCHER" document to hand to the station attendant, with signature lines for Requested By, Approved By, and Station Attendant.
 
 ### Bulldozer Parts & Supplies tab
 
@@ -782,7 +786,7 @@ Everything in this ERP lives in one shared, central database — not on any one 
 
 ### Track diesel from a station down to a dozer
 1. **Station Ledger:** when you prepay a station, log it under **Resource Management → Diesel Management → Station Ledger → + Log Prepayment.**
-2. As deliveries arrive, log them as usual under **Fleet Management → Diesel Tracking → + Log Diesel Receipt**, tagging the **Filling Station** it came from and, if it's going straight to a site's bulk tank, the **Site / Project** too — this single receipt is what draws down the Station Ledger balance and feeds the site's stock.
+2. As deliveries arrive, log them under **Resource Management → Diesel Management → Diesel Tracking → + Log Diesel Receipt**, tagging the **Filling Station** it came from and, if it's going straight to a site's bulk tank, the **Site / Project** too — this single receipt is what draws down the Station Ledger balance and feeds the site's stock.
 3. **Site Distribution:** when diesel moves from a site's dump tank to an individual dozer, log it under **Resource Management → Diesel Management → Site Distribution → + Log Distribution.** This auto-fills that dozer's Diesel Supplied field the next time a matching Daily Operations report is logged (same equipment, date, and site).
 4. **Dozer Discrepancy Report:** periodically check **Resource Management → Diesel Management → Dozer Discrepancy Report** for any dozer whose actual tank reading (a physical dip, saved as Closing Diesel on a Daily Operations report) doesn't match what the numbers say it should be — that gap is your signal to investigate.
 

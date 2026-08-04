@@ -3,6 +3,8 @@ import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
 import { sectionHeader, statCard, statusPill, renderTable, actionButtons, openModal, confirmDelete } from '../ui.js';
 import { FUEL_STATIONS } from '../constants.js';
 import { fleetItems } from './fleet.js';
+import { renderDieselTracking } from './dieselTracking.js';
+import { renderFuelingVouchers } from './fuelingVouchers.js';
 
 function projectOptions() {
   return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
@@ -369,9 +371,13 @@ export function renderDieselManagement(container) {
   const stationTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('station') }, 'Station Ledger');
   const siteTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('site') }, 'Site Distribution');
   const reportTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('report') }, 'Dozer Discrepancy Report');
+  const trackingTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('tracking') }, 'Diesel Tracking');
+  const vouchersTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('vouchers') }, 'Fueling Vouchers');
   tabBar.appendChild(stationTabBtn);
   tabBar.appendChild(siteTabBtn);
   tabBar.appendChild(reportTabBtn);
+  tabBar.appendChild(trackingTabBtn);
+  tabBar.appendChild(vouchersTabBtn);
   container.appendChild(tabBar);
 
   const body = el('div');
@@ -382,9 +388,13 @@ export function renderDieselManagement(container) {
     stationTabBtn.classList.toggle('active', tab === 'station');
     siteTabBtn.classList.toggle('active', tab === 'site');
     reportTabBtn.classList.toggle('active', tab === 'report');
+    trackingTabBtn.classList.toggle('active', tab === 'tracking');
+    vouchersTabBtn.classList.toggle('active', tab === 'vouchers');
     if (tab === 'station') renderStationLedgerTab(body);
     else if (tab === 'site') renderSiteDistributionTab(body);
-    else renderDiscrepancyReportTab(body);
+    else if (tab === 'report') renderDiscrepancyReportTab(body);
+    else if (tab === 'tracking') renderDieselTracking(body);
+    else renderFuelingVouchers(body);
   }
 
   setTab('station');

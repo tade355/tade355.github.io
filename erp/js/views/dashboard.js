@@ -174,7 +174,7 @@ export function renderDashboard(container) {
   if (ownerSettlementsOwed) actionItems.push({ tone: 'warning', icon: '🤝', text: `${formatCurrency(ownerSettlementsOwed)} owed to dozer owners`, href: '#/resourceManagement' });
   if (pendingFundRequests) actionItems.push({ tone: 'warning', icon: '📋', text: `${pendingFundRequests} fund request${pendingFundRequests > 1 ? 's' : ''} awaiting approval`, href: '#/fundRequests' });
   if (pendingLeave) actionItems.push({ tone: 'warning', icon: '📋', text: `${pendingLeave} leave request${pendingLeave > 1 ? 's' : ''} awaiting approval`, href: '#/leave' });
-  if (pendingVouchers) actionItems.push({ tone: 'warning', icon: '📋', text: `${pendingVouchers} fueling voucher${pendingVouchers > 1 ? 's' : ''} awaiting approval`, href: '#/fleet' });
+  if (pendingVouchers) actionItems.push({ tone: 'warning', icon: '📋', text: `${pendingVouchers} fueling voucher${pendingVouchers > 1 ? 's' : ''} awaiting approval`, href: '#/resourceManagement' });
   if (!lastBackup) actionItems.push({ tone: 'warning', icon: '💾', text: "You've never backed up this data — everything lives only in this browser", href: '#/backup' });
   else if (daysSinceBackup > 7) actionItems.push({ tone: 'warning', icon: '💾', text: `It's been ${daysSinceBackup} days since your last backup`, href: '#/backup' });
 
