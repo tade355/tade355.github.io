@@ -75,7 +75,7 @@ export function renderInventory(container) {
   function openForm(record) {
     openModal({
       title: record ? 'Edit Item' : 'Add Item',
-      fields: FIELDS,
+      fields: fields(),
       initial: record || {},
       submitLabel: record ? 'Save Changes' : 'Add Item',
       onSubmit: async (data) => {
