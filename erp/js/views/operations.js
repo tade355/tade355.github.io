@@ -48,6 +48,13 @@ function textField(name, label, type, value, required) {
   return el('label', { class: 'field' }, [el('span', { class: 'field-label' }, label + (required ? ' *' : '')), input]);
 }
 
+function timeStringToMinutes(hhmm) {
+  if (!hhmm) return null;
+  const [h, m] = hhmm.split(':').map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
+}
+
 function openForm(record, refresh) {
   if (!employeeOptions().length) {
     window.alert('Add employees first before logging an operations report.');
@@ -61,13 +68,23 @@ function openForm(record, refresh) {
       const today = new Date().toISOString().slice(0, 10);
       const dateField = textField('date', 'Date', 'date', record?.date || today, true);
       const siteField = selectField('siteName', 'Site / Project Name', projectOptions(), record?.siteName ?? getAssignedProject());
+      const blockNumberField = textField('blockNumber', 'Block / Plot No. (if available for this site)', 'text', record?.blockNumber);
       const customerField = selectField('customerId', 'Client', customerOptions(), record?.customerId);
       const equipmentField = selectField('equipment', 'Equipment Used', equipmentOptions(), record?.equipment);
       const operatorField = selectField('operatorId', 'Operator', employeeOptions(), record?.operatorId);
       const supervisorField = selectField('supervisorId', 'Supervisor', employeeOptions(), record?.supervisorId);
-      const hoursField = textField('hoursWorked', 'Hours Worked', 'number', record?.hoursWorked, true);
-      const timeResumedField = textField('timeResumed', 'Time Resumed (optional — for average resumption tracking)', 'time', record?.timeResumed);
-      const timeClosedField = textField('timeClosed', 'Time Closed (optional — for average close time tracking)', 'time', record?.timeClosed);
+      const timeResumedField = textField('timeResumed', 'Time In (Resumed) — used to auto-calculate Hours Worked', 'time', record?.timeResumed);
+      const timeClosedField = textField('timeClosed', 'Time Out (Closed) — used to auto-calculate Hours Worked', 'time', record?.timeClosed);
+      const downtimeReasonField = selectField('downtimeReason', 'Downtime Reason (if any)', [
+        { value: '', label: '— None —' },
+        { value: 'Dozer Breakdown', label: 'Dozer Breakdown' },
+        { value: 'Community Disturbance', label: 'Community Disturbance' },
+        { value: 'Operator Delay / Infringement', label: 'Operator Delay / Infringement — deducted hours count against the operator' },
+        { value: 'Other', label: 'Other' },
+      ], record?.downtimeReason);
+      const downtimeHoursField = textField('downtimeHours', 'Downtime (hrs)', 'number', record?.downtimeHours);
+      const downtimeMinutesField = textField('downtimeMinutes', 'Downtime (mins)', 'number', record?.downtimeMinutes);
+      const hoursField = textField('hoursWorked', 'Hours Worked (auto-calculated from Time In/Out minus Downtime — editable if entering by hand)', 'number', record?.hoursWorked, true);
       const operationTypeField = selectField('operationType', 'Operation Type', OPERATION_TYPES.map((t) => ({ value: t.value, label: `${t.value} (${t.unit})` })), record?.operationType);
       const quantityField = textField('quantity', 'Quantity (unit shown next to the selected Operation Type, above)', 'number', record?.quantity, true);
       const openingDieselField = textField('openingDiesel', 'Opening Diesel (litres) — in the tank at start of day', 'number', record?.openingDiesel);
@@ -97,9 +114,33 @@ function openForm(record, refresh) {
         field.querySelector('input').addEventListener('input', recomputeFuelUsed);
       });
 
+      // Hours Worked auto-fills the moment both Time In and Time Out are set
+      // — the raw shift span, minus any logged Downtime (breakdown, community
+      // disturbance, or an operator's own delay/infringement). Deducting
+      // downtime here is what actually "punishes" an at-fault operator: this
+      // same hoursWorked figure is what Operator Allowance pays against and
+      // what Profitability charges as dozer cost, so fewer credited hours
+      // means less day-rate pay, automatically, with no separate penalty
+      // step needed. Still a plain editable input when times aren't tracked.
+      function recomputeHoursWorked() {
+        const resumedMin = timeStringToMinutes(timeResumedField.querySelector('input').value);
+        const closedMin = timeStringToMinutes(timeClosedField.querySelector('input').value);
+        if (resumedMin === null || closedMin === null) return;
+        let span = closedMin - resumedMin;
+        if (span < 0) span += 24 * 60; // shift crossing midnight
+        const downHrs = Number(downtimeHoursField.querySelector('input').value) || 0;
+        const downMins = Number(downtimeMinutesField.querySelector('input').value) || 0;
+        const netMinutes = Math.max(0, span - (downHrs * 60 + downMins));
+        hoursField.querySelector('input').value = (netMinutes / 60).toFixed(2);
+      }
+      [timeResumedField, timeClosedField, downtimeHoursField, downtimeMinutesField].forEach((field) => {
+        field.querySelector('input').addEventListener('input', recomputeHoursWorked);
+      });
+
       const topGrid = el('div', { class: 'form-grid-2' }, [
-        dateField, siteField, customerField, equipmentField, operatorField, supervisorField,
-        hoursField, timeResumedField, timeClosedField, operationTypeField, quantityField,
+        dateField, siteField, blockNumberField, customerField, equipmentField, operatorField, supervisorField,
+        timeResumedField, timeClosedField, downtimeReasonField, downtimeHoursField, downtimeMinutesField, hoursField,
+        operationTypeField, quantityField,
         openingDieselField, dieselSuppliedField, closingDieselField, fuelField, statusField,
       ]);
 
@@ -142,6 +183,7 @@ function openForm(record, refresh) {
         const payload = {
           date: dateField.querySelector('input').value,
           siteName: siteField.querySelector('select').value,
+          blockNumber: blockNumberField.querySelector('input').value || null,
           customerId: customerField.querySelector('select').value,
           equipment,
           operatorId: operatorField.querySelector('select').value,
@@ -149,6 +191,9 @@ function openForm(record, refresh) {
           hoursWorked: Number(hoursField.querySelector('input').value) || 0,
           timeResumed: timeResumedField.querySelector('input').value || null,
           timeClosed: timeClosedField.querySelector('input').value || null,
+          downtimeReason: downtimeReasonField.querySelector('select').value || null,
+          downtimeHours: downtimeHoursField.querySelector('input').value === '' ? null : Number(downtimeHoursField.querySelector('input').value),
+          downtimeMinutes: downtimeMinutesField.querySelector('input').value === '' ? null : Number(downtimeMinutesField.querySelector('input').value),
           operationType: operationTypeField.querySelector('select').value,
           quantity: Number(quantityField.querySelector('input').value) || 0,
           openingDiesel: openingDieselField.querySelector('input').value === '' ? null : Number(openingDieselField.querySelector('input').value),
@@ -225,7 +270,7 @@ export function renderOperations(container) {
     if (searchQuery) {
       rows = rows.filter((r) => {
         const operatorName = employees.find((e) => e.id === r.operatorId)?.name || '';
-        const haystack = [r.siteName, r.equipment, r.operationType, operatorName, r.notes].join(' ').toLowerCase();
+        const haystack = [r.siteName, r.blockNumber, r.equipment, r.operationType, operatorName, r.notes].join(' ').toLowerCase();
         return haystack.includes(searchQuery);
       });
     }
@@ -238,12 +283,14 @@ export function renderOperations(container) {
     const totalTrekking = trekkingRows.reduce((sum, r) => sum + r.quantity, 0);
     const totalFuel = rows.reduce((sum, r) => sum + r.fuelUsed, 0);
     const ongoing = rows.filter((r) => r.status === 'Ongoing').length;
+    const totalDowntimeMinutes = rows.reduce((sum, r) => sum + ((Number(r.downtimeHours) || 0) * 60 + (Number(r.downtimeMinutes) || 0)), 0);
 
     summaryGrid.innerHTML = '';
     summaryGrid.appendChild(statCard({ label: 'Total Area Cleared', value: `${totalArea.toFixed(1)} Ha` }));
     summaryGrid.appendChild(statCard({ label: 'Total Road', value: `${totalRoad.toFixed(1)} KM` }));
     summaryGrid.appendChild(statCard({ label: 'Total Trekking', value: `${totalTrekking.toFixed(1)} hrs` }));
     summaryGrid.appendChild(statCard({ label: 'Total Fuel Used', value: `${totalFuel.toLocaleString()} L` }));
+    summaryGrid.appendChild(statCard({ label: 'Total Downtime', value: `${Math.floor(totalDowntimeMinutes / 60)}h ${totalDowntimeMinutes % 60}m` }));
     summaryGrid.appendChild(statCard({ label: 'Ongoing Sites', value: String(ongoing) }));
     summaryGrid.appendChild(statCard({ label: 'Reports Logged', value: String(rows.length) }));
 
@@ -251,12 +298,22 @@ export function renderOperations(container) {
       columns: [
         { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
         { key: 'siteName', label: 'Site' },
+        { key: 'blockNumber', label: 'Block/Plot', render: (r) => r.blockNumber || '—' },
         { key: 'customer', label: 'Client', render: (r) => customers.find((c) => c.id === r.customerId)?.name || '—' },
         { key: 'equipment', label: 'Equipment' },
         { key: 'operator', label: 'Operator', render: (r) => employees.find((e) => e.id === r.operatorId)?.name || 'Unknown' },
         { key: 'hoursWorked', label: 'Hours', render: (r) => `${r.hoursWorked} h` },
         { key: 'timeResumed', label: 'Resumed', render: (r) => r.timeResumed || '—' },
         { key: 'timeClosed', label: 'Closed', render: (r) => r.timeClosed || '—' },
+        { key: 'downtime', label: 'Downtime', render: (r) => {
+          const hrs = Number(r.downtimeHours) || 0;
+          const mins = Number(r.downtimeMinutes) || 0;
+          if (!hrs && !mins) return '—';
+          const parts = [];
+          if (hrs) parts.push(`${hrs}h`);
+          if (mins) parts.push(`${mins}m`);
+          return `${parts.join(' ')}${r.downtimeReason ? ` — ${r.downtimeReason}` : ''}`;
+        } },
         { key: 'operationType', label: 'Operation Type' },
         { key: 'quantity', label: 'Quantity', render: (r) => `${r.quantity} ${unitForOperationType(r.operationType)}` },
         { key: 'fuelUsed', label: 'Fuel', render: (r) => `${r.fuelUsed} L` },

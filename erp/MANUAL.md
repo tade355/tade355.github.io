@@ -211,7 +211,7 @@ The same screen also appears inside [Accounting & Expenses](#12-accounting--expe
 
 This is the field log book — one entry per piece of equipment per day, capturing what was worked, how much got done, fuel burned, and any site files.
 
-**List screen:** a search box ("Search by site, equipment, operator, or notes…"), stat cards (Total Area Cleared, Total Road, Total Trekking, Total Fuel Used, Ongoing Sites, Reports Logged), and a table of every report. A Supervisor only sees rows from their own assigned project.
+**List screen:** a search box ("Search by site, block/plot, equipment, operator, or notes…"), stat cards (Total Area Cleared, Total Road, Total Trekking, Total Fuel Used, Total Downtime, Ongoing Sites, Reports Logged), and a table of every report. A Supervisor only sees rows from their own assigned project.
 
 **"+ Log Daily Report" fields, in order:**
 
@@ -219,14 +219,17 @@ This is the field log book — one entry per piece of equipment per day, capturi
 |---|---|
 | Date | required, defaults to today |
 | Site / Project Name | dropdown of Projects; pre-fills to a Supervisor's own assigned project |
+| Block / Plot No. | optional free text — fill in only when the site actually has this subdivided |
 | Client | optional, dropdown of Customers |
 | Equipment Used | dropdown — only shows items whose Category is Heavy Equipment, Tools, or Vehicles |
 | Operator | dropdown of employees |
 | Supervisor | dropdown of employees |
-| Hours Worked | ⚠ marked required on screen, but in practice a blank value silently saves as 0 rather than blocking the save |
-| Time Resumed | optional — feeds the fleet's average resumption-time stat |
-| Time Closed | optional — feeds the fleet's average close-time stat |
-| Operation Type | Felling (Ha), Stacking (Ha), Direct Stacking (Ha), Root Picking (Ha), Bonding (Ha), Road (KM), or Trekking (hrs) |
+| Time In (Resumed) | optional — also feeds the fleet's average resumption-time stat |
+| Time Out (Closed) | optional — also feeds the fleet's average close-time stat |
+| Downtime Reason | — None —, Dozer Breakdown, Community Disturbance, Operator Delay / Infringement, or Other |
+| Downtime (hrs) / Downtime (mins) | how long the dozer was down during the shift, if any |
+| Hours Worked | **auto-fills the moment both Time In and Time Out are set** — the raw shift span minus any Downtime entered above. Still a plain editable field, so you can type it by hand when times aren't tracked. ⚠ if left blank with no times entered, it silently saves as 0 rather than blocking the save. |
+| Operation Type | Felling (Ha), Stacking (Ha), Direct Stacking (Ha), Root Picking (Ha), Bonding (Ha), Phase 1 (Ha), Phase 2 (Ha), Cross Cutting (Ha), Road (KM), or Trekking (hrs) |
 | Quantity | the amount done, in whatever unit the chosen Operation Type uses (shown next to it) — same "required label but silently saves as 0" caveat as Hours Worked |
 | Opening Diesel (litres) | what was in the tank at the start of the day — optional, matches the field's End of the Day Report |
 | Diesel Supplied (litres) | what was added to the tank today — optional |
@@ -238,6 +241,8 @@ This is the field log book — one entry per piece of equipment per day, capturi
 | KML Boundary File / Photos | attach a `.kml` site-boundary file and/or photos — these automatically feed the Projects → Map View and Photo Gallery tabs |
 
 Date, Site, Equipment, Operator, Supervisor, and Operation Type genuinely block saving if left blank; the rest do not (see the caveat above — fill them in anyway, since downstream stats depend on real numbers).
+
+> **How Downtime "punishes" an operator:** there's no separate penalty step. Downtime hrs/mins are simply subtracted from the auto-computed Hours Worked, and that same Hours Worked figure is what HR → Operator Allowance pays day-rate against and what Profitability charges as dozer cost — so logging downtime as, say, Operator Delay / Infringement automatically reduces that day's credited hours (and pay) with no extra step. The Downtime Reason itself is only an accountability label, for telling fault from no-fault situations afterward — every reason deducts the same way.
 
 No print button on this screen.
 

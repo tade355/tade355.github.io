@@ -262,6 +262,7 @@ create table operations (
   id             text primary key,
   date           date not null,
   site_name      text not null,
+  block_number   text, -- Block/Plot No., optional — only some sites have this subdivided
   customer_id    text references customers(id) on delete set null,
   equipment      text,
   operator_id    text references employees(id) on delete set null,
@@ -269,11 +270,18 @@ create table operations (
   hours_worked   numeric,
   time_resumed   text, -- "HH:MM" 24h, optional — for average resumption-time tracking (Fleet Roster)
   time_closed    text, -- "HH:MM" 24h, optional — for average close-time tracking (Fleet Roster)
+  -- Downtime is subtracted from hours_worked client-side (see operations.js
+  -- recomputeHoursWorked) so it already reduces Operator Allowance pay and
+  -- Profitability dozer cost — downtime_reason is an accountability label,
+  -- not a separate calculation path.
+  downtime_reason  text check (downtime_reason in ('Dozer Breakdown', 'Community Disturbance', 'Operator Delay / Infringement', 'Other')),
+  downtime_hours   numeric,
+  downtime_minutes numeric,
   -- Old values (Tree Felling, Direct Clearing, Phase 1, Phase 2, Corrections,
   -- Zero Bonding) kept valid alongside the corrected names — see 0015_operation_type_rename.sql.
   operation_type text check (operation_type in (
     'Felling', 'Stacking', 'Direct Stacking', 'Root Picking', 'Bonding', 'Road', 'Trekking',
-    'Tree Felling', 'Direct Clearing', 'Phase 1', 'Phase 2', 'Corrections', 'Zero Bonding'
+    'Tree Felling', 'Direct Clearing', 'Phase 1', 'Phase 2', 'Cross Cutting', 'Corrections', 'Zero Bonding'
   )),
   quantity       numeric, -- Ha for the clearing types, KM for Road, hrs for Trekking
   opening_diesel numeric, -- litres in the tank at start of day (optional tank reading)

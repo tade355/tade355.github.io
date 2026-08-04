@@ -1,14 +1,19 @@
 // Matches the terminology actually used on the field (daily logs, milestone
 // trackers) rather than the placeholder names this app originally shipped
-// with. "Tree Felling", "Direct Clearing", "Phase 1", "Phase 2", and
-// "Corrections" never appear in any real record — see LEGACY_OPERATION_TYPE_UNITS
-// below for why they're still recognized even though they're gone from this list.
+// with. "Tree Felling", "Direct Clearing", and "Corrections" never appear
+// in any real record — see LEGACY_OPERATION_TYPE_UNITS below for why
+// they're still recognized even though they're gone from this list. Phase 1
+// and Phase 2 were retired the same way but have since come back into real
+// use, so they're active types again rather than legacy-only.
 export const OPERATION_TYPES = [
   { value: 'Felling', unit: 'Ha' },
   { value: 'Stacking', unit: 'Ha' },
   { value: 'Direct Stacking', unit: 'Ha' },
   { value: 'Root Picking', unit: 'Ha' },
   { value: 'Bonding', unit: 'Ha' },
+  { value: 'Phase 1', unit: 'Ha' },
+  { value: 'Phase 2', unit: 'Ha' },
+  { value: 'Cross Cutting', unit: 'Ha' },
   { value: 'Road', unit: 'KM' },
   { value: 'Trekking', unit: 'hrs' },
 ];
@@ -20,8 +25,6 @@ export const OPERATION_TYPES = [
 const LEGACY_OPERATION_TYPE_UNITS = {
   'Tree Felling': 'Ha',
   'Direct Clearing': 'Ha',
-  'Phase 1': 'Ha',
-  'Phase 2': 'Ha',
   Corrections: 'Ha',
   'Zero Bonding': 'Ha',
 };
@@ -44,12 +47,13 @@ const OPERATION_TYPE_COLORS = {
   'Direct Stacking': '#eda100',
   'Root Picking': '#4a3aa7',
   Bonding: '#e34948',
+  'Phase 1': '#12a4a4',
+  'Phase 2': '#6c5ce7',
+  'Cross Cutting': '#b5842a',
   Road: '#3d3d3d',
   Trekking: '#e87ba4',
   'Tree Felling': '#2a78d6',
   'Direct Clearing': '#eda100',
-  'Phase 1': '#4a3aa7',
-  'Phase 2': '#8e44ad',
   Corrections: '#eb6834',
   'Zero Bonding': '#e34948',
 };
