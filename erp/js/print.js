@@ -396,30 +396,22 @@ export function printMilestoneTracker(data) {
   render(html);
 }
 
-export function printDieselReplenishmentRequest(forDate, rows) {
-  const totalLitres = rows.reduce((sum, r) => sum + r.projectedLitres, 0);
+export function printDieselReplenishmentRequest(forDate, rows, { station, requestedByName } = {}) {
+  const totalLitres = rows.reduce((sum, r) => sum + r.litres, 0);
   const html = `
-    ${letterhead('DIESEL REPLENISHMENT REQUEST', formatDate(forDate))}
-    <div class="print-meta-grid">
-      <div><strong>For:</strong> ${formatDate(forDate)}</div>
-      <div><strong>Assets:</strong> ${rows.length}</div>
-      <div><strong>Total Projected:</strong> ${totalLitres.toLocaleString()} L</div>
-    </div>
-    <table class="print-table">
-      <thead><tr><th>Asset</th><th>Avg Daily Use (14d)</th><th>Projected Need</th></tr></thead>
-      <tbody>
-        ${rows.map((r) => `
-          <tr>
-            <td>${r.name}</td>
-            <td>${r.projectedLitres.toLocaleString()} L</td>
-            <td>${r.projectedLitres.toLocaleString()} L</td>
-          </tr>
-        `).join('')}
-      </tbody>
-      <tfoot><tr><td colspan="2">Total</td><td>${totalLitres.toLocaleString()} L</td></tr></tfoot>
-    </table>
+    ${letterhead('DIESEL REQUEST', formatDate(forDate))}
+    <div class="print-block"><p><strong>FOR TOMORROW'S OPERATION — ${formatDate(forDate)}</strong></p></div>
     <div class="print-block">
-      <p>Projected from each asset's average daily diesel use over its last 14 working days — an estimate, not a guarantee of actual need.</p>
+      ${rows.map((r) => `<p>${r.name} — ${r.litres.toLocaleString()} Litre's</p>`).join('')}
+      <p><strong>▪️ TOTAL — ${totalLitres.toLocaleString()} Litre's</strong></p>
+    </div>
+    <div class="print-meta-grid">
+      <div><strong>Station:</strong> ${station || '—'}</div>
+      <div><strong>Staff:</strong> ${requestedByName || '—'}</div>
+    </div>
+    <div class="print-block">
+      <p>Please kindly approve for tomorrow's operation.</p>
+      <p>Thank you.</p>
     </div>
     ${signatureBlock(['Requested By', 'Approved By'])}
   `;

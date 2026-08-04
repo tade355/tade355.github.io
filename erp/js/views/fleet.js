@@ -125,6 +125,41 @@ function avgDailyFuelUsageFor(name, windowDays = 14) {
   return total / recentWorkedDates.length;
 }
 
+// Litres burned per hour worked, over the same trailing-worked-days window
+// as avgDailyFuelUsageFor — this is what actually varies asset to asset
+// (two dozers doing an 8h day rarely burn the same litres), so it's the
+// right rate to project a target-hours figure from, rather than reusing
+// a flat per-day average regardless of how long tomorrow's shift is.
+function avgFuelPerHourFor(name, windowDays = 14) {
+  const today = new Date();
+  const from = new Date(today.getTime() - (windowDays * 3 - 1) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const to = today.toISOString().slice(0, 10);
+  const byDate = {};
+  store.get('operations')
+    .filter((o) => o.equipment === name && o.date >= from && o.date <= to)
+    .forEach((o) => {
+      const bucket = byDate[o.date] || { fuel: 0, hours: 0 };
+      bucket.fuel += o.fuelUsed || 0;
+      bucket.hours += o.hoursWorked || 0;
+      byDate[o.date] = bucket;
+    });
+  const recentWorkedDates = Object.keys(byDate).sort().slice(-windowDays);
+  if (!recentWorkedDates.length) return 0;
+  const totals = recentWorkedDates.reduce((acc, d) => ({ fuel: acc.fuel + byDate[d].fuel, hours: acc.hours + byDate[d].hours }), { fuel: 0, hours: 0 });
+  return totals.hours > 0 ? totals.fuel / totals.hours : 0;
+}
+
+// The most recent tank reading actually logged for this asset (see the
+// Opening/Supplied/Closing Diesel fields on Daily Operations) — this is
+// "what's really left in the tank right now" for the Replenishment
+// Request below, as opposed to a company-wide computed running balance.
+function latestClosingDieselFor(name) {
+  const rows = store.get('operations')
+    .filter((o) => o.equipment === name && o.closingDiesel !== null && o.closingDiesel !== undefined)
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+  return rows.length ? rows[0].closingDiesel : null;
+}
+
 function lastMaintenanceFor(name) {
   const logs = store.get('maintenanceLogs')
     .filter((m) => m.equipment === name && m.status === 'Completed')
@@ -724,33 +759,92 @@ export function renderFleet(container) {
       refreshLedger();
 
       const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-      const replenishmentRows = fleetItems()
-        .filter((d) => (d.fleetStatus || 'Active') === 'Active')
-        .map((d) => ({ name: d.name, projectedLitres: Math.round(avgDailyFuelUsageFor(d.name)) }))
-        .filter((r) => r.projectedLitres > 0);
-      const replenishmentTotal = replenishmentRows.reduce((sum, r) => sum + r.projectedLitres, 0);
+      const dayAfter = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-      const replenishmentHeader = el('div', { class: 'section-header' }, [
-        el('h3', { class: 'subsection-title' }, `Diesel Replenishment Request — ${formatDate(tomorrow)}`),
-        el('button', {
-          type: 'button',
-          class: 'btn btn-ghost',
-          onClick: () => printDieselReplenishmentRequest(tomorrow, replenishmentRows),
-        }, '🖨 Print Request'),
+      body.appendChild(el('h3', { class: 'subsection-title' }, `Diesel Replenishment Request — ${formatDate(tomorrow)}`));
+      body.appendChild(el('p', { class: 'section-subtitle' }, "For each asset: Closing Diesel is its most recent tank reading from Daily Operations; Tomorrow is the top-up still needed on top of that (target hours × the asset's own recent litres/hour, minus what's already in the tank); Next Day assumes the tank will be empty by then, so it's the full amount for that day's target. This is a planning estimate, not a confirmed work schedule."));
+
+      const replenishmentFilterBar = el('div', { class: 'filter-bar' });
+      const tomorrowHoursInput = el('input', { type: 'number', min: 0, step: 0.5, value: '8' });
+      const nextDayHoursInput = el('input', { type: 'number', min: 0, step: 0.5, value: '8' });
+      const requestStationSelect = el('select', {}, FUEL_STATIONS.map((s) => el('option', { value: s }, s)));
+      const requestByOptions = employeeOptions();
+      const requestBySelect = el('select', {}, [
+        el('option', { value: '' }, '— Not specified —'),
+        ...requestByOptions.map((o) => el('option', { value: o.value }, o.label)),
       ]);
-      body.appendChild(replenishmentHeader);
-      body.appendChild(el('p', { class: 'section-subtitle' }, "Projects each Active asset's need for tomorrow from its average diesel use over its last 14 worked days — an estimate to help plan the next delivery, not a schedule of who's actually working tomorrow."));
+      replenishmentFilterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Target Hrs — Tomorrow'), tomorrowHoursInput]));
+      replenishmentFilterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Target Hrs — Next Day'), nextDayHoursInput]));
+      replenishmentFilterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Station'), requestStationSelect]));
+      replenishmentFilterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Staff (requested by)'), requestBySelect]));
+      body.appendChild(replenishmentFilterBar);
+
       const replenishmentContainer = el('div');
       body.appendChild(replenishmentContainer);
-      renderTable(replenishmentContainer, {
-        columns: [
-          { key: 'name', label: 'Asset' },
-          { key: 'projectedLitres', label: 'Projected Need', render: (r) => `${r.projectedLitres.toLocaleString()} L` },
-        ],
-        rows: replenishmentRows,
-        emptyText: 'No recent diesel usage to project from yet.',
+      const replenishmentTotalNote = el('p', { class: 'section-subtitle' });
+      body.appendChild(replenishmentTotalNote);
+      const printBtnWrap = el('div');
+      body.appendChild(printBtnWrap);
+
+      function refreshReplenishment() {
+        const tomorrowHours = Number(tomorrowHoursInput.value) || 0;
+        const nextDayHours = Number(nextDayHoursInput.value) || 0;
+
+        const replenishmentRows = fleetItems().map((d) => {
+          const isActive = (d.fleetStatus || 'Active') === 'Active';
+          const closingDiesel = latestClosingDieselFor(d.name);
+          const ratePerHour = isActive ? avgFuelPerHourFor(d.name) : 0;
+          const tomorrowNeed = isActive ? Math.max(0, Math.round(tomorrowHours * ratePerHour - (closingDiesel || 0))) : 0;
+          const nextDayNeed = isActive ? Math.round(nextDayHours * ratePerHour) : 0;
+          return {
+            name: d.name,
+            closingDiesel,
+            tomorrowNeed,
+            nextDayNeed,
+            total: tomorrowNeed + nextDayNeed,
+            status: d.fleetStatus || 'Active',
+          };
+        });
+        const totals = replenishmentRows.reduce((acc, r) => ({
+          tomorrow: acc.tomorrow + r.tomorrowNeed,
+          nextDay: acc.nextDay + r.nextDayNeed,
+          total: acc.total + r.total,
+        }), { tomorrow: 0, nextDay: 0, total: 0 });
+
+        renderTable(replenishmentContainer, {
+          columns: [
+            { key: 'name', label: 'Asset' },
+            { key: 'closingDiesel', label: 'C. Diesel', render: (r) => (r.closingDiesel === null ? '—' : `${r.closingDiesel.toLocaleString()} L`) },
+            { key: 'tomorrowNeed', label: `Tomorrow (${formatDate(tomorrow)})`, render: (r) => `${r.tomorrowNeed.toLocaleString()} L` },
+            { key: 'nextDayNeed', label: `Next Day (${formatDate(dayAfter)})`, render: (r) => `${r.nextDayNeed.toLocaleString()} L` },
+            { key: 'total', label: 'Total', render: (r) => el('strong', {}, `${r.total.toLocaleString()} L`) },
+            { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
+          ],
+          rows: replenishmentRows,
+          emptyText: 'No fleet assets yet.',
+        });
+        replenishmentTotalNote.textContent = `Total — Tomorrow: ${totals.tomorrow.toLocaleString()} L · Next Day: ${totals.nextDay.toLocaleString()} L · Combined: ${totals.total.toLocaleString()} L`;
+
+        printBtnWrap.innerHTML = '';
+        printBtnWrap.appendChild(el('button', {
+          type: 'button',
+          class: 'btn btn-ghost',
+          onClick: () => {
+            const printRows = replenishmentRows.filter((r) => r.tomorrowNeed > 0).map((r) => ({ name: r.name, litres: r.tomorrowNeed }));
+            if (!printRows.length) { window.alert('No assets need diesel for tomorrow yet.'); return; }
+            printDieselReplenishmentRequest(tomorrow, printRows, {
+              station: requestStationSelect.value,
+              requestedByName: store.get('employees').find((e) => e.id === requestBySelect.value)?.name || '',
+            });
+          },
+        }, '🖨 Print Request'));
+      }
+
+      [tomorrowHoursInput, nextDayHoursInput, requestStationSelect, requestBySelect].forEach((input) => {
+        input.addEventListener('input', refreshReplenishment);
+        input.addEventListener('change', refreshReplenishment);
       });
-      body.appendChild(el('p', { class: 'section-subtitle' }, `Total projected: ${replenishmentTotal.toLocaleString()} L`));
+      refreshReplenishment();
     }
 
     function openReceiptForm(record) {

@@ -272,7 +272,10 @@ create table operations (
     'Tree Felling', 'Direct Clearing', 'Phase 1', 'Phase 2', 'Corrections', 'Zero Bonding'
   )),
   quantity       numeric, -- Ha for the clearing types, KM for Road, hrs for Trekking
-  fuel_used      numeric,
+  opening_diesel numeric, -- litres in the tank at start of day (optional tank reading)
+  diesel_supplied numeric, -- litres added to the tank today (optional tank reading)
+  closing_diesel numeric, -- litres left in the tank at end of day — feeds the Diesel Replenishment Request
+  fuel_used      numeric, -- auto-computed from opening + supplied - closing when those are given; else entered directly
   status         text check (status in ('Completed', 'Ongoing', 'Halted')),
   notes          text,
   attachments    jsonb not null default '[]'::jsonb,

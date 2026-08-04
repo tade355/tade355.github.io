@@ -70,6 +70,9 @@ function openForm(record, refresh) {
       const timeClosedField = textField('timeClosed', 'Time Closed (optional — for average close time tracking)', 'time', record?.timeClosed);
       const operationTypeField = selectField('operationType', 'Operation Type', OPERATION_TYPES.map((t) => ({ value: t.value, label: `${t.value} (${t.unit})` })), record?.operationType);
       const quantityField = textField('quantity', 'Quantity (unit shown next to the selected Operation Type, above)', 'number', record?.quantity, true);
+      const openingDieselField = textField('openingDiesel', 'Opening Diesel (litres) — in the tank at start of day', 'number', record?.openingDiesel);
+      const dieselSuppliedField = textField('dieselSupplied', 'Diesel Supplied (litres) — added to the tank today', 'number', record?.dieselSupplied);
+      const closingDieselField = textField('closingDiesel', 'Closing Diesel (litres) — left in the tank at end of day', 'number', record?.closingDiesel);
       const fuelField = textField('fuelUsed', 'Fuel Used (litres)', 'number', record?.fuelUsed, true);
       const statusField = selectField('status', 'Status', [
         { value: 'Completed', label: 'Completed' },
@@ -77,9 +80,27 @@ function openForm(record, refresh) {
         { value: 'Halted', label: 'Halted' },
       ], record?.status || 'Completed');
 
+      // Fuel Used auto-fills from the tank readings the moment either end of
+      // it is entered — Opening + Supplied − Closing — since that's how the
+      // real end-of-day reports work (a tank reading, not a hand-estimated
+      // litres-used figure). Still a plain editable input otherwise, for
+      // operation types or legacy entries with no tank readings.
+      function recomputeFuelUsed() {
+        const opening = openingDieselField.querySelector('input').value;
+        const supplied = dieselSuppliedField.querySelector('input').value;
+        const closing = closingDieselField.querySelector('input').value;
+        if (opening === '' && closing === '') return;
+        const used = (Number(opening) || 0) + (Number(supplied) || 0) - (Number(closing) || 0);
+        fuelField.querySelector('input').value = Math.max(0, used);
+      }
+      [openingDieselField, dieselSuppliedField, closingDieselField].forEach((field) => {
+        field.querySelector('input').addEventListener('input', recomputeFuelUsed);
+      });
+
       const topGrid = el('div', { class: 'form-grid-2' }, [
         dateField, siteField, customerField, equipmentField, operatorField, supervisorField,
-        hoursField, timeResumedField, timeClosedField, operationTypeField, quantityField, fuelField, statusField,
+        hoursField, timeResumedField, timeClosedField, operationTypeField, quantityField,
+        openingDieselField, dieselSuppliedField, closingDieselField, fuelField, statusField,
       ]);
 
       // Only Partnership/Rented dozers need the Office/Business question —
@@ -130,6 +151,9 @@ function openForm(record, refresh) {
           timeClosed: timeClosedField.querySelector('input').value || null,
           operationType: operationTypeField.querySelector('select').value,
           quantity: Number(quantityField.querySelector('input').value) || 0,
+          openingDiesel: openingDieselField.querySelector('input').value === '' ? null : Number(openingDieselField.querySelector('input').value),
+          dieselSupplied: dieselSuppliedField.querySelector('input').value === '' ? null : Number(dieselSuppliedField.querySelector('input').value),
+          closingDiesel: closingDieselField.querySelector('input').value === '' ? null : Number(closingDieselField.querySelector('input').value),
           fuelUsed: Number(fuelField.querySelector('input').value) || 0,
           status: statusField.querySelector('select').value,
           notes: notesInput.value,
@@ -236,6 +260,7 @@ export function renderOperations(container) {
         { key: 'operationType', label: 'Operation Type' },
         { key: 'quantity', label: 'Quantity', render: (r) => `${r.quantity} ${unitForOperationType(r.operationType)}` },
         { key: 'fuelUsed', label: 'Fuel', render: (r) => `${r.fuelUsed} L` },
+        { key: 'closingDiesel', label: 'C. Diesel', render: (r) => (r.closingDiesel === null || r.closingDiesel === undefined ? '—' : `${r.closingDiesel} L`) },
         { key: 'workType', label: 'Work Type', render: (r) => (r.workType ? statusPill(r.workType) : '—') },
         { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
         { key: 'attachments', label: 'Files', render: (r) => (r.attachments?.length ? `📎 ${r.attachments.length}` : '—') },
