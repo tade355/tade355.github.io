@@ -228,7 +228,10 @@ This is the field log book — one entry per piece of equipment per day, capturi
 | Time Closed | optional — feeds the fleet's average close-time stat |
 | Operation Type | Felling (Ha), Stacking (Ha), Direct Stacking (Ha), Root Picking (Ha), Bonding (Ha), Road (KM), or Trekking (hrs) |
 | Quantity | the amount done, in whatever unit the chosen Operation Type uses (shown next to it) — same "required label but silently saves as 0" caveat as Hours Worked |
-| Fuel Used (litres) | same caveat |
+| Opening Diesel (litres) | what was in the tank at the start of the day — optional, matches the field's End of the Day Report |
+| Diesel Supplied (litres) | what was added to the tank today — optional |
+| Closing Diesel (litres) | what's left in the tank at the end of the day — optional, but this is the figure the Diesel Replenishment Request (Fleet Management → Diesel Tracking) uses as "what's currently in the tank," so fill it in whenever you can |
+| Fuel Used (litres) | **auto-fills the moment you enter Opening or Closing Diesel** (Opening + Supplied − Closing) — you can still type over it by hand for entries where tank readings aren't tracked |
 | Status | Completed, Ongoing, or Halted (defaults to Completed) |
 | Work Type + Business Amount (₦) | **only appears if the selected equipment's Ownership is Partnership or Rented.** Choose "Office" for the normal, owner-shareable arrangement, or "Business" for a private arrangement that's never shown to the owner (and pays the operator an extra Business Amount for that day). See [Dozer Economics](#9-fleet-management) for how this splits downstream. |
 | Notes | free text |
@@ -300,7 +303,9 @@ Below the buttons, four sections:
 1. **Diesel Receipts** — every delivery logged.
 2. **Stock Counts & Reconciliation** — every physical count, compared against what the records say *should* be in the tank as of that date, with a Variance pill (green if under 1 L off, amber if under 2% off, red if worse).
 3. **Diesel Ledger by Asset** — filter by date range; shows each dozer's Opening / New / Used / Closing litre balances over that period. "New" comes from Fulfilled fueling vouchers issued to that asset; "Used" comes from its Daily Operations fuel figures; "Opening" is derived from everything before your start date — none of this is entered by hand.
-4. **Diesel Replenishment Request — &lt;tomorrow's date&gt;** — a planning table projecting tomorrow's likely need per active dozer (based on its average diesel use per *worked* day over its last 14 worked days), with a **🖨 Print Request** button producing a printable "DIESEL REPLENISHMENT REQUEST." This is a planning estimate, not a confirmed work schedule — the app has no next-day scheduling of its own.
+4. **Diesel Replenishment Request — &lt;tomorrow's date&gt;** — for every fleet asset, shows **C. Diesel** (its most recent actual Closing Diesel reading from Daily Operations), **Tomorrow** (the top-up still needed on top of that), **Next Day** (the full amount needed the day after, assuming the tank is empty by then), **Total**, and **Status**. Two inputs — **Target Hrs — Tomorrow** and **Target Hrs — Next Day** (both default to 8) — let you adjust the planning assumption; a **Station** and **Staff (requested by)** dropdown feed the printed document. Click **🖨 Print Request** for a "DIESEL REQUEST" document itemized per asset with a total, ready to send for approval and on to the station. This is a planning estimate, not a confirmed work schedule.
+>
+> **How Tomorrow/Next Day are calculated:** each asset's own recent litres-per-hour rate (from its last 14 worked days) × your Target Hours, minus what's already in its tank (Tomorrow only — Next Day assumes a near-empty tank by then, so it's the full amount). An asset with no Closing Diesel reading yet is treated as having 0 in the tank. Assets that aren't currently Active always show 0/0/0.
 
 > **Expected Balance** is always calculated, never typed in: total litres received (up to a date) minus total litres used on Daily Operations reports (up to that date).
 
