@@ -8,42 +8,35 @@ import { renderOperations } from './views/operations.js';
 import { renderFleet } from './views/fleet.js';
 import { renderLeaveAttendance } from './views/leaveAttendance.js';
 import { renderFundRequests } from './views/fundRequests.js';
-import { renderApprovals } from './views/approvals.js';
-import { renderPayroll } from './views/payroll.js';
-import { renderDozerPayroll } from './views/dozerPayroll.js';
-import { renderDozerEconomics } from './views/dozerEconomics.js';
 import { renderBackup } from './views/backup.js';
 import { renderNoticeBoard } from './views/noticeBoard.js';
-import { renderFuelCredit } from './views/fuelCredit.js';
-import { renderWeeklyReport } from './views/weeklyReport.js';
 import { closeModal } from './ui.js';
 import { canAccess, getCurrentTier, defaultRouteForTier } from './session.js';
 import { ICONS } from './icons.js';
 
+// Approvals lives inside Fund Requests, Fuel Credit and Bulldozer Parts &
+// Supplies inside Purchasing & Suppliers, Dozer Economics inside Fleet
+// Management, Weekly Report and Profitability inside Projects, and Payroll
+// / Operator Allowance inside HR & Employees — all as tabs, not routes. See
+// each view file's own tab bar for those.
 export const ROUTES = [
   // Overview + daily action items
   { path: 'dashboard', label: 'Dashboard', icon: ICONS.dashboard, render: renderDashboard, tiers: ['Admin', 'Accounts'] },
-  { path: 'approvals', label: 'Approvals', icon: ICONS.checkCircle, render: renderApprovals, tiers: ['Admin', 'Supervisor'] },
   { path: 'noticeBoard', label: 'Documents and Notices', icon: ICONS.documents, render: renderNoticeBoard, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
-  // Core operations: the job, the work done against it, the equipment doing it, and reporting over all three
+  // Core operations: the job, the work done against it, the equipment doing it
   { path: 'projects', label: 'Projects', icon: ICONS.folder, render: renderProjects, tiers: ['Admin', 'Accounts', 'Supervisor'] },
   { path: 'operations', label: 'Daily Operations', icon: ICONS.activity, render: renderOperations, tiers: ['Admin', 'Supervisor'] },
   { path: 'fleet', label: 'Fleet Management', icon: ICONS.wrench, render: renderFleet, tiers: ['Admin', 'Supervisor'] },
-  { path: 'fuelCredit', label: 'Fuel Credit', icon: ICONS.fuelCan, render: renderFuelCredit, tiers: ['Admin', 'Accounts', 'Supervisor'] },
-  { path: 'weeklyReport', label: 'Weekly Report', icon: ICONS.calendar, render: renderWeeklyReport, tiers: ['Admin', 'Accounts', 'Supervisor'] },
-  // Field submissions that feed the Approvals inbox above
-  { path: 'fundRequests', label: 'Fund Requests', icon: ICONS.nairaPaper, render: renderFundRequests, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
+  // Field submissions + the approvals they feed
+  { path: 'fundRequests', label: 'Fund Requests & Approvals', icon: ICONS.nairaPaper, render: renderFundRequests, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   { path: 'leave', label: 'Leave & Attendance', icon: ICONS.clock, render: renderLeaveAttendance, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   // Commercial
   { path: 'sales', label: 'Sales & Invoicing', icon: ICONS.receipt, render: renderSales, tiers: ['Admin', 'Accounts'] },
   { path: 'purchasing', label: 'Purchasing & Suppliers', icon: ICONS.bag, render: renderPurchasing, tiers: ['Admin', 'Accounts'] },
   // Finance / back-office
   { path: 'accounting', label: 'Accounting & Expenses', icon: ICONS.wallet, render: renderAccounting, tiers: ['Admin', 'Accounts'] },
-  { path: 'dozerEconomics', label: 'Dozer Economics', icon: ICONS.barChart, render: renderDozerEconomics, tiers: ['Admin', 'Accounts'] },
   // People + pay
   { path: 'hr', label: 'HR & Employees', icon: ICONS.users, render: renderHR, tiers: ['Admin'] },
-  { path: 'payroll', label: 'Payroll', icon: ICONS.calculator, render: renderPayroll, tiers: ['Admin'] },
-  { path: 'dozerPayroll', label: 'Dozer Day-Rate Payroll', icon: ICONS.banknote, render: renderDozerPayroll, tiers: ['Admin'] },
   // System
   { path: 'backup', label: 'Backup & Data', icon: ICONS.database, render: renderBackup, tiers: ['Admin'] },
 ];

@@ -61,6 +61,7 @@ export function statusPillClass(status) {
     'Under Maintenance': 'pill-warning', Scheduled: 'pill-warning', 'In Progress': 'pill-warning', Partnership: 'pill-warning', Rented: 'pill-warning', 'Pending Approval': 'pill-warning', Business: 'pill-warning',
     Office: 'pill-good',
     'Fully Settled': 'pill-good', 'Partially Settled': 'pill-warning', Outstanding: 'pill-critical',
+    Commendation: 'pill-good', Query: 'pill-warning', Deployed: 'pill-good', Returned: 'pill-neutral', Damaged: 'pill-warning', Lost: 'pill-critical',
   };
   return map[status] || 'pill-neutral';
 }

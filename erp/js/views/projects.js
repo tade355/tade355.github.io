@@ -5,6 +5,8 @@ import { renderOperationsMap } from './operationsMap.js';
 import { renderOperationsGallery } from './operationsGallery.js';
 import { getCurrentTier } from '../session.js';
 import { formatDate } from '../utils.js';
+import { renderWeeklyReport } from './weeklyReport.js';
+import { renderProfitability } from './profitability.js';
 
 const FIELDS = [
   { name: 'name', label: 'Project Name', required: true },
@@ -48,13 +50,19 @@ export function renderProjects(container) {
     : null;
   const mapTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('map') }, 'Map View');
   const galleryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('gallery') }, 'Photo Gallery');
+  const weeklyReportTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('weeklyReport') }, 'Weekly Report');
   const rateHistoryTabBtn = canManageProjects
     ? el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('rateHistory') }, 'Rate History')
+    : null;
+  const profitabilityTabBtn = canManageProjects
+    ? el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('profitability') }, 'Profitability')
     : null;
   if (projectsTabBtn) tabBar.appendChild(projectsTabBtn);
   tabBar.appendChild(mapTabBtn);
   tabBar.appendChild(galleryTabBtn);
+  tabBar.appendChild(weeklyReportTabBtn);
   if (rateHistoryTabBtn) tabBar.appendChild(rateHistoryTabBtn);
+  if (profitabilityTabBtn) tabBar.appendChild(profitabilityTabBtn);
   container.appendChild(tabBar);
 
   const body = el('div');
@@ -65,11 +73,15 @@ export function renderProjects(container) {
     if (projectsTabBtn) projectsTabBtn.classList.toggle('active', tab === 'projects');
     mapTabBtn.classList.toggle('active', tab === 'map');
     galleryTabBtn.classList.toggle('active', tab === 'gallery');
+    weeklyReportTabBtn.classList.toggle('active', tab === 'weeklyReport');
     if (rateHistoryTabBtn) rateHistoryTabBtn.classList.toggle('active', tab === 'rateHistory');
+    if (profitabilityTabBtn) profitabilityTabBtn.classList.toggle('active', tab === 'profitability');
     if (tab === 'projects') renderProjectsTab();
     else if (tab === 'map') renderMapTab();
+    else if (tab === 'gallery') renderGalleryTab();
+    else if (tab === 'weeklyReport') renderWeeklyReportTab();
     else if (tab === 'rateHistory') renderRateHistoryTab();
-    else renderGalleryTab();
+    else renderProfitabilityTab();
   }
 
   function renderMapTab() {
@@ -82,6 +94,18 @@ export function renderProjects(container) {
     actionSlot.innerHTML = '';
     body.innerHTML = '';
     renderOperationsGallery(body);
+  }
+
+  function renderWeeklyReportTab() {
+    actionSlot.innerHTML = '';
+    body.innerHTML = '';
+    renderWeeklyReport(body);
+  }
+
+  function renderProfitabilityTab() {
+    actionSlot.innerHTML = '';
+    body.innerHTML = '';
+    renderProfitability(body);
   }
 
   function renderRateHistoryTab() {

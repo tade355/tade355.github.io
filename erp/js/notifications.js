@@ -74,7 +74,7 @@ export async function notifyNewLeaveRequest(record) {
     request_type: 'Leave Request',
     submitted_by: submitter?.name || 'Unknown',
     summary: `${record.leaveType} leave, ${record.startDate} to ${record.endDate}`,
-    link_url: 'https://tade355.github.io/erp/#/approvals',
+    link_url: 'https://tade355.github.io/erp/#/fundRequests',
   });
 }
 
@@ -100,6 +100,6 @@ export async function notifyLeaveRequestDecision(record, decidedByName) {
     request_type: 'Leave Request',
     submitted_by: submitter?.name || 'Unknown',
     summary: `${record.status} by ${decidedByName || 'an admin'} — ${record.leaveType} leave, ${record.startDate} to ${record.endDate}`,
-    link_url: 'https://tade355.github.io/erp/#/approvals',
+    link_url: 'https://tade355.github.io/erp/#/fundRequests',
   });
 }

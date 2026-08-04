@@ -14,6 +14,7 @@ function fields() {
       { value: 'Tools', label: 'Tools' },
       { value: 'Consumables', label: 'Consumables' },
       { value: 'Safety Gear', label: 'Safety Gear' },
+      { value: 'Dozer Parts', label: 'Dozer Parts (managed under Purchasing & Suppliers)' },
     ] },
     { name: 'sku', label: 'SKU', required: true },
     { name: 'quantity', label: 'Quantity', type: 'number', required: true, min: 0 },

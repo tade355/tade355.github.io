@@ -4,8 +4,10 @@ import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confi
 import { ACCESS_TIERS, ACCESS_TIER_LABELS } from '../constants.js';
 import { printStaffMemo } from '../print.js';
 import { getCurrentUserId } from '../session.js';
+import { renderPayroll } from './payroll.js';
+import { renderDozerPayroll } from './dozerPayroll.js';
 
-const MEMO_TYPES = ['Memo', 'Notice', 'Warning Letter', 'Query Letter', 'Confirmation Letter', 'Other'];
+const MEMO_TYPES = ['Memo', 'Notice', 'Warning Letter', 'Query Letter', 'Commendation Letter', 'Confirmation Letter', 'Other'];
 
 function projectOptions() {
   return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
@@ -66,6 +68,52 @@ function memoFields() {
   ];
 }
 
+function queryCommendFields() {
+  return [
+    { name: 'date', label: 'Date', type: 'date', required: true },
+    { name: 'type', label: 'Type', type: 'select', required: true, options: [
+      { value: 'Query Letter', label: 'Query' },
+      { value: 'Commendation Letter', label: 'Commendation' },
+    ] },
+    { name: 'employeeId', label: 'Staff Member', type: 'select', required: true, options: employeeOptions() },
+    { name: 'subject', label: 'Subject', required: true },
+    { name: 'body', label: 'Reason / Details', type: 'textarea', required: true },
+    { name: 'issuedBy', label: 'Issued By', type: 'select', options: [
+      { value: '', label: '— Not specified —' },
+      ...employeeOptions(),
+    ] },
+  ];
+}
+
+function assetFields() {
+  return [
+    { name: 'name', label: 'Asset Name', required: true },
+    { name: 'category', label: 'Category (e.g. Furniture, Electronics, Generator)' },
+    { name: 'serialNumber', label: 'Serial / Tag Number' },
+    { name: 'assignedType', label: 'Assigned To', type: 'select', required: true, options: [
+      { value: 'Project', label: 'A Project' },
+      { value: 'Staff', label: 'A Staff Member' },
+      { value: 'Unassigned', label: 'Unassigned / General Use' },
+    ] },
+    { name: 'project', label: 'Project (if assigned to a Project)', type: 'select', options: [
+      { value: '', label: '— Not applicable —' },
+      ...projectOptions(),
+    ] },
+    { name: 'employeeId', label: 'Staff Member (if assigned to a Staff member)', type: 'select', options: [
+      { value: '', label: '— Not applicable —' },
+      ...employeeOptions(),
+    ] },
+    { name: 'dateAssigned', label: 'Date Assigned', type: 'date' },
+    { name: 'status', label: 'Status', type: 'select', required: true, options: [
+      { value: 'Deployed', label: 'Deployed' },
+      { value: 'Returned', label: 'Returned' },
+      { value: 'Damaged', label: 'Damaged' },
+      { value: 'Lost', label: 'Lost' },
+    ] },
+    { name: 'notes', label: 'Notes' },
+  ];
+}
+
 export function renderHR(container) {
   container.innerHTML = '';
 
@@ -73,11 +121,19 @@ export function renderHR(container) {
   const tabBar = el('div', { class: 'tab-bar' });
   const employeesTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('employees') }, 'Employees');
   const memosTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('memos') }, 'Memos & Notices');
+  const queryCommendTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('queryCommend') }, 'Query / Commendation');
+  const assetsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('assets') }, 'Assets Tracker');
+  const payrollTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('payroll') }, 'Payroll');
+  const operatorAllowanceTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('operatorAllowance') }, 'Operator Allowance');
   tabBar.appendChild(employeesTabBtn);
   tabBar.appendChild(memosTabBtn);
+  tabBar.appendChild(queryCommendTabBtn);
+  tabBar.appendChild(assetsTabBtn);
+  tabBar.appendChild(payrollTabBtn);
+  tabBar.appendChild(operatorAllowanceTabBtn);
 
   const actionSlot = el('div');
-  container.appendChild(sectionHeader('HR & Employees', 'Staff records, roles, and printable memos/notices', actionSlot));
+  container.appendChild(sectionHeader('HR & Employees', 'Staff records, roles, memos/notices, payroll, and operator allowance', actionSlot));
   container.appendChild(tabBar);
 
   const body = el('div');
@@ -87,8 +143,28 @@ export function renderHR(container) {
     tab = next;
     employeesTabBtn.classList.toggle('active', tab === 'employees');
     memosTabBtn.classList.toggle('active', tab === 'memos');
+    queryCommendTabBtn.classList.toggle('active', tab === 'queryCommend');
+    assetsTabBtn.classList.toggle('active', tab === 'assets');
+    payrollTabBtn.classList.toggle('active', tab === 'payroll');
+    operatorAllowanceTabBtn.classList.toggle('active', tab === 'operatorAllowance');
     if (tab === 'employees') renderEmployeesTab();
-    else renderMemosTab();
+    else if (tab === 'memos') renderMemosTab();
+    else if (tab === 'queryCommend') renderQueryCommendTab();
+    else if (tab === 'assets') renderAssetsTab();
+    else if (tab === 'payroll') renderPayrollTab();
+    else renderOperatorAllowanceTab();
+  }
+
+  function renderPayrollTab() {
+    actionSlot.innerHTML = '';
+    body.innerHTML = '';
+    renderPayroll(body);
+  }
+
+  function renderOperatorAllowanceTab() {
+    actionSlot.innerHTML = '';
+    body.innerHTML = '';
+    renderDozerPayroll(body);
   }
 
   function renderEmployeesTab() {
@@ -143,6 +219,132 @@ export function renderHR(container) {
         onSubmit: async (data) => {
           if (record) await store.update('employees', record.id, data);
           else await store.add('employees', data);
+          refresh();
+        },
+      });
+    }
+
+    refresh();
+  }
+
+  function renderQueryCommendTab() {
+    actionSlot.innerHTML = '';
+    actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openQueryCommendForm() }, '+ Issue Query / Commendation'));
+
+    body.innerHTML = '';
+    body.appendChild(el('p', { class: 'section-subtitle' }, 'A shortcut for issuing a Query or Commendation letter to a staff member — stored alongside Memos & Notices, filtered to just these two types here.'));
+    const tableContainer = el('div');
+    body.appendChild(tableContainer);
+
+    function refresh() {
+      const rows = store.get('staffMemos')
+        .filter((m) => m.type === 'Query Letter' || m.type === 'Commendation Letter')
+        .slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+      renderTable(tableContainer, {
+        columns: [
+          { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
+          { key: 'type', label: 'Type', render: (r) => statusPill(r.type === 'Query Letter' ? 'Query' : 'Commendation') },
+          { key: 'employeeId', label: 'Staff Member', render: (r) => (r.employeeId ? employeeName(r.employeeId) : '—') },
+          { key: 'subject', label: 'Subject' },
+          { key: 'issuedBy', label: 'Issued By', render: (r) => (r.issuedBy ? employeeName(r.issuedBy) : '—') },
+          {
+            key: 'actions',
+            label: '',
+            render: (r) => actionButtons({
+              onPrint: () => printStaffMemo(r, {
+                employeeName: r.employeeId ? employeeName(r.employeeId) : '',
+                issuedByName: r.issuedBy ? employeeName(r.issuedBy) : '',
+              }),
+              onEdit: () => openQueryCommendForm(r),
+              onDelete: async () => {
+                if (!confirmDelete(r.subject)) return;
+                try {
+                  await store.remove('staffMemos', r.id);
+                  refresh();
+                } catch (err) {
+                  window.alert(err.message || 'Could not delete this record.');
+                }
+              },
+            }),
+          },
+        ],
+        rows,
+        emptyText: 'No queries or commendations issued yet.',
+      });
+    }
+
+    function openQueryCommendForm(record) {
+      openModal({
+        title: record ? 'Edit Query / Commendation' : 'Issue Query / Commendation',
+        fields: queryCommendFields(),
+        initial: record || { date: new Date().toISOString().slice(0, 10), type: 'Query Letter', issuedBy: getCurrentUserId() || '' },
+        submitLabel: record ? 'Save Changes' : 'Issue',
+        onSubmit: async (data) => {
+          if (record) await store.update('staffMemos', record.id, data);
+          else await store.add('staffMemos', data);
+          refresh();
+        },
+      });
+    }
+
+    refresh();
+  }
+
+  function renderAssetsTab() {
+    actionSlot.innerHTML = '';
+    actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openAssetForm() }, '+ Add Asset'));
+
+    body.innerHTML = '';
+    body.appendChild(el('p', { class: 'section-subtitle' }, 'Movable assets and items — deployed to a project, assigned to a staff member, or kept as general-use/unassigned.'));
+    const tableContainer = el('div');
+    body.appendChild(tableContainer);
+
+    function assignedToLabel(r) {
+      if (r.assignedType === 'Project') return r.project ? `Project: ${r.project}` : 'Project (not set)';
+      if (r.assignedType === 'Staff') return r.employeeId ? employeeName(r.employeeId) : 'Staff (not set)';
+      return 'General Use';
+    }
+
+    function refresh() {
+      const rows = store.get('assets').slice().sort((a, b) => (a.name < b.name ? -1 : 1));
+      renderTable(tableContainer, {
+        columns: [
+          { key: 'name', label: 'Asset' },
+          { key: 'category', label: 'Category', render: (r) => r.category || '—' },
+          { key: 'assignedTo', label: 'Assigned To', render: (r) => assignedToLabel(r) },
+          { key: 'dateAssigned', label: 'Date Assigned', render: (r) => (r.dateAssigned ? formatDate(r.dateAssigned) : '—') },
+          { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
+          {
+            key: 'actions',
+            label: '',
+            render: (r) => actionButtons({
+              onEdit: () => openAssetForm(r),
+              onDelete: async () => {
+                if (!confirmDelete(r.name)) return;
+                try {
+                  await store.remove('assets', r.id);
+                  refresh();
+                } catch (err) {
+                  window.alert(err.message || 'Could not delete this asset.');
+                }
+              },
+            }),
+          },
+        ],
+        rows,
+        emptyText: 'No assets tracked yet.',
+      });
+    }
+
+    function openAssetForm(record) {
+      openModal({
+        title: record ? 'Edit Asset' : 'Add Asset',
+        fields: assetFields(),
+        initial: record || { assignedType: 'Unassigned', status: 'Deployed', dateAssigned: new Date().toISOString().slice(0, 10) },
+        submitLabel: record ? 'Save Changes' : 'Add Asset',
+        onSubmit: async (data) => {
+          if (record) await store.update('assets', record.id, data);
+          else await store.add('assets', data);
           refresh();
         },
       });

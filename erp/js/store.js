@@ -33,6 +33,8 @@ const CONFIG = {
   noticeBoardPosts: { table: 'notice_board_posts', prefix: 'NB' },
   fuelCreditCollections: { table: 'fuel_credit_collections', prefix: 'FCC' },
   fuelCreditPayments: { table: 'fuel_credit_payments', prefix: 'FCP' },
+  dozerPartWithdrawals: { table: 'dozer_part_withdrawals', prefix: 'DPW' },
+  assets: { table: 'assets', prefix: 'AST' },
 };
 
 const COLLECTIONS = Object.keys(CONFIG);

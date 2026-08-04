@@ -6,6 +6,7 @@ import { filterFundRequests, getCurrentUserId, getCurrentTier } from '../session
 import { createAttachmentPicker } from '../attachments.js';
 import { notifyNewFundRequest } from '../notifications.js';
 import { EXPENSE_CATEGORIES } from '../constants.js';
+import { renderApprovals } from './approvals.js';
 
 function costHeadOptions() {
   return [{ value: '', label: '— Not categorized —' }, ...EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }))];
@@ -198,6 +199,37 @@ function openRequestForm(record, onSaved) {
 export function renderFundRequests(container) {
   container.innerHTML = '';
 
+  const canApprove = ['Admin', 'Supervisor'].includes(getCurrentTier());
+
+  let tab = 'requests';
+  const tabBar = el('div', { class: 'tab-bar' });
+  const requestsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('requests') }, 'Requests');
+  tabBar.appendChild(requestsTabBtn);
+  let approvalsTabBtn;
+  if (canApprove) {
+    approvalsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('approvals') }, 'Approvals');
+    tabBar.appendChild(approvalsTabBtn);
+  }
+
+  container.appendChild(sectionHeader('Fund Requests and Approvals', 'Staff requests for funds, plus everything waiting on your decision'));
+  container.appendChild(tabBar);
+
+  const body = el('div');
+  container.appendChild(body);
+
+  function setTab(next) {
+    tab = next;
+    requestsTabBtn.classList.toggle('active', tab === 'requests');
+    if (approvalsTabBtn) approvalsTabBtn.classList.toggle('active', tab === 'approvals');
+    body.innerHTML = '';
+    if (tab === 'requests') renderRequestsTab(body);
+    else renderApprovals(body);
+  }
+
+  setTab(tab);
+}
+
+function renderRequestsTab(container) {
   const addBtn = el('button', { class: 'btn btn-primary', onClick: () => openRequestForm(null, refresh) }, '+ Submit Fund Request');
   container.appendChild(sectionHeader('Fund Requests', 'Staff requests for funds, with approval and payee details', addBtn));
 

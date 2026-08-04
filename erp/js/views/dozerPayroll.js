@@ -317,7 +317,7 @@ export function renderDozerPayroll(container) {
   container.innerHTML = '';
 
   const addBtn = el('button', { class: 'btn btn-primary', onClick: () => openRunForm(null, refresh) }, '+ New Day-Rate Run');
-  container.appendChild(sectionHeader('Dozer Operator Day-Rate Payroll', 'Field operators paid per day worked (8h = 1 day) plus overtime, separate from monthly office payroll', addBtn));
+  container.appendChild(sectionHeader('Operator Allowance (Day-Rate Payroll)', 'Field operators paid per day worked (8h = 1 day) plus overtime, separate from monthly office payroll', addBtn));
 
   const summarySlot = el('div');
   container.appendChild(summarySlot);

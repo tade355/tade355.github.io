@@ -4,6 +4,7 @@ import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confi
 import { FUEL_STATIONS, OWNERSHIP_CATEGORIES, isHaOperationType } from '../constants.js';
 import { printFuelingVoucher, printDieselReplenishmentRequest } from '../print.js';
 import { renderInventory } from './inventory.js';
+import { renderDozerEconomics } from './dozerEconomics.js';
 
 const OWNERSHIP_LABELS = {
   Company: 'Company Owned',
@@ -265,12 +266,14 @@ export function renderFleet(container) {
   const voucherTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('vouchers') }, 'Fueling Vouchers');
   const inventoryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('inventory') }, 'Inventory & Equipment');
   const rateHistoryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('rateHistory') }, 'Rate History');
+  const dozerEconomicsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('dozerEconomics') }, 'Dozer Economics');
   tabBar.appendChild(rosterTabBtn);
   tabBar.appendChild(maintenanceTabBtn);
   tabBar.appendChild(dieselTabBtn);
   tabBar.appendChild(voucherTabBtn);
   tabBar.appendChild(inventoryTabBtn);
   tabBar.appendChild(rateHistoryTabBtn);
+  tabBar.appendChild(dozerEconomicsTabBtn);
 
   const actionSlot = el('div');
   container.appendChild(sectionHeader('Fleet Management', 'Dozer status, ownership, maintenance, diesel accountability, and inventory', actionSlot));
@@ -289,12 +292,14 @@ export function renderFleet(container) {
     voucherTabBtn.classList.toggle('active', tab === 'vouchers');
     inventoryTabBtn.classList.toggle('active', tab === 'inventory');
     rateHistoryTabBtn.classList.toggle('active', tab === 'rateHistory');
+    dozerEconomicsTabBtn.classList.toggle('active', tab === 'dozerEconomics');
     summarySlot.innerHTML = '';
     if (tab === 'roster') renderRosterTab();
     else if (tab === 'maintenance') renderMaintenanceTab();
     else if (tab === 'diesel') renderDieselTab();
     else if (tab === 'vouchers') renderVouchersTab();
     else if (tab === 'rateHistory') renderRateHistoryTab();
+    else if (tab === 'dozerEconomics') renderDozerEconomicsTab();
     else renderInventoryTab();
   }
 
@@ -302,6 +307,12 @@ export function renderFleet(container) {
     actionSlot.innerHTML = '';
     body.innerHTML = '';
     renderInventory(body);
+  }
+
+  function renderDozerEconomicsTab() {
+    actionSlot.innerHTML = '';
+    body.innerHTML = '';
+    renderDozerEconomics(body);
   }
 
   function renderRateHistoryTab() {
