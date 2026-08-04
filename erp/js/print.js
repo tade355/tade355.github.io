@@ -314,6 +314,36 @@ export function printDozerSettlement(settlement, ownerName) {
   render(html);
 }
 
+export function printDieselReplenishmentRequest(forDate, rows) {
+  const totalLitres = rows.reduce((sum, r) => sum + r.projectedLitres, 0);
+  const html = `
+    ${letterhead('DIESEL REPLENISHMENT REQUEST', formatDate(forDate))}
+    <div class="print-meta-grid">
+      <div><strong>For:</strong> ${formatDate(forDate)}</div>
+      <div><strong>Assets:</strong> ${rows.length}</div>
+      <div><strong>Total Projected:</strong> ${totalLitres.toLocaleString()} L</div>
+    </div>
+    <table class="print-table">
+      <thead><tr><th>Asset</th><th>Avg Daily Use (14d)</th><th>Projected Need</th></tr></thead>
+      <tbody>
+        ${rows.map((r) => `
+          <tr>
+            <td>${r.name}</td>
+            <td>${r.projectedLitres.toLocaleString()} L</td>
+            <td>${r.projectedLitres.toLocaleString()} L</td>
+          </tr>
+        `).join('')}
+      </tbody>
+      <tfoot><tr><td colspan="2">Total</td><td>${totalLitres.toLocaleString()} L</td></tr></tfoot>
+    </table>
+    <div class="print-block">
+      <p>Projected from each asset's average daily diesel use over its last 14 working days — an estimate, not a guarantee of actual need.</p>
+    </div>
+    ${signatureBlock(['Requested By', 'Approved By'])}
+  `;
+  render(html);
+}
+
 export function printStaffMemo(memo, { employeeName, issuedByName }) {
   const html = `
     ${letterhead(memo.type.toUpperCase(), memo.id)}

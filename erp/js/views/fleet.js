@@ -2,7 +2,7 @@ import { store } from '../store.js';
 import { formatCurrency, formatDate, el, monthKey, statusPillClass, dateInRange } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { FUEL_STATIONS, OWNERSHIP_CATEGORIES, isHaOperationType } from '../constants.js';
-import { printFuelingVoucher } from '../print.js';
+import { printFuelingVoucher, printDieselReplenishmentRequest } from '../print.js';
 import { renderInventory } from './inventory.js';
 
 const OWNERSHIP_LABELS = {
@@ -80,6 +80,29 @@ function avgWorkRateFor(name) {
     avgHoursPerDay: workDays ? Object.values(hoursByDate).reduce((a, b) => a + b, 0) / workDays : null,
     avgHaPerDay: haDays ? Object.values(haByDate).reduce((a, b) => a + b, 0) / haDays : null,
   };
+}
+
+// Projects tomorrow's diesel need from an asset's average daily use over
+// its last 14 WORKED days (not calendar days) — a trailing-average
+// estimate, not a plan of who's actually scheduled to work tomorrow, since
+// the app has no next-day work schedule to project from instead.
+function avgDailyFuelUsageFor(name, windowDays = 14) {
+  const today = new Date();
+  const from = new Date(today.getTime() - (windowDays * 3 - 1) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const to = today.toISOString().slice(0, 10);
+  const fuelByDate = {};
+  store.get('operations')
+    .filter((o) => o.equipment === name && o.date >= from && o.date <= to)
+    .forEach((o) => { fuelByDate[o.date] = (fuelByDate[o.date] || 0) + (o.fuelUsed || 0); });
+
+  // Only the most recent `windowDays` worked dates count, even though the
+  // date range searched above is wider (3x) — a sparse fleet asset that
+  // only works a few days a month still gets a real trailing average
+  // instead of one diluted by a mostly-idle 14 calendar days.
+  const recentWorkedDates = Object.keys(fuelByDate).sort().slice(-windowDays);
+  if (!recentWorkedDates.length) return 0;
+  const total = recentWorkedDates.reduce((sum, d) => sum + fuelByDate[d], 0);
+  return total / recentWorkedDates.length;
 }
 
 function lastMaintenanceFor(name) {
@@ -667,6 +690,35 @@ export function renderFleet(container) {
       }
       [ledgerFrom, ledgerTo].forEach((input) => input.addEventListener('change', refreshLedger));
       refreshLedger();
+
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const replenishmentRows = fleetItems()
+        .filter((d) => (d.fleetStatus || 'Active') === 'Active')
+        .map((d) => ({ name: d.name, projectedLitres: Math.round(avgDailyFuelUsageFor(d.name)) }))
+        .filter((r) => r.projectedLitres > 0);
+      const replenishmentTotal = replenishmentRows.reduce((sum, r) => sum + r.projectedLitres, 0);
+
+      const replenishmentHeader = el('div', { class: 'section-header' }, [
+        el('h3', { class: 'subsection-title' }, `Diesel Replenishment Request — ${formatDate(tomorrow)}`),
+        el('button', {
+          type: 'button',
+          class: 'btn btn-ghost',
+          onClick: () => printDieselReplenishmentRequest(tomorrow, replenishmentRows),
+        }, '🖨 Print Request'),
+      ]);
+      body.appendChild(replenishmentHeader);
+      body.appendChild(el('p', { class: 'section-subtitle' }, "Projects each Active asset's need for tomorrow from its average diesel use over its last 14 worked days — an estimate to help plan the next delivery, not a schedule of who's actually working tomorrow."));
+      const replenishmentContainer = el('div');
+      body.appendChild(replenishmentContainer);
+      renderTable(replenishmentContainer, {
+        columns: [
+          { key: 'name', label: 'Asset' },
+          { key: 'projectedLitres', label: 'Projected Need', render: (r) => `${r.projectedLitres.toLocaleString()} L` },
+        ],
+        rows: replenishmentRows,
+        emptyText: 'No recent diesel usage to project from yet.',
+      });
+      body.appendChild(el('p', { class: 'section-subtitle' }, `Total projected: ${replenishmentTotal.toLocaleString()} L`));
     }
 
     function openReceiptForm(record) {
