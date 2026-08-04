@@ -96,17 +96,15 @@ These conventions repeat across almost every module — learn them once here ins
 
 **Who sees it:** Admin, Accounts.
 
-The Dashboard is the executive landing page — a live, always-current snapshot of the whole company, with no forms to fill in (everything here is read-only, sourced from every other module).
+The Dashboard is the executive landing page — a live, always-current snapshot of the whole company, with no forms to fill in (everything here is read-only, sourced from every other module). Almost everything on it is clickable, taking you straight to the module behind the number.
 
 **What's on it, top to bottom:**
-- **Backup nudge** — if no backup has ever been exported, or it's been more than 7 days, a warning banner appears with a link straight to [Backup & Data](#16-backup--data).
-- **Top stat row**: Active Employees, Low Stock Items, Expenses This Month, Land Cleared This Month, Active Sites.
-- **Fleet Health**: Fleet Size, Active, Down / Under Maintenance, Overdue for Service, Due Soon for Service.
-- **Money Owed**: Outstanding Invoices (money owed *to* the company), Fuel Credit Owed (money the company owes filling stations), Dozer Owner Settlements Owed (money owed to Partnership dozer owners).
-- **Pending Approvals**: counts of Fund Requests, Leave Requests, and Fueling Vouchers still waiting on a decision — a quick nudge to check the [Approvals tab](#13-fund-requests--approvals).
+- **Greeting** — "Good morning/afternoon/evening, {name} — here's how Emagrims Ltd is doing today, {date}."
+- **KPI row**: Revenue This Month, Profit This Month, Expenses This Month, Land Cleared This Month, Active Sites, Active Employees. The first four show a trend arrow (▲/▼/▬) and percentage vs. last month — green for a favorable move, amber for an unfavorable one (e.g. Expenses rising shows amber, since more spend isn't good news, while Revenue rising shows green). Every card links to the module that owns that number.
+- **Fleet Snapshot**: Fleet Size, Active, Down / Under Maintenance.
+- **Needs Attention** — every "watch this" signal the app can surface, merged into one clickable, priority-sorted list instead of scattered stat cards: dozers overdue for service, unpaid invoices, out-of-stock / low-stock items, dozers down, fuel credit owed, dozer owner settlements owed, pending Fund Requests / Leave Requests / Fueling Vouchers, and a stale/missing backup warning. Each row links straight to where you'd act on it. Shows "✅ All caught up" when there's nothing outstanding.
+- **This Month at a Glance** — three leaderboard panels: **Top Sites by Hectares** and **Top Operators by Hours** (both for the current month, from Daily Operations), and **Recently Logged** (the 5 most recent Daily Operations reports across all sites) — gives the page a live "pulse" rather than only historical totals.
 - **Charts** (last 6 months unless noted): Revenue vs Cost vs Profit (company-wide, all projects — same math as Profitability), Sales Trend, Land Cleared Trend, Expenses by Category (all-time), Land Cleared by Site (all-time).
-
-There's nothing to click here except the backup nudge link — this page exists purely to answer "how are we doing right now?" at a glance.
 
 ---
 

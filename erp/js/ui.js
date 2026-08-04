@@ -158,12 +158,22 @@ export function actionButtons({ onEdit, onDelete, onPrint }) {
   ]);
 }
 
-export function statCard({ label, value, hint, tone }) {
-  return el('div', { class: `stat-card${tone ? ' stat-' + tone : ''}` }, [
+// `href` makes the card a clickable link to another module (e.g. from a
+// dashboard KPI to the screen that owns that data). `trend` is optional:
+// { direction: 'up'|'down'|'flat', label, tone }, tone chosen by the caller
+// since "up" isn't always good (e.g. Expenses This Month rising is bad).
+export function statCard({ label, value, hint, tone, href, trend, icon }) {
+  const content = [
+    icon ? el('span', { class: 'stat-icon' }, icon) : null,
     el('span', { class: 'stat-label' }, label),
     el('span', { class: 'stat-value' }, value),
+    trend ? el('span', { class: `stat-trend stat-trend-${trend.tone || 'neutral'}` }, `${trend.direction === 'up' ? '▲' : trend.direction === 'down' ? '▼' : '▬'} ${trend.label}`) : null,
     hint ? el('span', { class: 'stat-hint' }, hint) : null,
-  ]);
+  ];
+  const classes = `stat-card${tone ? ' stat-' + tone : ''}${href ? ' stat-card-link' : ''}`;
+  return href
+    ? el('a', { class: classes, href }, content)
+    : el('div', { class: classes }, content);
 }
 
 export function sectionHeader(title, subtitle, actionButton) {

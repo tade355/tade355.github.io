@@ -1,5 +1,5 @@
 import { store } from '../store.js';
-import { formatCurrency, invoiceTotal, monthKey, monthLabel, el } from '../utils.js';
+import { formatCurrency, formatDate, invoiceTotal, monthKey, monthLabel, el } from '../utils.js';
 import { statCard, sectionHeader } from '../ui.js';
 import { renderBarChart, renderLineChart, renderMultiLineChart, CATEGORICAL_COLORS } from '../charts.js';
 import { isHaOperationType } from '../constants.js';
@@ -7,6 +7,7 @@ import { fleetItems, serviceStatusFor } from './fleet.js';
 import { stationBalances } from './fuelCredit.js';
 import { ownerSettlementBalances } from './dozerEconomics.js';
 import { projectNames, computeProjectStats } from './profitability.js';
+import { getCurrentUser } from '../session.js';
 
 function lastNMonthKeys(n) {
   const keys = [];
@@ -24,6 +25,38 @@ function monthBounds(key) {
   return { from: `${key}-01`, to: new Date(y, m, 0).toISOString().slice(0, 10) };
 }
 
+// `invert` flips which direction counts as "good" — e.g. Expenses rising
+// is bad, so invert: true there, while Revenue rising is good by default.
+function trendFor(current, previous, { invert = false } = {}) {
+  if (!previous && !current) return { direction: 'flat', label: 'No activity last month either', tone: 'neutral' };
+  if (!previous) return { direction: 'up', label: 'New this month', tone: invert ? 'warning' : 'good' };
+  const diffPct = ((current - previous) / Math.abs(previous)) * 100;
+  if (Math.abs(diffPct) < 0.5) return { direction: 'flat', label: 'Flat vs last month', tone: 'neutral' };
+  const direction = diffPct > 0 ? 'up' : 'down';
+  const isGood = (direction === 'up') !== invert;
+  return { direction, label: `${diffPct > 0 ? '+' : ''}${diffPct.toFixed(0)}% vs last month`, tone: isGood ? 'good' : 'warning' };
+}
+
+function leaderboardCard(title, subtitle, rows, emptyText) {
+  const card = el('div', { class: 'leaderboard-card' }, [
+    el('h3', {}, title),
+    el('p', { class: 'chart-subtitle' }, subtitle),
+  ]);
+  if (!rows.length) {
+    card.appendChild(el('p', { class: 'leaderboard-empty' }, emptyText));
+    return card;
+  }
+  rows.forEach((r, i) => {
+    card.appendChild(el('div', { class: 'leaderboard-row' }, [
+      el('span', { class: 'leaderboard-rank' }, String(i + 1)),
+      el('span', { class: 'leaderboard-name' }, r.name),
+      r.meta ? el('span', { class: 'leaderboard-meta' }, r.meta) : null,
+      el('span', { class: 'leaderboard-value' }, r.value),
+    ]));
+  });
+  return card;
+}
+
 export function renderDashboard(container) {
   container.innerHTML = '';
   const employees = store.get('employees');
@@ -32,38 +65,79 @@ export function renderDashboard(container) {
   const expenses = store.get('expenses');
   const operations = store.get('operations');
 
-  const currentMonth = monthKey(new Date().toISOString().slice(0, 10));
+  const months = lastNMonthKeys(6);
+  const currentMonthKey = months[5];
+  const prevMonthKey = months[4];
 
   const lowStock = inventory.filter((i) => i.quantity <= i.reorderLevel);
+  const outOfStock = inventory.filter((i) => i.quantity <= 0);
   const unpaid = invoices.filter((i) => i.status === 'Unpaid');
   const unpaidTotal = unpaid.reduce((sum, i) => sum + invoiceTotal(i), 0);
-  const expensesThisMonth = expenses.filter((e) => monthKey(e.date) === currentMonth).reduce((sum, e) => sum + e.amount, 0);
-  const areaThisMonth = operations.filter((o) => monthKey(o.date) === currentMonth && isHaOperationType(o.operationType)).reduce((sum, o) => sum + o.quantity, 0);
+
+  const expensesForMonth = (key) => expenses.filter((e) => monthKey(e.date) === key).reduce((sum, e) => sum + e.amount, 0);
+  const areaForMonth = (key) => operations.filter((o) => monthKey(o.date) === key && isHaOperationType(o.operationType)).reduce((sum, o) => sum + o.quantity, 0);
+  const revenueForMonth = (key) => invoices.filter((inv) => monthKey(inv.date) === key).reduce((sum, inv) => sum + invoiceTotal(inv), 0);
+
+  const expensesThisMonth = expensesForMonth(currentMonthKey);
+  const areaThisMonth = areaForMonth(currentMonthKey);
+  const revenueThisMonth = revenueForMonth(currentMonthKey);
   const activeSites = new Set(operations.filter((o) => o.status === 'Ongoing').map((o) => o.siteName)).size;
 
-  container.appendChild(sectionHeader('Dashboard', 'Emagrims Ltd — company overview'));
+  // Revenue vs Cost vs Profit — company-wide, all projects, reusing the
+  // exact same per-project cost/revenue logic as Operation Profitability
+  // so this never drifts out of sync with that page's numbers. Computed
+  // early (rather than just before the chart) so the KPI row below can
+  // pull this month's and last month's profit out of the same numbers.
+  const projects = projectNames();
+  const monthlyStats = months.map((key) => {
+    const { from, to } = monthBounds(key);
+    const perProject = projects.map((p) => computeProjectStats(p, from, to));
+    return {
+      key,
+      label: monthLabel(key),
+      revenue: perProject.reduce((sum, s) => sum + s.revenue, 0),
+      cost: perProject.reduce((sum, s) => sum + s.totalCost, 0),
+      profit: perProject.reduce((sum, s) => sum + s.profit, 0),
+    };
+  });
+  const profitThisMonth = monthlyStats[5].profit;
+  const profitLastMonth = monthlyStats[4].profit;
 
-  const lastBackup = store.getLastBackupAt();
-  const daysSinceBackup = lastBackup ? Math.floor((Date.now() - new Date(lastBackup).getTime()) / 86400000) : null;
-  if (!lastBackup || daysSinceBackup > 7) {
-    container.appendChild(el('div', { class: 'backup-nudge' }, [
-      el('span', {}, lastBackup
-        ? `⚠ It's been ${daysSinceBackup} days since your last backup.`
-        : "⚠ You've never backed up this data — everything lives only in this browser."),
-      el('a', { href: '#/backup' }, 'Back up now →'),
-    ]));
-  }
+  // Greeting — a small personal touch so this reads as a live briefing
+  // rather than a static report.
+  const user = getCurrentUser();
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const todayLabel = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const firstName = (user?.name || '').split(' ')[0];
+  container.appendChild(sectionHeader('Dashboard', `${greeting}${firstName ? ', ' + firstName : ''} — here's how Emagrims Ltd is doing today, ${todayLabel}.`));
 
-  const statsGrid = el('div', { class: 'stats-grid' }, [
-    statCard({ label: 'Active Employees', value: String(employees.filter((e) => e.status === 'Active').length), hint: `${employees.length} total` }),
-    statCard({ label: 'Low Stock Items', value: String(lowStock.length), hint: lowStock.length ? 'Needs reorder' : 'All stocked', tone: lowStock.length ? 'warning' : 'good' }),
-    statCard({ label: 'Expenses This Month', value: formatCurrency(expensesThisMonth) }),
-    statCard({ label: 'Land Cleared This Month', value: `${areaThisMonth.toFixed(1)} ha` }),
-    statCard({ label: 'Active Sites', value: String(activeSites) }),
+  // KPI hero row — the headline numbers, each linking to the module that
+  // owns the data and showing month-over-month trend where it's meaningful.
+  const kpiGrid = el('div', { class: 'kpi-grid' }, [
+    statCard({
+      icon: '💰', label: 'Revenue This Month', value: formatCurrency(revenueThisMonth), href: '#/sales',
+      trend: trendFor(revenueThisMonth, revenueForMonth(prevMonthKey)),
+    }),
+    statCard({
+      icon: '📈', label: 'Profit This Month', value: formatCurrency(profitThisMonth), href: '#/accounting',
+      trend: trendFor(profitThisMonth, profitLastMonth),
+    }),
+    statCard({
+      icon: '💸', label: 'Expenses This Month', value: formatCurrency(expensesThisMonth), href: '#/accounting',
+      trend: trendFor(expensesThisMonth, expensesForMonth(prevMonthKey), { invert: true }),
+    }),
+    statCard({
+      icon: '🚜', label: 'Land Cleared This Month', value: `${areaThisMonth.toFixed(1)} ha`, href: '#/operations',
+      trend: trendFor(areaThisMonth, areaForMonth(prevMonthKey)),
+    }),
+    statCard({ icon: '📍', label: 'Active Sites', value: String(activeSites), href: '#/operations' }),
+    statCard({ icon: '👥', label: 'Active Employees', value: String(employees.filter((e) => e.status === 'Active').length), hint: `${employees.length} total`, href: '#/hr' }),
   ]);
-  container.appendChild(statsGrid);
+  container.appendChild(kpiGrid);
 
-  // Fleet Health
+  // Fleet Health (secondary snapshot — the urgent items inside it feed the
+  // Needs Attention list below instead of being duplicated here)
   const dozers = fleetItems();
   const activeFleetCount = dozers.filter((d) => (d.fleetStatus || 'Active') === 'Active').length;
   const downFleetCount = dozers.filter((d) => d.fleetStatus === 'Down' || d.fleetStatus === 'Under Maintenance').length;
@@ -71,59 +145,92 @@ export function renderDashboard(container) {
   const overdueServiceCount = serviceStatuses.filter((s) => s === 'Overdue').length;
   const dueSoonServiceCount = serviceStatuses.filter((s) => s === 'Due Soon').length;
 
-  container.appendChild(el('h3', { class: 'subsection-title' }, 'Fleet Health'));
+  container.appendChild(el('h3', { class: 'subsection-title' }, 'Fleet Snapshot'));
   container.appendChild(el('div', { class: 'stats-grid' }, [
-    statCard({ label: 'Fleet Size', value: String(dozers.length) }),
-    statCard({ label: 'Active', value: String(activeFleetCount), tone: 'good' }),
-    statCard({ label: 'Down / Under Maintenance', value: String(downFleetCount), tone: downFleetCount ? 'warning' : 'good' }),
-    statCard({ label: 'Overdue for Service', value: String(overdueServiceCount), tone: overdueServiceCount ? 'critical' : 'good' }),
-    statCard({ label: 'Due Soon for Service', value: String(dueSoonServiceCount), tone: dueSoonServiceCount ? 'warning' : 'good' }),
+    statCard({ label: 'Fleet Size', value: String(dozers.length), href: '#/fleet' }),
+    statCard({ label: 'Active', value: String(activeFleetCount), tone: 'good', href: '#/fleet' }),
+    statCard({ label: 'Down / Under Maintenance', value: String(downFleetCount), tone: downFleetCount ? 'warning' : 'good', href: '#/fleet' }),
   ]));
 
-  // Money Owed — both directions: what's owed TO the company (receivables)
-  // and what the company owes OUT (fuel station credit, Partnership owner
-  // settlements) — an executive needs both sides together, not just one.
+  // Needs Attention — every "watch this" signal the dashboard used to
+  // scatter across Money Owed / Pending Approvals / Fleet Health grids,
+  // merged into one prioritized, clickable list.
   const fuelCreditOwed = stationBalances().reduce((sum, s) => sum + Math.max(0, s.balance), 0);
   const ownerSettlementsOwed = ownerSettlementBalances().reduce((sum, s) => sum + Math.max(0, s.balance), 0);
-
-  container.appendChild(el('h3', { class: 'subsection-title' }, 'Money Owed'));
-  container.appendChild(el('div', { class: 'stats-grid' }, [
-    statCard({ label: 'Outstanding Invoices (owed to us)', value: formatCurrency(unpaidTotal), hint: `${unpaid.length} unpaid`, tone: unpaid.length ? 'critical' : 'good' }),
-    statCard({ label: 'Fuel Credit Owed (to stations)', value: formatCurrency(fuelCreditOwed), tone: fuelCreditOwed ? 'warning' : 'good' }),
-    statCard({ label: 'Dozer Owner Settlements Owed', value: formatCurrency(ownerSettlementsOwed), tone: ownerSettlementsOwed ? 'warning' : 'good' }),
-  ]));
-
-  // Pending Approvals
   const pendingFundRequests = store.get('fundRequests').filter((r) => r.status === 'Pending').length;
   const pendingLeave = store.get('leaveRequests').filter((r) => r.status === 'Pending').length;
   const pendingVouchers = store.get('fuelingVouchers').filter((r) => r.status === 'Pending Approval').length;
+  const lastBackup = store.getLastBackupAt();
+  const daysSinceBackup = lastBackup ? Math.floor((Date.now() - new Date(lastBackup).getTime()) / 86400000) : null;
 
-  container.appendChild(el('h3', { class: 'subsection-title' }, 'Pending Approvals'));
-  container.appendChild(el('div', { class: 'stats-grid' }, [
-    statCard({ label: 'Fund Requests', value: String(pendingFundRequests), tone: pendingFundRequests ? 'warning' : 'good' }),
-    statCard({ label: 'Leave Requests', value: String(pendingLeave), tone: pendingLeave ? 'warning' : 'good' }),
-    statCard({ label: 'Fueling Vouchers', value: String(pendingVouchers), tone: pendingVouchers ? 'warning' : 'good' }),
+  const actionItems = [];
+  if (overdueServiceCount) actionItems.push({ tone: 'critical', icon: '🔧', text: `${overdueServiceCount} dozer${overdueServiceCount > 1 ? 's' : ''} overdue for service`, href: '#/fleet' });
+  if (unpaid.length) actionItems.push({ tone: 'critical', icon: '🧾', text: `${unpaid.length} unpaid invoice${unpaid.length > 1 ? 's' : ''} — ${formatCurrency(unpaidTotal)} outstanding`, href: '#/sales' });
+  if (outOfStock.length) actionItems.push({ tone: 'critical', icon: '📦', text: `${outOfStock.length} item${outOfStock.length > 1 ? 's' : ''} out of stock`, href: '#/fleet' });
+  if (lowStock.length - outOfStock.length > 0) actionItems.push({ tone: 'warning', icon: '📦', text: `${lowStock.length - outOfStock.length} item${lowStock.length - outOfStock.length > 1 ? 's' : ''} at or below reorder level`, href: '#/fleet' });
+  if (downFleetCount) actionItems.push({ tone: 'warning', icon: '🚧', text: `${downFleetCount} dozer${downFleetCount > 1 ? 's' : ''} down or under maintenance`, href: '#/fleet' });
+  if (dueSoonServiceCount) actionItems.push({ tone: 'warning', icon: '🔧', text: `${dueSoonServiceCount} dozer${dueSoonServiceCount > 1 ? 's' : ''} due soon for service`, href: '#/fleet' });
+  if (fuelCreditOwed) actionItems.push({ tone: 'warning', icon: '⛽', text: `${formatCurrency(fuelCreditOwed)} fuel credit owed to stations`, href: '#/purchasing' });
+  if (ownerSettlementsOwed) actionItems.push({ tone: 'warning', icon: '🤝', text: `${formatCurrency(ownerSettlementsOwed)} owed to dozer owners`, href: '#/fleet' });
+  if (pendingFundRequests) actionItems.push({ tone: 'warning', icon: '📋', text: `${pendingFundRequests} fund request${pendingFundRequests > 1 ? 's' : ''} awaiting approval`, href: '#/fundRequests' });
+  if (pendingLeave) actionItems.push({ tone: 'warning', icon: '📋', text: `${pendingLeave} leave request${pendingLeave > 1 ? 's' : ''} awaiting approval`, href: '#/leave' });
+  if (pendingVouchers) actionItems.push({ tone: 'warning', icon: '📋', text: `${pendingVouchers} fueling voucher${pendingVouchers > 1 ? 's' : ''} awaiting approval`, href: '#/fleet' });
+  if (!lastBackup) actionItems.push({ tone: 'warning', icon: '💾', text: "You've never backed up this data — everything lives only in this browser", href: '#/backup' });
+  else if (daysSinceBackup > 7) actionItems.push({ tone: 'warning', icon: '💾', text: `It's been ${daysSinceBackup} days since your last backup`, href: '#/backup' });
+
+  const toneRank = { critical: 0, warning: 1 };
+  actionItems.sort((a, b) => toneRank[a.tone] - toneRank[b.tone]);
+
+  container.appendChild(el('h3', { class: 'subsection-title' }, 'Needs Attention'));
+  if (actionItems.length) {
+    container.appendChild(el('div', { class: 'action-feed' }, actionItems.map((item) => el('a', { class: `action-item action-item-${item.tone}`, href: item.href }, [
+      el('span', { class: 'action-icon' }, item.icon),
+      el('span', { class: 'action-text' }, item.text),
+      el('span', { class: 'action-chevron' }, '→'),
+    ]))));
+  } else {
+    container.appendChild(el('div', { class: 'action-feed-empty' }, '✅ All caught up — nothing needs attention right now.'));
+  }
+
+  // Leaderboards / live activity — top sites and operators for the current
+  // month, plus the most recently logged reports, so the dashboard reads
+  // as a live pulse rather than only historical totals.
+  const employeeName = (id) => employees.find((e) => e.id === id)?.name || 'Unknown';
+  const opsThisMonth = operations.filter((o) => monthKey(o.date) === currentMonthKey);
+
+  const areaBySiteThisMonth = {};
+  opsThisMonth.filter((o) => isHaOperationType(o.operationType)).forEach((o) => {
+    areaBySiteThisMonth[o.siteName] = (areaBySiteThisMonth[o.siteName] || 0) + o.quantity;
+  });
+  const topSites = Object.entries(areaBySiteThisMonth)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([name, value]) => ({ name, value: `${value.toFixed(1)} ha` }));
+
+  const hoursByOperatorThisMonth = {};
+  opsThisMonth.forEach((o) => {
+    hoursByOperatorThisMonth[o.operatorId] = (hoursByOperatorThisMonth[o.operatorId] || 0) + (o.hoursWorked || 0);
+  });
+  const topOperators = Object.entries(hoursByOperatorThisMonth)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([id, value]) => ({ name: employeeName(id), value: `${value.toFixed(1)} h` }));
+
+  const recentReports = operations.slice()
+    .sort((a, b) => (a.date < b.date ? 1 : -1))
+    .slice(0, 5)
+    .map((r) => ({ name: r.siteName, meta: employeeName(r.operatorId), value: formatDate(r.date) }));
+
+  container.appendChild(el('h3', { class: 'subsection-title' }, 'This Month at a Glance'));
+  container.appendChild(el('div', { class: 'leaderboard-grid' }, [
+    leaderboardCard('Top Sites by Hectares', 'This month', topSites, 'No hectares logged this month yet.'),
+    leaderboardCard('Top Operators by Hours', 'This month', topOperators, 'No hours logged this month yet.'),
+    leaderboardCard('Recently Logged', 'Most recent Daily Operations reports', recentReports, 'No reports logged yet.'),
   ]));
 
   const chartsGrid = el('div', { class: 'charts-grid' });
   container.appendChild(chartsGrid);
 
-  const months = lastNMonthKeys(6);
-
-  // Revenue vs Cost vs Profit — company-wide, all projects, reusing the
-  // exact same per-project cost/revenue logic as Operation Profitability
-  // so this never drifts out of sync with that page's numbers.
-  const projects = projectNames();
-  const monthlyStats = months.map((key) => {
-    const { from, to } = monthBounds(key);
-    const perProject = projects.map((p) => computeProjectStats(p, from, to));
-    return {
-      label: monthLabel(key),
-      revenue: perProject.reduce((sum, s) => sum + s.revenue, 0),
-      cost: perProject.reduce((sum, s) => sum + s.totalCost, 0),
-      profit: perProject.reduce((sum, s) => sum + s.profit, 0),
-    };
-  });
   const profitCol = el('div');
   chartsGrid.appendChild(profitCol);
   renderMultiLineChart(profitCol, {
@@ -140,10 +247,7 @@ export function renderDashboard(container) {
 
   const salesCol = el('div');
   chartsGrid.appendChild(salesCol);
-  const salesByMonth = months.map((key) => ({
-    label: monthLabel(key),
-    value: invoices.filter((inv) => monthKey(inv.date) === key).reduce((sum, inv) => sum + invoiceTotal(inv), 0),
-  }));
+  const salesByMonth = months.map((key) => ({ label: monthLabel(key), value: revenueForMonth(key) }));
   renderLineChart(salesCol, {
     title: 'Sales Trend',
     subtitle: 'Total invoiced amount, last 6 months',
@@ -153,10 +257,7 @@ export function renderDashboard(container) {
 
   const landCol = el('div');
   chartsGrid.appendChild(landCol);
-  const areaByMonth = months.map((key) => ({
-    label: monthLabel(key),
-    value: operations.filter((o) => monthKey(o.date) === key && isHaOperationType(o.operationType)).reduce((sum, o) => sum + o.quantity, 0),
-  }));
+  const areaByMonth = months.map((key) => ({ label: monthLabel(key), value: areaForMonth(key) }));
   renderLineChart(landCol, {
     title: 'Land Cleared Trend',
     subtitle: 'Hectares (Ha-unit operation types), last 6 months',
