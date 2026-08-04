@@ -17,6 +17,10 @@ function supplierOptions() {
   return store.get('suppliers').map((s) => ({ value: s.id, label: s.name }));
 }
 
+function stockableInventoryOptions() {
+  return store.get('inventory').map((i) => ({ value: i.name, label: `${i.name} (${i.quantity} ${i.unit || ''} in stock)`.trim() }));
+}
+
 function poFields() {
   return [
     { name: 'supplierId', label: 'Supplier', type: 'select', required: true, options: supplierOptions() },
@@ -24,11 +28,34 @@ function poFields() {
     { name: 'description', label: 'Item Description', required: true },
     { name: 'qty', label: 'Quantity', type: 'number', required: true, min: 0 },
     { name: 'price', label: 'Unit Price (₦)', type: 'number', required: true, min: 0 },
+    { name: 'inventoryItem', label: 'Restocks Inventory Item (optional — adds this quantity to stock once marked Received)', type: 'select', options: [
+      { value: '', label: '— Not linked to inventory —' },
+      ...stockableInventoryOptions(),
+    ] },
     { name: 'status', label: 'Status', type: 'select', required: true, options: [
       { value: 'Pending', label: 'Pending' },
       { value: 'Received', label: 'Received' },
     ] },
   ];
+}
+
+// Adds/reverses the PO's quantity against its linked inventory item on
+// every Pending<->Received transition — never on a save that leaves status
+// unchanged, so re-saving a Received PO doesn't restock it twice. Reverses
+// the OLD contribution first (in case the linked item or quantity also
+// changed in the same edit), then applies the new one — the same
+// restore-then-apply pattern used for Bulldozer Parts withdrawals.
+async function applyInventoryStockChange(record, payload) {
+  const wasReceived = record?.status === 'Received' && record?.inventoryItem;
+  const isReceived = payload.status === 'Received' && payload.inventoryItem;
+  if (wasReceived) {
+    const item = store.get('inventory').find((i) => i.name === record.inventoryItem);
+    if (item) await store.update('inventory', item.id, { quantity: (item.quantity || 0) - (record.items[0]?.qty || 0) });
+  }
+  if (isReceived) {
+    const item = store.get('inventory').find((i) => i.name === payload.inventoryItem);
+    if (item) await store.update('inventory', item.id, { quantity: (item.quantity || 0) + (payload.items[0]?.qty || 0) });
+  }
 }
 
 export function renderPurchasing(container) {
@@ -132,8 +159,10 @@ export function renderPurchasing(container) {
             supplierId: data.supplierId,
             date: data.date,
             status: data.status,
+            inventoryItem: data.inventoryItem || '',
             items: [{ description: data.description, qty: data.qty, price: data.price }],
           };
+          await applyInventoryStockChange(record, payload);
           if (record) await store.update('purchaseOrders', record.id, payload);
           else await store.add('purchaseOrders', payload);
           refresh();

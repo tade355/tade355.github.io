@@ -215,6 +215,7 @@ create table purchase_orders (
   supplier_id text references suppliers(id) on delete set null,
   date        date not null,
   status      text not null default 'Pending' check (status in ('Pending', 'Received')),
+  inventory_item text, -- optional: name of the inventory item this PO restocks — its quantity is added on the Pending->Received transition
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
@@ -704,6 +705,28 @@ create trigger trg_assets_updated_at before update on assets
   for each row execute function set_updated_at();
 alter table assets enable row level security;
 create policy assets_auth_all on assets for all to authenticated using (true) with check (true);
+
+-- ---------------------------------------------------------------------
+-- General inventory withdrawals (Tools / Consumables / Safety Gear) —
+-- Bulldozer Parts has its own withdrawal tracker under Purchasing &
+-- Suppliers; this is the equivalent for everything else that gets used
+-- up. Logging one deducts the quantity from the item's stock.
+-- ---------------------------------------------------------------------
+create table inventory_withdrawals (
+  id          text primary key,
+  date        date not null,
+  item_name   text not null,
+  quantity    numeric not null default 0,
+  issued_to   text references employees(id) on delete set null,
+  equipment   text,
+  notes       text,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+create trigger trg_inventory_withdrawals_updated_at before update on inventory_withdrawals
+  for each row execute function set_updated_at();
+alter table inventory_withdrawals enable row level security;
+create policy inventory_withdrawals_auth_all on inventory_withdrawals for all to authenticated using (true) with check (true);
 
 -- ---------------------------------------------------------------------
 -- Row Level Security

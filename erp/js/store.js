@@ -35,6 +35,7 @@ const CONFIG = {
   fuelCreditPayments: { table: 'fuel_credit_payments', prefix: 'FCP' },
   dozerPartWithdrawals: { table: 'dozer_part_withdrawals', prefix: 'DPW' },
   assets: { table: 'assets', prefix: 'AST' },
+  inventoryWithdrawals: { table: 'inventory_withdrawals', prefix: 'IW' },
 };
 
 const COLLECTIONS = Object.keys(CONFIG);
