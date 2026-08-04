@@ -1,7 +1,7 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el, monthKey, statusPillClass, dateInRange } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
-import { FUEL_STATIONS, OWNERSHIP_CATEGORIES } from '../constants.js';
+import { FUEL_STATIONS, OWNERSHIP_CATEGORIES, isHaOperationType } from '../constants.js';
 import { printFuelingVoucher } from '../print.js';
 import { renderInventory } from './inventory.js';
 
@@ -54,6 +54,32 @@ function utilization30dFor(name) {
       .map((o) => o.date),
   );
   return (days.size / 30) * 100;
+}
+
+// "How much does it get done on a day it works" (a pace figure), as
+// opposed to Utilization above ("how often does it work at all") — averaged
+// over days actually worked in the last 30 days, not calendar days, so an
+// idle weekend doesn't drag down the rate. Applies to every fleet asset
+// regardless of ownership (unlike Utilization, which is Company-only).
+function avgWorkRateFor(name) {
+  const today = new Date();
+  const from = new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const to = today.toISOString().slice(0, 10);
+  const rows = store.get('operations').filter((o) => o.equipment === name && o.date >= from && o.date <= to);
+
+  const hoursByDate = {};
+  const haByDate = {};
+  rows.forEach((o) => {
+    hoursByDate[o.date] = (hoursByDate[o.date] || 0) + (o.hoursWorked || 0);
+    if (isHaOperationType(o.operationType)) haByDate[o.date] = (haByDate[o.date] || 0) + (o.quantity || 0);
+  });
+
+  const workDays = Object.keys(hoursByDate).length;
+  const haDays = Object.keys(haByDate).length;
+  return {
+    avgHoursPerDay: workDays ? Object.values(hoursByDate).reduce((a, b) => a + b, 0) / workDays : null,
+    avgHaPerDay: haDays ? Object.values(haByDate).reduce((a, b) => a + b, 0) / haDays : null,
+  };
 }
 
 function lastMaintenanceFor(name) {
@@ -347,6 +373,8 @@ export function renderFleet(container) {
           { key: 'currentProject', label: 'Current Project', render: (r) => r.currentProject || '—' },
           { key: 'hourlyRate', label: 'Rate/hr', render: (r) => formatCurrency(r.hourlyRate) },
           { key: 'utilization', label: 'Utilization (30d)', render: (r) => ((r.ownership === 'Company' || !r.ownership) ? `${utilization30dFor(r.name).toFixed(0)}%` : '—') },
+          { key: 'avgHoursPerDay', label: 'Avg Hrs/Day (30d)', render: (r) => { const v = avgWorkRateFor(r.name).avgHoursPerDay; return v === null ? '—' : `${v.toFixed(1)} h`; } },
+          { key: 'avgHaPerDay', label: 'Avg Ha/Day (30d)', render: (r) => { const v = avgWorkRateFor(r.name).avgHaPerDay; return v === null ? '—' : `${v.toFixed(2)} ha`; } },
           { key: 'totalHours', label: 'Total Hours', render: (r) => `${totalHoursFor(r.name)} h` },
           { key: 'totalFuel', label: 'Total Fuel', render: (r) => `${totalFuelFor(r.name)} L` },
           { key: 'lastMaintenance', label: 'Last Maintenance', render: (r) => formatDate(lastMaintenanceFor(r.name)) },
