@@ -117,6 +117,12 @@ create table inventory (
   service_interval_hours numeric,
   rental_rate_per_day    numeric, -- Partnership/Rented: flat day rate paid to the owner
   management_fee_per_day numeric, -- Partnership only: flat amount the company retains per day
+  -- Diesel consumption specs (Heavy Equipment only) — drive Daily Operations'
+  -- Fuel Used auto-calc: rate x hours, tiered around the first 8 hrs/day,
+  -- with Trekking using its own flat rate instead of the tiered pair.
+  diesel_rate_first8h    numeric,
+  diesel_rate_after8h    numeric,
+  diesel_rate_trekking   numeric,
   created_at             timestamptz not null default now(),
   updated_at             timestamptz not null default now()
 );

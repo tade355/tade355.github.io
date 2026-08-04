@@ -229,10 +229,10 @@ This is the field log book — one entry per piece of equipment per day, capturi
 | Hours Worked | **auto-fills the moment both Time In and Time Out are set** — the raw shift span minus any Downtime entered above. Still a plain editable field, so you can type it by hand when times aren't tracked. ⚠ if left blank with no times entered, it silently saves as 0 rather than blocking the save. |
 | Operation Type | Felling (Ha), Stacking (Ha), Direct Stacking (Ha), Root Picking (Ha), Bonding (Ha), Phase 1 (Ha), Phase 2 (Ha), Cross Cutting (Ha), Road (KM), or Trekking (hrs) |
 | Quantity | the amount done, in whatever unit the chosen Operation Type uses (shown next to it) — same "required label but silently saves as 0" caveat as Hours Worked |
-| Opening Diesel (litres) | what was in the tank at the start of the day — optional, matches the field's End of the Day Report |
-| Diesel Supplied (litres) | what was added to the tank today — optional |
-| Closing Diesel (litres) | what's left in the tank at the end of the day — optional, but this is the figure the Diesel Replenishment Request (Fleet Management → Diesel Tracking) uses as "what's currently in the tank," so fill it in whenever you can |
-| Fuel Used (litres) | **auto-fills the moment you enter Opening or Closing Diesel** (Opening + Supplied − Closing) — you can still type over it by hand for entries where tank readings aren't tracked |
+| Diesel Supplied (litres) | what was added to the tank today — optional, manual entry |
+| Opening Diesel (litres) | **auto-fills** as this dozer's last logged Closing Diesel (its most recent prior report) **+ today's Diesel Supplied** — still a plain editable field if you have an actual reading instead |
+| Fuel/Diesel Used (litres) | **auto-calculates** as the equipment's configured Diesel Consumption Rate (set on Fleet Management → Fleet Roster) **× Hours Worked**, tiered around the first 8 hrs/day — Trekking uses its own flat rate instead. If the selected equipment has no consumption rate configured yet, this stays a manual entry. |
+| Closing Diesel (litres) | **auto-calculates** as Opening Diesel − Fuel Used — overwrite it with an actual tank dip whenever you have one; this is the figure the Diesel Replenishment Request (Fleet Management → Diesel Tracking) uses as "what's currently in the tank" |
 | Status | Completed, Ongoing, or Halted (defaults to Completed) |
 | Work Type + Business Amount (₦) | **only appears if the selected equipment's Ownership is Partnership or Rented.** Choose "Office" for the normal, owner-shareable arrangement, or "Business" for a private arrangement that's never shown to the owner (and pays the operator an extra Business Amount for that day). See [Dozer Economics](#9-fleet-management) for how this splits downstream. |
 | Notes | free text |
@@ -275,6 +275,9 @@ Stat cards: Fleet Size, Company Owned, Partnership, Rented, Down / Under Mainten
 | Hourly Rate (₦) | internal cost/value used for project profitability |
 | Rental Rate/Day (₦) | Partnership or Rented only |
 | Management Fee/Day (₦) | Partnership only — retained from the rental rate |
+| Diesel Consumption — First 8 hrs/day (L/hr) | optional — drives Daily Operations' Fuel Used auto-calc for this dozer's first 8 worked hours in a day |
+| Diesel Consumption — After 8 hrs/day (L/hr) | optional — usually lower than the first-8-hrs rate; applies to hours worked beyond 8 in a day |
+| Diesel Consumption — Trekking (L/hr, flat) | optional — used instead of the tiered pair above whenever the report's Operation Type is Trekking; no 8-hr tiering |
 | Current Project | which project it's currently deployed to — this drives the Weekly Report tab |
 | Location | required |
 | Acquisition Value (₦) | |

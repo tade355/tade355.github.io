@@ -87,32 +87,74 @@ function openForm(record, refresh) {
       const hoursField = textField('hoursWorked', 'Hours Worked (auto-calculated from Time In/Out minus Downtime — editable if entering by hand)', 'number', record?.hoursWorked, true);
       const operationTypeField = selectField('operationType', 'Operation Type', OPERATION_TYPES.map((t) => ({ value: t.value, label: `${t.value} (${t.unit})` })), record?.operationType);
       const quantityField = textField('quantity', 'Quantity (unit shown next to the selected Operation Type, above)', 'number', record?.quantity, true);
-      const openingDieselField = textField('openingDiesel', 'Opening Diesel (litres) — in the tank at start of day', 'number', record?.openingDiesel);
       const dieselSuppliedField = textField('dieselSupplied', 'Diesel Supplied (litres) — added to the tank today', 'number', record?.dieselSupplied);
-      const closingDieselField = textField('closingDiesel', 'Closing Diesel (litres) — left in the tank at end of day', 'number', record?.closingDiesel);
-      const fuelField = textField('fuelUsed', 'Fuel Used (litres)', 'number', record?.fuelUsed, true);
+      const openingDieselField = textField('openingDiesel', "Opening Diesel (litres) — auto-fills from this dozer's last logged Closing Diesel plus today's Diesel Supplied", 'number', record?.openingDiesel);
+      const fuelField = textField('fuelUsed', "Fuel/Diesel Used (litres) — auto-calculated from the dozer's Consumption Rate (Fleet Roster) × Hours Worked", 'number', record?.fuelUsed, true);
+      const closingDieselField = textField('closingDiesel', 'Closing Diesel (litres) — auto-calculated as Opening Diesel minus Fuel Used; overwrite with an actual tank dip if you have one', 'number', record?.closingDiesel);
       const statusField = selectField('status', 'Status', [
         { value: 'Completed', label: 'Completed' },
         { value: 'Ongoing', label: 'Ongoing' },
         { value: 'Halted', label: 'Halted' },
       ], record?.status || 'Completed');
 
-      // Fuel Used auto-fills from the tank readings the moment either end of
-      // it is entered — Opening + Supplied − Closing — since that's how the
-      // real end-of-day reports work (a tank reading, not a hand-estimated
-      // litres-used figure). Still a plain editable input otherwise, for
-      // operation types or legacy entries with no tank readings.
-      function recomputeFuelUsed() {
-        const opening = openingDieselField.querySelector('input').value;
-        const supplied = dieselSuppliedField.querySelector('input').value;
-        const closing = closingDieselField.querySelector('input').value;
-        if (opening === '' && closing === '') return;
-        const used = (Number(opening) || 0) + (Number(supplied) || 0) - (Number(closing) || 0);
-        fuelField.querySelector('input').value = Math.max(0, used);
+      // The diesel tank ledger for this dozer, in the same order the real
+      // end-of-day report follows: Opening = this dozer's last logged
+      // Closing Diesel (most recent prior report, any date before this
+      // one) + today's Diesel Supplied. Diesel Used = the dozer's
+      // configured consumption rate (Fleet Management → Fleet Roster) x
+      // Hours Worked, tiered around the first 8 hrs/day since most dozers
+      // burn less once past that — Trekking uses its own flat rate
+      // instead of the tiered one. Closing = Opening − Used. Every field
+      // stays plain and editable so a real tank dip always wins over the
+      // computed estimate; it just won't be recomputed again unless one
+      // of its own driving inputs changes.
+      function latestClosingDieselBefore(equipment, date) {
+        if (!equipment || !date) return null;
+        const rows = store.get('operations')
+          .filter((o) => o.equipment === equipment && o.date < date && o.closingDiesel !== null && o.closingDiesel !== undefined)
+          .sort((a, b) => (a.date < b.date ? 1 : -1));
+        return rows.length ? rows[0].closingDiesel : null;
       }
-      [openingDieselField, dieselSuppliedField, closingDieselField].forEach((field) => {
-        field.querySelector('input').addEventListener('input', recomputeFuelUsed);
-      });
+
+      function recomputeOpeningDiesel() {
+        const equipment = equipmentField.querySelector('select').value;
+        const date = dateField.querySelector('input').value;
+        const prevClosing = latestClosingDieselBefore(equipment, date);
+        const supplied = Number(dieselSuppliedField.querySelector('input').value) || 0;
+        if (prevClosing === null && !supplied) return;
+        openingDieselField.querySelector('input').value = ((prevClosing || 0) + supplied).toFixed(1);
+      }
+
+      function recomputeDieselUsed() {
+        const asset = store.get('inventory').find((i) => i.name === equipmentField.querySelector('select').value);
+        if (!asset) return;
+        const opType = operationTypeField.querySelector('select').value;
+        const hours = Number(hoursField.querySelector('input').value) || 0;
+        let used = null;
+        if (opType === 'Trekking') {
+          if (asset.dieselRateTrekking) used = hours * asset.dieselRateTrekking;
+        } else if (asset.dieselRateFirst8h || asset.dieselRateAfter8h) {
+          const first8 = Math.min(hours, 8);
+          const rest = Math.max(0, hours - 8);
+          used = first8 * (asset.dieselRateFirst8h || 0) + rest * (asset.dieselRateAfter8h || asset.dieselRateFirst8h || 0);
+        }
+        if (used !== null) fuelField.querySelector('input').value = used.toFixed(1);
+      }
+
+      function recomputeClosingDiesel() {
+        const opening = openingDieselField.querySelector('input').value;
+        if (opening === '') return;
+        const used = Number(fuelField.querySelector('input').value) || 0;
+        closingDieselField.querySelector('input').value = Math.max(0, Number(opening) - used).toFixed(1);
+      }
+
+      openingDieselField.querySelector('input').addEventListener('input', recomputeClosingDiesel);
+      fuelField.querySelector('input').addEventListener('input', recomputeClosingDiesel);
+      dieselSuppliedField.querySelector('input').addEventListener('input', () => { recomputeOpeningDiesel(); recomputeClosingDiesel(); });
+      dateField.querySelector('input').addEventListener('input', () => { recomputeOpeningDiesel(); recomputeClosingDiesel(); });
+      equipmentField.querySelector('select').addEventListener('change', () => { recomputeOpeningDiesel(); recomputeDieselUsed(); recomputeClosingDiesel(); });
+      operationTypeField.querySelector('select').addEventListener('change', () => { recomputeDieselUsed(); recomputeClosingDiesel(); });
+      hoursField.querySelector('input').addEventListener('input', () => { recomputeDieselUsed(); recomputeClosingDiesel(); });
 
       // Hours Worked auto-fills the moment both Time In and Time Out are set
       // — the raw shift span, minus any logged Downtime (breakdown, community
@@ -132,6 +174,11 @@ function openForm(record, refresh) {
         const downMins = Number(downtimeMinutesField.querySelector('input').value) || 0;
         const netMinutes = Math.max(0, span - (downHrs * 60 + downMins));
         hoursField.querySelector('input').value = (netMinutes / 60).toFixed(2);
+        // Setting .value directly doesn't fire hoursField's own 'input'
+        // listener, so Diesel Used (which depends on Hours Worked) needs
+        // an explicit nudge here too.
+        recomputeDieselUsed();
+        recomputeClosingDiesel();
       }
       [timeResumedField, timeClosedField, downtimeHoursField, downtimeMinutesField].forEach((field) => {
         field.querySelector('input').addEventListener('input', recomputeHoursWorked);
@@ -141,7 +188,7 @@ function openForm(record, refresh) {
         dateField, siteField, blockNumberField, customerField, equipmentField, operatorField, supervisorField,
         timeResumedField, timeClosedField, downtimeReasonField, downtimeHoursField, downtimeMinutesField, hoursField,
         operationTypeField, quantityField,
-        openingDieselField, dieselSuppliedField, closingDieselField, fuelField, statusField,
+        dieselSuppliedField, openingDieselField, fuelField, closingDieselField, statusField,
       ]);
 
       // Only Partnership/Rented dozers need the Office/Business question —
