@@ -24,6 +24,8 @@ const FIELDS = [
   { name: 'rate', label: 'Rate (₦)', type: 'number', min: 0 },
   { name: 'rateUnit', label: 'Rate Unit (e.g. per Ha, per KM)', },
   { name: 'expectedRatePerDay', label: 'Expected Rate/Day (Ha) — for weekly productivity tracking', type: 'number', min: 0, step: '0.1' },
+  { name: 'startDate', label: 'Project Start Date — for Milestone Tracker', type: 'date' },
+  { name: 'totalAreaHa', label: 'Total Contract Area (Ha) — for Milestone Tracker', type: 'number', min: 0, step: '0.1' },
   { name: 'scope', label: 'Scope of Work', type: 'textarea' },
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];

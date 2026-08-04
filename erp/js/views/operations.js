@@ -67,6 +67,7 @@ function openForm(record, refresh) {
       const supervisorField = selectField('supervisorId', 'Supervisor', employeeOptions(), record?.supervisorId);
       const hoursField = textField('hoursWorked', 'Hours Worked', 'number', record?.hoursWorked, true);
       const timeResumedField = textField('timeResumed', 'Time Resumed (optional — for average resumption tracking)', 'time', record?.timeResumed);
+      const timeClosedField = textField('timeClosed', 'Time Closed (optional — for average close time tracking)', 'time', record?.timeClosed);
       const operationTypeField = selectField('operationType', 'Operation Type', OPERATION_TYPES.map((t) => ({ value: t.value, label: `${t.value} (${t.unit})` })), record?.operationType);
       const quantityField = textField('quantity', 'Quantity (unit shown next to the selected Operation Type, above)', 'number', record?.quantity, true);
       const fuelField = textField('fuelUsed', 'Fuel Used (litres)', 'number', record?.fuelUsed, true);
@@ -78,7 +79,7 @@ function openForm(record, refresh) {
 
       const topGrid = el('div', { class: 'form-grid-2' }, [
         dateField, siteField, customerField, equipmentField, operatorField, supervisorField,
-        hoursField, timeResumedField, operationTypeField, quantityField, fuelField, statusField,
+        hoursField, timeResumedField, timeClosedField, operationTypeField, quantityField, fuelField, statusField,
       ]);
 
       // Only Partnership/Rented dozers need the Office/Business question —
@@ -126,6 +127,7 @@ function openForm(record, refresh) {
           supervisorId: supervisorField.querySelector('select').value,
           hoursWorked: Number(hoursField.querySelector('input').value) || 0,
           timeResumed: timeResumedField.querySelector('input').value || null,
+          timeClosed: timeClosedField.querySelector('input').value || null,
           operationType: operationTypeField.querySelector('select').value,
           quantity: Number(quantityField.querySelector('input').value) || 0,
           fuelUsed: Number(fuelField.querySelector('input').value) || 0,
@@ -230,6 +232,7 @@ export function renderOperations(container) {
         { key: 'operator', label: 'Operator', render: (r) => employees.find((e) => e.id === r.operatorId)?.name || 'Unknown' },
         { key: 'hoursWorked', label: 'Hours', render: (r) => `${r.hoursWorked} h` },
         { key: 'timeResumed', label: 'Resumed', render: (r) => r.timeResumed || '—' },
+        { key: 'timeClosed', label: 'Closed', render: (r) => r.timeClosed || '—' },
         { key: 'operationType', label: 'Operation Type' },
         { key: 'quantity', label: 'Quantity', render: (r) => `${r.quantity} ${unitForOperationType(r.operationType)}` },
         { key: 'fuelUsed', label: 'Fuel', render: (r) => `${r.fuelUsed} L` },

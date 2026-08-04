@@ -28,4 +28,5 @@ export const ICONS = {
   nairaPaper: icon('<path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/><text x="13" y="18" font-size="9.5" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="Inter, system-ui, sans-serif">₦</text>'),
   database: icon('<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>'),
   fuelCan: icon('<rect x="9" y="3" width="6" height="4" rx="1"/><rect x="4" y="7" width="16" height="14" rx="2"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/>'),
+  calendar: icon('<rect x="3" y="4.5" width="18" height="16" rx="2"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/><line x1="7" y1="13.5" x2="7" y2="13.5"/><line x1="12" y1="13.5" x2="12" y2="13.5"/><line x1="17" y1="13.5" x2="17" y2="13.5"/><line x1="7" y1="17.5" x2="7" y2="17.5"/><line x1="12" y1="17.5" x2="12" y2="17.5"/>'),
 };

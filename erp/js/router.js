@@ -15,6 +15,7 @@ import { renderDozerEconomics } from './views/dozerEconomics.js';
 import { renderBackup } from './views/backup.js';
 import { renderNoticeBoard } from './views/noticeBoard.js';
 import { renderFuelCredit } from './views/fuelCredit.js';
+import { renderWeeklyReport } from './views/weeklyReport.js';
 import { closeModal } from './ui.js';
 import { canAccess, getCurrentTier, defaultRouteForTier } from './session.js';
 import { ICONS } from './icons.js';
@@ -23,6 +24,7 @@ export const ROUTES = [
   { path: 'dashboard', label: 'Dashboard', icon: ICONS.dashboard, render: renderDashboard, tiers: ['Admin', 'Accounts'] },
   { path: 'noticeBoard', label: 'Documents and Notices', icon: ICONS.documents, render: renderNoticeBoard, tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   { path: 'projects', label: 'Projects', icon: ICONS.folder, render: renderProjects, tiers: ['Admin', 'Accounts', 'Supervisor'] },
+  { path: 'weeklyReport', label: 'Weekly Report', icon: ICONS.calendar, render: renderWeeklyReport, tiers: ['Admin', 'Accounts', 'Supervisor'] },
   { path: 'approvals', label: 'Approvals', icon: ICONS.checkCircle, render: renderApprovals, tiers: ['Admin', 'Supervisor'] },
   { path: 'operations', label: 'Daily Operations', icon: ICONS.activity, render: renderOperations, tiers: ['Admin', 'Supervisor'] },
   { path: 'fleet', label: 'Fleet Management', icon: ICONS.wrench, render: renderFleet, tiers: ['Admin', 'Supervisor'] },

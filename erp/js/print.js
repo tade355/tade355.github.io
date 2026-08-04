@@ -314,6 +314,88 @@ export function printDozerSettlement(settlement, ownerName) {
   render(html);
 }
 
+const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+export function printWeeklyPerformanceReport(project, data) {
+  const cumulativeTotal = data.cumulative.reduce((a, b) => a + b, 0);
+  const html = `
+    ${letterhead('WEEKLY PERFORMANCE REPORT', `${formatDate(data.weekStart)} – ${formatDate(data.weekEnd)}`)}
+    <div class="print-meta-grid">
+      <div><strong>Project:</strong> ${project}</div>
+      <div><strong>Week:</strong> ${formatDate(data.weekStart)} – ${formatDate(data.weekEnd)}</div>
+    </div>
+    <table class="print-table">
+      <thead>
+        <tr>
+          <th>Dozer</th><th>Type</th><th>Start</th><th>Close</th>
+          ${DAY_LABELS.map((d) => `<th>${d}</th>`).join('')}
+          <th>Total</th><th>Speed Ha/Day</th><th>Planned</th><th>Actual</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${data.rows.map((r) => `
+          <tr>
+            <td>${r.name}</td>
+            <td>${r.types}</td>
+            <td>${r.start || '—'}</td>
+            <td>${r.close || '—'}</td>
+            ${r.byDay.map((v) => `<td>${v ? v.toFixed(1) : '—'}</td>`).join('')}
+            <td>${r.total.toFixed(1)}</td>
+            <td>${r.speedPerDay.toFixed(1)}</td>
+            <td>${r.plannedDays}</td>
+            <td>${r.actualDays}</td>
+          </tr>
+        `).join('')}
+        <tr>
+          <td colspan="4"><strong>Cumulative</strong></td>
+          ${data.cumulative.map((v) => `<td><strong>${v.toFixed(1)}</strong></td>`).join('')}
+          <td><strong>${cumulativeTotal.toFixed(1)}</strong></td><td></td><td></td><td></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="print-block">
+      ${data.typeTotals.map((t) => `<p><strong>Total ${t.unit} Achieved for ${t.type}:</strong> ${t.total.toFixed(2)} ${t.unit}</p>`).join('') || '<p>No operations logged for this project this week.</p>'}
+    </div>
+  `;
+  render(html);
+}
+
+export function printMilestoneTracker(data) {
+  const html = `
+    ${letterhead('MILESTONE REPORT TRACKING SYSTEM', data.project?.name)}
+    <div class="print-meta-grid">
+      <div><strong>Project Start Date:</strong> ${data.project?.startDate ? formatDate(data.project.startDate) : '—'}</div>
+      <div><strong>Current Date:</strong> ${formatDate(data.today)}</div>
+      <div><strong>Days on Project:</strong> ${data.daysOnProject === null ? '—' : data.daysOnProject}</div>
+      <div><strong>Project Speed (Ha/Day):</strong> ${data.speedPerDay === null ? '—' : data.speedPerDay.toFixed(2)}</div>
+      <div><strong>Grand Cumulative Achieved:</strong> ${data.grandCumulative.toFixed(2)} Ha</div>
+      <div><strong>Total Contract Area:</strong> ${data.project?.totalAreaHa ? `${data.project.totalAreaHa.toFixed(2)} Ha` : '—'}</div>
+      <div><strong>Remaining to Complete:</strong> ${data.remaining === null ? '—' : `${data.remaining.toFixed(2)} Ha`}</div>
+    </div>
+    <table class="print-table">
+      <thead>
+        <tr>
+          <th>Machinery</th><th>Vendor</th><th>Combined Days</th><th>Office Days</th><th>Business Days</th>
+          ${data.activeTypes.map((t) => `<th>${t.value} (${t.unit})</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${data.machineRows.map((r) => `
+          <tr>
+            <td>${r.name}</td>
+            <td>${r.owner}</td>
+            <td>${r.combinedDays}</td>
+            <td>${r.officeDays}</td>
+            <td>${r.businessDays}</td>
+            ${data.activeTypes.map((t) => `<td>${(r.byType[t.value] || 0).toFixed(2)}</td>`).join('')}
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+  render(html);
+}
+
 export function printDieselReplenishmentRequest(forDate, rows) {
   const totalLitres = rows.reduce((sum, r) => sum + r.projectedLitres, 0);
   const html = `

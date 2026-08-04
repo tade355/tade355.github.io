@@ -165,6 +165,8 @@ create table projects (
   rate             numeric,
   rate_unit        text,
   expected_rate_per_day numeric,
+  start_date       date,
+  total_area_ha    numeric,
   scope            text,
   notes            text,
   created_at       timestamptz not null default now(),
@@ -262,6 +264,7 @@ create table operations (
   supervisor_id  text references employees(id) on delete set null,
   hours_worked   numeric,
   time_resumed   text, -- "HH:MM" 24h, optional — for average resumption-time tracking (Fleet Roster)
+  time_closed    text, -- "HH:MM" 24h, optional — for average close-time tracking (Fleet Roster)
   -- Old values (Tree Felling, Direct Clearing, Phase 1, Phase 2, Corrections,
   -- Zero Bonding) kept valid alongside the corrected names — see 0015_operation_type_rename.sql.
   operation_type text check (operation_type in (

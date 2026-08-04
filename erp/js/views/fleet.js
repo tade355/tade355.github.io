@@ -82,20 +82,22 @@ function avgWorkRateFor(name) {
   const hoursByDate = {};
   const haByDate = {};
   const resumptionMinutes = [];
+  const closeMinutes = [];
   rows.forEach((o) => {
     hoursByDate[o.date] = (hoursByDate[o.date] || 0) + (o.hoursWorked || 0);
     if (isHaOperationType(o.operationType)) haByDate[o.date] = (haByDate[o.date] || 0) + (o.quantity || 0);
     if (o.timeResumed) resumptionMinutes.push(timeToMinutes(o.timeResumed));
+    if (o.timeClosed) closeMinutes.push(timeToMinutes(o.timeClosed));
   });
 
   const workDays = Object.keys(hoursByDate).length;
   const haDays = Object.keys(haByDate).length;
+  const avgMinutes = (list) => (list.length ? minutesToTime(list.reduce((a, b) => a + b, 0) / list.length) : null);
   return {
     avgHoursPerDay: workDays ? Object.values(hoursByDate).reduce((a, b) => a + b, 0) / workDays : null,
     avgHaPerDay: haDays ? Object.values(haByDate).reduce((a, b) => a + b, 0) / haDays : null,
-    avgResumptionTime: resumptionMinutes.length
-      ? minutesToTime(resumptionMinutes.reduce((a, b) => a + b, 0) / resumptionMinutes.length)
-      : null,
+    avgResumptionTime: avgMinutes(resumptionMinutes),
+    avgCloseTime: avgMinutes(closeMinutes),
   };
 }
 
@@ -416,6 +418,7 @@ export function renderFleet(container) {
           { key: 'avgHoursPerDay', label: 'Avg Hrs/Day (30d)', render: (r) => { const v = avgWorkRateFor(r.name).avgHoursPerDay; return v === null ? '—' : `${v.toFixed(1)} h`; } },
           { key: 'avgHaPerDay', label: 'Avg Ha/Day (30d)', render: (r) => { const v = avgWorkRateFor(r.name).avgHaPerDay; return v === null ? '—' : `${v.toFixed(2)} ha`; } },
           { key: 'avgResumptionTime', label: 'Avg Resumption (30d)', render: (r) => avgWorkRateFor(r.name).avgResumptionTime || '—' },
+          { key: 'avgCloseTime', label: 'Avg Close (30d)', render: (r) => avgWorkRateFor(r.name).avgCloseTime || '—' },
           { key: 'totalHours', label: 'Total Hours', render: (r) => `${totalHoursFor(r.name)} h` },
           { key: 'totalFuel', label: 'Total Fuel', render: (r) => `${totalFuelFor(r.name)} L` },
           { key: 'lastMaintenance', label: 'Last Maintenance', render: (r) => formatDate(lastMaintenanceFor(r.name)) },

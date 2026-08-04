@@ -433,6 +433,8 @@ button { font-family: inherit; }
 .data-table tbody tr:hover { background: var(--page-plane); }
 .data-table tbody tr.row-warning td:first-child { box-shadow: inset 3px 0 0 var(--warning); }
 .data-table tbody tr.row-critical td:first-child { box-shadow: inset 3px 0 0 var(--critical); }
+.data-table tbody tr.row-cumulative { background: var(--page-plane); }
+.weekly-report-footer { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.35rem; }
 .table-wrap { overflow-x: auto; }
 .table-empty {
   color: var(--text-muted);
