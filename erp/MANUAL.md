@@ -325,7 +325,9 @@ The master stock list of everything the company owns or holds: machinery, vehicl
 
 **"+ Add Item" fields:** Item Name, Category (Heavy Equipment, Vehicles, Tools, Consumables, Safety Gear, or Dozer Parts — the last one is really managed from Purchasing & Suppliers, see below), SKU, Quantity, Unit, Unit Cost (₦), Reorder Level, Location, Current Project.
 
-Rows where **Quantity ≤ Reorder Level** are flagged with an amber row highlight — your visual cue to reorder. There is no automatic stock deduction anywhere in this screen; Quantity is a plain number you update by hand whenever stock changes (the one exception is Bulldozer Parts withdrawals, which *do* auto-deduct — see [Purchasing & Suppliers](#11-purchasing--suppliers)).
+Rows where **Quantity ≤ Reorder Level** are flagged with an amber row highlight — your visual cue to reorder.
+
+**Withdrawal Log — Tools, Consumables, Safety Gear** (below the main item table): logging a withdrawal here auto-deducts the quantity from that item's stock, the same way Bulldozer Parts withdrawals do (see [Purchasing & Suppliers](#11-purchasing--suppliers)) — you don't edit Quantity by hand for a withdrawal. **"+ Log Withdrawal" fields:** Date, Item (only Tools/Consumables/Safety Gear appear here — Heavy Equipment/Vehicles are fixed assets, and Dozer Parts has its own tracker), Quantity Withdrawn, Issued To (Staff), Equipment (optional, if used on a specific machine), Notes. As with Bulldozer Parts, correct a mistaken withdrawal by **editing** it, not deleting it — deleting doesn't restore the stock.
 
 No print button.
 
@@ -387,7 +389,9 @@ Four tabs: **Purchase Orders, Suppliers, Fuel Credit, Bulldozer Parts & Supplies
 
 Table: PO #, Supplier, Date, Total, Status, actions.
 
-**"+ New Purchase Order" fields:** Supplier (required), Order Date, Item Description, Quantity, Unit Price (₦), Status (Pending / Received). Like invoices, a PO currently holds one line item; Total = Quantity × Unit Price. Marking a PO **Received** is a status label only — it does **not** automatically add stock to Inventory & Equipment; update that separately if needed.
+**"+ New Purchase Order" fields:** Supplier (required), Order Date, Item Description, Quantity, Unit Price (₦), **Restocks Inventory Item** (optional), Status (Pending / Received). Like invoices, a PO currently holds one line item; Total = Quantity × Unit Price.
+
+> If you link a PO to an Inventory item, marking it **Received** automatically adds the PO's quantity to that item's stock — you don't update it separately. Changing it back to Pending (a correction) subtracts the same quantity back out. Leave the link blank for services or one-off spend that was never going to touch inventory.
 
 **Print** produces a "PURCHASE ORDER" document with signature lines for Authorized Signature and Supplier Signature.
 
@@ -712,6 +716,16 @@ Everything in this ERP lives in one shared, central database — not on any one 
 2. When a part is used on a job: **+ Log Withdrawal**, pick the part, quantity, and which dozer it went into — stock deducts automatically.
 3. Watch for amber-highlighted rows in the catalog (at or below Reorder Level) to know what to reorder.
 
+### Restock inventory from a Purchase Order
+1. **Purchasing & Suppliers → Purchase Orders → + New Purchase Order.**
+2. Fill it in as normal, and set **Restocks Inventory Item** to the item this order is for (leave it blank if the order isn't for stocked inventory — a service, a one-off).
+3. When the order arrives, edit it and set **Status** to **Received** — the item's stock updates automatically.
+
+### Log a consumable/tool withdrawal
+1. **Fleet Management → Inventory & Equipment → + Log Withdrawal** (below the main item table).
+2. Pick the item (Tools/Consumables/Safety Gear only), quantity, and who it was issued to — stock deducts automatically.
+3. If you logged one by mistake, edit it rather than deleting it, so the stock correction actually happens.
+
 ### Back up the company's data
 1. **Backup & Data → ⬇ Download Backup**, at least weekly.
 2. Store the downloaded file somewhere safe outside the app (e.g. a shared drive).
@@ -741,8 +755,7 @@ Worth knowing about, so nothing here surprises you:
 - **The access-tier system is a UI convenience, not hard security.** It hides the wrong screens from the wrong people, but it isn't a database-level lock.
 - **Email notifications for new/decided fund and leave requests are wired into the app but currently inactive** (the email service isn't yet configured) — don't wait for an email; check the **Approvals** tab directly.
 - **Invoices and Purchase Orders currently hold a single line item each** — for a multi-item sale or order, you'd need to raise one per item for now.
-- **Marking a Purchase Order "Received" does not automatically add stock to Inventory & Equipment** — update the relevant inventory item's quantity separately if needed.
-- **Deleting a Bulldozer Parts withdrawal does not restore the stock it deducted** — if you logged one by mistake, edit it instead of deleting it.
+- **Deleting a Bulldozer Parts withdrawal, or a general Inventory withdrawal, does not restore the stock it deducted** — if you logged one by mistake, edit it instead of deleting it.
 - **Attendance times can't be edited in the app** — only deleted; corrections go through a site supervisor.
 - **Restoring a backup replaces data for the entire company on every device, with no undo** — treat it as a last resort.
 - **Adding someone in HR & Employees does not, by itself, give them a login.** The employee record (name, role, salary, access tier, etc.) and the actual username/password login are two separate things — a new hire's login has to be set up by whoever administers the underlying system, outside this app, and linked to their employee record before they can sign in.
