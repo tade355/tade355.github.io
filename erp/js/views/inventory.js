@@ -3,9 +3,10 @@ import { formatCurrency, formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, sectionHeader, openModal, confirmDelete } from '../ui.js';
 
 // Categories a withdrawal actually makes sense for: they get used up.
-// Heavy Equipment/Vehicles are fixed assets, not consumed, and Dozer Parts
-// already has its own dedicated withdrawal tracker under Purchasing.
-const WITHDRAWAL_CATEGORIES = ['Tools', 'Consumables', 'Safety Gear'];
+// Heavy Equipment/Vehicles are fixed assets, not consumed. Dozer Parts and
+// Consumables each have their own dedicated withdrawal tracker under
+// Resource Management.
+const WITHDRAWAL_CATEGORIES = ['Tools', 'Safety Gear'];
 
 function projectOptions() {
   return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
@@ -43,9 +44,9 @@ function fields() {
       { value: 'Heavy Equipment', label: 'Heavy Equipment' },
       { value: 'Vehicles', label: 'Vehicles' },
       { value: 'Tools', label: 'Tools' },
-      { value: 'Consumables', label: 'Consumables' },
+      { value: 'Consumables', label: 'Consumables (managed under Resource Management)' },
       { value: 'Safety Gear', label: 'Safety Gear' },
-      { value: 'Dozer Parts', label: 'Dozer Parts (managed under Purchasing & Suppliers)' },
+      { value: 'Dozer Parts', label: 'Dozer Parts (managed under Resource Management)' },
     ] },
     { name: 'sku', label: 'SKU', required: true },
     { name: 'quantity', label: 'Quantity', type: 'number', required: true, min: 0 },
@@ -69,8 +70,8 @@ export function renderInventory(container) {
   const tableContainer = el('div');
   container.appendChild(tableContainer);
 
-  container.appendChild(el('h3', { class: 'subsection-title' }, 'Withdrawal Log — Tools, Consumables, Safety Gear'));
-  container.appendChild(el('p', { class: 'section-subtitle' }, "Logging a withdrawal deducts the quantity from the item's stock automatically — it is not a manual stock edit. Doesn't apply to Heavy Equipment/Vehicles (fixed assets) or Dozer Parts (tracked separately under Purchasing & Suppliers)."));
+  container.appendChild(el('h3', { class: 'subsection-title' }, 'Withdrawal Log — Tools, Safety Gear'));
+  container.appendChild(el('p', { class: 'section-subtitle' }, "Logging a withdrawal deducts the quantity from the item's stock automatically — it is not a manual stock edit. Doesn't apply to Heavy Equipment/Vehicles (fixed assets), or Dozer Parts/Consumables (tracked separately under Resource Management)."));
   const withdrawalHeader = el('div', { class: 'section-header' }, [
     el('span', {}),
     el('button', { class: 'btn btn-ghost', onClick: () => openWithdrawalForm() }, '+ Log Withdrawal'),

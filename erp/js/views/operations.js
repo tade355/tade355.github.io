@@ -125,6 +125,23 @@ function openForm(record, refresh) {
         openingDieselField.querySelector('input').value = ((prevClosing || 0) + supplied).toFixed(1);
       }
 
+      // Diesel Supplied auto-fills from any Resource Management -> Diesel
+      // Management -> Site Distribution rows logged for this exact
+      // equipment/date/site (Level 2 -> Level 3 link) — still a plain
+      // editable input, so it's just a starting point when nothing was
+      // logged there yet, or when a hand count differs.
+      function recomputeDieselSupplied() {
+        const equipment = equipmentField.querySelector('select').value;
+        const date = dateField.querySelector('input').value;
+        const project = siteField.querySelector('select').value;
+        if (!equipment || !date || !project) return;
+        const matches = store.get('dieselSiteDistributions')
+          .filter((d) => d.equipment === equipment && d.date === date && d.project === project);
+        if (!matches.length) return;
+        const total = matches.reduce((sum, d) => sum + (d.litres || 0), 0);
+        dieselSuppliedField.querySelector('input').value = total.toFixed(1);
+      }
+
       function recomputeDieselUsed() {
         const asset = store.get('inventory').find((i) => i.name === equipmentField.querySelector('select').value);
         if (!asset) return;
@@ -151,8 +168,9 @@ function openForm(record, refresh) {
       openingDieselField.querySelector('input').addEventListener('input', recomputeClosingDiesel);
       fuelField.querySelector('input').addEventListener('input', recomputeClosingDiesel);
       dieselSuppliedField.querySelector('input').addEventListener('input', () => { recomputeOpeningDiesel(); recomputeClosingDiesel(); });
-      dateField.querySelector('input').addEventListener('input', () => { recomputeOpeningDiesel(); recomputeClosingDiesel(); });
-      equipmentField.querySelector('select').addEventListener('change', () => { recomputeOpeningDiesel(); recomputeDieselUsed(); recomputeClosingDiesel(); });
+      dateField.querySelector('input').addEventListener('input', () => { recomputeDieselSupplied(); recomputeOpeningDiesel(); recomputeClosingDiesel(); });
+      siteField.querySelector('select').addEventListener('change', () => { recomputeDieselSupplied(); recomputeOpeningDiesel(); recomputeClosingDiesel(); });
+      equipmentField.querySelector('select').addEventListener('change', () => { recomputeDieselSupplied(); recomputeOpeningDiesel(); recomputeDieselUsed(); recomputeClosingDiesel(); });
       operationTypeField.querySelector('select').addEventListener('change', () => { recomputeDieselUsed(); recomputeClosingDiesel(); });
       hoursField.querySelector('input').addEventListener('input', () => { recomputeDieselUsed(); recomputeClosingDiesel(); });
 

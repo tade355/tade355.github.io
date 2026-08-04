@@ -1,168 +1,20 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
-import { sectionHeader, statCard, renderTable, actionButtons, openCustomModal, closeModal, confirmDelete, statusPill } from '../ui.js';
+import { sectionHeader, statCard, renderTable, statusPill } from '../ui.js';
 import { getCurrentTier } from '../session.js';
-import { printDozerSettlement } from '../print.js';
-import { dozerRatesAsOf, hourlyRateAsOf } from '../rateHistory.js';
+import { hourlyRateAsOf } from '../rateHistory.js';
 
 function companyDozers() {
   return store.get('inventory').filter((i) => i.ownership === 'Company' || !i.ownership);
 }
-function partnershipDozers() {
-  return store.get('inventory').filter((i) => i.ownership === 'Partnership');
-}
 function ledgerDozers() {
   return store.get('inventory').filter((i) => i.ownership === 'Partnership' || i.ownership === 'Rented');
-}
-
-function selectField(name, label, options, value) {
-  const select = el('select', { name }, options.map((o) => {
-    const opt = el('option', { value: o.value }, o.label);
-    if (String(o.value) === String(value ?? '')) opt.setAttribute('selected', 'selected');
-    return opt;
-  }));
-  return el('label', { class: 'field' }, [el('span', { class: 'field-label' }, label), select]);
-}
-
-function textField(name, label, type, value, required) {
-  const input = el('input', { type: type || 'text', name, required: required ? 'required' : undefined, min: type === 'number' ? 0 : undefined });
-  input.value = value ?? '';
-  return el('label', { class: 'field' }, [el('span', { class: 'field-label' }, label + (required ? ' *' : '')), input]);
-}
-
-// Distinct days worked in a period, excluding Business days — this is what
-// feeds a Partnership dozer's formal, owner-shareable settlement.
-function officeDaysWorked(equipment, from, to) {
-  return new Set(
-    store.get('operations')
-      .filter((o) => o.equipment === equipment && dateInRange(o.date, from, to) && o.workType !== 'Business')
-      .map((o) => o.date),
-  ).size;
 }
 
 function maintenanceCostFor(equipment, from, to) {
   return store.get('maintenanceLogs')
     .filter((m) => m.equipment === equipment && dateInRange(m.date, from, to))
     .reduce((sum, m) => sum + m.cost, 0);
-}
-
-function settlementBalance(s) {
-  return (s.daysWorked * s.rentalRatePerDay) - (s.daysWorked * s.managementFeePerDay) - s.repairsCost - s.amountPaidToOwner;
-}
-
-function openSettlementForm(record, refresh) {
-  const dozers = partnershipDozers();
-  if (!dozers.length) {
-    window.alert('No Partnership dozers in the fleet yet. Set a dozer\'s Ownership to Partnership in Fleet Management first.');
-    return;
-  }
-
-  openCustomModal({
-    title: record ? 'Edit Owner Settlement' : 'New Owner Settlement',
-    wide: true,
-    build: (container) => {
-      const equipmentField = selectField('equipment', 'Partnership Dozer', dozers.map((d) => ({ value: d.name, label: d.name })), record?.equipment);
-      const periodStartField = textField('periodStart', 'Period Start', 'date', record?.periodStart, true);
-      const periodEndField = textField('periodEnd', 'Period End', 'date', record?.periodEnd, true);
-      const topGrid = el('div', { class: 'form-grid-2' }, [equipmentField, periodStartField, periodEndField]);
-
-      const daysField = textField('daysWorked', 'Days Worked (Office days only)', 'number', record?.daysWorked ?? 0, true);
-      const rentalField = textField('rentalRatePerDay', 'Rental Rate/Day (₦)', 'number', record?.rentalRatePerDay ?? 0, true);
-      const feeField = textField('managementFeePerDay', 'Management Fee/Day (₦, retained)', 'number', record?.managementFeePerDay ?? 0, true);
-      const repairsField = textField('repairsCost', 'Repairs Cost (₦)', 'number', record?.repairsCost ?? 0);
-      const paidField = textField('amountPaidToOwner', 'Amount Paid to Owner (₦)', 'number', record?.amountPaidToOwner ?? 0);
-      const numbersGrid = el('div', { class: 'form-grid-2' }, [daysField, rentalField, feeField, repairsField, paidField]);
-
-      const balanceDisplay = el('strong', {}, formatCurrency(0));
-      const balanceRow = el('div', { class: 'line-items-total' }, [el('span', {}, 'Balance Owed to Owner:'), balanceDisplay]);
-
-      function recomputeBalance() {
-        const days = Number(daysField.querySelector('input').value) || 0;
-        const rental = Number(rentalField.querySelector('input').value) || 0;
-        const fee = Number(feeField.querySelector('input').value) || 0;
-        const repairs = Number(repairsField.querySelector('input').value) || 0;
-        const paid = Number(paidField.querySelector('input').value) || 0;
-        balanceDisplay.textContent = formatCurrency((days * rental) - (days * fee) - repairs - paid);
-      }
-      [daysField, rentalField, feeField, repairsField, paidField].forEach((f) => f.querySelector('input').addEventListener('input', recomputeBalance));
-
-      const recomputeBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '↻ Fill Days, Repairs & Rates from Records');
-      recomputeBtn.addEventListener('click', () => {
-        const equipment = equipmentField.querySelector('select').value;
-        const from = periodStartField.querySelector('input').value;
-        const to = periodEndField.querySelector('input').value;
-        if (!equipment || !from || !to) { window.alert('Pick a dozer and both period dates first.'); return; }
-        daysField.querySelector('input').value = officeDaysWorked(equipment, from, to);
-        repairsField.querySelector('input').value = maintenanceCostFor(equipment, from, to);
-        const rates = dozerRatesAsOf(equipment, from);
-        rentalField.querySelector('input').value = rates.rentalRatePerDay ?? 0;
-        feeField.querySelector('input').value = rates.managementFeePerDay ?? 0;
-        recomputeBalance();
-      });
-
-      // Pre-fill using the rate in effect at the start of the chosen period
-      // (Rate History in Fleet Management), not necessarily today's rate.
-      function fillDefaultRates() {
-        const equipment = equipmentField.querySelector('select').value;
-        if (!equipment || record) return;
-        const asOf = periodStartField.querySelector('input').value || new Date().toISOString().slice(0, 10);
-        const rates = dozerRatesAsOf(equipment, asOf);
-        rentalField.querySelector('input').value = rates.rentalRatePerDay ?? 0;
-        feeField.querySelector('input').value = rates.managementFeePerDay ?? 0;
-        recomputeBalance();
-      }
-      equipmentField.querySelector('select').addEventListener('change', fillDefaultRates);
-      periodStartField.querySelector('input').addEventListener('change', fillDefaultRates);
-      if (!record) fillDefaultRates();
-      recomputeBalance();
-
-      const notesInput = el('textarea', { name: 'notes', rows: 2 });
-      notesInput.value = record?.notes || '';
-      const notesField = el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Notes'), notesInput]);
-
-      const actions = el('div', { class: 'modal-actions' }, [
-        el('button', { type: 'button', class: 'btn btn-ghost', onClick: closeModal }, 'Cancel'),
-        el('button', { type: 'button', class: 'btn btn-primary' }, record ? 'Save Changes' : 'Save Settlement'),
-      ]);
-      const submitBtn = actions.lastChild;
-
-      submitBtn.addEventListener('click', async () => {
-        const payload = {
-          equipment: equipmentField.querySelector('select').value,
-          periodStart: periodStartField.querySelector('input').value,
-          periodEnd: periodEndField.querySelector('input').value,
-          daysWorked: Number(daysField.querySelector('input').value) || 0,
-          rentalRatePerDay: Number(rentalField.querySelector('input').value) || 0,
-          managementFeePerDay: Number(feeField.querySelector('input').value) || 0,
-          repairsCost: Number(repairsField.querySelector('input').value) || 0,
-          amountPaidToOwner: Number(paidField.querySelector('input').value) || 0,
-          notes: notesInput.value,
-        };
-        if (!payload.equipment) { window.alert('Dozer is required.'); return; }
-        if (!payload.periodStart || !payload.periodEnd) { window.alert('Both period dates are required.'); return; }
-
-        try {
-          submitBtn.disabled = true;
-          submitBtn.textContent = 'Saving…';
-          if (record) await store.update('dozerOwnerSettlements', record.id, payload);
-          else await store.add('dozerOwnerSettlements', payload);
-          closeModal();
-          refresh();
-        } catch (err) {
-          window.alert(err.message || 'Could not save this settlement.');
-          submitBtn.disabled = false;
-          submitBtn.textContent = record ? 'Save Changes' : 'Save Settlement';
-        }
-      });
-
-      container.appendChild(topGrid);
-      container.appendChild(recomputeBtn);
-      container.appendChild(numbersGrid);
-      container.appendChild(balanceRow);
-      container.appendChild(notesField);
-      container.appendChild(actions);
-    },
-  });
 }
 
 function renderCompanyPerformance(container, from, to) {
@@ -209,84 +61,9 @@ function renderCompanyPerformance(container, from, to) {
   });
 }
 
-// Per-Partnership-dozer running balance owed to its owner — generated
-// rental minus management fee retained, repairs, and what's already been
-// paid out. Exported so the Dashboard can surface the company-wide total
-// without duplicating this logic.
-export function ownerSettlementBalances() {
-  const settlements = store.get('dozerOwnerSettlements');
-  return partnershipDozers().map((d) => {
-    const own = settlements.filter((s) => s.equipment === d.name);
-    const generated = own.reduce((sum, s) => sum + (s.daysWorked * s.rentalRatePerDay), 0);
-    const retained = own.reduce((sum, s) => sum + (s.daysWorked * s.managementFeePerDay), 0);
-    const repairs = own.reduce((sum, s) => sum + s.repairsCost, 0);
-    const paid = own.reduce((sum, s) => sum + s.amountPaidToOwner, 0);
-    return { name: d.name, owner: d.ownerName || '—', generated, retained, repairs, paid, balance: generated - retained - repairs - paid };
-  });
-}
-
-function renderOwnerSettlements(container, refresh) {
-  const settlements = store.get('dozerOwnerSettlements').slice().sort((a, b) => (a.periodStart < b.periodStart ? 1 : -1));
-
-  container.appendChild(sectionHeader('Partnership Owner Settlements', 'Formal, owner-shareable record of days worked, rental earned, management fee retained, repairs, and amount paid', el('button', { class: 'btn btn-primary', onClick: () => openSettlementForm(null, refresh) }, '+ New Settlement')));
-
-  const balanceRows = ownerSettlementBalances();
-
-  const summaryContainer = el('div');
-  container.appendChild(summaryContainer);
-  renderTable(summaryContainer, {
-    columns: [
-      { key: 'name', label: 'Dozer' },
-      { key: 'owner', label: 'Owner' },
-      { key: 'generated', label: 'Total Generated', render: (r) => formatCurrency(r.generated) },
-      { key: 'retained', label: 'Management Retained', render: (r) => formatCurrency(r.retained) },
-      { key: 'repairs', label: 'Repairs Cost', render: (r) => formatCurrency(r.repairs) },
-      { key: 'paid', label: 'Already Paid', render: (r) => formatCurrency(r.paid) },
-      { key: 'balance', label: 'Balance Owed', render: (r) => el('strong', { class: r.balance >= 0 ? 'text-critical' : 'text-good' }, formatCurrency(r.balance)) },
-    ],
-    rows: balanceRows,
-    emptyText: 'No Partnership dozers in the fleet yet.',
-  });
-
-  container.appendChild(el('h3', { class: 'subsection-title' }, 'Settlement History'));
-  const tableContainer = el('div');
-  container.appendChild(tableContainer);
-  renderTable(tableContainer, {
-    columns: [
-      { key: 'equipment', label: 'Dozer' },
-      { key: 'period', label: 'Period', render: (r) => `${formatDate(r.periodStart)} – ${formatDate(r.periodEnd)}` },
-      { key: 'daysWorked', label: 'Days', render: (r) => r.daysWorked },
-      { key: 'rentalRatePerDay', label: 'Rate/Day', render: (r) => formatCurrency(r.rentalRatePerDay) },
-      { key: 'managementFeePerDay', label: 'Mgmt Fee/Day', render: (r) => formatCurrency(r.managementFeePerDay) },
-      { key: 'repairsCost', label: 'Repairs', render: (r) => formatCurrency(r.repairsCost) },
-      { key: 'amountPaidToOwner', label: 'Paid to Owner', render: (r) => formatCurrency(r.amountPaidToOwner) },
-      { key: 'balance', label: 'Balance', render: (r) => formatCurrency(settlementBalance(r)) },
-      {
-        key: 'actions',
-        label: '',
-        render: (r) => actionButtons({
-          onPrint: () => printDozerSettlement(r, store.get('inventory').find((i) => i.name === r.equipment)?.ownerName),
-          onEdit: () => openSettlementForm(r, refresh),
-          onDelete: async () => {
-            if (!confirmDelete(`${r.equipment} settlement (${formatDate(r.periodStart)} – ${formatDate(r.periodEnd)})`)) return;
-            try {
-              await store.remove('dozerOwnerSettlements', r.id);
-              refresh();
-            } catch (err) {
-              window.alert(err.message || 'Could not delete this settlement.');
-            }
-          },
-        }),
-      },
-    ],
-    rows: settlements,
-    emptyText: 'No settlements recorded yet.',
-  });
-}
-
 function renderInternalLedger(container) {
   container.appendChild(el('h3', { class: 'subsection-title' }, 'Internal Ledger — Office vs Business'));
-  container.appendChild(el('p', { class: 'section-subtitle' }, 'Every day logged against a Partnership or Rented dozer, Office and Business alike — for internal use only. Business days and amounts never appear in the owner-shareable settlement above.'));
+  container.appendChild(el('p', { class: 'section-subtitle' }, 'Every day logged against a Partnership or Rented dozer, Office and Business alike — for internal use only. Business days and amounts never appear in the owner-shareable settlement (see Resource Management → Dozer Rent Payments).'));
 
   const filterBar = el('div', { class: 'filter-bar' });
   const dozers = ledgerDozers();
@@ -350,7 +127,7 @@ export function renderDozerEconomics(container) {
 
   const isAdmin = getCurrentTier() === 'Admin';
 
-  container.appendChild(sectionHeader('Dozer Economics', 'Company-owned dozer performance and Partnership owner settlements'));
+  container.appendChild(sectionHeader('Dozer Economics', 'Company-owned dozer performance and revenue analysis'));
 
   const filterBar = el('div', { class: 'filter-bar' });
   const fromInput = el('input', { type: 'date' });
@@ -361,21 +138,14 @@ export function renderDozerEconomics(container) {
 
   const companySection = el('div');
   container.appendChild(companySection);
-  const settlementsSection = el('div');
-  container.appendChild(settlementsSection);
 
   function refreshCompany() {
     companySection.innerHTML = '';
     renderCompanyPerformance(companySection, fromInput.value, toInput.value);
   }
-  function refreshSettlements() {
-    settlementsSection.innerHTML = '';
-    renderOwnerSettlements(settlementsSection, refreshSettlements);
-  }
 
   [fromInput, toInput].forEach((input) => input.addEventListener('change', refreshCompany));
   refreshCompany();
-  refreshSettlements();
 
   if (isAdmin) {
     const ledgerSection = el('div');

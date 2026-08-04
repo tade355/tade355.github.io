@@ -6,6 +6,7 @@ import { renderHR } from './views/hr.js';
 import { renderAccounting } from './views/accounting.js';
 import { renderOperations } from './views/operations.js';
 import { renderFleet } from './views/fleet.js';
+import { renderResourceManagement } from './views/resourceManagement.js';
 import { renderLeaveAttendance } from './views/leaveAttendance.js';
 import { renderFundRequests } from './views/fundRequests.js';
 import { renderBackup } from './views/backup.js';
@@ -14,11 +15,12 @@ import { closeModal } from './ui.js';
 import { canAccess, getCurrentTier, defaultRouteForTier } from './session.js';
 import { ICONS } from './icons.js';
 
-// Approvals lives inside Fund Requests, Fuel Credit and Bulldozer Parts &
-// Supplies inside Purchasing & Suppliers, Dozer Economics inside Fleet
-// Management, Weekly Report and Profitability inside Projects, and Payroll
-// / Operator Allowance inside HR & Employees — all as tabs, not routes. See
-// each view file's own tab bar for those.
+// Approvals lives inside Fund Requests, Fuel Credit inside Purchasing &
+// Suppliers, Dozer Economics inside Fleet Management, Weekly Report and
+// Profitability inside Projects, Payroll / Operator Allowance inside HR &
+// Employees, and Diesel Management / Bulldozer Parts & Supplies / Dozer
+// Rent Payments / Lubricants & Consumables inside Resource Management —
+// all as tabs, not routes. See each view file's own tab bar for those.
 export const ROUTES = [
   // Overview
   { path: 'dashboard', label: 'Dashboard', icon: ICONS.dashboard, render: renderDashboard, tiers: ['Admin', 'Accounts'] },
@@ -27,6 +29,7 @@ export const ROUTES = [
   { path: 'projects', label: 'Projects', icon: ICONS.folder, render: renderProjects, tiers: ['Admin', 'Accounts', 'Supervisor'] },
   { path: 'operations', label: 'Daily Operations', icon: ICONS.activity, render: renderOperations, tiers: ['Admin', 'Supervisor'] },
   { path: 'fleet', label: 'Fleet Management', icon: ICONS.wrench, render: renderFleet, tiers: ['Admin', 'Supervisor'] },
+  { path: 'resourceManagement', label: 'Resource Management', icon: ICONS.fuelCan, render: renderResourceManagement, tiers: ['Admin', 'Accounts', 'Supervisor'] },
   // Commercial: money moving with outside parties
   { path: 'sales', label: 'Sales & Invoicing', icon: ICONS.receipt, render: renderSales, tiers: ['Admin', 'Accounts'] },
   { path: 'purchasing', label: 'Purchasing & Suppliers', icon: ICONS.bag, render: renderPurchasing, tiers: ['Admin', 'Accounts'] },

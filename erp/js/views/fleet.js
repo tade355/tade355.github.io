@@ -245,6 +245,14 @@ function receiptFields() {
     { name: 'litres', label: 'Litres Received', type: 'number', required: true, min: 0 },
     { name: 'unitCost', label: 'Unit Cost (₦/litre)', type: 'number', required: true, min: 0 },
     { name: 'supplier', label: 'Supplier', type: 'select', options: supplierOptions() },
+    { name: 'station', label: 'Filling Station (optional — draws down a prepayment balance, see Resource Management → Diesel Management)', type: 'select', options: [
+      { value: '', label: '— Not against a station prepayment —' },
+      ...FUEL_STATIONS.map((s) => ({ value: s, label: s })),
+    ] },
+    { name: 'project', label: "Site / Project (optional — replenishes that site's dump tank, see Resource Management → Diesel Management)", type: 'select', options: [
+      { value: '', label: '— Company-wide pool —' },
+      ...projectOptions(),
+    ] },
     { name: 'reference', label: 'Reference (PO #, waybill, etc.)' },
     { name: 'notes', label: 'Notes', type: 'textarea' },
   ];
@@ -660,6 +668,8 @@ export function renderFleet(container) {
           { key: 'unitCost', label: 'Unit Cost', render: (r) => formatCurrency(r.unitCost) },
           { key: 'total', label: 'Total Cost', render: (r) => formatCurrency(r.litres * r.unitCost) },
           { key: 'supplier', label: 'Supplier', render: (r) => r.supplier || '—' },
+          { key: 'station', label: 'Station', render: (r) => r.station || '—' },
+          { key: 'project', label: 'Site / Project', render: (r) => r.project || '—' },
           { key: 'reference', label: 'Reference', render: (r) => r.reference || '—' },
           {
             key: 'actions',

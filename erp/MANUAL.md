@@ -17,16 +17,17 @@ Use **Ctrl+F** (or your browser's "Find" feature) to jump to a section by name �
 7. [Projects](#7-projects)
 8. [Daily Operations](#8-daily-operations)
 9. [Fleet Management](#9-fleet-management)
-10. [Sales & Invoicing](#10-sales--invoicing)
-11. [Purchasing & Suppliers](#11-purchasing--suppliers)
-12. [Accounting & Expenses](#12-accounting--expenses)
-13. [Fund Requests & Approvals](#13-fund-requests--approvals)
-14. [HR & Employees](#14-hr--employees)
-15. [Leave & Attendance](#15-leave--attendance)
-16. [Backup & Data](#16-backup--data)
-17. [Step-by-Step Workflows](#17-step-by-step-workflows)
-18. [Glossary](#18-glossary)
-19. [Known Limitations](#19-known-limitations)
+10. [Resource Management](#10-resource-management)
+11. [Sales & Invoicing](#11-sales--invoicing)
+12. [Purchasing & Suppliers](#12-purchasing--suppliers)
+13. [Accounting & Expenses](#13-accounting--expenses)
+14. [Fund Requests & Approvals](#14-fund-requests--approvals)
+15. [HR & Employees](#15-hr--employees)
+16. [Leave & Attendance](#16-leave--attendance)
+17. [Backup & Data](#17-backup--data)
+18. [Step-by-Step Workflows](#18-step-by-step-workflows)
+19. [Glossary](#19-glossary)
+20. [Known Limitations](#20-known-limitations)
 
 ---
 
@@ -66,8 +67,8 @@ Every staff account is assigned one of four **ERP Access Levels** in HR & Employ
 | Tier | Who this is for | What they get |
 |---|---|---|
 | **Admin** | Management / ownership | Everything — every module, every tab, every action, including HR, Payroll, and the Admin-only Internal Ledger inside Dozer Economics. |
-| **Accounts** | Office / accounts staff | Dashboard, Documents and Notices, Projects (including Profitability and Rate History), Sales & Invoicing, Purchasing & Suppliers, Accounting & Expenses, Fund Requests & Approvals, Leave & Attendance. **Not**: Daily Operations, Fleet Management, HR & Employees. |
-| **Supervisor** | Site supervisors | Documents and Notices, Projects (Map View, Photo Gallery, and Weekly Report only — no Projects list, Rate History, or Profitability tab), Daily Operations, Fleet Management, Fund Requests & Approvals (including the Approvals inbox), Leave & Attendance. A Supervisor's view of Fund Requests, Leave Requests, and Fueling Vouchers is further narrowed to their own **Assigned Project** (set on their HR record) — see the note under each relevant module. **Not**: Dashboard, Sales, Purchasing, Accounting, HR. |
+| **Accounts** | Office / accounts staff | Dashboard, Documents and Notices, Projects (including Profitability and Rate History), Resource Management, Sales & Invoicing, Purchasing & Suppliers, Accounting & Expenses, Fund Requests & Approvals, Leave & Attendance. **Not**: Daily Operations, Fleet Management, HR & Employees. |
+| **Supervisor** | Site supervisors | Documents and Notices, Projects (Map View, Photo Gallery, and Weekly Report only — no Projects list, Rate History, or Profitability tab), Daily Operations, Fleet Management, Resource Management, Fund Requests & Approvals (including the Approvals inbox), Leave & Attendance. A Supervisor's view of Fund Requests, Leave Requests, and Fueling Vouchers is further narrowed to their own **Assigned Project** (set on their HR record) — see the note under each relevant module. **Not**: Dashboard, Sales, Purchasing, Accounting, HR. |
 | **Staff** | Everyone else (general/field staff) | Documents and Notices, Fund Requests & Approvals (their own requests only — no Approvals tab), Leave & Attendance (their own leave/attendance only). Nothing else. |
 
 > **Important caveat:** this tier system controls what the app's screens *show and offer* — it is not a database-level security wall. Anyone determined enough with technical access to the underlying system could bypass it. Treat it as "the right doors are hidden from the wrong people," not "the wrong people are locked out even if they try to force their way in."
@@ -83,7 +84,7 @@ These conventions repeat across almost every module — learn them once here ins
 - **`+ Add / New / Log / Submit …` button** — top-right of most list screens. Opens a form (a "modal" popup) to create a new record. Required fields are marked with `*`.
 - **Row icons**:
   - **✎ Edit** — opens the same form, pre-filled, to change that record.
-  - **🗑 Delete** — always asks to confirm first (*"Delete '&lt;record name&gt;'? This cannot be undone."*). There is no undo after confirming, other than restoring from a backup (see [Backup & Data](#16-backup--data)).
+  - **🗑 Delete** — always asks to confirm first (*"Delete '&lt;record name&gt;'? This cannot be undone."*). There is no undo after confirming, other than restoring from a backup (see [Backup & Data](#17-backup--data)).
   - **🖨 Print** — only appears where a printable document exists for that record (see each module's Print section below). Opens your browser's print dialog with a formatted letterhead document — print it, or use "Save as PDF" in the print dialog to get a PDF file instead of paper.
 - **Status pills** — colored badges showing a record's status. As a rough guide: **green** = good/complete/paid/active, **amber** = pending/in-progress/needs attention, **red** = a problem, rejected, overdue, or unpaid.
 - **Search and filter bars** — most list screens have a search box and/or dropdown filters just above the table. These only change what's *displayed*; they never delete or alter data.
@@ -199,7 +200,7 @@ A dated log of every contract-rate change per project. **"+ Log Rate Change"** f
 
 ### Profitability tab (Admin/Accounts only)
 
-The same screen also appears inside [Accounting & Expenses](#12-accounting--expenses) — see that section for the full breakdown of how revenue, cost, and margin are calculated. It's a read-only report; there's nothing to add or edit here.
+The same screen also appears inside [Accounting & Expenses](#13-accounting--expenses) — see that section for the full breakdown of how revenue, cost, and margin are calculated. It's a read-only report; there's nothing to add or edit here.
 
 ---
 
@@ -229,12 +230,12 @@ This is the field log book — one entry per piece of equipment per day, capturi
 | Hours Worked | **auto-fills the moment both Time In and Time Out are set** — the raw shift span minus any Downtime entered above. Still a plain editable field, so you can type it by hand when times aren't tracked. ⚠ if left blank with no times entered, it silently saves as 0 rather than blocking the save. |
 | Operation Type | Felling (Ha), Stacking (Ha), Direct Stacking (Ha), Root Picking (Ha), Bonding (Ha), Phase 1 (Ha), Phase 2 (Ha), Cross Cutting (Ha), Road (KM), or Trekking (hrs) |
 | Quantity | the amount done, in whatever unit the chosen Operation Type uses (shown next to it) — same "required label but silently saves as 0" caveat as Hours Worked |
-| Diesel Supplied (litres) | what was added to the tank today — optional, manual entry |
+| Diesel Supplied (litres) | **auto-fills** from any matching Resource Management → Diesel Management → Site Distribution entry logged for this exact equipment/date/site — still a plain editable field if nothing was logged there, or a hand count differs |
 | Opening Diesel (litres) | **auto-fills** as this dozer's last logged Closing Diesel (its most recent prior report) **+ today's Diesel Supplied** — still a plain editable field if you have an actual reading instead |
 | Fuel/Diesel Used (litres) | **auto-calculates** as the equipment's configured Diesel Consumption Rate (set on Fleet Management → Fleet Roster) **× Hours Worked**, tiered around the first 8 hrs/day — Trekking uses its own flat rate instead. If the selected equipment has no consumption rate configured yet, this stays a manual entry. |
 | Closing Diesel (litres) | **auto-calculates** as Opening Diesel − Fuel Used — overwrite it with an actual tank dip whenever you have one; this is the figure the Diesel Replenishment Request (Fleet Management → Diesel Tracking) uses as "what's currently in the tank" |
 | Status | Completed, Ongoing, or Halted (defaults to Completed) |
-| Work Type + Business Amount (₦) | **only appears if the selected equipment's Ownership is Partnership or Rented.** Choose "Office" for the normal, owner-shareable arrangement, or "Business" for a private arrangement that's never shown to the owner (and pays the operator an extra Business Amount for that day). See [Dozer Economics](#9-fleet-management) for how this splits downstream. |
+| Work Type + Business Amount (₦) | **only appears if the selected equipment's Ownership is Partnership or Rented.** Choose "Office" for the normal, owner-shareable arrangement, or "Business" for a private arrangement that's never shown to the owner (and pays the operator an extra Business Amount for that day). See Dozer Economics (Fleet Management) and [Dozer Rent Payments](#10-resource-management) for how this splits downstream. |
 | Notes | free text |
 | KML Boundary File / Photos | attach a `.kml` site-boundary file and/or photos — these automatically feed the Projects → Map View and Photo Gallery tabs |
 
@@ -301,7 +302,9 @@ Buttons: **+ Log Diesel Receipt**, **+ Log Stock Count**.
 
 Stat cards: Total Received (All-Time), Total Issued (from Daily Logs), Expected Balance, and — once at least one physical count has been logged — Last Count Variance.
 
-**"+ Log Diesel Receipt" fields:** Date, Litres Received, Unit Cost (₦/litre), Supplier, Reference (PO #, waybill, etc.), Notes.
+**"+ Log Diesel Receipt" fields:** Date, Litres Received, Unit Cost (₦/litre), Supplier, Filling Station (optional — draws down that station's prepayment balance), Site / Project (optional — replenishes that site's dump tank), Reference (PO #, waybill, etc.), Notes.
+
+> Tagging a receipt with a **Filling Station** and/or **Site / Project** is what feeds Resource Management → Diesel Management's Station Ledger (Level 1) and Site Distribution (Level 2) — this same receipt is the single record used everywhere; there's no separate ledger to keep in sync.
 
 **"+ Log Stock Count" fields:** Date, Counted Litres (the physical tank reading), Counted By, Notes.
 
@@ -321,7 +324,7 @@ Below the buttons, four sections:
 
 **"+ New Fueling Voucher" fields:** Date, Fuel Station (Midejab Ltd, SK Gold, Asolak Ltd, Iloamachi Ltd, Total Enugu, Akuebuolo Ltd, Kabir Ltd), Project, Dozer/Equipment, Litres Requested, Estimated Cost (₦), Requested By, Status (Pending Approval / Approved / Rejected / Fulfilled), Approved By, Notes, Receipts / Photos.
 
-A voucher only counts toward the Diesel Ledger's "New" litres once it's marked **Fulfilled**. Approving or rejecting a pending voucher is normally done from the [Approvals inbox](#13-fund-requests--approvals) rather than from here.
+A voucher only counts toward the Diesel Ledger's "New" litres once it's marked **Fulfilled**. Approving or rejecting a pending voucher is normally done from the [Approvals inbox](#14-fund-requests--approvals) rather than from here.
 
 **Print** (🖨 on any row) produces a "FUELING VOUCHER" document to hand to the station attendant, with signature lines for Requested By, Approved By, and Station Attendant.
 
@@ -329,11 +332,11 @@ A voucher only counts toward the Diesel Ledger's "New" litres once it's marked *
 
 The master stock list of everything the company owns or holds: machinery, vehicles, tools, consumables, and safety gear. (Fleet Roster above is this same list, filtered to just Heavy Equipment + Vehicles.)
 
-**"+ Add Item" fields:** Item Name, Category (Heavy Equipment, Vehicles, Tools, Consumables, Safety Gear, or Dozer Parts — the last one is really managed from Purchasing & Suppliers, see below), SKU, Quantity, Unit, Unit Cost (₦), Reorder Level, Location, Current Project.
+**"+ Add Item" fields:** Item Name, Category (Heavy Equipment, Vehicles, Tools, Consumables, Safety Gear, or Dozer Parts — the last two are really managed from [Resource Management](#10-resource-management), see there), SKU, Quantity, Unit, Unit Cost (₦), Reorder Level, Location, Current Project.
 
 Rows where **Quantity ≤ Reorder Level** are flagged with an amber row highlight — your visual cue to reorder.
 
-**Withdrawal Log — Tools, Consumables, Safety Gear** (below the main item table): logging a withdrawal here auto-deducts the quantity from that item's stock, the same way Bulldozer Parts withdrawals do (see [Purchasing & Suppliers](#11-purchasing--suppliers)) — you don't edit Quantity by hand for a withdrawal. **"+ Log Withdrawal" fields:** Date, Item (only Tools/Consumables/Safety Gear appear here — Heavy Equipment/Vehicles are fixed assets, and Dozer Parts has its own tracker), Quantity Withdrawn, Issued To (Staff), Equipment (optional, if used on a specific machine), Notes. As with Bulldozer Parts, correct a mistaken withdrawal by **editing** it, not deleting it — deleting doesn't restore the stock.
+**Withdrawal Log — Tools, Safety Gear** (below the main item table): logging a withdrawal here auto-deducts the quantity from that item's stock — you don't edit Quantity by hand for a withdrawal. **"+ Log Withdrawal" fields:** Date, Item (only Tools/Safety Gear appear here — Heavy Equipment/Vehicles are fixed assets, and Dozer Parts/Consumables each have their own tracker under [Resource Management](#10-resource-management)), Quantity Withdrawn, Issued To (Staff), Equipment (optional, if used on a specific machine), Notes. Correct a mistaken withdrawal by **editing** it, not deleting it — deleting doesn't restore the stock.
 
 No print button.
 
@@ -345,25 +348,75 @@ This "rate as of a date" system is what lets Profitability and Dozer Economics a
 
 ### Dozer Economics tab
 
-**Purpose:** dozer-level profitability, and Partnership owner accountability.
+**Purpose:** dozer-level profitability and revenue analysis.
 
 **Company-Owned Dozer Performance** (top of the tab, filterable by From/To dates): per Company dozer, Hours Worked, Downtime (days without a logged report — only computable with both dates set), % Optimization, Actual Revenue (estimated as hours worked × the rate in effect each day — clients are billed per project, not per machine, so this is always an estimate), Potential Revenue (what it *could* have earned working a full 8h every day in the period), Shortfall, Maintenance Cost, and Profit (estimated).
 
-**Partnership Owner Settlements:** a per-dozer summary (Total Generated, Management Retained, Repairs Cost, Already Paid, Balance Owed — red if still owed), then a full settlement history.
+> Partnership owner accountability (settling what's owed to a Partnership dozer's outside owner) moved to [Resource Management → Dozer Rent Payments](#10-resource-management).
+
+**Internal Ledger — Office vs Business** *(Admin only — Supervisors do not see this section at all, even though they can open this tab)*: every day logged against a Partnership or Rented dozer, both Office and Business, side by side, with Business Earnings totaled. This exists purely for internal audit of the "Business" arrangement — none of it ever appears in the owner-facing settlement (Resource Management → Dozer Rent Payments).
+
+---
+
+## 10. Resource Management
+
+**Who sees it:** Admin, Accounts, Supervisor.
+
+Four tabs: **Diesel Management, Bulldozer Parts & Supplies, Dozer Rent Payments, Lubricants & Consumables.** This is the home for diesel accountability from the filling station all the way down to an individual dozer, plus everything else that gets consumed or paid out against the fleet.
+
+### Diesel Management tab
+
+**Purpose:** a 3-level accountability chain that tracks diesel from a filling station relationship, through a project site's bulk tank, down to what an individual dozer actually burned — each level built from the same underlying receipts and daily reports rather than three separate ledgers, so logging a delivery or a report in one place automatically updates the others.
+
+**Station Ledger (Level 1)** — a *prepay* relationship: you pay a filling station up front, and it owes back litres/funds as it supplies diesel over the following days. **"+ Log Prepayment" fields:** Date, Filling Station, Amount Paid (₦), Agreed Unit Price (₦/litre), Reference, Notes. A balances table shows, per station: Total Prepaid, Litres Purchased, Litres Supplied, Balance (Diesel), Balance (Funds), and Status (Fully Settled / Partially Settled / Outstanding). "Litres Supplied" comes from **Diesel Receipts** (Fleet Management → Diesel Tracking) tagged with that station — there's nothing extra to log here once a receipt is tagged. Note the balance direction is the opposite of the existing Fuel Credit tab in Purchasing & Suppliers: there, a balance means *you* owe the station (credit collected, paid later); here, a balance means *the station* still owes *you* (paid up front, not yet fully supplied). Use whichever matches how a given station actually does business with you.
+
+**Site Distribution (Level 2)** — each project's dump-tank stock. Opening + New Supply − Distributed = Closing, filterable by date range. "New Supply" comes from Diesel Receipts tagged with that Site/Project (same receipts as Level 1, just tagged with a project instead of/as well as a station). "Distributed" is a new log of diesel handed from the site tank to an individual dozer. **"+ Log Distribution" fields:** Date, Site/Project, Dozer/Equipment, Litres Distributed, Distributed By, Notes.
+
+> Logging a distribution here is what auto-fills that dozer's **Diesel Supplied** field on its next matching Daily Operations report (same equipment, date, and site) — see [Daily Operations](#8-daily-operations).
+
+**Dozer Discrepancy Report (Level 3)** — a read-only report, filterable by date range and dozer, built entirely from existing Daily Operations figures (nothing new to log here): Distributed, Used, Closing Expected (opening + supplied − used, recomputed the same way the Daily Operations form auto-fills it), Closing Reported (whatever was actually saved — a real tank dip if one overrode the estimate), and Discrepancy (Reported − Expected). Status is **OK**, **Minor Variance**, or **Variance** (flagged red once the gap exceeds roughly 2% of the expected figure, or 5 litres, whichever is larger) — this is the theft/leak signal: a real tank reading that doesn't match what the math says should be there.
+
+### Bulldozer Parts & Supplies tab
+
+**Purpose:** the spare-parts store room — what's in stock, reorder thresholds, and a log of every part taken out to service a specific dozer. (Behind the scenes, the parts catalog is really the same Inventory & Equipment list, tagged with Category = "Dozer Parts.")
+
+**"+ Add Part" fields:** Part Name, Part Number / SKU, Current Stock, Unit, Unit Cost (₦), Reorder Level, Storage Location. Rows at or below Reorder Level are flagged amber.
+
+**"+ Log Withdrawal" fields:** Date, Part (its dropdown shows current stock right in the label), Quantity Withdrawn, Dozer / Equipment, Withdrawn By, Notes.
+
+> **This is one of the few places in the app where stock deducts itself automatically.** Logging a withdrawal immediately reduces that part's stock count by the quantity withdrawn — you never edit the stock number by hand for a withdrawal. If you need to correct a withdrawal you logged by mistake, **edit it** rather than deleting it: editing correctly restores the old quantity and re-applies the corrected one, while deleting a withdrawal record does *not* put the stock back.
+
+No print button.
+
+### Dozer Rent Payments tab
+
+**Purpose:** Partnership owner accountability — settling what's owed to a Partnership dozer's outside owner. (Company-owned dozer profitability and the internal Office/Business ledger stay on Fleet Management → Dozer Economics.)
+
+A per-dozer summary (Total Generated, Management Retained, Repairs Cost, Already Paid, Balance Owed — red if still owed), then a full settlement history.
 
 **"+ New Settlement" fields:** Partnership Dozer, Period Start, Period End, Days Worked (Office days only), Rental Rate/Day (₦), Management Fee/Day (₦), Repairs Cost (₦), Amount Paid to Owner (₦), Notes — plus a live-updating **Balance Owed to Owner** preview, and a **↻ Fill Days, Repairs & Rates from Records** button that auto-computes Days Worked, Repairs Cost, and the historically-correct rates for you (requires the dozer and both dates set first).
 
-> **The Office/Business split matters here:** "Days Worked" only counts days logged as **Office** work type in Daily Operations. Any day logged as **Business** never appears in this settlement — it's excluded entirely, by design, since it's a private arrangement never meant to be shown to the outside owner.
+> **The Office/Business split matters here:** "Days Worked" only counts days logged as **Office** work type in Daily Operations. Any day logged as **Business** never appears in this settlement — it's excluded entirely, by design, since it's a private arrangement never meant to be shown to the outside owner (see the Internal Ledger on Fleet Management → Dozer Economics for where Business days actually show up).
 
 **Balance Owed** = (Days Worked × Rental Rate/Day) − (Days Worked × Management Fee/Day) − Repairs Cost − Amount Paid to Owner.
 
 **Print** produces a "DOZER OWNER SETTLEMENT STATEMENT" the owner can be shown directly, with signature lines for Prepared By and Owner Acknowledgement.
 
-**Internal Ledger — Office vs Business** *(Admin only — Supervisors do not see this section at all, even though they can open this tab)*: every day logged against a Partnership or Rented dozer, both Office and Business, side by side, with Business Earnings totaled. This exists purely for internal audit of the "Business" arrangement — none of it ever appears in the owner-facing settlement above.
+### Lubricants & Consumables tab
+
+**Purpose:** engine oil, grease, hydraulic fluid, and other consumables — stock levels and a per-dozer withdrawal/utilization log, kept separate from Fleet Management's Tools/Safety Gear withdrawal log. (Behind the scenes, this catalog is really the same Inventory & Equipment list, tagged with Category = "Consumables.")
+
+**"+ Add Item" fields:** Item Name, SKU, Current Stock, Unit, Unit Cost (₦), Reorder Level, Storage Location. Rows at or below Reorder Level are flagged amber.
+
+**"+ Log Withdrawal" fields:** Date, Item (its dropdown shows current stock right in the label), Quantity Withdrawn, Issued To (Staff), Equipment (optional, if used on a specific dozer), Notes.
+
+> As with Bulldozer Parts, logging a withdrawal here deducts stock automatically. Correct a mistake by **editing** it, not deleting it — deleting doesn't restore the stock.
+
+No print button.
 
 ---
 
-## 10. Sales & Invoicing
+## 11. Sales & Invoicing
 
 **Who sees it:** Admin, Accounts.
 
@@ -385,11 +438,11 @@ Table: Invoice #, Customer, Project, Date, Due, Total, Status, actions. Any **Un
 
 ---
 
-## 11. Purchasing & Suppliers
+## 12. Purchasing & Suppliers
 
 **Who sees it:** Admin, Accounts.
 
-Four tabs: **Purchase Orders, Suppliers, Fuel Credit, Bulldozer Parts & Supplies.**
+Three tabs: **Purchase Orders, Suppliers, Fuel Credit.**
 
 ### Purchase Orders tab
 
@@ -416,24 +469,14 @@ Table: PO #, Supplier, Date, Total, Status, actions.
 **"+ Log Payment" fields:** Date, Filling Station, Amount Paid (₦), Reference, Notes.
 
 > There is no stored "balance" anywhere — every balance is recalculated live from every collection and payment on record: **Balance = Total Collected − Total Paid.** Deleting or editing an old entry recalculates the balance automatically; there's no separate reconciliation step to run.
-
-No print button.
-
-### Bulldozer Parts & Supplies tab
-
-**Purpose:** the spare-parts store room — what's in stock, reorder thresholds, and a log of every part taken out to service a specific dozer. (Behind the scenes, the parts catalog is really the same Inventory & Equipment list, tagged with Category = "Dozer Parts.")
-
-**"+ Add Part" fields:** Part Name, Part Number / SKU, Current Stock, Unit, Unit Cost (₦), Reorder Level, Storage Location. Rows at or below Reorder Level are flagged amber.
-
-**"+ Log Withdrawal" fields:** Date, Part (its dropdown shows current stock right in the label), Quantity Withdrawn, Dozer / Equipment, Withdrawn By, Notes.
-
-> **This is the one place in the whole app where stock deducts itself automatically.** Logging a withdrawal immediately reduces that part's stock count by the quantity withdrawn — you never edit the stock number by hand for a withdrawal. If you need to correct a withdrawal you logged by mistake, **edit it** rather than deleting it: editing correctly restores the old quantity and re-applies the corrected one, while deleting a withdrawal record does *not* put the stock back.
+>
+> **This is the collect-now, pay-later direction** (balance owed *by* the company). If a station instead requires payment up front and supplies diesel afterward, use the separate Station Ledger under [Resource Management → Diesel Management](#10-resource-management) instead — the two can coexist per station, whichever matches how that station actually does business with you.
 
 No print button.
 
 ---
 
-## 12. Accounting & Expenses
+## 13. Accounting & Expenses
 
 **Who sees it:** Admin, Accounts.
 
@@ -505,7 +548,7 @@ This is a read-only report — nothing here can be added or edited directly.
 
 ---
 
-## 13. Fund Requests & Approvals
+## 14. Fund Requests & Approvals
 
 **Who sees it:** everyone. **Approvals tab is only visible to Admin and Supervisor.**
 
@@ -551,7 +594,7 @@ For each row you get **Approve** and **Reject** buttons (Reject asks you to conf
 
 ---
 
-## 14. HR & Employees
+## 15. HR & Employees
 
 **Who sees it:** Admin only.
 
@@ -634,7 +677,7 @@ An **Operator Balances** table at the bottom flags anyone still owed money (or o
 
 ---
 
-## 15. Leave & Attendance
+## 16. Leave & Attendance
 
 **Who sees it:** everyone.
 
@@ -648,7 +691,7 @@ Two tabs: **Leave Requests, Attendance.**
 
 A **Leave Balances table** (visible to Admin/Supervisor only) shows every relevant employee's Entitlement, Used, and Remaining — a Supervisor sees only staff on their own assigned project.
 
-> Normal decisions on a leave request should be made from the [Approvals inbox](#13-fund-requests--approvals), which correctly records who actually approved it. Who can *see* a request follows the same rule as fund requests: Admin/Accounts see all, a Supervisor sees their project's staff, Staff see only their own.
+> Normal decisions on a leave request should be made from the [Approvals inbox](#14-fund-requests--approvals), which correctly records who actually approved it. Who can *see* a request follows the same rule as fund requests: Admin/Accounts see all, a Supervisor sees their project's staff, Staff see only their own.
 
 No print button for leave requests.
 
@@ -664,7 +707,7 @@ Attendance times **cannot be edited** through the app — clicking Edit just tel
 
 ---
 
-## 16. Backup & Data
+## 17. Backup & Data
 
 **Who sees it:** Admin only.
 
@@ -675,7 +718,7 @@ Everything in this ERP lives in one shared, central database — not on any one 
 
 ---
 
-## 17. Step-by-Step Workflows
+## 18. Step-by-Step Workflows
 
 ### Onboard a new employee
 1. Go to **HR & Employees → Employees → + Add Employee**.
@@ -714,11 +757,11 @@ Everything in this ERP lives in one shared, central database — not on any one 
 ### Track and settle a Partnership dozer owner
 1. Set the dozer's Ownership to **Partnership** on **Fleet Management → Fleet Roster**.
 2. Log each day's work in Daily Operations as normal, choosing **Office** or **Business** as the Work Type.
-3. When it's time to settle: **Fleet Management → Dozer Economics → + New Settlement**, choose the dozer and period, click **↻ Fill Days, Repairs & Rates from Records**, review, then save.
+3. When it's time to settle: **Resource Management → Dozer Rent Payments → + New Settlement**, choose the dozer and period, click **↻ Fill Days, Repairs & Rates from Records**, review, then save.
 4. Print the settlement statement to hand to the owner.
 
 ### Order and track dozer parts
-1. Add the part to the catalog: **Purchasing & Suppliers → Bulldozer Parts & Supplies → + Add Part.**
+1. Add the part to the catalog: **Resource Management → Bulldozer Parts & Supplies → + Add Part.**
 2. When a part is used on a job: **+ Log Withdrawal**, pick the part, quantity, and which dozer it went into — stock deducts automatically.
 3. Watch for amber-highlighted rows in the catalog (at or below Reorder Level) to know what to reorder.
 
@@ -727,10 +770,21 @@ Everything in this ERP lives in one shared, central database — not on any one 
 2. Fill it in as normal, and set **Restocks Inventory Item** to the item this order is for (leave it blank if the order isn't for stocked inventory — a service, a one-off).
 3. When the order arrives, edit it and set **Status** to **Received** — the item's stock updates automatically.
 
-### Log a consumable/tool withdrawal
+### Log a tool withdrawal
 1. **Fleet Management → Inventory & Equipment → + Log Withdrawal** (below the main item table).
-2. Pick the item (Tools/Consumables/Safety Gear only), quantity, and who it was issued to — stock deducts automatically.
+2. Pick the item (Tools/Safety Gear only), quantity, and who it was issued to — stock deducts automatically.
 3. If you logged one by mistake, edit it rather than deleting it, so the stock correction actually happens.
+
+### Log a consumable withdrawal (oil, grease, hydraulic fluid, etc.)
+1. **Resource Management → Lubricants & Consumables → + Log Withdrawal.**
+2. Pick the item, quantity, and who it was issued to (and which dozer, if relevant) — stock deducts automatically.
+3. If you logged one by mistake, edit it rather than deleting it, so the stock correction actually happens.
+
+### Track diesel from a station down to a dozer
+1. **Station Ledger:** when you prepay a station, log it under **Resource Management → Diesel Management → Station Ledger → + Log Prepayment.**
+2. As deliveries arrive, log them as usual under **Fleet Management → Diesel Tracking → + Log Diesel Receipt**, tagging the **Filling Station** it came from and, if it's going straight to a site's bulk tank, the **Site / Project** too — this single receipt is what draws down the Station Ledger balance and feeds the site's stock.
+3. **Site Distribution:** when diesel moves from a site's dump tank to an individual dozer, log it under **Resource Management → Diesel Management → Site Distribution → + Log Distribution.** This auto-fills that dozer's Diesel Supplied field the next time a matching Daily Operations report is logged (same equipment, date, and site).
+4. **Dozer Discrepancy Report:** periodically check **Resource Management → Diesel Management → Dozer Discrepancy Report** for any dozer whose actual tank reading (a physical dip, saved as Closing Diesel on a Daily Operations report) doesn't match what the numbers say it should be — that gap is your signal to investigate.
 
 ### Back up the company's data
 1. **Backup & Data → ⬇ Download Backup**, at least weekly.
@@ -739,12 +793,15 @@ Everything in this ERP lives in one shared, central database — not on any one 
 
 ---
 
-## 18. Glossary
+## 19. Glossary
 
 | Term | Meaning |
 |---|---|
 | **Ownership (Company / Partnership / Rented)** | **Company**: owned and maintained by Emagrims, operators paid per day worked. **Partnership**: owned by a 2nd party; Emagrims pays a day-rate rental and keeps a management fee, but still pays the operators directly. **Rented**: owned by a 3rd party who pays their own operators; Emagrims just pays a day rate. |
-| **Office vs. Business (Work Type)** | Only relevant for Partnership/Rented equipment. **Office** = the normal, formal arrangement shared with the owner. **Business** = a private arrangement, visible only to Admin in Dozer Economics' Internal Ledger, and always excluded from owner settlements. |
+| **Office vs. Business (Work Type)** | Only relevant for Partnership/Rented equipment. **Office** = the normal, formal arrangement shared with the owner. **Business** = a private arrangement, visible only to Admin in Dozer Economics' Internal Ledger, and always excluded from owner settlements (Resource Management → Dozer Rent Payments). |
+| **Station Ledger vs. Fuel Credit** | Two different directions a filling-station relationship can run. **Fuel Credit** (Purchasing & Suppliers): collect diesel/PMS on credit, pay the station later — a balance means the company owes the station. **Station Ledger** (Resource Management → Diesel Management): pay the station up front, it supplies diesel afterward — a balance means the station owes the company. Both can be used, station by station, whichever matches the real arrangement. |
+| **Site Dump Tank** | A project's own bulk diesel stock (Resource Management → Diesel Management → Site Distribution): Opening + New Supply (receipts tagged to that site) − Distributed (handed to individual dozers) = Closing. |
+| **Closing Diesel Expected vs. Reported** | On the Dozer Discrepancy Report: **Expected** is opening + supplied − used, recomputed from the numbers; **Reported** is whatever was actually saved as Closing Diesel on a Daily Operations report (a real tank dip, if one overrode the computed estimate). A gap between the two is a discrepancy worth investigating. |
 | **Ha-unit operation types** | Felling, Stacking, Direct Stacking, Root Picking, Bonding — measured in hectares. Road is measured in KM, Trekking in hours; both are excluded from "hectares cleared" totals everywhere in the app. |
 | **Rate History / "as of a date"** | Every rate that matters (dozer hourly rate, project rate, diesel price) is tracked with an effective date. Reports always use whichever rate was in effect on the actual day the work happened — never today's rate applied backward to old work. |
 | **Cost Head** | The category a cost or income item is grouped under for the Income & Expenditure report — the same list as Expense Categories, plus a few income-only categories. |
@@ -754,14 +811,15 @@ Everything in this ERP lives in one shared, central database — not on any one 
 
 ---
 
-## 19. Known Limitations
+## 20. Known Limitations
 
 Worth knowing about, so nothing here surprises you:
 
 - **The access-tier system is a UI convenience, not hard security.** It hides the wrong screens from the wrong people, but it isn't a database-level lock.
 - **Email notifications for new/decided fund and leave requests are wired into the app but currently inactive** (the email service isn't yet configured) — don't wait for an email; check the **Approvals** tab directly.
 - **Invoices and Purchase Orders currently hold a single line item each** — for a multi-item sale or order, you'd need to raise one per item for now.
-- **Deleting a Bulldozer Parts withdrawal, or a general Inventory withdrawal, does not restore the stock it deducted** — if you logged one by mistake, edit it instead of deleting it.
+- **Deleting a Bulldozer Parts, Consumables, or general Inventory withdrawal does not restore the stock it deducted** — if you logged one by mistake, edit it instead of deleting it.
+- **"Filling Station" is still a fixed list of names, not a manageable record** — Station Ledger, Fuel Credit, and Fueling Vouchers all draw from the same fixed list; there's no separate screen to add/edit a station's own details.
 - **Attendance times can't be edited in the app** — only deleted; corrections go through a site supervisor.
 - **Restoring a backup replaces data for the entire company on every device, with no undo** — treat it as a last resort.
 - **Adding someone in HR & Employees does not, by itself, give them a login.** The employee record (name, role, salary, access tier, etc.) and the actual username/password login are two separate things — a new hire's login has to be set up by whoever administers the underlying system, outside this app, and linked to their employee record before they can sign in.

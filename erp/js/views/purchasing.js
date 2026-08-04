@@ -3,7 +3,6 @@ import { formatCurrency, formatDate, poTotal, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete } from '../ui.js';
 import { printPurchaseOrder } from '../print.js';
 import { renderFuelCredit } from './fuelCredit.js';
-import { renderDozerParts } from './dozerParts.js';
 
 const SUPPLIER_FIELDS = [
   { name: 'name', label: 'Supplier Name', required: true },
@@ -67,14 +66,12 @@ export function renderPurchasing(container) {
   const ordersTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('orders') }, 'Purchase Orders');
   const suppliersTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('suppliers') }, 'Suppliers');
   const fuelCreditTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('fuelCredit') }, 'Fuel Credit');
-  const dozerPartsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('dozerParts') }, 'Bulldozer Parts & Supplies');
   tabBar.appendChild(ordersTabBtn);
   tabBar.appendChild(suppliersTabBtn);
   tabBar.appendChild(fuelCreditTabBtn);
-  tabBar.appendChild(dozerPartsTabBtn);
 
   const actionSlot = el('div');
-  container.appendChild(sectionHeader('Purchasing & Suppliers', 'Purchase orders, supplier records, fuel credit, and bulldozer parts', actionSlot));
+  container.appendChild(sectionHeader('Purchasing & Suppliers', 'Purchase orders, supplier records, and fuel credit', actionSlot));
   container.appendChild(tabBar);
 
   const body = el('div');
@@ -85,23 +82,15 @@ export function renderPurchasing(container) {
     ordersTabBtn.classList.toggle('active', tab === 'orders');
     suppliersTabBtn.classList.toggle('active', tab === 'suppliers');
     fuelCreditTabBtn.classList.toggle('active', tab === 'fuelCredit');
-    dozerPartsTabBtn.classList.toggle('active', tab === 'dozerParts');
     if (tab === 'orders') renderOrdersTab();
     else if (tab === 'suppliers') renderSuppliersTab();
-    else if (tab === 'fuelCredit') renderFuelCreditTab();
-    else renderDozerPartsTab();
+    else renderFuelCreditTab();
   }
 
   function renderFuelCreditTab() {
     actionSlot.innerHTML = '';
     body.innerHTML = '';
     renderFuelCredit(body);
-  }
-
-  function renderDozerPartsTab() {
-    actionSlot.innerHTML = '';
-    body.innerHTML = '';
-    renderDozerParts(body);
   }
 
   function renderOrdersTab() {

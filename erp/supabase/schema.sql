@@ -338,6 +338,12 @@ create table diesel_receipts (
   litres     numeric not null,
   unit_cost  numeric,
   supplier   text,
+  -- station: which prepay station (Resource Management -> Diesel
+  -- Management -> Station Ledger) this delivery draws down, if any.
+  -- project: which site's dump tank this delivery replenishes, if any
+  -- (null = the company-wide/HQ pool, the original behavior).
+  station    text,
+  project    text,
   reference  text,
   notes      text,
   created_at timestamptz not null default now(),
@@ -741,6 +747,48 @@ create trigger trg_inventory_withdrawals_updated_at before update on inventory_w
   for each row execute function set_updated_at();
 alter table inventory_withdrawals enable row level security;
 create policy inventory_withdrawals_auth_all on inventory_withdrawals for all to authenticated using (true) with check (true);
+
+-- ---------------------------------------------------------------------
+-- Resource Management -> Diesel Management: Level 1 (station prepay
+-- ledger, paired with diesel_receipts.station above) and Level 2 (site
+-- dump-tank distributions, paired with diesel_receipts.project above).
+-- Level 3 (per-dozer discrepancy) is a report, not a table — see
+-- erp/js/views/dieselManagement.js.
+-- ---------------------------------------------------------------------
+create table diesel_station_prepayments (
+  id                text primary key,
+  date              date not null,
+  station           text not null,
+  amount            numeric not null default 0,
+  unit_price_agreed numeric not null default 0,
+  reference         text,
+  notes             text,
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
+);
+create index idx_diesel_station_prepayments_station on diesel_station_prepayments(station, date);
+create trigger trg_diesel_station_prepayments_updated_at before update on diesel_station_prepayments
+  for each row execute function set_updated_at();
+alter table diesel_station_prepayments enable row level security;
+create policy diesel_station_prepayments_anon_all on diesel_station_prepayments for all to authenticated using (true) with check (true);
+
+create table diesel_site_distributions (
+  id             text primary key,
+  date           date not null,
+  project        text not null,
+  equipment      text not null,
+  litres         numeric not null default 0,
+  distributed_by text references employees(id) on delete set null,
+  notes          text,
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now()
+);
+create index idx_diesel_site_distributions_project on diesel_site_distributions(project, date);
+create index idx_diesel_site_distributions_equipment on diesel_site_distributions(equipment, date);
+create trigger trg_diesel_site_distributions_updated_at before update on diesel_site_distributions
+  for each row execute function set_updated_at();
+alter table diesel_site_distributions enable row level security;
+create policy diesel_site_distributions_anon_all on diesel_site_distributions for all to authenticated using (true) with check (true);
 
 -- ---------------------------------------------------------------------
 -- Row Level Security

@@ -62,6 +62,7 @@ export function statusPillClass(status) {
     Office: 'pill-good',
     'Fully Settled': 'pill-good', 'Partially Settled': 'pill-warning', Outstanding: 'pill-critical',
     Commendation: 'pill-good', Query: 'pill-warning', Deployed: 'pill-good', Returned: 'pill-neutral', Damaged: 'pill-warning', Lost: 'pill-critical',
+    OK: 'pill-good', Variance: 'pill-critical', 'Minor Variance': 'pill-warning',
   };
   return map[status] || 'pill-neutral';
 }
