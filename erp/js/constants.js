@@ -75,6 +75,42 @@ export const FUEL_STATIONS = [
 // Fuel types tracked on credit from filling stations — see Fuel Credit Tracking.
 export const FUEL_TYPES = ['Diesel', 'PMS'];
 
+// Fleet-wide diesel consumption, applied to every dozer that doesn't carry
+// its own override on its Fleet Roster record. The whole current fleet is
+// D8K, so one set of rates covers all of it and nobody has to configure a
+// rate per machine before Fuel Used will auto-calculate on a daily report.
+// Trekking is a flat rate for every hour (no first-8-hrs tiering) because
+// the machine is walking between sites, not pushing earth.
+// If a future machine burns differently, set the three Diesel Consumption
+// fields on its Fleet Roster record and those win over these defaults.
+export const DEFAULT_DIESEL_RATES = {
+  first8h: 25,
+  after8h: 20,
+  trekking: 20,
+};
+
+// Litres this asset burns per hour, tiered around the first 8 hrs in a day
+// — the asset's own configured rates if it has them, otherwise the
+// fleet-wide D8K defaults above. Shared by the Daily Operations auto-calc
+// and anything else that needs "what should this dozer have burned".
+export function dieselRatesFor(asset) {
+  return {
+    first8h: asset?.dieselRateFirst8h || DEFAULT_DIESEL_RATES.first8h,
+    after8h: asset?.dieselRateAfter8h || DEFAULT_DIESEL_RATES.after8h,
+    trekking: asset?.dieselRateTrekking || DEFAULT_DIESEL_RATES.trekking,
+  };
+}
+
+// Litres for a given number of hours on a given operation type, using the
+// tiering rule above. The single place that math lives.
+export function dieselUsedFor(asset, operationType, hours) {
+  const rates = dieselRatesFor(asset);
+  if (operationType === 'Trekking') return hours * rates.trekking;
+  const first8 = Math.min(hours, 8);
+  const rest = Math.max(0, hours - 8);
+  return first8 * rates.first8h + rest * rates.after8h;
+}
+
 export const LEAVE_TYPES = [
   'Annual',
   'Sick',

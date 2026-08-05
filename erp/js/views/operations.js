@@ -1,8 +1,8 @@
 import { store } from '../store.js';
 import { formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
-import { OPERATION_TYPES, unitForOperationType, isHaOperationType } from '../constants.js';
-import { filterByProject, getAssignedProject } from '../session.js';
+import { OPERATION_TYPES, unitForOperationType, isHaOperationType, dieselUsedFor, DEFAULT_DIESEL_RATES } from '../constants.js';
+import { filterByProject, getAssignedProject, getCurrentUserId } from '../session.js';
 import { createAttachmentPicker } from '../attachments.js';
 
 function projectOptions() {
@@ -55,6 +55,42 @@ function timeStringToMinutes(hhmm) {
   return h * 60 + m;
 }
 
+// Most of a daily report repeats yesterday's: the same operator stays on
+// the same dozer, a site keeps the same client, and a crew works the same
+// operation type for days at a stretch. So rather than making someone
+// re-pick all of it every evening, a new report pre-fills each of these
+// from the most recent matching report and lets them change what differs.
+// Only ever used to seed a NEW report — editing an existing one always
+// shows exactly what was saved.
+function mostRecent(predicate) {
+  return store.get('operations')
+    .filter(predicate)
+    .sort((a, b) => (a.date < b.date ? 1 : -1))[0] || null;
+}
+
+function lastOperatorFor(equipment) {
+  if (!equipment) return '';
+  return mostRecent((o) => o.equipment === equipment && o.operatorId)?.operatorId || '';
+}
+
+function lastCustomerFor(siteName) {
+  if (!siteName) return '';
+  return mostRecent((o) => o.siteName === siteName && o.customerId)?.customerId || '';
+}
+
+function lastOperationTypeFor(equipment, siteName) {
+  if (!equipment && !siteName) return '';
+  return mostRecent((o) => (!equipment || o.equipment === equipment) && (!siteName || o.siteName === siteName) && o.operationType)?.operationType || '';
+}
+
+// A supervisor filing the day's reports is almost always the supervisor on
+// them, so default to whoever is logged in — but only if they actually
+// exist as an employee record (the dropdown is employee-backed).
+function defaultSupervisorId() {
+  const id = getCurrentUserId();
+  return store.get('employees').some((e) => e.id === id) ? id : '';
+}
+
 function openForm(record, refresh) {
   if (!employeeOptions().length) {
     window.alert('Add employees first before logging an operations report.');
@@ -66,15 +102,19 @@ function openForm(record, refresh) {
     wide: true,
     build: (container) => {
       const today = new Date().toISOString().slice(0, 10);
+      const isNew = !record;
+      const seedSite = record?.siteName ?? getAssignedProject();
+
       const dateField = textField('date', 'Date', 'date', record?.date || today, true);
-      const siteField = selectField('siteName', 'Site / Project Name', projectOptions(), record?.siteName ?? getAssignedProject());
-      const blockNumberField = textField('blockNumber', 'Block / Plot No. (if available for this site)', 'text', record?.blockNumber);
-      const customerField = selectField('customerId', 'Client', customerOptions(), record?.customerId);
+      const siteField = selectField('siteName', 'Site / Project Name', projectOptions(), seedSite);
       const equipmentField = selectField('equipment', 'Equipment Used', equipmentOptions(), record?.equipment);
       const operatorField = selectField('operatorId', 'Operator', employeeOptions(), record?.operatorId);
-      const supervisorField = selectField('supervisorId', 'Supervisor', employeeOptions(), record?.supervisorId);
-      const timeResumedField = textField('timeResumed', 'Time In (Resumed) — used to auto-calculate Hours Worked', 'time', record?.timeResumed);
-      const timeClosedField = textField('timeClosed', 'Time Out (Closed) — used to auto-calculate Hours Worked', 'time', record?.timeClosed);
+      const supervisorField = selectField('supervisorId', 'Supervisor', employeeOptions(), isNew ? defaultSupervisorId() : record?.supervisorId);
+      const blockNumberField = textField('blockNumber', 'Block / Plot No. (optional)', 'text', record?.blockNumber);
+      const customerField = selectField('customerId', 'Client (optional)', customerOptions(), isNew ? lastCustomerFor(seedSite) : record?.customerId);
+
+      const timeResumedField = textField('timeResumed', 'Time In (Resumed)', 'time', record?.timeResumed);
+      const timeClosedField = textField('timeClosed', 'Time Out (Closed)', 'time', record?.timeClosed);
       const downtimeReasonField = selectField('downtimeReason', 'Downtime Reason (if any)', [
         { value: '', label: '— None —' },
         { value: 'Dozer Breakdown', label: 'Dozer Breakdown' },
@@ -82,20 +122,28 @@ function openForm(record, refresh) {
         { value: 'Operator Delay / Infringement', label: 'Operator Delay / Infringement — deducted hours count against the operator' },
         { value: 'Other', label: 'Other' },
       ], record?.downtimeReason);
-      const downtimeHoursField = textField('downtimeHours', 'Downtime (hrs)', 'number', record?.downtimeHours);
-      const downtimeMinutesField = textField('downtimeMinutes', 'Downtime (mins)', 'number', record?.downtimeMinutes);
-      const hoursField = textField('hoursWorked', 'Hours Worked (auto-calculated from Time In/Out minus Downtime — editable if entering by hand)', 'number', record?.hoursWorked, true);
-      const operationTypeField = selectField('operationType', 'Operation Type', OPERATION_TYPES.map((t) => ({ value: t.value, label: `${t.value} (${t.unit})` })), record?.operationType);
-      const quantityField = textField('quantity', 'Quantity (unit shown next to the selected Operation Type, above)', 'number', record?.quantity, true);
-      const dieselSuppliedField = textField('dieselSupplied', 'Diesel Supplied (litres) — added to the tank today', 'number', record?.dieselSupplied);
-      const openingDieselField = textField('openingDiesel', "Opening Diesel (litres) — auto-fills from this dozer's last logged Closing Diesel plus today's Diesel Supplied", 'number', record?.openingDiesel);
-      const fuelField = textField('fuelUsed', "Fuel/Diesel Used (litres) — auto-calculated from the dozer's Consumption Rate (Fleet Roster) × Hours Worked", 'number', record?.fuelUsed, true);
-      const closingDieselField = textField('closingDiesel', 'Closing Diesel (litres) — auto-calculated as Opening Diesel minus Fuel Used; overwrite with an actual tank dip if you have one', 'number', record?.closingDiesel);
+      // One box of minutes instead of the old hrs + mins pair — the two
+      // columns still exist in the database and are written back out as
+      // whole hours + remainder, so old reports and anything reading them
+      // keep working unchanged.
+      const recordDowntimeMinutes = record
+        ? ((Number(record.downtimeHours) || 0) * 60 + (Number(record.downtimeMinutes) || 0)) || null
+        : null;
+      const downtimeField = textField('downtimeTotalMinutes', 'Downtime (minutes)', 'number', recordDowntimeMinutes);
+      const hoursField = textField('hoursWorked', 'Hours Worked — fills in from Time In/Out minus Downtime', 'number', record?.hoursWorked, true);
+
+      const operationTypeField = selectField('operationType', 'Operation Type', OPERATION_TYPES.map((t) => ({ value: t.value, label: `${t.value} (${t.unit})` })), isNew ? lastOperationTypeFor('', seedSite) : record?.operationType);
+      const quantityField = textField('quantity', 'Quantity (unit shown next to the selected Operation Type)', 'number', record?.quantity, true);
       const statusField = selectField('status', 'Status', [
         { value: 'Completed', label: 'Completed' },
         { value: 'Ongoing', label: 'Ongoing' },
         { value: 'Halted', label: 'Halted' },
       ], record?.status || 'Completed');
+
+      const dieselSuppliedField = textField('dieselSupplied', 'Diesel Supplied (litres)', 'number', record?.dieselSupplied);
+      const openingDieselField = textField('openingDiesel', 'Opening Diesel (litres)', 'number', record?.openingDiesel);
+      const fuelField = textField('fuelUsed', 'Fuel/Diesel Used (litres)', 'number', record?.fuelUsed, true);
+      const closingDieselField = textField('closingDiesel', 'Closing Diesel (litres)', 'number', record?.closingDiesel);
 
       // The diesel tank ledger for this dozer, in the same order the real
       // end-of-day report follows: Opening = this dozer's last logged
@@ -142,20 +190,14 @@ function openForm(record, refresh) {
         dieselSuppliedField.querySelector('input').value = total.toFixed(1);
       }
 
+      // Always computes now — dieselUsedFor falls back to the fleet-wide
+      // D8K rates when a dozer has no override of its own, so Fuel Used no
+      // longer depends on anyone having configured that machine first.
       function recomputeDieselUsed() {
         const asset = store.get('inventory').find((i) => i.name === equipmentField.querySelector('select').value);
-        if (!asset) return;
         const opType = operationTypeField.querySelector('select').value;
         const hours = Number(hoursField.querySelector('input').value) || 0;
-        let used = null;
-        if (opType === 'Trekking') {
-          if (asset.dieselRateTrekking) used = hours * asset.dieselRateTrekking;
-        } else if (asset.dieselRateFirst8h || asset.dieselRateAfter8h) {
-          const first8 = Math.min(hours, 8);
-          const rest = Math.max(0, hours - 8);
-          used = first8 * (asset.dieselRateFirst8h || 0) + rest * (asset.dieselRateAfter8h || asset.dieselRateFirst8h || 0);
-        }
-        if (used !== null) fuelField.querySelector('input').value = used.toFixed(1);
+        fuelField.querySelector('input').value = dieselUsedFor(asset, opType, hours).toFixed(1);
       }
 
       function recomputeClosingDiesel() {
@@ -169,8 +211,8 @@ function openForm(record, refresh) {
       fuelField.querySelector('input').addEventListener('input', recomputeClosingDiesel);
       dieselSuppliedField.querySelector('input').addEventListener('input', () => { recomputeOpeningDiesel(); recomputeClosingDiesel(); });
       dateField.querySelector('input').addEventListener('input', () => { recomputeDieselSupplied(); recomputeOpeningDiesel(); recomputeClosingDiesel(); });
-      siteField.querySelector('select').addEventListener('change', () => { recomputeDieselSupplied(); recomputeOpeningDiesel(); recomputeClosingDiesel(); });
-      equipmentField.querySelector('select').addEventListener('change', () => { recomputeDieselSupplied(); recomputeOpeningDiesel(); recomputeDieselUsed(); recomputeClosingDiesel(); });
+      siteField.querySelector('select').addEventListener('change', () => { applyHistoryDefaults({ fromSite: true }); recomputeDieselSupplied(); recomputeOpeningDiesel(); recomputeDieselUsed(); recomputeClosingDiesel(); });
+      equipmentField.querySelector('select').addEventListener('change', () => { applyHistoryDefaults({ fromEquipment: true }); recomputeDieselSupplied(); recomputeOpeningDiesel(); recomputeDieselUsed(); recomputeClosingDiesel(); });
       operationTypeField.querySelector('select').addEventListener('change', () => { recomputeDieselUsed(); recomputeClosingDiesel(); });
       hoursField.querySelector('input').addEventListener('input', () => { recomputeDieselUsed(); recomputeClosingDiesel(); });
 
@@ -188,9 +230,8 @@ function openForm(record, refresh) {
         if (resumedMin === null || closedMin === null) return;
         let span = closedMin - resumedMin;
         if (span < 0) span += 24 * 60; // shift crossing midnight
-        const downHrs = Number(downtimeHoursField.querySelector('input').value) || 0;
-        const downMins = Number(downtimeMinutesField.querySelector('input').value) || 0;
-        const netMinutes = Math.max(0, span - (downHrs * 60 + downMins));
+        const downMins = Number(downtimeField.querySelector('input').value) || 0;
+        const netMinutes = Math.max(0, span - downMins);
         hoursField.querySelector('input').value = (netMinutes / 60).toFixed(2);
         // Setting .value directly doesn't fire hoursField's own 'input'
         // listener, so Diesel Used (which depends on Hours Worked) needs
@@ -198,15 +239,50 @@ function openForm(record, refresh) {
         recomputeDieselUsed();
         recomputeClosingDiesel();
       }
-      [timeResumedField, timeClosedField, downtimeHoursField, downtimeMinutesField].forEach((field) => {
+      [timeResumedField, timeClosedField, downtimeField].forEach((field) => {
         field.querySelector('input').addEventListener('input', recomputeHoursWorked);
       });
 
-      const topGrid = el('div', { class: 'form-grid-2' }, [
-        dateField, siteField, blockNumberField, customerField, equipmentField, operatorField, supervisorField,
-        timeResumedField, timeClosedField, downtimeReasonField, downtimeHoursField, downtimeMinutesField, hoursField,
-        operationTypeField, quantityField,
-        dieselSuppliedField, openingDieselField, fuelField, closingDieselField, statusField,
+      // Picking a dozer or a site pulls forward whoever/whatever was on the
+      // last matching report, so the common case is "check it, don't type
+      // it". Only on a new report, and only into fields still untouched —
+      // never clobbers something already chosen.
+      function applyHistoryDefaults({ fromEquipment, fromSite }) {
+        if (!isNew) return;
+        const equipment = equipmentField.querySelector('select').value;
+        const site = siteField.querySelector('select').value;
+        const operatorSelect = operatorField.querySelector('select');
+        const customerSelect = customerField.querySelector('select');
+        const opTypeSelect = operationTypeField.querySelector('select');
+
+        if (fromEquipment && equipment) {
+          const op = lastOperatorFor(equipment);
+          if (op) operatorSelect.value = op;
+        }
+        if (fromSite && site && !customerSelect.value) {
+          const cust = lastCustomerFor(site);
+          if (cust) customerSelect.value = cust;
+        }
+        const opType = lastOperationTypeFor(equipment, site);
+        if (opType) opTypeSelect.value = opType;
+      }
+
+      // Grouped so the eye goes to the handful of fields that genuinely
+      // need typing, and the computed block reads as "check, don't fill".
+      const whoGrid = el('div', { class: 'form-grid-2' }, [
+        dateField, siteField, equipmentField, operatorField, supervisorField, blockNumberField, customerField,
+      ]);
+
+      const timeGrid = el('div', { class: 'form-grid-2' }, [
+        timeResumedField, timeClosedField, downtimeReasonField, downtimeField, hoursField,
+      ]);
+
+      const workGrid = el('div', { class: 'form-grid-2' }, [
+        operationTypeField, quantityField, statusField,
+      ]);
+
+      const dieselGrid = el('div', { class: 'form-grid-2' }, [
+        dieselSuppliedField, openingDieselField, fuelField, closingDieselField,
       ]);
 
       // Only Partnership/Rented dozers need the Office/Business question —
@@ -223,6 +299,17 @@ function openForm(record, refresh) {
       }
       equipmentField.querySelector('select').addEventListener('change', updateWorkTypeVisibility);
       updateWorkTypeVisibility();
+
+      // Seed the computed fields for whatever the form opened with (a
+      // pre-selected site/dozer on a new report), so they're already
+      // filled rather than waiting for the first change event.
+      if (isNew) {
+        applyHistoryDefaults({ fromEquipment: true, fromSite: true });
+        recomputeDieselSupplied();
+        recomputeOpeningDiesel();
+        recomputeDieselUsed();
+        recomputeClosingDiesel();
+      }
 
       const notesInput = el('textarea', { name: 'notes', rows: 2 });
       notesInput.value = record?.notes || '';
@@ -244,6 +331,8 @@ function openForm(record, refresh) {
         const equipment = equipmentField.querySelector('select').value;
         const relevant = needsWorkType(equipment);
         const workType = relevant ? workTypeField.querySelector('select').value : null;
+        const downtimeRaw = downtimeField.querySelector('input').value;
+        const downtimeTotal = Math.max(0, Number(downtimeRaw) || 0);
 
         const payload = {
           date: dateField.querySelector('input').value,
@@ -257,8 +346,11 @@ function openForm(record, refresh) {
           timeResumed: timeResumedField.querySelector('input').value || null,
           timeClosed: timeClosedField.querySelector('input').value || null,
           downtimeReason: downtimeReasonField.querySelector('select').value || null,
-          downtimeHours: downtimeHoursField.querySelector('input').value === '' ? null : Number(downtimeHoursField.querySelector('input').value),
-          downtimeMinutes: downtimeMinutesField.querySelector('input').value === '' ? null : Number(downtimeMinutesField.querySelector('input').value),
+          // The form collects one total in minutes; the two original
+          // columns are still what gets stored, so every existing reader
+          // of downtimeHours/downtimeMinutes keeps working.
+          downtimeHours: downtimeRaw === '' ? null : Math.floor(downtimeTotal / 60),
+          downtimeMinutes: downtimeRaw === '' ? null : downtimeTotal % 60,
           operationType: operationTypeField.querySelector('select').value,
           quantity: Number(quantityField.querySelector('input').value) || 0,
           openingDiesel: openingDieselField.querySelector('input').value === '' ? null : Number(openingDieselField.querySelector('input').value),
@@ -293,7 +385,24 @@ function openForm(record, refresh) {
         }
       });
 
-      container.appendChild(topGrid);
+      const heading = (text, sub) => {
+        const wrap = el('div', {}, [el('h3', { class: 'subsection-title' }, text)]);
+        if (sub) wrap.appendChild(el('p', { class: 'section-subtitle' }, sub));
+        return wrap;
+      };
+
+      container.appendChild(heading('Who and where', isNew ? 'Operator, Client and Operation Type fill in from this dozer/site’s last report — change any that differ today.' : null));
+      container.appendChild(whoGrid);
+
+      container.appendChild(heading('Hours', 'Enter Time In and Time Out and Hours Worked calculates itself, minus any downtime.'));
+      container.appendChild(timeGrid);
+
+      container.appendChild(heading('Work done'));
+      container.appendChild(workGrid);
+
+      container.appendChild(heading('Diesel', `All four fill in automatically — Used is ${DEFAULT_DIESEL_RATES.first8h} L/hr for the first 8 hrs and ${DEFAULT_DIESEL_RATES.after8h} L/hr after that (${DEFAULT_DIESEL_RATES.trekking} L/hr flat for Trekking). Only change Closing Diesel, and only if you have a real tank dip — that is what the discrepancy report checks against.`));
+      container.appendChild(dieselGrid);
+
       container.appendChild(workTypeWrap);
       container.appendChild(notesField);
       container.appendChild(attachmentField);

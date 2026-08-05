@@ -212,36 +212,56 @@ This is the field log book — one entry per piece of equipment per day, capturi
 
 **List screen:** a search box ("Search by site, block/plot, equipment, operator, or notes…"), stat cards (Total Area Cleared, Total Road, Total Trekking, Total Fuel Used, Total Downtime, Ongoing Sites, Reports Logged), and a table of every report. A Supervisor only sees rows from their own assigned project.
 
-**"+ Log Daily Report" fields, in order:**
+**"+ Log Daily Report"** is grouped into four blocks. In practice only about six things need typing — the rest is pre-filled or calculated.
+
+**Who and where**
 
 | Field | Notes |
 |---|---|
 | Date | required, defaults to today |
 | Site / Project Name | dropdown of Projects; pre-fills to a Supervisor's own assigned project |
-| Block / Plot No. | optional free text — fill in only when the site actually has this subdivided |
-| Client | optional, dropdown of Customers |
 | Equipment Used | dropdown — only shows items whose Category is Heavy Equipment, Tools, or Vehicles |
-| Operator | dropdown of employees |
-| Supervisor | dropdown of employees |
-| Time In (Resumed) | optional — also feeds the fleet's average resumption-time stat |
-| Time Out (Closed) | optional — also feeds the fleet's average close-time stat |
+| Operator | **pre-fills** with whoever last operated the dozer you selected — change it when someone else is on the machine |
+| Supervisor | **pre-fills** with whoever is logged in |
+| Block / Plot No. | optional free text — fill in only when the site actually has this subdivided |
+| Client | optional — **pre-fills** with the client on that site's last report |
+
+> All the pre-filling above happens only on a **new** report, and only from the most recent matching report. Editing an existing report always shows exactly what was saved. Nothing is invented — if there's no history for that dozer or site yet, the field simply stays empty.
+
+**Hours**
+
+| Field | Notes |
+|---|---|
+| Time In (Resumed) | also feeds the fleet's average resumption-time stat |
+| Time Out (Closed) | also feeds the fleet's average close-time stat |
 | Downtime Reason | — None —, Dozer Breakdown, Community Disturbance, Operator Delay / Infringement, or Other |
-| Downtime (hrs) / Downtime (mins) | how long the dozer was down during the shift, if any |
-| Hours Worked | **auto-fills the moment both Time In and Time Out are set** — the raw shift span minus any Downtime entered above. Still a plain editable field, so you can type it by hand when times aren't tracked. ⚠ if left blank with no times entered, it silently saves as 0 rather than blocking the save. |
-| Operation Type | Felling (Ha), Stacking (Ha), Direct Stacking (Ha), Root Picking (Ha), Bonding (Ha), Phase 1 (Ha), Phase 2 (Ha), Cross Cutting (Ha), Road (KM), or Trekking (hrs) |
-| Quantity | the amount done, in whatever unit the chosen Operation Type uses (shown next to it) — same "required label but silently saves as 0" caveat as Hours Worked |
-| Diesel Supplied (litres) | **auto-fills** from any matching Resource Management → Diesel Management → Site Distribution entry logged for this exact equipment/date/site — still a plain editable field if nothing was logged there, or a hand count differs |
-| Opening Diesel (litres) | **auto-fills** as this dozer's last logged Closing Diesel (its most recent prior report) **+ today's Diesel Supplied** — still a plain editable field if you have an actual reading instead |
-| Fuel/Diesel Used (litres) | **auto-calculates** as the equipment's configured Diesel Consumption Rate (set on Fleet Management → Fleet Roster) **× Hours Worked**, tiered around the first 8 hrs/day — Trekking uses its own flat rate instead. If the selected equipment has no consumption rate configured yet, this stays a manual entry. |
-| Closing Diesel (litres) | **auto-calculates** as Opening Diesel − Fuel Used — overwrite it with an actual tank dip whenever you have one; this is the figure the Diesel Replenishment Request (Resource Management → Diesel Management → Diesel Tracking) uses as "what's currently in the tank" |
+| Downtime (minutes) | a single box of total minutes — enter 90 for an hour and a half. (Stored as hours + minutes behind the scenes, so older reports still read correctly.) |
+| Hours Worked | **calculates itself** the moment both Time In and Time Out are set — the shift span minus any Downtime. Handles a shift crossing midnight. Still editable, so you can type it by hand when times aren't tracked. ⚠ if left blank with no times entered, it silently saves as 0 rather than blocking the save. |
+
+**Work done**
+
+| Field | Notes |
+|---|---|
+| Operation Type | **pre-fills** from the last report for that dozer/site. Felling (Ha), Stacking (Ha), Direct Stacking (Ha), Root Picking (Ha), Bonding (Ha), Phase 1 (Ha), Phase 2 (Ha), Cross Cutting (Ha), Road (KM), or Trekking (hrs) |
+| Quantity | the amount done, in whatever unit the chosen Operation Type uses — same "required label but silently saves as 0" caveat as Hours Worked |
 | Status | Completed, Ongoing, or Halted (defaults to Completed) |
-| Work Type + Business Amount (₦) | **only appears if the selected equipment's Ownership is Partnership or Rented.** Choose "Office" for the normal, owner-shareable arrangement, or "Business" for a private arrangement that's never shown to the owner (and pays the operator an extra Business Amount for that day). See Dozer Economics (Fleet Management) and [Dozer Rent Payments](#10-resource-management) for how this splits downstream. |
-| Notes | free text |
-| KML Boundary File / Photos | attach a `.kml` site-boundary file and/or photos — these automatically feed the Projects → Map View and Photo Gallery tabs |
+
+**Diesel** — all four calculate themselves; normally you don't touch this block at all.
+
+| Field | Notes |
+|---|---|
+| Diesel Supplied (litres) | **auto-fills** from any matching Resource Management → Diesel Management → Site Distribution entry logged for this exact equipment/date/site |
+| Opening Diesel (litres) | **auto-fills** as this dozer's last logged Closing Diesel (its most recent prior report) **+ today's Diesel Supplied** |
+| Fuel/Diesel Used (litres) | **auto-calculates** as consumption rate × Hours Worked — see the rate note below |
+| Closing Diesel (litres) | **auto-calculates** as Opening Diesel − Fuel Used. **This is the one worth overwriting** — put in a real tank dip whenever you have one, because the [Dozer Discrepancy Report](#10-resource-management) compares exactly this against the calculated figure to spot losses. It's also what the Diesel Replenishment Request treats as "what's currently in the tank". |
+
+> **Diesel consumption rate.** The whole current fleet is D8K, so one set of rates applies across the board with nothing to configure per machine: **25 L/hr for the first 8 hours of a day, 20 L/hr for every hour after that**, and **20 L/hr flat for Trekking** (no 8-hour tiering — the machine is walking, not pushing). A future machine that burns differently can override this on its own Fleet Roster record via the three Diesel Consumption fields; leave those blank and the fleet default applies. To change the fleet-wide figures, edit `DEFAULT_DIESEL_RATES` in `erp/js/constants.js` — one place, and every calculation follows.
+
+**Also on the form:** Work Type + Business Amount (₦) — **only appears if the selected equipment's Ownership is Partnership or Rented.** Choose "Office" for the normal, owner-shareable arrangement, or "Business" for a private arrangement that's never shown to the owner (and pays the operator an extra Business Amount for that day). See Dozer Economics (Fleet Management) and [Dozer Rent Payments](#10-resource-management) for how this splits downstream. Plus **Notes** (free text) and **KML Boundary File / Photos** — attach a `.kml` site-boundary file and/or photos, which automatically feed the Projects → Map View and Photo Gallery tabs.
 
 Date, Site, Equipment, Operator, Supervisor, and Operation Type genuinely block saving if left blank; the rest do not (see the caveat above — fill them in anyway, since downstream stats depend on real numbers).
 
-> **How Downtime "punishes" an operator:** there's no separate penalty step. Downtime hrs/mins are simply subtracted from the auto-computed Hours Worked, and that same Hours Worked figure is what HR → Operator Allowance pays day-rate against and what Profitability charges as dozer cost — so logging downtime as, say, Operator Delay / Infringement automatically reduces that day's credited hours (and pay) with no extra step. The Downtime Reason itself is only an accountability label, for telling fault from no-fault situations afterward — every reason deducts the same way.
+> **How Downtime "punishes" an operator:** there's no separate penalty step. Downtime minutes are simply subtracted from the auto-computed Hours Worked, and that same Hours Worked figure is what HR → Operator Allowance pays day-rate against and what Profitability charges as dozer cost — so logging downtime as, say, Operator Delay / Infringement automatically reduces that day's credited hours (and pay) with no extra step. The Downtime Reason itself is only an accountability label, for telling fault from no-fault situations afterward — every reason deducts the same way.
 
 No print button on this screen.
 
@@ -278,9 +298,11 @@ Stat cards: Fleet Size, Company Owned, Partnership, Rented, Down / Under Mainten
 | Hourly Rate (₦) | internal cost/value used for project profitability |
 | Rental Rate/Day (₦) | Partnership or Rented only |
 | Management Fee/Day (₦) | Partnership only — retained from the rental rate |
-| Diesel Consumption — First 8 hrs/day (L/hr) | optional — drives Daily Operations' Fuel Used auto-calc for this dozer's first 8 worked hours in a day |
-| Diesel Consumption — After 8 hrs/day (L/hr) | optional — usually lower than the first-8-hrs rate; applies to hours worked beyond 8 in a day |
-| Diesel Consumption — Trekking (L/hr, flat) | optional — used instead of the tiered pair above whenever the report's Operation Type is Trekking; no 8-hr tiering |
+| Diesel Consumption — First 8 hrs/day (L/hr) | **leave blank** unless this machine differs from the fleet — blank uses the fleet default of 25 |
+| Diesel Consumption — After 8 hrs/day (L/hr) | **leave blank** unless this machine differs — blank uses the fleet default of 20 |
+| Diesel Consumption — Trekking (L/hr, flat) | **leave blank** unless this machine differs — blank uses the fleet default of 20 |
+
+> These three exist only to override a machine that burns differently from the rest of the fleet. Since every current dozer is a D8K, all three should stay blank and the fleet-wide rates apply automatically — nobody has to configure a dozer before Fuel Used will calculate on a daily report.
 | Current Project | which project it's currently deployed to — this drives the Weekly Report tab |
 | Location | required |
 | Acquisition Value (₦) | |

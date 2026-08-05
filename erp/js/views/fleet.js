@@ -1,7 +1,7 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el, monthKey, statusPillClass } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
-import { OWNERSHIP_CATEGORIES, isHaOperationType } from '../constants.js';
+import { OWNERSHIP_CATEGORIES, isHaOperationType, DEFAULT_DIESEL_RATES } from '../constants.js';
 import { renderInventory } from './inventory.js';
 import { renderDozerEconomics } from './dozerEconomics.js';
 
@@ -140,9 +140,9 @@ function fleetFields() {
     { name: 'hourlyRate', label: 'Hourly Rate (₦) — internal operating cost/value used for project profitability', type: 'number', required: true, min: 0 },
     { name: 'rentalRatePerDay', label: 'Rental Rate/Day (₦) — Partnership or Rented dozers', type: 'number', min: 0 },
     { name: 'managementFeePerDay', label: 'Management Fee/Day (₦) — Partnership dozers only, retained from the rental rate', type: 'number', min: 0 },
-    { name: 'dieselRateFirst8h', label: 'Diesel Consumption — first 8 hrs/day (L/hr) — used to auto-calculate Fuel Used on Daily Operations', type: 'number', min: 0 },
-    { name: 'dieselRateAfter8h', label: 'Diesel Consumption — after 8 hrs/day (L/hr) — usually lower than the first-8-hrs rate', type: 'number', min: 0 },
-    { name: 'dieselRateTrekking', label: 'Diesel Consumption — Trekking (L/hr, flat — no first-8-hrs tiering)', type: 'number', min: 0 },
+    { name: 'dieselRateFirst8h', label: `Diesel Consumption — first 8 hrs/day (L/hr) — leave blank to use the fleet default of ${DEFAULT_DIESEL_RATES.first8h}`, type: 'number', min: 0 },
+    { name: 'dieselRateAfter8h', label: `Diesel Consumption — after 8 hrs/day (L/hr) — leave blank to use the fleet default of ${DEFAULT_DIESEL_RATES.after8h}`, type: 'number', min: 0 },
+    { name: 'dieselRateTrekking', label: `Diesel Consumption — Trekking (L/hr, flat) — leave blank to use the fleet default of ${DEFAULT_DIESEL_RATES.trekking}`, type: 'number', min: 0 },
     { name: 'currentProject', label: 'Current Project', type: 'select', options: [
       { value: '', label: '— Unassigned —' },
       ...projectOptions(),
