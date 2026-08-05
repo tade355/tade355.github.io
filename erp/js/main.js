@@ -19,6 +19,26 @@ const loadingMessage = document.getElementById('loadingMessage');
 initModalRoot();
 initThemeSwitch();
 
+// Every date field in the app is a plain <input type="date">, built fresh
+// each time a form/modal opens — rather than wiring a picker per field,
+// one delegated listener at the document level covers every date input
+// that will ever exist, including ones inside modals that don't exist yet.
+// showPicker() makes the calendar pop immediately on click/focus instead of
+// depending on the browser's own (inconsistent — Firefox needs the small
+// icon specifically) affordance for opening it.
+function initDateInputAutoPicker() {
+  const openPicker = (evt) => {
+    const target = evt.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (target.type !== 'date' || target.disabled || target.readOnly) return;
+    if (typeof target.showPicker !== 'function') return;
+    try { target.showPicker(); } catch { /* not a user gesture, or unsupported here — native fallback still works */ }
+  };
+  document.addEventListener('focus', openPicker, true);
+  document.addEventListener('click', openPicker, true);
+}
+initDateInputAutoPicker();
+
 function openChangePasswordForm() {
   openModal({
     title: 'Change Password',

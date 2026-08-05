@@ -177,15 +177,24 @@ function distributionFields() {
   ];
 }
 
+// "Distributed" is read straight from Daily Operations reports'
+// dieselSupplied field (siteName = project), not from the
+// diesel_site_distributions log below — a supervisor filing a report with
+// Diesel Supplied filled in IS the distribution event, whether or not
+// anyone pre-logged it here first. This also avoids double-counting: when
+// a distribution record here seeds a report's Diesel Supplied field (see
+// operations.js recomputeDieselSupplied), the litres already live in the
+// report; summing diesel_site_distributions on top of that would count it
+// twice.
 function siteDieselLedger(from, to) {
   const receipts = store.get('dieselReceipts').filter((r) => r.project);
-  const distributions = store.get('dieselSiteDistributions');
+  const operations = store.get('operations').filter((o) => o.siteName);
   return store.get('projects').map((p) => {
     const openingReceipts = from ? receipts.filter((r) => r.project === p.name && r.date < from).reduce((sum, r) => sum + r.litres, 0) : 0;
-    const openingDistributed = from ? distributions.filter((d) => d.project === p.name && d.date < from).reduce((sum, d) => sum + d.litres, 0) : 0;
+    const openingDistributed = from ? operations.filter((o) => o.siteName === p.name && o.date < from).reduce((sum, o) => sum + (o.dieselSupplied || 0), 0) : 0;
     const opening = openingReceipts - openingDistributed;
     const newInRange = receipts.filter((r) => r.project === p.name && dateInRange(r.date, from, to)).reduce((sum, r) => sum + r.litres, 0);
-    const distributedInRange = distributions.filter((d) => d.project === p.name && dateInRange(d.date, from, to)).reduce((sum, d) => sum + d.litres, 0);
+    const distributedInRange = operations.filter((o) => o.siteName === p.name && dateInRange(o.date, from, to)).reduce((sum, o) => sum + (o.dieselSupplied || 0), 0);
     return { name: p.name, opening, newInRange, distributedInRange, closing: opening + newInRange - distributedInRange };
   });
 }
@@ -195,7 +204,7 @@ function renderSiteDistributionTab(container) {
   const actionSlot = el('div');
   container.appendChild(sectionHeader(
     'Site Distribution — Level 2',
-    "Each project's dump-tank stock: Opening + New Supply (diesel receipts tagged to the site) − Distributed (handed to individual dozers) = Closing",
+    "Each project's dump-tank stock: Opening + New Supply (diesel receipts tagged to the site) − Distributed (Daily Operations reports' Diesel Supplied, for that site) = Closing. Distributed updates itself as reports come in from the field — nothing to log here for it to count.",
     actionSlot,
   ));
   actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openDistributionForm() }, '+ Log Distribution'));
@@ -210,6 +219,7 @@ function renderSiteDistributionTab(container) {
   const ledgerContainer = el('div');
   container.appendChild(ledgerContainer);
   container.appendChild(el('h3', { class: 'subsection-title' }, 'Distributions'));
+  container.appendChild(el('p', { class: 'section-subtitle' }, "Optional accountability log (who handed diesel to which dozer) — logging one here also pre-fills that dozer's Daily Operations report for the same date/site with these litres, but the Distributed figures above always come from the report itself, not from this log."));
   const distributionsContainer = el('div');
   container.appendChild(distributionsContainer);
 
