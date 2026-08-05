@@ -38,6 +38,7 @@ const CONFIG = {
   inventoryWithdrawals: { table: 'inventory_withdrawals', prefix: 'IW' },
   dieselStationPrepayments: { table: 'diesel_station_prepayments', prefix: 'DSP' },
   dieselSiteDistributions: { table: 'diesel_site_distributions', prefix: 'DSD' },
+  invoicePayments: { table: 'invoice_payments', prefix: 'IVP' },
 };
 
 const COLLECTIONS = Object.keys(CONFIG);

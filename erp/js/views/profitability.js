@@ -3,7 +3,7 @@ import { formatCurrency, formatDate, el, dateInRange, invoiceTotal } from '../ut
 import { sectionHeader, statCard, renderTable } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { isHaOperationType } from '../constants.js';
-import { hourlyRateAsOf, dieselRateAsOf } from '../rateHistory.js';
+import { hourlyRateAsOf, dieselRateAsOf, projectRateAsOf } from '../rateHistory.js';
 
 export function projectNames() {
   return store.get('projects').map((p) => p.name);
@@ -92,6 +92,92 @@ function computeWeeklyProductivity(project, from, to) {
   return { target, rows };
 }
 
+// ---------------------------------------------------------------------
+// Multi-dimensional grouping (Dozer / Supervisor / Date / Week / Block),
+// alongside the existing per-project view above rather than replacing it.
+//
+// Fixed constraint: verified (invoice) revenue only exists at project
+// granularity — clients invoice against a measured project period, never
+// against an individual dozer, supervisor, date, or block. So this path
+// only ever computes provisional revenue (quantity x the contract rate in
+// effect that day), and Logistics/Other/Total Cost/Profit — which can only
+// be attributed to a project, via expenses tagged there — render as "—"
+// (unknown), not "₦0" (verified zero), at every grouping here.
+// ---------------------------------------------------------------------
+
+const GROUP_KEY_FNS = {
+  equipment: (o) => o.equipment,
+  supervisor: (o) => o.supervisorId,
+  date: (o) => o.date,
+  week: (o) => weekOf(o.date).key,
+  block: (o) => `${o.siteName} / ${o.blockNumber || '—'}`,
+};
+
+function groupLabel(groupBy, key) {
+  if (groupBy === 'supervisor') return store.get('employees').find((e) => e.id === key)?.name || key || '—';
+  if (groupBy === 'date') return formatDate(key);
+  if (groupBy === 'week') return weekOf(key).label;
+  return key || '—';
+}
+
+function provisionalRevenueForRows(operations) {
+  return operations.reduce((sum, o) => sum + (o.quantity || 0) * (projectRateAsOf(o.siteName, o.date).rate || 0), 0);
+}
+
+export function computeGroupedStats({ groupBy, from, to, project }) {
+  const opsInRange = store.get('operations').filter((o) =>
+    dateInRange(o.date, from, to) && (!project || project === 'all' || o.siteName === project));
+  const keyFn = GROUP_KEY_FNS[groupBy];
+  const keys = [...new Set(opsInRange.map(keyFn))];
+
+  return keys.map((key) => {
+    const rows = opsInRange.filter((o) => keyFn(o) === key);
+    const areaCleared = rows.filter((o) => isHaOperationType(o.operationType)).reduce((sum, o) => sum + o.quantity, 0);
+    const fuelUsed = rows.reduce((sum, o) => sum + o.fuelUsed, 0);
+    const dozerCost = rows.reduce((sum, o) => sum + (o.hoursWorked || 0) * hourlyRateAsOf(o.equipment, o.date), 0);
+    const dieselCost = rows.reduce((sum, o) => sum + (o.fuelUsed || 0) * dieselRateAsOf(o.date), 0);
+    const revenue = provisionalRevenueForRows(rows);
+    return {
+      key,
+      label: groupLabel(groupBy, key),
+      areaCleared,
+      fuelUsed,
+      dozerCost,
+      dieselCost,
+      logisticsCost: null,
+      otherCost: null,
+      totalCost: null,
+      revenue,
+      profit: null,
+    };
+  }).sort((a, b) => (a.label < b.label ? -1 : 1));
+}
+
+function renderGroupedTable(body, groupBy, from, to, project) {
+  const stats = computeGroupedStats({ groupBy, from, to, project });
+  const groupColumnLabel = { equipment: 'Dozer', supervisor: 'Supervisor', date: 'Date', week: 'Week', block: 'Project / Block' }[groupBy];
+
+  const tableContainer = el('div');
+  body.appendChild(tableContainer);
+  renderTable(tableContainer, {
+    columns: [
+      { key: 'label', label: groupColumnLabel },
+      { key: 'areaCleared', label: 'Area Cleared', render: (r) => `${r.areaCleared.toFixed(1)} ha` },
+      { key: 'revenue', label: 'Revenue (Provisional)', render: (r) => formatCurrency(r.revenue) },
+      { key: 'dozerCost', label: 'Dozer Cost', render: (r) => formatCurrency(r.dozerCost) },
+      { key: 'dieselCost', label: 'Diesel Cost', render: (r) => formatCurrency(r.dieselCost) },
+      { key: 'logisticsCost', label: 'Logistics Cost', render: () => '—' },
+      { key: 'otherCost', label: 'Other Cost', render: () => '—' },
+      { key: 'totalCost', label: 'Total Cost', render: () => '—' },
+      { key: 'profit', label: 'Profit', render: () => '—' },
+    ],
+    rows: stats,
+    emptyText: 'No Daily Operations reports in this range.',
+  });
+
+  body.appendChild(el('p', { class: 'section-subtitle' }, 'Revenue here is Provisional only (quantity x the contract rate in effect that day) — clients invoice against a measured project period, never against an individual dozer, supervisor, date, or block, so verified revenue and Logistics/Other/Total Cost/Profit (which can only be attributed at the project level) can\'t be split this way and show as "—".'));
+}
+
 export function renderProfitability(container) {
   container.innerHTML = '';
 
@@ -104,9 +190,18 @@ export function renderProfitability(container) {
   ]);
   const fromInput = el('input', { type: 'date', name: 'from' });
   const toInput = el('input', { type: 'date', name: 'to' });
+  const groupBySelect = el('select', { name: 'groupBy' }, [
+    el('option', { value: 'project' }, 'Project'),
+    el('option', { value: 'equipment' }, 'Dozer'),
+    el('option', { value: 'supervisor' }, 'Supervisor'),
+    el('option', { value: 'date' }, 'Date'),
+    el('option', { value: 'week' }, 'Week'),
+    el('option', { value: 'block' }, 'Block'),
+  ]);
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Project'), projectSelect]));
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'From'), fromInput]));
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), toInput]));
+  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Group By'), groupBySelect]));
   container.appendChild(filterBar);
 
   const body = el('div');
@@ -116,16 +211,19 @@ export function renderProfitability(container) {
     const project = projectSelect.value;
     const from = fromInput.value;
     const to = toInput.value;
+    const groupBy = groupBySelect.value;
     body.innerHTML = '';
 
-    if (project === 'all') {
+    if (groupBy !== 'project') {
+      renderGroupedTable(body, groupBy, from, to, project);
+    } else if (project === 'all') {
       renderAllProjects(body, from, to);
     } else {
       renderSingleProject(body, project, from, to);
     }
   }
 
-  [projectSelect, fromInput, toInput].forEach((input) => input.addEventListener('change', refresh));
+  [projectSelect, fromInput, toInput, groupBySelect].forEach((input) => input.addEventListener('change', refresh));
 
   refresh();
 }

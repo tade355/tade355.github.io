@@ -150,9 +150,10 @@ export function renderTable(container, { columns, rows, emptyText = 'No records 
   container.appendChild(table);
 }
 
-export function actionButtons({ onEdit, onDelete, onPrint }) {
+export function actionButtons({ onEdit, onDelete, onPrint, onPayment }) {
   return el('div', { class: 'row-actions' }, [
     onPrint ? el('button', { class: 'icon-btn', type: 'button', title: 'Print', onClick: onPrint }, '🖨') : null,
+    onPayment ? el('button', { class: 'icon-btn', type: 'button', title: 'Log Payment', onClick: onPayment }, '💰') : null,
     el('button', { class: 'icon-btn', type: 'button', title: 'Edit', onClick: onEdit }, '✎'),
     el('button', { class: 'icon-btn icon-btn-danger', type: 'button', title: 'Delete', onClick: onDelete }, '🗑'),
   ]);

@@ -1,5 +1,6 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, invoiceTotal, monthKey, monthLabel, el } from '../utils.js';
+import { amountOutstanding } from '../invoicePayments.js';
 import { statCard, sectionHeader } from '../ui.js';
 import { renderBarChart, renderLineChart, renderMultiLineChart, CATEGORICAL_COLORS } from '../charts.js';
 import { isHaOperationType } from '../constants.js';
@@ -71,8 +72,12 @@ export function renderDashboard(container) {
 
   const lowStock = inventory.filter((i) => i.quantity <= i.reorderLevel);
   const outOfStock = inventory.filter((i) => i.quantity <= 0);
-  const unpaid = invoices.filter((i) => i.status === 'Unpaid');
-  const unpaidTotal = unpaid.reduce((sum, i) => sum + invoiceTotal(i), 0);
+  // status !== 'Paid' (not just === 'Unpaid') so Partially Paid invoices
+  // still count as outstanding; unpaidTotal sums what's still owed on each
+  // (amountOutstanding), not the full original invoice value, so a
+  // partially paid invoice isn't counted as if nothing had been received.
+  const unpaid = invoices.filter((i) => i.status !== 'Paid');
+  const unpaidTotal = unpaid.reduce((sum, i) => sum + amountOutstanding(i), 0);
 
   const expensesForMonth = (key) => expenses.filter((e) => monthKey(e.date) === key).reduce((sum, e) => sum + e.amount, 0);
   const areaForMonth = (key) => operations.filter((o) => monthKey(o.date) === key && isHaOperationType(o.operationType)).reduce((sum, o) => sum + o.quantity, 0);

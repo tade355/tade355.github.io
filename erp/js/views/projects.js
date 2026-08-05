@@ -7,6 +7,7 @@ import { getCurrentTier } from '../session.js';
 import { formatDate } from '../utils.js';
 import { renderWeeklyReport } from './weeklyReport.js';
 import { renderProfitability } from './profitability.js';
+import { renderRevenueReconciliation } from './revenueReconciliationView.js';
 
 const FIELDS = [
   { name: 'name', label: 'Project Name', required: true },
@@ -57,12 +58,16 @@ export function renderProjects(container) {
   const profitabilityTabBtn = canManageProjects
     ? el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('profitability') }, 'Profitability')
     : null;
+  const reconciliationTabBtn = canManageProjects
+    ? el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('reconciliation') }, 'Revenue Reconciliation')
+    : null;
   if (projectsTabBtn) tabBar.appendChild(projectsTabBtn);
   tabBar.appendChild(mapTabBtn);
   tabBar.appendChild(galleryTabBtn);
   tabBar.appendChild(weeklyReportTabBtn);
   if (rateHistoryTabBtn) tabBar.appendChild(rateHistoryTabBtn);
   if (profitabilityTabBtn) tabBar.appendChild(profitabilityTabBtn);
+  if (reconciliationTabBtn) tabBar.appendChild(reconciliationTabBtn);
   container.appendChild(tabBar);
 
   const body = el('div');
@@ -76,12 +81,14 @@ export function renderProjects(container) {
     weeklyReportTabBtn.classList.toggle('active', tab === 'weeklyReport');
     if (rateHistoryTabBtn) rateHistoryTabBtn.classList.toggle('active', tab === 'rateHistory');
     if (profitabilityTabBtn) profitabilityTabBtn.classList.toggle('active', tab === 'profitability');
+    if (reconciliationTabBtn) reconciliationTabBtn.classList.toggle('active', tab === 'reconciliation');
     if (tab === 'projects') renderProjectsTab();
     else if (tab === 'map') renderMapTab();
     else if (tab === 'gallery') renderGalleryTab();
     else if (tab === 'weeklyReport') renderWeeklyReportTab();
     else if (tab === 'rateHistory') renderRateHistoryTab();
-    else renderProfitabilityTab();
+    else if (tab === 'profitability') renderProfitabilityTab();
+    else renderReconciliationTab();
   }
 
   function renderMapTab() {
@@ -106,6 +113,12 @@ export function renderProjects(container) {
     actionSlot.innerHTML = '';
     body.innerHTML = '';
     renderProfitability(body);
+  }
+
+  function renderReconciliationTab() {
+    actionSlot.innerHTML = '';
+    body.innerHTML = '';
+    renderRevenueReconciliation(body);
   }
 
   function renderRateHistoryTab() {

@@ -761,6 +761,21 @@ button { font-family: inherit; }
   width: 100%;
   box-sizing: border-box;
 }
+/* Line items (Sales invoices — description, qty, price, operation type) */
+.invoice-line-items .line-items-header, .invoice-line-items .line-item-row {
+  grid-template-columns: 2fr 0.7fr 1fr 1.3fr auto;
+}
+.line-item-row select {
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--page-plane);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
 .payroll-line-header, .payroll-line-row {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto auto;

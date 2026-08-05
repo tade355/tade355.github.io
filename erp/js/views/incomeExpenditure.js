@@ -1,8 +1,9 @@
 import { store } from '../store.js';
-import { formatCurrency, formatDate, invoiceTotal, el, dateInRange } from '../utils.js';
+import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
 import { sectionHeader, statCard, statusPill, renderTable, actionButtons, openModal, confirmDelete } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../constants.js';
+import { amountReceived } from '../invoicePayments.js';
 
 function projectNames() {
   return store.get('projects').map((p) => p.name);
@@ -30,17 +31,19 @@ function manualEntryFields() {
   ];
 }
 
-// Merges the four sources of cash movement into one flat list: Paid
-// invoices (income), Expenses (expenditure), Fund Requests that are
-// Approved or Paid (expenditure — "approved/disbursed"), and manual
-// entries the accountant records directly for anything else.
+// Merges the four sources of cash movement into one flat list: Paid and
+// Partially Paid invoices (income — only the amount actually received, not
+// the full invoice total, now that partial payments exist), Expenses
+// (expenditure), Fund Requests that are Approved or Paid (expenditure —
+// "approved/disbursed"), and manual entries the accountant records
+// directly for anything else.
 function collectEntries() {
   const rows = [];
 
-  store.get('invoices').filter((i) => i.status === 'Paid').forEach((i) => {
+  store.get('invoices').filter((i) => i.status === 'Paid' || i.status === 'Partially Paid').forEach((i) => {
     rows.push({
       date: i.date, project: i.project || '', type: 'Income', costHead: 'Invoicing / Sales',
-      description: i.items?.[0]?.description || `Invoice ${i.id}`, amount: invoiceTotal(i), source: 'Invoice',
+      description: i.items?.[0]?.description || `Invoice ${i.id}`, amount: amountReceived(i), source: 'Invoice',
     });
   });
 

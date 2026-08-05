@@ -202,6 +202,23 @@ A dated log of every contract-rate change per project. **"+ Log Rate Change"** f
 
 The same screen also appears inside [Accounting & Expenses](#13-accounting--expenses) — see that section for the full breakdown of how revenue, cost, and margin are calculated. It's a read-only report; there's nothing to add or edit here.
 
+### Revenue Reconciliation tab (Admin/Accounts only)
+
+**Purpose:** two things that used to have no visibility at all — where a Daily Operations report's figures disagree with what a client-approved invoice actually verifies, and how much of what's been invoiced has actually been paid.
+
+**Filters:** Project (or "All Projects"), From, To.
+
+**Revenue Reconciliation table** — one row per Project × Operation Type combination that has activity in the selected range:
+- **Reported Qty / Reported Revenue** — from Daily Operations reports, quantity × the contract rate that was in effect that day (Rate History tab). This is the **provisional** figure, available same-day, before any client involvement.
+- **Invoiced Qty / Invoiced Revenue** — from invoice line items that carry the same Operation Type and whose invoice's Period overlaps the range. This is the **verified** figure, from what the client actually agreed to pay for.
+- **Qty Variance / Revenue Variance** — the gap between the two, with a status pill: **OK** (within 2% or a small floor), **Minor Variance**, or **Variance** (flagged red) if the gap is larger. **No Invoice Yet** means nothing's been invoiced for that slice at all.
+
+Only invoice lines with an **Operation Type** set can appear in this matrix (see the Sales & Invoicing section below) — older invoices, or ones not linked to a project, predate this and show up instead in a small "Unclassified / Legacy Invoices" note beneath the table, so their revenue isn't mistaken for a gap; it's already counted normally everywhere else (Profitability, Income & Expenditure).
+
+**Payment Tracking table** — every invoice (optionally filtered to the selected project): Invoiced, Received, Outstanding, Status, and Aging (days past due, only shown for invoices that are overdue and not fully paid). Stat cards above it total Outstanding, Partially Paid, and Overdue counts. See the Sales & Invoicing section for how to log a payment.
+
+This is a read-only report — nothing here can be added or edited directly; go to Sales & Invoicing to change an invoice or log a payment.
+
 ---
 
 ## 8. Daily Operations
@@ -450,13 +467,15 @@ Two tabs: **Invoices** and **Customers.**
 
 ### Invoices tab
 
-Table: Invoice #, Customer, Project, Date, Due, Total, Status, actions. Any **Unpaid** invoice past its Due Date is flagged with a red row highlight.
+Table: Invoice #, Customer, Project, Date, Due, Total, Status, actions. Any invoice that isn't fully **Paid** and is past its Due Date is flagged with a red row highlight.
 
-**"+ New Invoice" fields:** Customer (required), Project (optional — links this invoice into that project's Profitability revenue), Invoice Date, Due Date, Description of Work, Quantity (e.g. hectares), Price per Unit (₦), Status (Unpaid / Paid).
+**"+ New Invoice" fields:** Customer (required), Project (optional), Invoice Date, Due Date, and one or more **Line Items** (Description, Qty, Price/Unit — "+ Add Line" for more than one). **Status is no longer set by hand** — it's computed automatically from payments logged against the invoice (see "Log a Payment" below): Unpaid, Partially Paid, or Paid.
 
-> An invoice currently holds a single line item (one description/quantity/price combination) — Total = Quantity × Price.
+> **When a Project is linked**, two things appear that don't for a freeform invoice: a **Period Start / Period End** (the measurement window this invoice verifies), and an **Operation Type** dropdown on every line item — both required. This is what lets the Revenue Reconciliation tab on the Projects screen automatically match this invoice against Daily Operations reports for the same project, operation type, and period. Non-project invoices skip both and stay freeform, same as before.
 
-**Print** produces an "INVOICE" (or "RECEIPT" with a PAID stamp, if status is Paid) letterhead: dates, project, a "Bill To" block, the line item, total, and signature lines for Authorized Signature and Customer Signature.
+**Log a Payment (💰 button on the invoices table):** opens a window showing the invoice's payment history (Date, Amount, Method, Reference, Notes — editable/deletable) plus a form to log a new one. Every add/edit/delete immediately recomputes the invoice's Status: 0 received → Unpaid, something but less than the total → Partially Paid, the full total or more → Paid.
+
+**Print** produces an "INVOICE" (or "RECEIPT" with a PAID stamp, once Status is Paid) letterhead: dates, project, a "Bill To" block, every line item, total, and signature lines for Authorized Signature and Customer Signature.
 
 ### Customers tab
 
@@ -540,7 +559,7 @@ No print button on this tab.
 **Stat cards:** Total Income, Total Expenditure, Net Position — all recalculated for whatever you've currently filtered to.
 
 > **This report auto-assembles itself from four sources — you don't build it by hand:**
-> 1. Every **Paid** invoice → Income, Cost Head "Invoicing / Sales" (Unpaid invoices never appear here).
+> 1. Every **Paid** or **Partially Paid** invoice → Income, Cost Head "Invoicing / Sales", for the amount actually **received** so far (not the full invoice total if it's only partially paid). Unpaid invoices never appear here.
 > 2. Every **Expense** record → Expenditure, grouped by its own Category.
 > 3. Every fund request that's **Approved** or **Paid** → Expenditure, grouped by its Cost Head (Pending/Draft/Rejected fund requests are excluded — only money that's been approved or actually disbursed counts).
 > 4. **Manual Entries** you add directly on this screen — for anything that isn't one of the three above, like a loan received, an equity injection, or interest income.
@@ -555,11 +574,15 @@ No print button.
 
 **Purpose:** whether each project is actually profitable — revenue earned versus the real cost of the dozers, diesel, and other spend behind it. (The identical screen also appears inside [Projects](#7-projects).)
 
-**Filters:** Project (or "All Projects"), From, To.
+**Filters:** Project (or "All Projects"), From, To, and **Group By** (Project / Dozer / Supervisor / Date / Week / Block).
 
-**All Projects view:** a "Profit by Project" bar chart, and a table per project — Area Cleared (ha), Revenue, Dozer Cost, Diesel Cost, Logistics Cost, Other Cost, Total Cost, Profit, Margin (%), Revenue/ha.
+**Group By: Project** (the default) behaves exactly as before — see the two views below.
 
-**Single project view:** stat cards (Area Cleared, Revenue Earned, Total Cost, Profit, Margin, Revenue/ha, Cost/ha, Diesel Used), a Cost Breakdown chart, and — if the project has an **Expected Rate/Day** set (Projects tab) — a **Weekly Productivity** table comparing actual hectares cleared per week against that target.
+**Group By: Dozer / Supervisor / Date / Week / Block** shows a table with Area Cleared and **Revenue (Provisional)** — quantity × the contract rate in effect that day, straight from Daily Operations reports, the same same-day figure the Revenue Reconciliation tab calls "Reported Revenue." Dozer Cost and Diesel Cost still show (they're per-report-row figures), but **Logistics Cost, Other Cost, Total Cost, and Profit always show "—"** at these groupings — clients invoice against a measured project period, never against an individual dozer, supervisor, date, or block, so verified revenue and project-level expenses genuinely can't be split this finely. Use Group By: Project for a real Total Cost/Profit number.
+
+**All Projects view (Group By: Project, "All Projects"):** a "Profit by Project" bar chart, and a table per project — Area Cleared (ha), Revenue, Dozer Cost, Diesel Cost, Logistics Cost, Other Cost, Total Cost, Profit, Margin (%), Revenue/ha.
+
+**Single project view (Group By: Project, one project selected):** stat cards (Area Cleared, Revenue Earned, Total Cost, Profit, Margin, Revenue/ha, Cost/ha, Diesel Used), a Cost Breakdown chart, and — if the project has an **Expected Rate/Day** set (Projects tab) — a **Weekly Productivity** table comparing actual hectares cleared per week against that target.
 
 > **How the numbers are actually built — read this once, it explains a lot of "why doesn't this match" questions:**
 > - **Area Cleared** only counts Ha-unit operation types (Felling, Stacking, Direct Stacking, Root Picking, Bonding) — Road (KM) and Trekking (hrs) are deliberately excluded so they don't distort a hectares total.

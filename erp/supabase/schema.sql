@@ -189,28 +189,62 @@ create trigger trg_projects_updated_at before update on projects
 -- ---------------------------------------------------------------------
 
 create table invoices (
-  id          text primary key,
-  customer_id text references customers(id) on delete set null,
-  date        date not null,
-  due_date    date,
-  status      text not null default 'Unpaid' check (status in ('Paid', 'Unpaid')),
-  project     text,
-  created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now()
+  id           text primary key,
+  customer_id  text references customers(id) on delete set null,
+  date         date not null,
+  due_date     date,
+  -- Computed by the app from invoice_payments vs the invoice total (see
+  -- erp/js/invoicePayments.js computeInvoiceStatus), not user-editable.
+  status       text not null default 'Unpaid' check (status in ('Unpaid', 'Partially Paid', 'Paid')),
+  project      text,
+  -- Only meaningful when project is set: the measurement period this
+  -- invoice verifies, matched against Daily Operations report dates for
+  -- the Revenue Reconciliation report. Null for freeform, non-project
+  -- invoices.
+  period_start date,
+  period_end   date,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
 );
 create index idx_invoices_customer on invoices(customer_id);
 create trigger trg_invoices_updated_at before update on invoices
   for each row execute function set_updated_at();
 
 create table invoice_items (
-  id          uuid primary key default gen_random_uuid(),
-  invoice_id  text not null references invoices(id) on delete cascade,
-  description text,
-  qty         numeric,
-  price       numeric,
-  sort_order  integer not null default 0
+  id             uuid primary key default gen_random_uuid(),
+  invoice_id     text not null references invoices(id) on delete cascade,
+  description    text,
+  qty            numeric,
+  price          numeric,
+  sort_order     integer not null default 0,
+  -- Only meaningful when the parent invoice has a project: which Daily
+  -- Operations operation type this line verifies. Nullable — existing
+  -- items predate this and stay unclassified (excluded from the
+  -- Revenue Reconciliation matrix, but still counted in invoice totals
+  -- everywhere else).
+  operation_type text check (operation_type in (
+    'Felling', 'Stacking', 'Direct Stacking', 'Root Picking', 'Bonding', 'Road', 'Trekking',
+    'Tree Felling', 'Direct Clearing', 'Phase 1', 'Phase 2', 'Cross Cutting', 'Corrections', 'Zero Bonding'
+  ))
 );
 create index idx_invoice_items_invoice on invoice_items(invoice_id);
+
+create table invoice_payments (
+  id         text primary key,
+  invoice_id text not null references invoices(id) on delete cascade,
+  date       date not null,
+  amount     numeric not null default 0,
+  method     text,
+  reference  text,
+  notes      text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index idx_invoice_payments_invoice on invoice_payments(invoice_id, date);
+create trigger trg_invoice_payments_updated_at before update on invoice_payments
+  for each row execute function set_updated_at();
+alter table invoice_payments enable row level security;
+create policy invoice_payments_anon_all on invoice_payments for all to authenticated using (true) with check (true);
 
 -- ---------------------------------------------------------------------
 -- purchase orders (+ line items)
