@@ -9,7 +9,7 @@ export function reportedForSlice({ project, operationType, from, to }) {
   const rows = store.get('operations').filter((o) =>
     o.siteName === project && o.operationType === operationType && dateInRange(o.date, from, to));
   const qty = rows.reduce((sum, o) => sum + (o.quantity || 0), 0);
-  const revenue = rows.reduce((sum, o) => sum + (o.quantity || 0) * (projectRateAsOf(o.siteName, o.date).rate || 0), 0);
+  const revenue = rows.reduce((sum, o) => sum + (o.quantity || 0) * (projectRateAsOf(o.siteName, o.operationType, o.date).rate || 0), 0);
   return { qty, revenue, reportCount: rows.length };
 }
 

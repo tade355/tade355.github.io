@@ -647,6 +647,13 @@ create table project_rate_history (
   effective_date date not null,
   rate           numeric,
   rate_unit      text,
+  -- Null = a general/fallback rate for the whole project. Set = this rate
+  -- only applies to that operation type — most contracts price each
+  -- operation type separately (Felling, Stacking, Bonding, ...).
+  operation_type text check (operation_type in (
+    'Felling', 'Stacking', 'Direct Stacking', 'Root Picking', 'Bonding', 'Road', 'Trekking',
+    'Tree Felling', 'Direct Clearing', 'Phase 1', 'Phase 2', 'Cross Cutting', 'Corrections', 'Zero Bonding'
+  )),
   notes          text,
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()

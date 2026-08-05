@@ -132,7 +132,7 @@ function groupLabel(groupBy, key) {
 }
 
 function provisionalRevenueForRows(operations) {
-  return operations.reduce((sum, o) => sum + (o.quantity || 0) * (projectRateAsOf(o.siteName, o.date).rate || 0), 0);
+  return operations.reduce((sum, o) => sum + (o.quantity || 0) * (projectRateAsOf(o.siteName, o.operationType, o.date).rate || 0), 0);
 }
 
 export function computeGroupedStats({ groupBy, from, to, project }) {

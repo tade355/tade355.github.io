@@ -8,6 +8,7 @@ import { formatDate } from '../utils.js';
 import { renderWeeklyReport } from './weeklyReport.js';
 import { renderProfitability } from './profitability.js';
 import { renderRevenueReconciliation } from './revenueReconciliationView.js';
+import { OPERATION_TYPES } from '../constants.js';
 
 const FIELDS = [
   { name: 'name', label: 'Project Name', required: true },
@@ -24,8 +25,8 @@ const FIELDS = [
     { value: 'Expired', label: 'Expired' },
   ] },
   { name: 'percentComplete', label: 'Percent Complete (%)', type: 'number', min: 0, step: '1' },
-  { name: 'rate', label: 'Rate (₦)', type: 'number', min: 0 },
-  { name: 'rateUnit', label: 'Rate Unit (e.g. per Ha, per KM)', },
+  { name: 'rate', label: 'Default Rate (₦) — used when no operation-type-specific rate is set in Rate History', type: 'number', min: 0 },
+  { name: 'rateUnit', label: 'Default Rate Unit (e.g. per Ha, per KM)', },
   { name: 'expectedRatePerDay', label: 'Expected Rate/Day (Ha) — for weekly productivity tracking', type: 'number', min: 0, step: '0.1' },
   { name: 'startDate', label: 'Project Start Date — for Milestone Tracker', type: 'date' },
   { name: 'totalAreaHa', label: 'Total Contract Area (Ha) — for Milestone Tracker', type: 'number', min: 0, step: '0.1' },
@@ -126,14 +127,20 @@ export function renderProjects(container) {
     actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openRateHistoryForm() }, '+ Log Rate Change'));
 
     body.innerHTML = '';
-    body.appendChild(el('p', { class: 'section-subtitle' }, 'Every contract rate change, by project and effective date. Operation Profitability uses the rate that was in effect on each day\'s operations, not just the project\'s current rate.'));
+    body.appendChild(el('p', { class: 'section-subtitle' }, "Every contract rate change, by project, operation type, and effective date. Most contracts price each operation type separately (a hectare's value isn't earned until every operation type contracted for it is done) — a rate logged with no Operation Type is a general/fallback rate for the whole project instead. Provisional revenue (Profitability, Revenue Reconciliation) uses the operation-type-specific rate in effect on each day's operations where one exists, falling back to the general rate otherwise." }));
 
     const projectSelect = el('select', {}, [
       el('option', { value: 'all' }, 'All Projects'),
       ...store.get('projects').map((p) => el('option', { value: p.name }, p.name)),
     ]);
+    const operationTypeSelect = el('select', {}, [
+      el('option', { value: 'all' }, 'All Operation Types'),
+      el('option', { value: 'general' }, 'General (no operation type)'),
+      ...OPERATION_TYPES.map((t) => el('option', { value: t.value }, t.value)),
+    ]);
     body.appendChild(el('div', { class: 'filter-bar' }, [
       el('label', { class: 'filter-field' }, [el('span', {}, 'Project'), projectSelect]),
+      el('label', { class: 'filter-field' }, [el('span', {}, 'Operation Type'), operationTypeSelect]),
     ]));
 
     const tableContainer = el('div');
@@ -142,10 +149,13 @@ export function renderProjects(container) {
     function refresh() {
       let rows = store.get('projectRateHistory').slice().sort((a, b) => (a.effectiveDate < b.effectiveDate ? 1 : -1));
       if (projectSelect.value !== 'all') rows = rows.filter((r) => r.project === projectSelect.value);
+      if (operationTypeSelect.value === 'general') rows = rows.filter((r) => !r.operationType);
+      else if (operationTypeSelect.value !== 'all') rows = rows.filter((r) => r.operationType === operationTypeSelect.value);
 
       renderTable(tableContainer, {
         columns: [
           { key: 'project', label: 'Project' },
+          { key: 'operationType', label: 'Operation Type', render: (r) => r.operationType || 'General (all operations)' },
           { key: 'effectiveDate', label: 'Effective From', render: (r) => formatDate(r.effectiveDate) },
           { key: 'rate', label: 'Rate', render: (r) => (r.rate ? `${formatCurrency(r.rate)} ${r.rateUnit || ''}`.trim() : '—') },
           { key: 'notes', label: 'Notes', render: (r) => r.notes || '—' },
@@ -171,7 +181,7 @@ export function renderProjects(container) {
       });
     }
 
-    projectSelect.addEventListener('change', refresh);
+    [projectSelect, operationTypeSelect].forEach((input) => input.addEventListener('change', refresh));
 
     function openRateHistoryForm(record) {
       if (!store.get('projects').length) { window.alert('Add a project first.'); return; }
@@ -179,6 +189,10 @@ export function renderProjects(container) {
         title: record ? 'Edit Rate Change' : 'Log Rate Change',
         fields: [
           { name: 'project', label: 'Project', type: 'select', required: true, options: store.get('projects').map((p) => ({ value: p.name, label: p.name })) },
+          { name: 'operationType', label: 'Operation Type', type: 'select', options: [
+            { value: '', label: '— General (all operations) —' },
+            ...OPERATION_TYPES.map((t) => ({ value: t.value, label: t.value })),
+          ] },
           { name: 'effectiveDate', label: 'Effective From', type: 'date', required: true },
           { name: 'rate', label: 'Rate (₦)', type: 'number', min: 0 },
           { name: 'rateUnit', label: 'Rate Unit (e.g. per Ha, per KM)' },

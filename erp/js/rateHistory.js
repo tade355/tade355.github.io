@@ -34,14 +34,27 @@ export function dieselRateAsOf(date) {
   return store.get('inventory').find((i) => i.name === 'Diesel (AGO)')?.unitCost || 0;
 }
 
-// The most recent project_rate_history entry for a project at or before
-// `date`. Falls back to the project's own current rate if no history
-// entry exists yet.
-export function projectRateAsOf(project, date) {
-  const history = store.get('projectRateHistory')
-    .filter((h) => h.project === project && h.effectiveDate <= date)
+// The most recent project_rate_history entry for a project (and, usually,
+// a specific operation type) at or before `date`. Most contracts price
+// each operation type separately (Felling, Stacking, Bonding, ...), so an
+// exact operationType match is tried first; if none exists, falls back to
+// a general (no-operationType) rate entry for the project, then to the
+// project's own current rate — so a project that's never had its contract
+// broken down by operation type keeps behaving exactly as before.
+export function projectRateAsOf(project, operationType, date) {
+  const opType = operationType || null;
+  const specific = store.get('projectRateHistory')
+    .filter((h) => h.project === project && (h.operationType || null) === opType && h.effectiveDate <= date)
     .sort((a, b) => (a.effectiveDate < b.effectiveDate ? 1 : -1));
-  if (history.length) return history[0];
+  if (specific.length) return specific[0];
+
+  if (opType) {
+    const general = store.get('projectRateHistory')
+      .filter((h) => h.project === project && !h.operationType && h.effectiveDate <= date)
+      .sort((a, b) => (a.effectiveDate < b.effectiveDate ? 1 : -1));
+    if (general.length) return general[0];
+  }
+
   const p = store.get('projects').find((x) => x.name === project);
   return { rate: p?.rate || 0, rateUnit: p?.rateUnit || '' };
 }

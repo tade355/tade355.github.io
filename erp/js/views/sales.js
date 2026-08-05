@@ -4,6 +4,7 @@ import { renderTable, actionButtons, statusPill, sectionHeader, openModal, openC
 import { printInvoice } from '../print.js';
 import { OPERATION_TYPES } from '../constants.js';
 import { paymentsForInvoice, amountReceived, computeInvoiceStatus } from '../invoicePayments.js';
+import { projectRateAsOf } from '../rateHistory.js';
 
 const CUSTOMER_FIELDS = [
   { name: 'name', label: 'Company / Customer Name', required: true },
@@ -42,7 +43,14 @@ function textField(name, label, type, value, required) {
 // Project — it's what lets the Revenue Reconciliation report match this
 // line against Daily Operations reports for the same operation type and
 // period. Visibility is toggled by the caller via row.setOperationTypeVisible().
-function buildInvoiceItemRow(item, onChange) {
+//
+// getRateContext() supplies the project + a reference date so picking an
+// Operation Type can seed Price/Unit from the contract rate in effect
+// then (Projects → Rate History) — most contracts price each operation
+// type separately. Only fills a blank price, same "computed but still a
+// plain editable input" treatment used elsewhere in this app; it never
+// overwrites a price someone already typed.
+function buildInvoiceItemRow(item, onChange, getRateContext) {
   const description = el('input', { type: 'text', class: 'li-description', placeholder: 'Description of work' });
   description.value = item.description || '';
   const qty = el('input', { type: 'number', class: 'li-qty', min: 0, step: '0.1', placeholder: 'Qty' });
@@ -58,6 +66,16 @@ function buildInvoiceItemRow(item, onChange) {
 
   const row = el('div', { class: 'line-item-row' }, [description, qty, price, operationType, removeBtn]);
   [qty, price].forEach((inp) => inp.addEventListener('input', onChange));
+  operationType.addEventListener('change', () => {
+    if (!price.value && operationType.value && getRateContext) {
+      const { project, date } = getRateContext();
+      if (project && date) {
+        const rate = projectRateAsOf(project, operationType.value, date).rate;
+        if (rate) price.value = rate;
+      }
+    }
+    onChange();
+  });
   removeBtn.addEventListener('click', () => { row.remove(); onChange(); });
   row.setOperationTypeVisible = (visible) => {
     operationType.style.display = visible ? '' : 'none';
@@ -130,12 +148,19 @@ function openInvoiceForm(record, onSaved) {
         [...itemsContainer.children].forEach((row) => row.setOperationTypeVisible(show));
       }
 
+      function getRateContext() {
+        return {
+          project: projectField.querySelector('select').value,
+          date: periodStartField.querySelector('input').value || dateField.querySelector('input').value,
+        };
+      }
+
       const initialItems = record?.items?.length ? record.items : [{}];
-      initialItems.forEach((item) => itemsContainer.appendChild(buildInvoiceItemRow(item, recompute)));
+      initialItems.forEach((item) => itemsContainer.appendChild(buildInvoiceItemRow(item, recompute, getRateContext)));
 
       const addLineBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '+ Add Line');
       addLineBtn.addEventListener('click', () => {
-        const row = buildInvoiceItemRow({}, recompute);
+        const row = buildInvoiceItemRow({}, recompute, getRateContext);
         row.setOperationTypeVisible(projectIsSet());
         itemsContainer.appendChild(row);
         recompute();
