@@ -35,6 +35,16 @@ export function computeProjectStats(project, from, to) {
   const revenue = invoices.reduce((sum, i) => sum + invoiceTotal(i), 0);
   const profit = revenue - totalCost;
 
+  // Provisional: same-day figure from Daily Operations reports (quantity x
+  // the contract rate in effect that day) — real, submitted work that
+  // hasn't necessarily been invoiced yet. Shown alongside verified Revenue
+  // so an active project with reports but no invoice yet doesn't read as
+  // "₦0 earned" when real work has actually gone in. Profit/Margin stay
+  // based on verified Revenue only — see the Fixed Constraint note in
+  // Revenue Reconciliation for why provisional and verified can't be mixed
+  // into one profit figure.
+  const provisionalRevenue = provisionalRevenueForRows(operations);
+
   return {
     project,
     areaCleared,
@@ -45,6 +55,7 @@ export function computeProjectStats(project, from, to) {
     otherCost,
     totalCost,
     revenue,
+    provisionalRevenue,
     profit,
     margin: revenue ? (profit / revenue) * 100 : null,
     revenuePerHa: areaCleared ? revenue / areaCleared : null,
@@ -246,7 +257,8 @@ function renderAllProjects(body, from, to) {
     columns: [
       { key: 'project', label: 'Project' },
       { key: 'areaCleared', label: 'Area Cleared', render: (r) => `${r.areaCleared.toFixed(1)} ha` },
-      { key: 'revenue', label: 'Revenue', render: (r) => formatCurrency(r.revenue) },
+      { key: 'provisionalRevenue', label: 'Provisional Revenue', render: (r) => formatCurrency(r.provisionalRevenue) },
+      { key: 'revenue', label: 'Verified Revenue', render: (r) => formatCurrency(r.revenue) },
       { key: 'dozerCost', label: 'Dozer Cost', render: (r) => formatCurrency(r.dozerCost) },
       { key: 'dieselCost', label: 'Diesel Cost', render: (r) => formatCurrency(r.dieselCost) },
       { key: 'logisticsCost', label: 'Logistics Cost', render: (r) => formatCurrency(r.logisticsCost) },
@@ -260,7 +272,7 @@ function renderAllProjects(body, from, to) {
     emptyText: 'No projects to show.',
   });
 
-  body.appendChild(el('p', { class: 'section-subtitle', html: 'Revenue and Logistics/Other costs only include invoices and expenses explicitly tagged to a project on the Sales and Accounting pages. Dozer and Diesel costs are computed automatically from Daily Operations logs using the rate/diesel price that was in effect on each day (Fleet Management Rate History, and diesel receipts) — Fuel-category expenses are excluded from "Other" to avoid double-counting diesel spend.' }));
+  body.appendChild(el('p', { class: 'section-subtitle', html: 'Provisional Revenue is quantity x the contract rate in effect that day, straight from Daily Operations reports — a same-day figure, whether or not it has been invoiced yet. Verified Revenue and Logistics/Other costs only include invoices and expenses explicitly tagged to a project on the Sales and Accounting pages (Profit/Margin are based on Verified Revenue only). Dozer and Diesel costs are computed automatically from Daily Operations logs using the rate/diesel price that was in effect on each day (Fleet Management Rate History, and diesel receipts) — Fuel-category expenses are excluded from "Other" to avoid double-counting diesel spend.' }));
 }
 
 function renderSingleProject(body, project, from, to) {
@@ -268,11 +280,12 @@ function renderSingleProject(body, project, from, to) {
 
   const statsGrid = el('div', { class: 'stats-grid' }, [
     statCard({ label: 'Area Cleared', value: `${s.areaCleared.toFixed(1)} ha` }),
-    statCard({ label: 'Revenue Earned', value: formatCurrency(s.revenue), tone: 'good' }),
+    statCard({ label: 'Provisional Revenue', value: formatCurrency(s.provisionalRevenue), tone: 'good', hint: 'From submitted Daily Operations reports, whether invoiced yet or not' }),
+    statCard({ label: 'Verified Revenue', value: formatCurrency(s.revenue), tone: 'good' }),
     statCard({ label: 'Total Cost', value: formatCurrency(s.totalCost), tone: 'critical' }),
     statCard({ label: 'Profit', value: formatCurrency(s.profit), tone: s.profit >= 0 ? 'good' : 'critical' }),
     statCard({ label: 'Margin', value: s.margin === null ? '—' : `${s.margin.toFixed(0)}%` }),
-    statCard({ label: 'Revenue / ha', value: formatMaybe(s.revenuePerHa) }),
+    statCard({ label: 'Verified Revenue / ha', value: formatMaybe(s.revenuePerHa) }),
     statCard({ label: 'Cost / ha', value: formatMaybe(s.costPerHa) }),
     statCard({ label: 'Diesel Used', value: `${s.fuelUsed.toLocaleString()} L` }),
   ]);
@@ -292,7 +305,7 @@ function renderSingleProject(body, project, from, to) {
     formatValue: formatCurrency,
   });
 
-  body.appendChild(el('p', { class: 'section-subtitle', html: 'Revenue and Logistics/Other costs only include invoices and expenses explicitly tagged to this project on the Sales and Accounting pages. Dozer and Diesel costs are computed automatically from Daily Operations logs using the rate/diesel price that was in effect on each day (Fleet Management Rate History, and diesel receipts) — Fuel-category expenses are excluded from "Other" to avoid double-counting diesel spend.' }));
+  body.appendChild(el('p', { class: 'section-subtitle', html: 'Provisional Revenue is quantity x the contract rate in effect that day, straight from Daily Operations reports — a same-day figure, whether or not it has been invoiced yet. Verified Revenue and Logistics/Other costs only include invoices and expenses explicitly tagged to this project on the Sales and Accounting pages (Profit/Margin are based on Verified Revenue only). Dozer and Diesel costs are computed automatically from Daily Operations logs using the rate/diesel price that was in effect on each day (Fleet Management Rate History, and diesel receipts) — Fuel-category expenses are excluded from "Other" to avoid double-counting diesel spend.' }));
 
   body.appendChild(el('h3', { class: 'subsection-title' }, 'Weekly Productivity'));
   const { target, rows: weeklyRows } = computeWeeklyProductivity(project, from, to);
