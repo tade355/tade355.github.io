@@ -108,6 +108,31 @@
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
     }
 
+    .discovery-field input[type="file"] {
+      font-family: var(--font-body);
+      font-size: 0.86rem;
+      color: var(--color-muted);
+      padding: 0.5rem 0;
+      border: none;
+    }
+    .discovery-field input[type="file"]::file-selector-button {
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 0.85rem;
+      padding: 0.5rem 1rem;
+      margin-right: 0.75rem;
+      border-radius: 999px;
+      border: 1px solid var(--color-border);
+      background: #fff;
+      color: var(--color-secondary);
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .discovery-field input[type="file"]::file-selector-button:hover {
+      background: var(--color-bg-alt);
+      border-color: var(--color-secondary);
+    }
+
     .discovery-radio-group {
       display: flex;
       flex-wrap: wrap;
@@ -163,7 +188,7 @@
     </div>
 
     <div class="discovery-form-wrap">
-      <form id="discoveryForm" action="https://formspree.io/f/xzdnlybw" method="POST">
+      <form id="discoveryForm" action="https://formspree.io/f/xzdnlybw" method="POST" enctype="multipart/form-data">
         <input type="hidden" name="_subject" value="Discovery Questionnaire response — Topcrown Consulting">
         <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
 
@@ -238,7 +263,7 @@
 
         <fieldset class="discovery-section">
           <legend style="padding:0;"><h2>Section 2 — Brand Identity</h2></legend>
-          <p class="discovery-section-note">If you have a logo, colour palette, or brand guideline document, please email it to fortuityglee@gmail.com separately, or paste a shareable link below.</p>
+          <p class="discovery-section-note">If you have a logo, colour palette, or brand guideline document, upload it below or paste a shareable link.</p>
 
           <div class="discovery-field">
             <label>11. Do you already have a logo?</label>
@@ -277,7 +302,12 @@
           </div>
 
           <div class="discovery-field">
-            <label for="q16b">Link to logo / brand assets / guidelines <span class="hint">(optional)</span></label>
+            <label for="q16c">Upload logo / brand assets / guidelines <span class="hint">(optional — images, PDF, AI, EPS; multiple files allowed)</span></label>
+            <input type="file" id="q16c" name="q16c_assets_upload" accept="image/*,.pdf,.ai,.eps,.svg" multiple>
+          </div>
+
+          <div class="discovery-field">
+            <label for="q16b">Or, link to logo / brand assets / guidelines <span class="hint">(optional)</span></label>
             <input type="text" id="q16b" name="q16b_assets_link" placeholder="e.g. Google Drive or Dropbox link">
           </div>
         </fieldset>
@@ -298,6 +328,11 @@
           <div class="discovery-field">
             <label for="q19">19. Do you have existing content we can use — bio, headshot photos, training photos, case studies, testimonials, publications?</label>
             <textarea id="q19" name="q19_content" rows="2"></textarea>
+          </div>
+
+          <div class="discovery-field">
+            <label for="q19b">Upload existing content <span class="hint">(optional — photos, bio document, case studies, publications; multiple files allowed)</span></label>
+            <input type="file" id="q19b" name="q19b_content_upload" accept="image/*,.pdf,.doc,.docx" multiple>
           </div>
 
           <div class="discovery-field">
