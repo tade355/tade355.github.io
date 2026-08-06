@@ -127,7 +127,7 @@ function initApp() {
     refreshBtn.disabled = true;
     refreshBtn.textContent = 'Refreshing…';
     await silentRefresh();
-    router.render();
+    await router.render();
     refreshBtn.disabled = false;
     refreshBtn.textContent = '↻ Refresh Data';
   });

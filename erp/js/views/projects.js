@@ -127,7 +127,7 @@ export function renderProjects(container) {
     actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openRateHistoryForm() }, '+ Log Rate Change'));
 
     body.innerHTML = '';
-    body.appendChild(el('p', { class: 'section-subtitle' }, "Every contract rate change, by project, operation type, and effective date. Most contracts price each operation type separately (a hectare's value isn't earned until every operation type contracted for it is done) — a rate logged with no Operation Type is a general/fallback rate for the whole project instead. Provisional revenue (Profitability, Revenue Reconciliation) uses the operation-type-specific rate in effect on each day's operations where one exists, falling back to the general rate otherwise." }));
+    body.appendChild(el('p', { class: 'section-subtitle' }, "Every contract rate change, by project, operation type, and effective date. Most contracts price each operation type separately (a hectare's value isn't earned until every operation type contracted for it is done) — a rate logged with no Operation Type is a general/fallback rate for the whole project instead. Provisional revenue (Profitability, Revenue Reconciliation) uses the operation-type-specific rate in effect on each day's operations where one exists, falling back to the general rate otherwise."));
 
     const projectSelect = el('select', {}, [
       el('option', { value: 'all' }, 'All Projects'),
