@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el } from '../utils.js';
-import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
+import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard, showToast } from '../ui.js';
 import { LOAN_CATEGORIES } from '../constants.js';
 import { computeLoanInterest, totalOwed } from '../loanInterest.js';
 import { paymentsForLoan, amountRepaid, amountOutstanding, agingDays } from '../loanPayments.js';
@@ -154,6 +154,7 @@ function openLoanForm(record, onSaved) {
           else await store.add('loans', payload);
           closeModal();
           onSaved();
+          showToast(record ? 'Loan updated.' : 'Loan added.');
         } catch (err) {
           window.alert(err.message || 'Could not save this loan. Please try again.');
           submitBtn.disabled = false;
@@ -259,11 +260,13 @@ function openRepaymentsModal(loan, onSaved) {
         };
         if (!data.date || !data.amount) { window.alert('Date and Amount are required.'); return; }
         try {
+          const wasEditing = Boolean(editingId);
           if (editingId) await store.update('loanRepayments', editingId, data);
           else await store.add('loanRepayments', { loanId: loan.id, ...data });
           resetForm();
           refresh();
           onSaved();
+          showToast(wasEditing ? 'Repayment updated.' : 'Repayment logged.');
         } catch (err) {
           window.alert(err.message || 'Could not save this repayment. Please try again.');
         }

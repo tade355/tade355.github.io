@@ -1,5 +1,6 @@
 import { el, statusPillClass } from './utils.js';
 import { createAttachmentPicker } from './attachments.js';
+import { renderSparkline } from './charts.js';
 
 let modalRoot = null;
 
@@ -9,6 +10,24 @@ export function initModalRoot() {
 
 export function closeModal() {
   if (modalRoot) modalRoot.innerHTML = '';
+}
+
+let toastRoot = null;
+
+export function initToastRoot() {
+  toastRoot = document.getElementById('toastRoot');
+}
+
+// Corner-anchored, auto-dismissing confirmation — e.g. "Loan saved." after
+// a successful add/edit. tone: 'good' | 'warning' | 'critical'.
+export function showToast(message, tone = 'good', duration = 3200) {
+  if (!toastRoot) return;
+  const toast = el('div', { class: `toast toast-${tone}` }, message);
+  toastRoot.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add('toast-leaving');
+    setTimeout(() => toast.remove(), 200);
+  }, duration);
 }
 
 export function openCustomModal({ title, build, wide }) {
@@ -163,13 +182,19 @@ export function actionButtons({ onEdit, onDelete, onPrint, onPayment }) {
 // dashboard KPI to the screen that owns that data). `trend` is optional:
 // { direction: 'up'|'down'|'flat', label, tone }, tone chosen by the caller
 // since "up" isn't always good (e.g. Expenses This Month rising is bad).
-export function statCard({ label, value, hint, tone, href, trend, icon }) {
+// `sparkline` is an optional recent-history number array (oldest first) —
+// a compact trend glyph, not a full chart. `target` is an optional plain
+// string shown under the value (e.g. "Target: 85%").
+export function statCard({ label, value, hint, tone, href, trend, icon, sparkline, target }) {
+  const sparklineSvg = sparkline ? renderSparkline({ values: sparkline, colorVar: tone ? `var(--${tone})` : undefined }) : null;
   const content = [
     icon ? el('span', { class: 'stat-icon' }, icon) : null,
     el('span', { class: 'stat-label' }, label),
     el('span', { class: 'stat-value' }, value),
     trend ? el('span', { class: `stat-trend stat-trend-${trend.tone || 'neutral'}` }, `${trend.direction === 'up' ? '▲' : trend.direction === 'down' ? '▼' : '▬'} ${trend.label}`) : null,
+    target ? el('span', { class: 'stat-target' }, target) : null,
     hint ? el('span', { class: 'stat-hint' }, hint) : null,
+    sparklineSvg ? el('span', { class: 'stat-sparkline' }, [sparklineSvg]) : null,
   ];
   const classes = `stat-card${tone ? ' stat-' + tone : ''}${href ? ' stat-card-link' : ''}`;
   return href

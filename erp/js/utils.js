@@ -73,6 +73,23 @@ export function uid() {
   return Math.random().toString(36).slice(2, 9);
 }
 
+// Animated count-up for a KPI value, ease-out cubic from `from` to `to`.
+// Respects prefers-reduced-motion by jumping straight to the final value.
+export function animateNumber(element, to, { from = 0, duration = 700, formatFn = (n) => Math.round(n).toLocaleString() } = {}) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    element.textContent = formatFn(to);
+    return;
+  }
+  const start = performance.now();
+  function tick(now) {
+    const progress = Math.min(1, (now - start) / duration);
+    const eased = 1 - (1 - progress) ** 3;
+    element.textContent = formatFn(from + (to - from) * eased);
+    if (progress < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
 export function dateInRange(iso, from, to) {
   if (!iso) return false;
   if (from && iso < from) return false;

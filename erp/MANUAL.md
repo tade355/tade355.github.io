@@ -98,14 +98,14 @@ These conventions repeat across almost every module — learn them once here ins
 
 **Who sees it:** Admin, Accounts.
 
-The Dashboard is the executive landing page — a live, always-current snapshot of the whole company, with no forms to fill in (everything here is read-only, sourced from every other module). Almost everything on it is clickable, taking you straight to the module behind the number.
+The Dashboard is an Executive Command Centre — a live, always-current briefing on the whole company, with no forms to fill in (everything here is read-only, sourced from every other module). Almost everything on it is clickable, taking you straight to the module behind the number.
 
 **What's on it, top to bottom:**
 - **Greeting** — "Good morning/afternoon/evening, {name} — here's how Emagrims Ltd is doing today, {date}."
-- **KPI row**: Revenue This Month, Profit This Month, Expenses This Month, Land Cleared This Month, Active Sites, Active Employees. The first four show a trend arrow (▲/▼/▬) and percentage vs. last month — green for a favorable move, amber for an unfavorable one (e.g. Expenses rising shows amber, since more spend isn't good news, while Revenue rising shows green). Every card links to the module that owns that number.
-- **Fleet Snapshot**: Fleet Size, Active, Down / Under Maintenance.
-- **Needs Attention** — every "watch this" signal the app can surface, merged into one clickable, priority-sorted list instead of scattered stat cards: dozers overdue for service, unpaid invoices, overdue loan repayments, out-of-stock / low-stock items, dozers down, fuel credit owed, dozer owner settlements owed, pending Fund Requests / Leave Requests / Fueling Vouchers, and a stale/missing backup warning. Each row links straight to where you'd act on it. Shows "✅ All caught up" when there's nothing outstanding.
-- **This Month at a Glance** — three leaderboard panels: **Top Sites by Hectares** and **Top Operators by Hours** (both for the current month, from Daily Operations), and **Recently Logged** (the 5 most recent Daily Operations reports across all sites) — gives the page a live "pulse" rather than only historical totals.
+- **KPI row** — 10 headline cards, each linking to the module behind it: Machine Availability (% of fleet Active, with a "Target: 85%" reference line), Active Machines, Machines Under Repair, Today's Revenue, Today's Cost, Today's Profit, ROI (Profit ÷ Cost for today — a return-on-operating-spend proxy, labeled as such since capital expenditure per machine isn't tracked), Today's Diesel Consumption, Today's Hectares, Active Staff, and Outstanding Approvals (Fund Requests + Leave Requests + Fueling Vouchers combined). Revenue/Cost/Profit/ROI/Diesel/Hectares each carry a 7-day sparkline and a trend arrow vs. yesterday — green for a favorable move, amber for an unfavorable one (e.g. Cost rising shows amber, Revenue rising shows green).
+- **Executive Alert Center** — every "watch this" signal the app can surface, grouped into three severity tiers instead of one flat list: 🔴 **Critical** (unpaid invoices, overdue loan repayments, out-of-stock items, dozers overdue for service), 🟠 **Important** (dozers down/under maintenance, dozers due soon for service, low-stock items, fuel credit owed, dozer owner settlements owed, pending Fund Requests/Leave Requests/Fueling Vouchers, stale or missing backup), and 🟢 **Info** (daily reports submitted today). Each row links straight to where you'd act on it. Shows "✅ All caught up" when there's nothing outstanding.
+- **This Month at a Glance** — four leaderboard panels for the current month: **Top Sites by Hectares**, **Top Operators by Hours**, **Top Machines by Utilization** (hours worked — not profit, since a per-machine profit can't fully attribute Logistics/Other costs below project level), and **Recently Logged** (the 5 most recent Daily Operations reports across all sites).
+- **Today's Activity Timeline** — a chronological feed of today's real events: Daily Operations reports (using their actual Time Resumed/Time Closed where logged), diesel deliveries, and maintenance log entries. Records with no time-of-day field (diesel receipts, maintenance logs) are listed without a fabricated timestamp rather than an invented one.
 - **Charts** (last 6 months unless noted): Revenue vs Cost vs Profit (company-wide, all projects — same math as Profitability), Sales Trend, Land Cleared Trend, Expenses by Category (all-time), Land Cleared by Site (all-time).
 
 ---
@@ -614,7 +614,7 @@ Every loan also has a **Due Date** (next repayment or review date) and a **Statu
 
 **Log a Repayment (💰 button on the loans table):** same pattern as invoice payments — a window showing that loan's repayment history (Date, Amount, Method, Reference, Notes — editable/deletable) plus a form to log a new one. Outstanding recalculates immediately; nothing on the loan record itself needs updating.
 
-**Overdue loans** (Due Date passed with a real balance outstanding) highlight red in the table and surface on the **Dashboard's Needs Attention** list, the same trigger mechanism used for overdue invoices, overdue maintenance, and pending approvals elsewhere in this app.
+**Overdue loans** (Due Date passed with a real balance outstanding) highlight red in the table and surface on the **Dashboard's Executive Alert Center** (Critical tier), the same trigger mechanism used for overdue invoices, overdue maintenance, and pending approvals elsewhere in this app.
 
 **Print** produces a "LOAN STATEMENT" document: terms, a Principal/Interest/Total Owed breakdown, the full repayment history, and the outstanding balance.
 

@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, invoiceTotal, el } from '../utils.js';
-import { renderTable, actionButtons, statusPill, sectionHeader, openModal, openCustomModal, closeModal, confirmDelete } from '../ui.js';
+import { renderTable, actionButtons, statusPill, sectionHeader, openModal, openCustomModal, closeModal, confirmDelete, showToast } from '../ui.js';
 import { printInvoice } from '../print.js';
 import { OPERATION_TYPES } from '../constants.js';
 import { paymentsForInvoice, amountReceived, computeInvoiceStatus } from '../invoicePayments.js';
@@ -208,6 +208,7 @@ function openInvoiceForm(record, onSaved) {
           else await store.add('invoices', payload);
           closeModal();
           onSaved();
+          showToast(record ? 'Invoice updated.' : 'Invoice created.');
         } catch (err) {
           window.alert(err.message || 'Could not save the invoice. Please try again.');
           submitBtn.disabled = false;
@@ -319,12 +320,14 @@ function openPaymentsModal(invoice, onSaved) {
         };
         if (!data.date || !data.amount) { window.alert('Date and Amount are required.'); return; }
         try {
+          const wasEditing = Boolean(editingId);
           if (editingId) await store.update('invoicePayments', editingId, data);
           else await store.add('invoicePayments', { invoiceId: invoice.id, ...data });
           await recomputeStatus();
           resetForm();
           refresh();
           onSaved();
+          showToast(wasEditing ? 'Payment updated.' : 'Payment logged.');
         } catch (err) {
           window.alert(err.message || 'Could not save this payment. Please try again.');
         }

@@ -269,6 +269,28 @@ export function renderMultiLineChart(container, { title, subtitle, categories, s
   root.appendChild(chart);
 }
 
+/**
+ * Compact, axis-less trend line for a stat card — not a full chart (no
+ * gridlines, labels, or tooltip), just a glyph showing recent direction.
+ * `values`: recent-history numbers, oldest first. Returns the built <svg>
+ * element so callers (statCard) can drop it straight into a card.
+ */
+export function renderSparkline({ values, colorVar = 'var(--brand)', width = 100, height = 28 }) {
+  if (!values || values.length < 2) return null;
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const range = max - min || 1;
+  const step = width / (values.length - 1);
+  const coords = values.map((v, i) => ({ x: i * step, y: height - ((v - min) / range) * height }));
+  const linePath = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+
+  const chart = svg('svg', { viewBox: `0 0 ${width} ${height}`, class: 'sparkline-svg', role: 'img', 'aria-hidden': 'true' });
+  chart.appendChild(svg('path', { d: linePath, fill: 'none', stroke: colorVar, 'stroke-width': 1.75, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+  const last = coords[coords.length - 1];
+  chart.appendChild(svg('circle', { cx: last.x, cy: last.y, r: 2.25, fill: colorVar }));
+  return chart;
+}
+
 export const CATEGORICAL_COLORS = [
   'var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)',
   'var(--series-5)', 'var(--series-6)', 'var(--series-7)', 'var(--series-8)',

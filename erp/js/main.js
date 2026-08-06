@@ -1,5 +1,5 @@
 import { ROUTES, initRouter } from './router.js';
-import { initModalRoot, openModal } from './ui.js';
+import { initModalRoot, initToastRoot, openModal } from './ui.js';
 import { store } from './store.js';
 import { el } from './utils.js';
 import { getCurrentUser, getCurrentTier, canAccess } from './session.js';
@@ -17,6 +17,7 @@ const loadingScreen = document.getElementById('loadingScreen');
 const loadingMessage = document.getElementById('loadingMessage');
 
 initModalRoot();
+initToastRoot();
 initThemeSwitch();
 
 // Every date field in the app is a plain <input type="date">, built fresh
