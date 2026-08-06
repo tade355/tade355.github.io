@@ -4,8 +4,12 @@ import { sectionHeader, statCard, renderTable, actionButtons, openCustomModal, c
 import { printDozerSettlement } from '../print.js';
 import { dozerRatesAsOf } from '../rateHistory.js';
 
-function partnershipDozers() {
-  return store.get('inventory').filter((i) => i.ownership === 'Partnership');
+// Partnership dozers pay a management fee (Emagrims retains a cut of the
+// rental); Rented dozers don't (Emagrims just pays the day rate) — but both
+// are 3rd-party equipment settled the same way otherwise, so they share this
+// one ledger. Management Fee/Day simply stays 0 for a Rented dozer's rows.
+function settleableDozers() {
+  return store.get('inventory').filter((i) => i.ownership === 'Partnership' || i.ownership === 'Rented');
 }
 
 function selectField(name, label, options, value) {
@@ -44,9 +48,9 @@ function settlementBalance(s) {
 }
 
 function openSettlementForm(record, refresh) {
-  const dozers = partnershipDozers();
+  const dozers = settleableDozers();
   if (!dozers.length) {
-    window.alert('No Partnership dozers in the fleet yet. Set a dozer\'s Ownership to Partnership in Fleet Management first.');
+    window.alert('No Partnership or Rented dozers in the fleet yet. Set a dozer\'s Ownership to Partnership or Rented in Fleet Management first.');
     return;
   }
 
@@ -54,7 +58,7 @@ function openSettlementForm(record, refresh) {
     title: record ? 'Edit Owner Settlement' : 'New Owner Settlement',
     wide: true,
     build: (container) => {
-      const equipmentField = selectField('equipment', 'Partnership Dozer', dozers.map((d) => ({ value: d.name, label: d.name })), record?.equipment);
+      const equipmentField = selectField('equipment', 'Dozer', dozers.map((d) => ({ value: d.name, label: d.name })), record?.equipment);
       const periodStartField = textField('periodStart', 'Period Start', 'date', record?.periodStart, true);
       const periodEndField = textField('periodEnd', 'Period End', 'date', record?.periodEnd, true);
       const topGrid = el('div', { class: 'form-grid-2' }, [equipmentField, periodStartField, periodEndField]);
@@ -158,13 +162,13 @@ function openSettlementForm(record, refresh) {
   });
 }
 
-// Per-Partnership-dozer running balance owed to its owner — generated
-// rental minus management fee retained, repairs, and what's already been
-// paid out. Exported so the Dashboard can surface the company-wide total
-// without duplicating this logic.
+// Per-dozer running balance owed to its owner (Partnership or Rented) —
+// generated rental minus management fee retained (0 for Rented), repairs,
+// and what's already been paid out. Exported so the Dashboard can surface
+// the company-wide total without duplicating this logic.
 export function ownerSettlementBalances() {
   const settlements = store.get('dozerOwnerSettlements');
-  return partnershipDozers().map((d) => {
+  return settleableDozers().map((d) => {
     const own = settlements.filter((s) => s.equipment === d.name);
     const generated = own.reduce((sum, s) => sum + (s.daysWorked * s.rentalRatePerDay), 0);
     const retained = own.reduce((sum, s) => sum + (s.daysWorked * s.managementFeePerDay), 0);
@@ -181,7 +185,7 @@ export function renderDozerRentPayments(container) {
     container.innerHTML = '';
     const settlements = store.get('dozerOwnerSettlements').slice().sort((a, b) => (a.periodStart < b.periodStart ? 1 : -1));
 
-    container.appendChild(sectionHeader('Dozer Rent Payments', 'Formal, owner-shareable record of days worked, rental earned, management fee retained, repairs, and amount paid — Partnership dozers only', el('button', { class: 'btn btn-primary', onClick: () => openSettlementForm(null, refresh) }, '+ New Settlement')));
+    container.appendChild(sectionHeader('Dozer Rent Payments', 'Formal, owner-shareable record of days worked, rental earned, management fee retained (0 for Rented dozers), repairs, and amount paid — Partnership and Rented dozers', el('button', { class: 'btn btn-primary', onClick: () => openSettlementForm(null, refresh) }, '+ New Settlement')));
 
     const balanceRows = ownerSettlementBalances();
 
@@ -198,7 +202,7 @@ export function renderDozerRentPayments(container) {
         { key: 'balance', label: 'Balance Owed', render: (r) => el('strong', { class: r.balance >= 0 ? 'text-critical' : 'text-good' }, formatCurrency(r.balance)) },
       ],
       rows: balanceRows,
-      emptyText: 'No Partnership dozers in the fleet yet.',
+      emptyText: 'No Partnership or Rented dozers in the fleet yet.',
     });
 
     container.appendChild(el('h3', { class: 'subsection-title' }, 'Settlement History'));
