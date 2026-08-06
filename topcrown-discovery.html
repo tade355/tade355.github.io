@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Website &amp; Brand Discovery Questionnaire | Fortuity Glee Consult</title>
+  <meta name="description" content="Discovery questionnaire from Fortuity Glee Consult for Topcrown Consulting's website project.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0B1F3A">
+
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon-180.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="style.css" rel="stylesheet">
+
+  <style>
+    fieldset {
+      border: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    legend {
+      width: 100%;
+      padding: 0;
+    }
+
+    .discovery-hero {
+      background: linear-gradient(135deg, #0B1F3A 0%, #14294d 45%, #1b3766 75%, #0d2242 100%);
+      color: #fff;
+      padding: 3.5rem 0 2.75rem;
+    }
+    .discovery-hero .logo-mark { height: 36px; width: auto; margin-bottom: 1.5rem; }
+    .discovery-hero .eyebrow { color: var(--color-accent); }
+    .discovery-hero h1 { color: #fff; font-size: 2rem; margin-bottom: 0.6rem; }
+    .discovery-hero p { color: rgba(255,255,255,0.75); max-width: 640px; margin: 0; }
+
+    .discovery-intro {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 0;
+      color: var(--color-muted);
+    }
+
+    .discovery-form-wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 1.5rem 1.5rem 4rem;
+    }
+
+    .discovery-section {
+      margin-top: 2.75rem;
+      padding-top: 1.75rem;
+      border-top: 2px solid var(--color-border);
+    }
+
+    .discovery-section h2 {
+      font-size: 1.3rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .discovery-section-note {
+      color: var(--color-muted);
+      font-size: 0.88rem;
+      margin: 0 0 1.5rem;
+    }
+
+    .discovery-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      margin-bottom: 1.4rem;
+    }
+
+    .discovery-field label {
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .discovery-field .hint {
+      font-weight: 400;
+      color: var(--color-muted);
+      font-size: 0.85rem;
+    }
+
+    .discovery-field input[type="text"],
+    .discovery-field input[type="email"],
+    .discovery-field textarea {
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      padding: 0.7rem 0.9rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      resize: vertical;
+      background: #fff;
+    }
+
+    .discovery-field input:focus,
+    .discovery-field textarea:focus {
+      outline: none;
+      border-color: var(--color-secondary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .discovery-radio-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+    }
+
+    .discovery-radio-group label {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 500;
+      font-size: 0.9rem;
+      color: var(--color-text);
+    }
+
+    .discovery-two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+
+    .discovery-submit-note {
+      background: var(--color-bg-alt);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 1.25rem 1.5rem;
+      margin: 2.5rem 0 2rem;
+      font-size: 0.9rem;
+      color: var(--color-muted);
+    }
+
+    @media (max-width: 640px) {
+      .discovery-two-col { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <section class="discovery-hero">
+    <div class="container">
+      <img src="assets/logo-icon.png" alt="Fortuity Glee Consult" class="logo-mark">
+      <p class="eyebrow">Fortuity Glee Consult &middot; Prepared for Topcrown Consulting</p>
+      <h1>Website &amp; Brand Discovery Questionnaire</h1>
+      <p>Attn: Dr. Adekanmbi Adeleke, PhD, FMNES — before we design or price anything, we'd like to understand Topcrown Consulting directly from you.</p>
+    </div>
+  </section>
+
+  <main id="main">
+    <div class="discovery-intro">
+      <p>Rather than proposing a design or a price before we truly understand your business, we'd like to start by learning directly from you — about Topcrown Consulting itself, and about the branding you already have or intend to build.</p>
+      <p>Please answer as fully as you're able. There are no wrong answers — where something doesn't apply yet (for example, if you don't yet have defined brand colours), simply say so, and we'll factor that into our recommendations rather than assume on your behalf.</p>
+    </div>
+
+    <div class="discovery-form-wrap">
+      <form id="discoveryForm" action="https://formspree.io/f/xzdnlybw" method="POST">
+        <input type="hidden" name="_subject" value="Discovery Questionnaire response — Topcrown Consulting">
+        <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
+
+        <fieldset class="discovery-section" style="border:none; padding-top:0; margin-top:0;">
+          <legend style="padding:0;"><h2>Your Details</h2></legend>
+          <p class="discovery-section-note">So we know who we're speaking with, and can reply to the right address.</p>
+          <div class="discovery-two-col">
+            <div class="discovery-field">
+              <label for="respName">Your name</label>
+              <input type="text" id="respName" name="name" required>
+            </div>
+            <div class="discovery-field">
+              <label for="respEmail">Your email</label>
+              <input type="email" id="respEmail" name="email" required>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="discovery-section">
+          <legend style="padding:0;"><h2>Section 1 — About Topcrown Consulting</h2></legend>
+
+          <div class="discovery-field">
+            <label for="q1">1. In what year was Topcrown Consulting founded, or how long has it been operating?</label>
+            <input type="text" id="q1" name="q1_founded">
+          </div>
+
+          <div class="discovery-field">
+            <label for="q2">2. In your own words, what does Topcrown Consulting do? <span class="hint">(1–2 sentences)</span></label>
+            <textarea id="q2" name="q2_description" rows="2"></textarea>
+          </div>
+
+          <div class="discovery-field">
+            <label for="q3">3. What is your mission — what are you ultimately trying to achieve for your clients?</label>
+            <textarea id="q3" name="q3_mission" rows="2"></textarea>
+          </div>
+
+          <div class="discovery-field">
+            <label for="q4">4. What is your vision — where do you see Topcrown Consulting in 5 years?</label>
+            <textarea id="q4" name="q4_vision" rows="2"></textarea>
+          </div>
+
+          <div class="discovery-field">
+            <label for="q5">5. Do you have a tagline or motto? If yes, please state it exactly as it should appear.</label>
+            <input type="text" id="q5" name="q5_tagline">
+          </div>
+
+          <div class="discovery-field">
+            <label for="q6">6. What are your core values? <span class="hint">(3–5 words or short phrases)</span></label>
+            <input type="text" id="q6" name="q6_values">
+          </div>
+
+          <div class="discovery-field">
+            <label for="q7">7. Who is your ideal client or target audience for each service line (Consulting vs. Training)?</label>
+            <textarea id="q7" name="q7_audience" rows="2"></textarea>
+          </div>
+
+          <div class="discovery-field">
+            <label for="q8">8. What specific services do you offer under Consulting? Under Training?</label>
+            <textarea id="q8" name="q8_services" rows="3"></textarea>
+          </div>
+
+          <div class="discovery-field">
+            <label for="q9">9. What makes Topcrown Consulting different from other consultants or trainers in this space?</label>
+            <textarea id="q9" name="q9_differentiation" rows="2"></textarea>
+          </div>
+
+          <div class="discovery-field">
+            <label for="q10">10. Any notable clients, projects, credentials, or affiliations we should highlight? <span class="hint">(e.g. DFID/Propcom Mai-Karfi, FMNES fellowship, cohort numbers, testimonials)</span></label>
+            <textarea id="q10" name="q10_credentials" rows="3"></textarea>
+          </div>
+        </fieldset>
+
+        <fieldset class="discovery-section">
+          <legend style="padding:0;"><h2>Section 2 — Brand Identity</h2></legend>
+          <p class="discovery-section-note">If you have a logo, colour palette, or brand guideline document, please email it to fortuityglee@gmail.com separately, or paste a shareable link below.</p>
+
+          <div class="discovery-field">
+            <label>11. Do you already have a logo?</label>
+            <div class="discovery-radio-group">
+              <label><input type="radio" name="q11_logo" value="Yes"> Yes</label>
+              <label><input type="radio" name="q11_logo" value="No"> No</label>
+            </div>
+          </div>
+
+          <div class="discovery-field">
+            <label for="q12">12. Do you have brand colours already defined? If yes, please provide hex codes or samples.</label>
+            <input type="text" id="q12" name="q12_colours">
+          </div>
+
+          <div class="discovery-field">
+            <label for="q13">13. Do you have preferred fonts/typefaces? If not, what's your general style preference (modern, academic/traditional, bold, minimal)?</label>
+            <textarea id="q13" name="q13_fonts" rows="2"></textarea>
+          </div>
+
+          <div class="discovery-field">
+            <label for="q14">14. How would you describe the tone of voice for your brand? <span class="hint">(e.g. formal and academic, approachable and practical, authoritative)</span></label>
+            <textarea id="q14" name="q14_tone" rows="2"></textarea>
+          </div>
+
+          <div class="discovery-field">
+            <label>15. Do you have existing brand guidelines or a style guide we should follow?</label>
+            <div class="discovery-radio-group">
+              <label><input type="radio" name="q15_guidelines" value="Yes"> Yes</label>
+              <label><input type="radio" name="q15_guidelines" value="No"> No</label>
+            </div>
+          </div>
+
+          <div class="discovery-field">
+            <label for="q16">16. Do you have existing marketing materials (business card, brochure, slide template, letterhead) the website should align with?</label>
+            <textarea id="q16" name="q16_materials" rows="2"></textarea>
+          </div>
+
+          <div class="discovery-field">
+            <label for="q16b">Link to logo / brand assets / guidelines <span class="hint">(optional)</span></label>
+            <input type="text" id="q16b" name="q16b_assets_link" placeholder="e.g. Google Drive or Dropbox link">
+          </div>
+        </fieldset>
+
+        <fieldset class="discovery-section">
+          <legend style="padding:0;"><h2>Section 3 — Website Goals &amp; Content</h2></legend>
+
+          <div class="discovery-field">
+            <label for="q17">17. What is the primary goal of the website? <span class="hint">(e.g. generate consulting leads, enrol training participants, build credibility, showcase publications)</span></label>
+            <textarea id="q17" name="q17_goal" rows="2"></textarea>
+          </div>
+
+          <div class="discovery-field">
+            <label for="q18">18. What pages or sections are must-haves? <span class="hint">(e.g. About, Services, Training Schedule, Insights, Testimonials, Contact)</span></label>
+            <textarea id="q18" name="q18_pages" rows="2"></textarea>
+          </div>
+
+          <div class="discovery-field">
+            <label for="q19">19. Do you have existing content we can use — bio, headshot photos, training photos, case studies, testimonials, publications?</label>
+            <textarea id="q19" name="q19_content" rows="2"></textarea>
+          </div>
+
+          <div class="discovery-field">
+            <label for="q20">20. Are there other websites, in or outside your industry, whose look or feel you admire? Please share links and what you like about them.</label>
+            <textarea id="q20" name="q20_references" rows="3"></textarea>
+          </div>
+
+          <div class="discovery-field">
+            <label for="q21">21. Do you already own a domain name? If yes, what is it? If not, do you have a preference?</label>
+            <input type="text" id="q21" name="q21_domain">
+          </div>
+
+          <div class="discovery-field">
+            <label>22. Do you want a contact form, a training enrolment/booking form, or both?</label>
+            <div class="discovery-radio-group">
+              <label><input type="radio" name="q22_forms" value="Contact form only"> Contact form only</label>
+              <label><input type="radio" name="q22_forms" value="Booking form only"> Booking form only</label>
+              <label><input type="radio" name="q22_forms" value="Both"> Both</label>
+            </div>
+          </div>
+
+          <div class="discovery-two-col">
+            <div class="discovery-field">
+              <label for="q23">23. Expected budget range</label>
+              <input type="text" id="q23" name="q23_budget">
+            </div>
+            <div class="discovery-field">
+              <label for="q24">24. Ideal timeline for launch</label>
+              <input type="text" id="q24" name="q24_timeline">
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="discovery-section">
+          <legend style="padding:0;"><h2>Section 4 — Primary Contact</h2></legend>
+
+          <div class="discovery-field">
+            <label for="q25">25. Who is the main point of contact for this project, and what's the best way to reach them (phone/email)?</label>
+            <input type="text" id="q25" name="q25_contact">
+          </div>
+
+          <div class="discovery-field">
+            <label for="q26">26. Who has final sign-off authority on design and content decisions?</label>
+            <input type="text" id="q26" name="q26_signoff">
+          </div>
+        </fieldset>
+
+        <div class="discovery-submit-note">
+          Once we receive your responses, Fortuity Glee Consult will prepare a design mockup and a concrete project scope built specifically around Topcrown Consulting's business and brand, followed by a formal, itemized quotation and delivery timeline. No part of the design or pricing will be finalized until this questionnaire is back with us.
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Submit Responses</button>
+        <p class="form-note" id="discoveryFormNote" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <span>Fortuity Glee Consult &middot; fortuityglee@gmail.com &middot; +234 813 806 5434 &middot; BN 2788269</span>
+    </div>
+  </footer>
+
+  <script>
+    const discoveryForm = document.getElementById('discoveryForm');
+    const discoveryFormNote = document.getElementById('discoveryFormNote');
+
+    if (discoveryForm) {
+      discoveryForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const submitButton = discoveryForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        discoveryFormNote.textContent = 'Sending…';
+        discoveryFormNote.classList.remove('form-note-error');
+
+        try {
+          const response = await fetch(discoveryForm.action, {
+            method: 'POST',
+            body: new FormData(discoveryForm),
+            headers: { Accept: 'application/json' },
+          });
+
+          if (response.ok) {
+            discoveryFormNote.textContent = 'Thank you — your responses have been received. We will be in touch shortly.';
+            discoveryForm.reset();
+          } else {
+            discoveryFormNote.textContent = 'Something went wrong sending your responses. Please email us directly at fortuityglee@gmail.com.';
+            discoveryFormNote.classList.add('form-note-error');
+          }
+        } catch (error) {
+          discoveryFormNote.textContent = 'Something went wrong sending your responses. Please email us directly at fortuityglee@gmail.com.';
+          discoveryFormNote.classList.add('form-note-error');
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+    }
+  </script>
+</body>
+</html>
