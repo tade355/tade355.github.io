@@ -104,7 +104,7 @@ The Dashboard is the executive landing page — a live, always-current snapshot 
 - **Greeting** — "Good morning/afternoon/evening, {name} — here's how Emagrims Ltd is doing today, {date}."
 - **KPI row**: Revenue This Month, Profit This Month, Expenses This Month, Land Cleared This Month, Active Sites, Active Employees. The first four show a trend arrow (▲/▼/▬) and percentage vs. last month — green for a favorable move, amber for an unfavorable one (e.g. Expenses rising shows amber, since more spend isn't good news, while Revenue rising shows green). Every card links to the module that owns that number.
 - **Fleet Snapshot**: Fleet Size, Active, Down / Under Maintenance.
-- **Needs Attention** — every "watch this" signal the app can surface, merged into one clickable, priority-sorted list instead of scattered stat cards: dozers overdue for service, unpaid invoices, out-of-stock / low-stock items, dozers down, fuel credit owed, dozer owner settlements owed, pending Fund Requests / Leave Requests / Fueling Vouchers, and a stale/missing backup warning. Each row links straight to where you'd act on it. Shows "✅ All caught up" when there's nothing outstanding.
+- **Needs Attention** — every "watch this" signal the app can surface, merged into one clickable, priority-sorted list instead of scattered stat cards: dozers overdue for service, unpaid invoices, overdue loan repayments, out-of-stock / low-stock items, dozers down, fuel credit owed, dozer owner settlements owed, pending Fund Requests / Leave Requests / Fueling Vouchers, and a stale/missing backup warning. Each row links straight to where you'd act on it. Shows "✅ All caught up" when there's nothing outstanding.
 - **This Month at a Glance** — three leaderboard panels: **Top Sites by Hectares** and **Top Operators by Hours** (both for the current month, from Daily Operations), and **Recently Logged** (the 5 most recent Daily Operations reports across all sites) — gives the page a live "pulse" rather than only historical totals.
 - **Charts** (last 6 months unless noted): Revenue vs Cost vs Profit (company-wide, all projects — same math as Profitability), Sales Trend, Land Cleared Trend, Expenses by Category (all-time), Land Cleared by Site (all-time).
 
@@ -403,7 +403,7 @@ Stat cards: Total Received (All-Time), Total Issued (from Daily Logs), Expected 
 **"+ Log Stock Count" fields:** Date, Counted Litres (the physical tank reading), Counted By, Notes.
 
 Below the buttons, four sections:
-1. **Diesel Receipts** — every delivery logged.
+1. **Diesel Receipts** — every delivery logged, filterable by **Station** and date range (From/To). **🖨 Print Report** produces a "DIESEL RECEIPTS REPORT" document listing exactly what's currently filtered — date, litres, unit cost, total cost, supplier, and reference for each receipt, plus a totals row — useful for reconciling directly with a specific filling station over a period.
 2. **Stock Counts & Reconciliation** — every physical count, compared against what the records say *should* be in the tank as of that date, with a Variance pill (green if under 1 L off, amber if under 2% off, red if worse).
 3. **Diesel Ledger by Asset** — filter by date range; shows each dozer's Opening / New / Used / Closing litre balances over that period. "New" comes from Fulfilled fueling vouchers issued to that asset; "Used" comes from its Daily Operations fuel figures; "Opening" is derived from everything before your start date — none of this is entered by hand.
 4. **Diesel Replenishment Request — &lt;tomorrow's date&gt;** — for every fleet asset, shows **C. Diesel** (its most recent actual Closing Diesel reading from Daily Operations), **Tomorrow** (the top-up still needed on top of that), **Next Day** (the full amount needed the day after, assuming the tank is empty by then), **Total**, and **Status**. Two inputs — **Target Hrs — Tomorrow** and **Target Hrs — Next Day** (both default to 8) — let you adjust the planning assumption; a **Station** and **Staff (requested by)** dropdown feed the printed document. Click **🖨 Print Request** for a "DIESEL REQUEST" document itemized per asset with a total, ready to send for approval and on to the station. This is a planning estimate, not a confirmed work schedule.
@@ -528,7 +528,7 @@ No print button.
 
 **Who sees it:** Admin, Accounts.
 
-Three tabs: **Expenses, Income & Expenditure, Profitability.**
+Four tabs: **Expenses, Income & Expenditure, Profitability, Loans.**
 
 ### Expenses tab
 
@@ -598,6 +598,25 @@ No print button.
 > - **Profit** = Verified Revenue − (Dozer + Diesel + Logistics + Other). **Margin** = Profit ÷ Verified Revenue. Both are always based on Verified Revenue, never Provisional — see the Fixed Constraint note under Revenue Reconciliation for why the two can't be mixed into one profit figure.
 
 This is a read-only report — nothing here can be added or edited directly.
+
+### Loans tab
+
+**Purpose:** everything the company has borrowed — from banks, directors, investors, or cooperatives — with terms, computed interest, and repayment status in one place.
+
+**Stat cards:** Total Outstanding, Total Interest Accrued, Loans Overdue.
+
+**"+ Add Loan" fields:** Category (Bank Loan / Director-Personal Loan / Investor Loan / Cooperative-Society Loan / Other), Lender / Source, Date Taken, Principal (₦), **Interest Type** — which changes what shows next:
+
+- **Fixed** — Interest Rate (%, informational only), Interest Basis (Flat / Per Annum / Per Month, also informational), and **Total Repayable (₦)** entered directly as agreed with the lender. This tab is a *tracker* for fixed loans, not an amortization calculator — it doesn't derive compounding or day-count interest itself, since a real loan agreement already states the figure.
+- **Turnover-Based / Profit-Based** — for money channeled into operations and repaid as a share of what it helped generate. Linked Project (or leave as "Company-wide"), Interest Percentage (%), and an Evaluation Period (Start/End). Interest is **computed automatically**: your percentage × that project's (or the whole company's) turnover or profit for the period, the exact same figures Profitability produces. A **Manual Interest Override (₦)** field, if set, replaces the computed figure entirely — useful if the assessed amount is disputed or needs a manual correction; the loan row shows "(override)" next to the Interest figure whenever one is active.
+
+Every loan also has a **Due Date** (next repayment or review date) and a **Status** (Active / Partially Repaid / Repaid / Restructured / Defaulted / Written Off) — Status is set by hand, not computed, since default/write-off/restructure decisions are judgment calls; Repaid/Outstanding amounts stay accurate regardless of which Status is chosen.
+
+**Log a Repayment (💰 button on the loans table):** same pattern as invoice payments — a window showing that loan's repayment history (Date, Amount, Method, Reference, Notes — editable/deletable) plus a form to log a new one. Outstanding recalculates immediately; nothing on the loan record itself needs updating.
+
+**Overdue loans** (Due Date passed with a real balance outstanding) highlight red in the table and surface on the **Dashboard's Needs Attention** list, the same trigger mechanism used for overdue invoices, overdue maintenance, and pending approvals elsewhere in this app.
+
+**Print** produces a "LOAN STATEMENT" document: terms, a Principal/Interest/Total Owed breakdown, the full repayment history, and the outstanding balance.
 
 ---
 

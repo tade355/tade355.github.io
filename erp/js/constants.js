@@ -146,6 +146,14 @@ export const EXPENSE_CATEGORIES = [
   'Other',
 ];
 
+export const LOAN_CATEGORIES = [
+  'Bank Loan',
+  'Director/Personal Loan',
+  'Investor Loan',
+  'Cooperative/Society Loan',
+  'Other',
+];
+
 // Fleet ownership categories — see Fleet Management and Dozer Economics.
 // Company: company owns + maintains it, pays operators per day.
 // Partnership: a 2nd-party owner; company pays a day-rate rental, retains

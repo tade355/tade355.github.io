@@ -418,6 +418,81 @@ export function printDieselReplenishmentRequest(forDate, rows, { station, reques
   render(html);
 }
 
+export function printLoanStatement(loan, repayments) {
+  const interest = loan.total - loan.principal;
+  const html = `
+    ${letterhead('LOAN STATEMENT', loan.id)}
+    <div class="print-meta-grid">
+      <div><strong>Lender / Source:</strong> ${loan.lender}</div>
+      <div><strong>Category:</strong> ${loan.category}</div>
+      <div><strong>Date Taken:</strong> ${formatDate(loan.dateTaken)}</div>
+      <div><strong>Interest Type:</strong> ${loan.interestType}</div>
+      <div><strong>Due Date:</strong> ${loan.dueDate ? formatDate(loan.dueDate) : '—'}</div>
+      <div><strong>Status:</strong> ${loan.status}</div>
+      ${loan.linkedProject ? `<div><strong>Linked Project:</strong> ${loan.linkedProject}</div>` : ''}
+    </div>
+    <table class="print-table">
+      <thead><tr><th>Item</th><th>Amount</th></tr></thead>
+      <tbody>
+        <tr><td>Principal</td><td>${formatCurrency(loan.principal)}</td></tr>
+        <tr><td>Interest</td><td>${formatCurrency(interest)}</td></tr>
+      </tbody>
+      <tfoot><tr><td>Total Owed</td><td>${formatCurrency(loan.total)}</td></tr></tfoot>
+    </table>
+    <table class="print-table">
+      <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Reference</th></tr></thead>
+      <tbody>
+        ${repayments.length ? repayments.map((r) => `
+          <tr>
+            <td>${formatDate(r.date)}</td>
+            <td>${formatCurrency(r.amount)}</td>
+            <td>${r.method || '—'}</td>
+            <td>${r.reference || '—'}</td>
+          </tr>
+        `).join('') : '<tr><td colspan="4">No repayments logged yet.</td></tr>'}
+      </tbody>
+      <tfoot><tr><td colspan="3">Total Repaid</td><td>${formatCurrency(loan.repaid)}</td></tr></tfoot>
+    </table>
+    <div class="print-block">
+      <strong>Outstanding Balance:</strong> ${formatCurrency(loan.outstanding)}
+    </div>
+    ${loan.notes ? `<div class="print-block"><strong>Notes:</strong><p>${loan.notes}</p></div>` : ''}
+    ${signatureBlock(['Prepared By', 'Authorized Signature'])}
+  `;
+  render(html);
+}
+
+export function printDieselStationReport(station, from, to, rows) {
+  const totalLitres = rows.reduce((sum, r) => sum + (r.litres || 0), 0);
+  const totalCost = rows.reduce((sum, r) => sum + (r.litres || 0) * (r.unitCost || 0), 0);
+  const periodLabel = (from || to) ? `${from ? formatDate(from) : 'Start'} – ${to ? formatDate(to) : 'Present'}` : 'All Time';
+  const html = `
+    ${letterhead('DIESEL RECEIPTS REPORT', station || 'All Stations')}
+    <div class="print-meta-grid">
+      <div><strong>Station:</strong> ${station || 'All Stations'}</div>
+      <div><strong>Period:</strong> ${periodLabel}</div>
+      <div><strong>Receipts:</strong> ${rows.length}</div>
+    </div>
+    <table class="print-table">
+      <thead><tr><th>Date</th><th>Litres</th><th>Unit Cost</th><th>Total Cost</th><th>Supplier</th><th>Reference</th></tr></thead>
+      <tbody>
+        ${rows.length ? rows.map((r) => `
+          <tr>
+            <td>${formatDate(r.date)}</td>
+            <td>${(r.litres || 0).toLocaleString()} L</td>
+            <td>${formatCurrency(r.unitCost)}</td>
+            <td>${formatCurrency((r.litres || 0) * (r.unitCost || 0))}</td>
+            <td>${r.supplier || '—'}</td>
+            <td>${r.reference || '—'}</td>
+          </tr>
+        `).join('') : '<tr><td colspan="6">No receipts in this range.</td></tr>'}
+      </tbody>
+      <tfoot><tr><td>Total</td><td>${totalLitres.toLocaleString()} L</td><td></td><td>${formatCurrency(totalCost)}</td><td colspan="2"></td></tr></tfoot>
+    </table>
+  `;
+  render(html);
+}
+
 export function printStaffMemo(memo, { employeeName, issuedByName }) {
   const html = `
     ${letterhead(memo.type.toUpperCase(), memo.id)}

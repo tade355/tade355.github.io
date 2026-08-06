@@ -2,7 +2,7 @@ import { store } from '../store.js';
 import { formatCurrency, formatDate, el, statusPillClass, dateInRange } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { FUEL_STATIONS } from '../constants.js';
-import { printDieselReplenishmentRequest } from '../print.js';
+import { printDieselReplenishmentRequest, printDieselStationReport } from '../print.js';
 import { fleetItems } from './fleet.js';
 
 function projectOptions() {
@@ -134,9 +134,38 @@ export function renderDieselTracking(container) {
 
     body.innerHTML = '';
     body.appendChild(el('h3', { class: 'subsection-title' }, 'Diesel Receipts'));
+
+    const receiptsFilterBar = el('div', { class: 'filter-bar' });
+    const receiptsStationSelect = el('select', {}, [
+      el('option', { value: '' }, 'All Stations'),
+      ...FUEL_STATIONS.map((s) => el('option', { value: s }, s)),
+    ]);
+    const receiptsFrom = el('input', { type: 'date' });
+    const receiptsTo = el('input', { type: 'date' });
+    receiptsFilterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Station'), receiptsStationSelect]));
+    receiptsFilterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'From'), receiptsFrom]));
+    receiptsFilterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), receiptsTo]));
+    const printReceiptsBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '🖨 Print Report');
+    receiptsFilterBar.appendChild(printReceiptsBtn);
+    body.appendChild(receiptsFilterBar);
+
     const receiptsContainer = el('div');
     body.appendChild(receiptsContainer);
-    renderTable(receiptsContainer, {
+
+    function filteredReceipts() {
+      return receipts
+        .filter((r) => (!receiptsStationSelect.value || r.station === receiptsStationSelect.value) && dateInRange(r.date, receiptsFrom.value, receiptsTo.value))
+        .slice()
+        .sort((a, b) => (a.date < b.date ? 1 : -1));
+    }
+
+    printReceiptsBtn.addEventListener('click', () => {
+      printDieselStationReport(receiptsStationSelect.value, receiptsFrom.value, receiptsTo.value, filteredReceipts());
+    });
+    [receiptsStationSelect, receiptsFrom, receiptsTo].forEach((input) => input.addEventListener('change', refreshReceiptsTable));
+
+    function refreshReceiptsTable() {
+      renderTable(receiptsContainer, {
       columns: [
         { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
         { key: 'litres', label: 'Litres', render: (r) => `${r.litres.toLocaleString()} L` },
@@ -163,9 +192,11 @@ export function renderDieselTracking(container) {
           }),
         },
       ],
-      rows: receipts.slice().sort((a, b) => (a.date < b.date ? 1 : -1)),
-      emptyText: 'No diesel receipts logged yet.',
-    });
+        rows: filteredReceipts(),
+        emptyText: 'No diesel receipts match this filter.',
+      });
+    }
+    refreshReceiptsTable();
 
     body.appendChild(el('h3', { class: 'subsection-title' }, 'Stock Counts & Reconciliation'));
     const countsContainer = el('div');

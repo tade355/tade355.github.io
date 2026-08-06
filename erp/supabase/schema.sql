@@ -516,6 +516,60 @@ create trigger trg_financial_entries_updated_at before update on financial_entri
   for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------
+-- loan portfolio (+ repayments) — see erp/js/loanInterest.js and
+-- erp/js/loanPayments.js for the interest/repayment computation this
+-- schema supports.
+-- ---------------------------------------------------------------------
+
+create table loans (
+  id                        text primary key,
+  category                  text not null check (category in (
+    'Bank Loan', 'Director/Personal Loan', 'Investor Loan', 'Cooperative/Society Loan', 'Other'
+  )),
+  lender                    text not null,
+  date_taken                date not null,
+  principal                 numeric not null default 0,
+  interest_type             text not null check (interest_type in ('Fixed', 'Turnover-Based', 'Profit-Based')),
+  interest_rate             numeric,
+  interest_rate_basis       text check (interest_rate_basis in ('Flat', 'Per Annum', 'Per Month')),
+  total_repayable           numeric,
+  linked_project            text,
+  interest_percentage       numeric,
+  evaluation_period_start   date,
+  evaluation_period_end     date,
+  manual_interest_override  numeric,
+  due_date                  date,
+  status                    text not null default 'Active' check (status in (
+    'Active', 'Partially Repaid', 'Repaid', 'Restructured', 'Defaulted', 'Written Off'
+  )),
+  notes                     text,
+  created_at                timestamptz not null default now(),
+  updated_at                timestamptz not null default now()
+);
+create index idx_loans_due_date on loans(due_date);
+create trigger trg_loans_updated_at before update on loans
+  for each row execute function set_updated_at();
+alter table loans enable row level security;
+create policy loans_anon_all on loans for all to authenticated using (true) with check (true);
+
+create table loan_repayments (
+  id         text primary key,
+  loan_id    text not null references loans(id) on delete cascade,
+  date       date not null,
+  amount     numeric not null default 0,
+  method     text,
+  reference  text,
+  notes      text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index idx_loan_repayments_loan on loan_repayments(loan_id, date);
+create trigger trg_loan_repayments_updated_at before update on loan_repayments
+  for each row execute function set_updated_at();
+alter table loan_repayments enable row level security;
+create policy loan_repayments_anon_all on loan_repayments for all to authenticated using (true) with check (true);
+
+-- ---------------------------------------------------------------------
 -- payroll (+ per-employee lines)
 -- ---------------------------------------------------------------------
 

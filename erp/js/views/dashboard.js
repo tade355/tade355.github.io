@@ -1,6 +1,7 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, invoiceTotal, monthKey, monthLabel, el } from '../utils.js';
 import { amountOutstanding } from '../invoicePayments.js';
+import { amountOutstanding as loanAmountOutstanding, agingDays as loanAgingDays } from '../loanPayments.js';
 import { statCard, sectionHeader } from '../ui.js';
 import { renderBarChart, renderLineChart, renderMultiLineChart, CATEGORICAL_COLORS } from '../charts.js';
 import { isHaOperationType } from '../constants.js';
@@ -78,6 +79,9 @@ export function renderDashboard(container) {
   // partially paid invoice isn't counted as if nothing had been received.
   const unpaid = invoices.filter((i) => i.status !== 'Paid');
   const unpaidTotal = unpaid.reduce((sum, i) => sum + amountOutstanding(i), 0);
+
+  const overdueLoans = store.get('loans').filter((l) => loanAgingDays(l) !== null);
+  const overdueLoansTotal = overdueLoans.reduce((sum, l) => sum + loanAmountOutstanding(l), 0);
 
   const expensesForMonth = (key) => expenses.filter((e) => monthKey(e.date) === key).reduce((sum, e) => sum + e.amount, 0);
   const areaForMonth = (key) => operations.filter((o) => monthKey(o.date) === key && isHaOperationType(o.operationType)).reduce((sum, o) => sum + o.quantity, 0);
@@ -171,6 +175,7 @@ export function renderDashboard(container) {
   const actionItems = [];
   if (overdueServiceCount) actionItems.push({ tone: 'critical', icon: '🔧', text: `${overdueServiceCount} dozer${overdueServiceCount > 1 ? 's' : ''} overdue for service`, href: '#/fleet' });
   if (unpaid.length) actionItems.push({ tone: 'critical', icon: '🧾', text: `${unpaid.length} unpaid invoice${unpaid.length > 1 ? 's' : ''} — ${formatCurrency(unpaidTotal)} outstanding`, href: '#/sales' });
+  if (overdueLoans.length) actionItems.push({ tone: 'critical', icon: '🏦', text: `${overdueLoans.length} loan repayment${overdueLoans.length > 1 ? 's' : ''} overdue — ${formatCurrency(overdueLoansTotal)} outstanding`, href: '#/accounting' });
   if (outOfStock.length) actionItems.push({ tone: 'critical', icon: '📦', text: `${outOfStock.length} item${outOfStock.length > 1 ? 's' : ''} out of stock`, href: '#/fleet' });
   if (lowStock.length - outOfStock.length > 0) actionItems.push({ tone: 'warning', icon: '📦', text: `${lowStock.length - outOfStock.length} item${lowStock.length - outOfStock.length > 1 ? 's' : ''} at or below reorder level`, href: '#/fleet' });
   if (downFleetCount) actionItems.push({ tone: 'warning', icon: '🚧', text: `${downFleetCount} dozer${downFleetCount > 1 ? 's' : ''} down or under maintenance`, href: '#/fleet' });

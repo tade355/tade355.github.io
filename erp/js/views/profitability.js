@@ -63,6 +63,19 @@ export function computeProjectStats(project, from, to) {
   };
 }
 
+// Summed across every project — used where a figure needs to be
+// company-wide rather than tied to one project (e.g. a loan with no
+// Linked Project, priced against turnover/profit generally rather than a
+// specific job).
+export function companyWideStats(from, to) {
+  const stats = projectNames().map((p) => computeProjectStats(p, from, to));
+  return stats.reduce((acc, s) => ({
+    revenue: acc.revenue + s.revenue,
+    profit: acc.profit + s.profit,
+    totalCost: acc.totalCost + s.totalCost,
+  }), { revenue: 0, profit: 0, totalCost: 0 });
+}
+
 function formatMaybe(value, suffix = '') {
   return value === null || value === undefined ? '—' : `${formatCurrency(value)}${suffix}`;
 }

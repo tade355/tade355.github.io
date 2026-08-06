@@ -3,6 +3,7 @@ import { formatCurrency, formatDate, invoiceTotal, el } from '../utils.js';
 import { renderTable, actionButtons, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { EXPENSE_CATEGORIES } from '../constants.js';
+import { renderLoans } from './loans.js';
 import { renderProfitability } from './profitability.js';
 import { renderIncomeExpenditure } from './incomeExpenditure.js';
 
@@ -40,9 +41,11 @@ export function renderAccounting(container) {
   const expensesTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('expenses') }, 'Expenses');
   const incomeExpenditureTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('incomeExpenditure') }, 'Income & Expenditure');
   const profitabilityTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('profitability') }, 'Profitability');
+  const loansTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('loans') }, 'Loans');
   tabBar.appendChild(expensesTabBtn);
   tabBar.appendChild(incomeExpenditureTabBtn);
   tabBar.appendChild(profitabilityTabBtn);
+  tabBar.appendChild(loansTabBtn);
 
   const actionSlot = el('div');
   container.appendChild(sectionHeader('Accounting & Expenses', 'Company spending, revenue summary, and project profitability', actionSlot));
@@ -56,9 +59,17 @@ export function renderAccounting(container) {
     expensesTabBtn.classList.toggle('active', tab === 'expenses');
     incomeExpenditureTabBtn.classList.toggle('active', tab === 'incomeExpenditure');
     profitabilityTabBtn.classList.toggle('active', tab === 'profitability');
+    loansTabBtn.classList.toggle('active', tab === 'loans');
     if (tab === 'expenses') renderExpensesTab();
     else if (tab === 'incomeExpenditure') renderIncomeExpenditureTab();
-    else renderProfitabilityTab();
+    else if (tab === 'profitability') renderProfitabilityTab();
+    else renderLoansTab();
+  }
+
+  function renderLoansTab() {
+    actionSlot.innerHTML = '';
+    body.innerHTML = '';
+    renderLoans(body);
   }
 
   function renderIncomeExpenditureTab() {

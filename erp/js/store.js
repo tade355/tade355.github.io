@@ -39,6 +39,8 @@ const CONFIG = {
   dieselStationPrepayments: { table: 'diesel_station_prepayments', prefix: 'DSP' },
   dieselSiteDistributions: { table: 'diesel_site_distributions', prefix: 'DSD' },
   invoicePayments: { table: 'invoice_payments', prefix: 'IVP' },
+  loans: { table: 'loans', prefix: 'LN' },
+  loanRepayments: { table: 'loan_repayments', prefix: 'LNR' },
 };
 
 const COLLECTIONS = Object.keys(CONFIG);
