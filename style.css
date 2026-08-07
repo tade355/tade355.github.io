@@ -549,7 +549,9 @@ a {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
+  max-width: 32rem;
+  margin: 0 auto;
   gap: 1.5rem;
   text-align: center;
 }
