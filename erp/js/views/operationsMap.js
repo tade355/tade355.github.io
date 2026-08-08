@@ -62,14 +62,17 @@ export function renderOperationsMap(container) {
         const group = layerGroups[r.operationType] || leaflet.layerGroup();
         layerGroups[r.operationType] = group;
 
-        const popupHtml = `<strong>${r.operationType}</strong><br>${r.siteName} — ${formatDate(r.date)}<br>${r.quantity} ${unitForOperationType(r.operationType)}`;
+        const tooltipHtml = `<strong>${r.operationType}</strong> — ${r.siteName}<br>`
+          + `Size: ${r.quantity} ${unitForOperationType(r.operationType)}<br>`
+          + `Dozer: ${r.equipment || 'Unknown'}<br>`
+          + `Date: ${formatDate(r.date)}`;
 
         geometries.forEach((g) => {
           let layer;
           if (g.type === 'Polygon') layer = leaflet.polygon(g.coords, { color, fillColor: color, fillOpacity: 0.35, weight: 2 });
           else if (g.type === 'LineString') layer = leaflet.polyline(g.coords, { color, weight: 4 });
           else layer = leaflet.circleMarker(g.coords[0], { color, radius: 6, fillOpacity: 0.9 });
-          layer.bindPopup(popupHtml);
+          layer.bindTooltip(tooltipHtml, { sticky: true, direction: 'top' });
           layer.addTo(group);
           g.coords.forEach((c) => bounds.push(c));
         });
