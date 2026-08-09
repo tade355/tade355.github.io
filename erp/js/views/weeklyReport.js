@@ -35,31 +35,47 @@ function rosterForProject(project, ops) {
   return [...assigned, ...extra];
 }
 
+// UTC-based date math throughout — a local-time Date (new Date(iso+'T00:00:00')
+// then setDate/toISOString) can fail to advance a calendar day right at a
+// local DST transition, which would make datesInRange's while-loop below
+// spin forever on the right timezone/date combination. UTC has no DST, so
+// this is deterministic regardless of the browser's timezone.
 function mondayOf(iso) {
-  const d = new Date(`${iso}T00:00:00`);
-  const diff = d.getDay() === 0 ? 6 : d.getDay() - 1;
-  d.setDate(d.getDate() - diff);
+  const [y, m, day] = iso.split('-').map(Number);
+  const d = new Date(Date.UTC(y, m - 1, day));
+  const diff = d.getUTCDay() === 0 ? 6 : d.getUTCDay() - 1;
+  d.setUTCDate(d.getUTCDate() - diff);
   return d.toISOString().slice(0, 10);
 }
 
 function addDays(iso, n) {
-  const d = new Date(`${iso}T00:00:00`);
-  d.setDate(d.getDate() + n);
+  const [y, m, day] = iso.split('-').map(Number);
+  const d = new Date(Date.UTC(y, m - 1, day));
+  d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 }
+
+// Hard cap on the period length: a mis-picked or far-future end date
+// (fat-fingering a year, say) must not be able to spin this loop for an
+// enormous or unbounded number of iterations and balloon the table to
+// thousands of day-columns — it visibly refuses instead.
+const MAX_PERIOD_DAYS = 92;
 
 function datesInRange(start, end) {
   const dates = [];
   let d = start;
-  while (d <= end) {
+  let guard = 0;
+  while (d <= end && guard < MAX_PERIOD_DAYS) {
     dates.push(d);
     d = addDays(d, 1);
+    guard += 1;
   }
   return dates;
 }
 
 function dayLabel(iso) {
-  const weekday = WEEKDAY_ABBR[new Date(`${iso}T00:00:00`).getDay()];
+  const [y, m, day] = iso.split('-').map(Number);
+  const weekday = WEEKDAY_ABBR[new Date(Date.UTC(y, m - 1, day)).getUTCDay()];
   return `${weekday} ${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 }
 
@@ -158,6 +174,9 @@ function renderWeeklyPerformanceTab(container) {
     const data = computeWeeklyPerformance(project, periodStart, periodEnd);
 
     body.appendChild(el('h3', { class: 'subsection-title' }, `Period: ${formatDate(periodStart)} – ${formatDate(periodEnd)}`));
+    if (data.dayLabels.length >= MAX_PERIOD_DAYS) {
+      body.appendChild(el('p', { class: 'section-subtitle text-critical' }, `This report is capped at ${MAX_PERIOD_DAYS} days per period — narrow the From/To range to see the rest.`));
+    }
 
     const table = el('table', { class: 'data-table' });
     const thead = el('thead', {}, [el('tr', {}, [
