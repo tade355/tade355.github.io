@@ -37,7 +37,7 @@ function manualEntryFields() {
 // (expenditure), Fund Requests that are Approved or Paid (expenditure —
 // "approved/disbursed"), and manual entries the accountant records
 // directly for anything else.
-function collectEntries() {
+export function collectEntries() {
   const rows = [];
 
   store.get('invoices').filter((i) => i.status === 'Paid' || i.status === 'Partially Paid').forEach((i) => {

@@ -5,6 +5,9 @@ import { OPERATION_TYPES, isHaOperationType } from '../constants.js';
 import { printWeeklyPerformanceReport, printMilestoneTracker } from '../print.js';
 import { provisionalRevenueForRows } from './profitability.js';
 import { dieselRateAsOf } from '../rateHistory.js';
+import { stationBalances } from './fuelCredit.js';
+import { ownerSettlementBalances } from './dozerRentPayments.js';
+import { collectEntries } from './incomeExpenditure.js';
 
 const WEEKDAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -143,6 +146,7 @@ function computeWeeklyPerformance(project, periodStart, periodEnd) {
     const optimizationPct = dates.length ? (daysWorkedAny / dates.length) * 100 : 0;
 
     const revenue = provisionalRevenueForRows(ops);
+    const dieselLitres = ops.reduce((sum, o) => sum + (o.fuelUsed || 0), 0);
     const dieselCost = ops.reduce((sum, o) => sum + (o.fuelUsed || 0) * dieselRateAsOf(o.date), 0);
     const maintenanceCost = maintenanceCostFor(d.name, periodStart, periodEnd);
     const profit = revenue - dieselCost - maintenanceCost;
@@ -160,6 +164,7 @@ function computeWeeklyPerformance(project, periodStart, periodEnd) {
       plannedDays: dates.length,
       actualDays,
       revenue,
+      dieselLitres,
       dieselCost,
       maintenanceCost,
       profit,
@@ -169,6 +174,7 @@ function computeWeeklyPerformance(project, periodStart, periodEnd) {
   const cumulative = dates.map((_, i) => rows.reduce((sum, r) => sum + r.byDay[i], 0));
   const totals = {
     revenue: rows.reduce((sum, r) => sum + r.revenue, 0),
+    dieselLitres: rows.reduce((sum, r) => sum + r.dieselLitres, 0),
     dieselCost: rows.reduce((sum, r) => sum + r.dieselCost, 0),
     maintenanceCost: rows.reduce((sum, r) => sum + r.maintenanceCost, 0),
     profit: rows.reduce((sum, r) => sum + r.profit, 0),
@@ -185,6 +191,54 @@ function computeWeeklyPerformance(project, periodStart, periodEnd) {
     .filter((t) => t.total > 0);
 
   return { rows, cumulative, totals, typeTotals, periodStart, periodEnd, dayLabels, avgStart, avgClose };
+}
+
+// Payments Summary: diesel vendor and machine-owner running balances are
+// credit accounts, not period totals — shown as a current, all-time
+// snapshot (vendor balances are company-wide across all fuel stations;
+// owner balances are restricted to the dozers on this project's roster).
+// "Total Paid Out" is genuinely period-scoped and deliberately company-wide
+// (all projects), reusing the same Income & Expenditure aggregator so the
+// numbers can't drift from that report — a weekly meeting reviewing one
+// project still wants to see the whole company's spend for the week.
+function computePaymentsSummary(periodStart, periodEnd, rosterNames) {
+  const vendorBalances = stationBalances();
+  const vendorTotals = vendorBalances.reduce((acc, v) => ({
+    owed: acc.owed + v.totalCollected,
+    paid: acc.paid + v.totalPaid,
+    balance: acc.balance + v.balance,
+  }), { owed: 0, paid: 0, balance: 0 });
+
+  const ownerBalances = ownerSettlementBalances().filter((b) => rosterNames.includes(b.name));
+  const ownerTotals = ownerBalances.reduce((acc, o) => ({
+    owed: acc.owed + o.generated,
+    paid: acc.paid + o.paid,
+    balance: acc.balance + o.balance,
+  }), { owed: 0, paid: 0, balance: 0 });
+
+  const paidEntries = collectEntries().filter((e) => e.type === 'Expenditure' && dateInRange(e.date, periodStart, periodEnd));
+  const totalPaidOut = paidEntries.reduce((sum, e) => sum + e.amount, 0);
+
+  const byCategory = {};
+  paidEntries.forEach((e) => {
+    const key = e.costHead || 'Uncategorized';
+    byCategory[key] = (byCategory[key] || 0) + e.amount;
+  });
+  const byProject = {};
+  paidEntries.forEach((e) => {
+    const key = e.project || 'Unassigned';
+    byProject[key] = (byProject[key] || 0) + e.amount;
+  });
+
+  return {
+    vendorBalances,
+    vendorTotals,
+    ownerBalances,
+    ownerTotals,
+    totalPaidOut,
+    byCategory: Object.entries(byCategory).map(([category, amount]) => ({ category, amount })).sort((a, b) => b.amount - a.amount),
+    byProject: Object.entries(byProject).map(([project, amount]) => ({ project, amount })).sort((a, b) => b.amount - a.amount),
+  };
 }
 
 function renderWeeklyPerformanceTab(container) {
@@ -270,6 +324,7 @@ function renderWeeklyPerformanceTab(container) {
 
     const summaryGrid = el('div', { class: 'stats-grid' }, [
       statCard({ label: 'Total Revenue (Provisional)', value: formatCurrency(data.totals.revenue), tone: 'good' }),
+      statCard({ label: 'Total Diesel Used', value: `${data.totals.dieselLitres.toLocaleString()} L` }),
       statCard({ label: 'Total Diesel Cost', value: formatCurrency(data.totals.dieselCost) }),
       statCard({ label: 'Total Repairs/Maintenance', value: formatCurrency(data.totals.maintenanceCost) }),
       statCard({ label: 'Total Profit (Provisional)', value: formatCurrency(data.totals.profit), tone: data.totals.profit >= 0 ? 'good' : 'critical' }),
@@ -283,6 +338,7 @@ function renderWeeklyPerformanceTab(container) {
         { key: 'name', label: 'Dozer' },
         { key: 'optimizationPct', label: '% Optimization', render: (r) => `${r.optimizationPct.toFixed(0)}%` },
         { key: 'revenue', label: 'Revenue (Provisional)', render: (r) => formatCurrency(r.revenue) },
+        { key: 'dieselLitres', label: 'Diesel Used', render: (r) => `${r.dieselLitres.toLocaleString()} L` },
         { key: 'dieselCost', label: 'Diesel Cost', render: (r) => formatCurrency(r.dieselCost) },
         { key: 'maintenanceCost', label: 'Repairs/Maintenance', render: (r) => formatCurrency(r.maintenanceCost) },
         { key: 'profit', label: 'Profit (Provisional)', render: (r) => el('strong', { class: r.profit >= 0 ? 'text-good' : 'text-critical' }, formatCurrency(r.profit)) },
@@ -291,8 +347,61 @@ function renderWeeklyPerformanceTab(container) {
       emptyText: 'No fleet assets assigned to this project, and no operations logged against it in this period.',
     });
 
+    const payments = computePaymentsSummary(periodStart, periodEnd, data.rows.map((r) => r.name));
+
+    body.appendChild(el('h3', { class: 'subsection-title' }, 'Payments Summary'));
+    body.appendChild(el('p', { class: 'section-subtitle' }, 'Diesel Vendor and Machine Owner balances are current running totals (all-time, not limited to this period) — Diesel Vendor is company-wide across all fuel stations (see Resource Management → Fuel Credit Tracking); Machine Owner covers Partnership/Rented dozers on this project\'s roster (see Fleet Management → Dozer Rent Payments). Total Paid Out below IS scoped to this period, and deliberately company-wide across every project, not just this one — reused from Accounting → Income & Expenditure.'));
+
+    const balanceGrid = el('div', { class: 'stats-grid' }, [
+      statCard({ label: 'Diesel Vendor — Total Owed', value: formatCurrency(payments.vendorTotals.owed) }),
+      statCard({ label: 'Diesel Vendor — Paid', value: formatCurrency(payments.vendorTotals.paid) }),
+      statCard({ label: 'Diesel Vendor — Balance', value: formatCurrency(payments.vendorTotals.balance), tone: payments.vendorTotals.balance > 0 ? 'critical' : 'good' }),
+      statCard({ label: 'Machine Owner — Total Owed', value: formatCurrency(payments.ownerTotals.owed) }),
+      statCard({ label: 'Machine Owner — Paid', value: formatCurrency(payments.ownerTotals.paid) }),
+      statCard({ label: 'Machine Owner — Balance', value: formatCurrency(payments.ownerTotals.balance), tone: payments.ownerTotals.balance > 0 ? 'critical' : 'good' }),
+    ]);
+    body.appendChild(balanceGrid);
+
+    if (payments.ownerBalances.length) {
+      const ownerTableContainer = el('div');
+      body.appendChild(ownerTableContainer);
+      renderTable(ownerTableContainer, {
+        columns: [
+          { key: 'name', label: 'Dozer' },
+          { key: 'owner', label: 'Owner' },
+          { key: 'generated', label: 'Owed', render: (r) => formatCurrency(r.generated) },
+          { key: 'paid', label: 'Paid', render: (r) => formatCurrency(r.paid) },
+          { key: 'balance', label: 'Balance', render: (r) => el('strong', { class: r.balance > 0 ? 'text-critical' : 'text-good' }, formatCurrency(r.balance)) },
+        ],
+        rows: payments.ownerBalances,
+        emptyText: 'No Partnership/Rented dozers on this roster.',
+      });
+    }
+
+    body.appendChild(el('h4', { class: 'subsection-title' }, `Total Paid Out This Period (All Projects): ${formatCurrency(payments.totalPaidOut)}`));
+    const byCategoryContainer = el('div', {}, [el('h5', {}, 'By Category')]);
+    body.appendChild(byCategoryContainer);
+    renderTable(byCategoryContainer, {
+      columns: [
+        { key: 'category', label: 'Cost Head' },
+        { key: 'amount', label: 'Amount', render: (r) => formatCurrency(r.amount) },
+      ],
+      rows: payments.byCategory,
+      emptyText: 'No expenditure logged in this period yet.',
+    });
+    const byProjectContainer = el('div', {}, [el('h5', {}, 'By Project')]);
+    body.appendChild(byProjectContainer);
+    renderTable(byProjectContainer, {
+      columns: [
+        { key: 'project', label: 'Project' },
+        { key: 'amount', label: 'Amount', render: (r) => formatCurrency(r.amount) },
+      ],
+      rows: payments.byProject,
+      emptyText: 'No expenditure logged in this period yet.',
+    });
+
     printBtn.disabled = false;
-    printBtn.onclick = () => printWeeklyPerformanceReport(project, data);
+    printBtn.onclick = () => printWeeklyPerformanceReport(project, { ...data, payments });
   }
 
   [projectSelect, startInput, endInput].forEach((input) => input.addEventListener('change', refresh));

@@ -196,9 +196,14 @@ Two sub-tabs generate the standard weekly field-reporting documents, straight fr
 
 A bolded **Cumulative** row sums every dozer's daily totals and also shows the fleet-wide average Start/Close across every report in the period.
 
-Below the daily grid, a **Cost & Profitability Analysis** section covers the same roster and period: Revenue (Provisional — quantity × the contract rate in effect that day for that operation type, from Rate History), Diesel Cost (Fuel Used × the diesel rate in effect that day), Repairs/Maintenance Cost (every Maintenance Log entry for that dozer in the period), and Profit. As with Profitability elsewhere in the app, this Profit figure can't absorb Logistics/Other costs (those only attribute at the project level), so treat it as a per-dozer field estimate, not the project's full bottom line.
+Below the daily grid, a **Cost & Profitability Analysis** section covers the same roster and period: Revenue (Provisional — quantity × the contract rate in effect that day for that operation type, from Rate History), Diesel Used (litres), Diesel Cost (Fuel Used × the diesel rate in effect that day), Repairs/Maintenance Cost (every Maintenance Log entry for that dozer in the period), and Profit. As with Profitability elsewhere in the app, this Profit figure can't absorb Logistics/Other costs (those only attribute at the project level), so treat it as a per-dozer field estimate, not the project's full bottom line.
 
-Click **🖨 Print Report** for a printable "WEEKLY PERFORMANCE REPORT" that includes both the daily grid and the Cost & Profitability Analysis section.
+Below that, a **Payments Summary** section covers three things, each with a different scope — read the labels carefully:
+- **Diesel Vendor** (Total Owed / Paid / Balance) — a *current, all-time* running balance across every fuel station, reused directly from Resource Management → Fuel Credit Tracking. Not limited to the selected period or project — diesel credit is a standing account, not a weekly transaction.
+- **Machine Owner** (Total Owed / Paid / Balance, plus a per-dozer breakdown) — the same kind of *current, all-time* running balance, reused from Fleet Management → Dozer Rent Payments, but restricted to the Partnership/Rented dozers on this project's roster.
+- **Total Paid Out This Period** — genuinely scoped to the selected From/To dates, and deliberately **company-wide across every project**, not just the one selected above (a weekly meeting reviewing one project's field performance still wants to see the whole company's spend for the week). Reused from Accounting → Income & Expenditure, broken down **by Category** (cost head) and **by Project**.
+
+Click **🖨 Print Report** for a printable "WEEKLY PERFORMANCE REPORT" that includes the daily grid, the Cost & Profitability Analysis, and the Payments Summary.
 
 If a dozer you expect to see is missing: it has neither its Current Project set to this project nor any operations report logged against it in the selected period.
 
