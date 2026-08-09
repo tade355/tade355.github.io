@@ -189,7 +189,16 @@ A browsable wall of every photo attached to Daily Operations reports.
 
 Two sub-tabs generate the standard weekly field-reporting documents, straight from Daily Operations data.
 
-**Weekly Performance sub-tab:** pick a **Project** and a **From**/**To** date range — despite the tab's name, the period isn't locked to a Mon–Sun week; pick any range from a single day to a month or more, and the day columns resize to match. Rows are every fleet asset currently assigned to that project (**Current Project** on its Fleet Roster record) *plus* any dozer with an operations report logged against the project in that period even if its Current Project has since changed or was never set correctly — so a dozer that actually worked there won't silently disappear from the report. Each row shows a day-by-day breakdown of hectares cleared, a period total, its speed (Ha/Day, based on days it actually worked — not divided by the period length), and its own average Start/Close time. A bolded **Cumulative** row sums every dozer's daily totals and also shows the fleet-wide average Start/Close across every report in the period. Click **🖨 Print Report** for a printable "WEEKLY PERFORMANCE REPORT."
+**Weekly Performance sub-tab:** pick a **Project** and a **From**/**To** date range — despite the tab's name, the period isn't locked to a Mon–Sun week; pick any range from a single day to 92 days (the hard cap — a longer range shows a notice and truncates rather than trying to render an unbounded number of day columns), and the day columns resize to match. Rows are every fleet asset currently assigned to that project (**Current Project** on its Fleet Roster record) *plus* any dozer with an operations report logged against the project in that period even if its Current Project has since changed or was never set correctly — so a dozer that actually worked there won't silently disappear from the report. Each row shows:
+- A day-by-day breakdown of hectares cleared, a period total, and its own average Start/Close time.
+- **Type (Speed/Day)** — each operation type the dozer worked this period gets its own speed figure (e.g. "Phase 2: 4.0 Ha/day, Trekking: 2.0 hrs/day") rather than one blended average, since different operation types genuinely run at different rates and averaging them together is misleading.
+- **% Optimization** — days the dozer did any work this period ÷ days in the period (same definition as Fleet Management → Dozer Economics → Company-Owned Dozer Performance).
+
+A bolded **Cumulative** row sums every dozer's daily totals and also shows the fleet-wide average Start/Close across every report in the period.
+
+Below the daily grid, a **Cost & Profitability Analysis** section covers the same roster and period: Revenue (Provisional — quantity × the contract rate in effect that day for that operation type, from Rate History), Diesel Cost (Fuel Used × the diesel rate in effect that day), Repairs/Maintenance Cost (every Maintenance Log entry for that dozer in the period), and Profit. As with Profitability elsewhere in the app, this Profit figure can't absorb Logistics/Other costs (those only attribute at the project level), so treat it as a per-dozer field estimate, not the project's full bottom line.
+
+Click **🖨 Print Report** for a printable "WEEKLY PERFORMANCE REPORT" that includes both the daily grid and the Cost & Profitability Analysis section.
 
 If a dozer you expect to see is missing: it has neither its Current Project set to this project nor any operations report logged against it in the selected period.
 
