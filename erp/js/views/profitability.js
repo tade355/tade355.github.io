@@ -144,7 +144,7 @@ function groupLabel(groupBy, key) {
   return key || '—';
 }
 
-function provisionalRevenueForRows(operations) {
+export function provisionalRevenueForRows(operations) {
   return operations.reduce((sum, o) => sum + (o.quantity || 0) * (projectRateAsOf(o.siteName, o.operationType, o.date).rate || 0), 0);
 }
 

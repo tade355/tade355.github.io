@@ -325,21 +325,21 @@ export function printWeeklyPerformanceReport(project, data) {
     <table class="print-table">
       <thead>
         <tr>
-          <th>Dozer</th><th>Type</th><th>Start</th><th>Close</th>
+          <th>Dozer</th><th>Type (Speed/Day)</th><th>Start</th><th>Close</th>
           ${data.dayLabels.map((d) => `<th>${d}</th>`).join('')}
-          <th>Total</th><th>Speed Ha/Day</th><th>Planned</th><th>Actual</th>
+          <th>Total</th><th>% Optimization</th><th>Planned</th><th>Actual</th>
         </tr>
       </thead>
       <tbody>
         ${data.rows.map((r) => `
           <tr>
             <td>${r.name}</td>
-            <td>${r.types}</td>
+            <td>${r.speedByType.map((s) => `${s.type}: ${s.speed.toFixed(1)} ${s.unit}/day`).join('<br>') || '—'}</td>
             <td>${r.start || '—'}</td>
             <td>${r.close || '—'}</td>
             ${r.byDay.map((v) => `<td>${v ? v.toFixed(1) : '—'}</td>`).join('')}
             <td>${r.total.toFixed(1)}</td>
-            <td>${r.speedPerDay.toFixed(1)}</td>
+            <td>${r.optimizationPct.toFixed(0)}%</td>
             <td>${r.plannedDays}</td>
             <td>${r.actualDays}</td>
           </tr>
@@ -357,6 +357,35 @@ export function printWeeklyPerformanceReport(project, data) {
     <div class="print-block">
       ${data.typeTotals.map((t) => `<p><strong>Total ${t.unit} Achieved for ${t.type}:</strong> ${t.total.toFixed(2)} ${t.unit}</p>`).join('') || '<p>No operations logged for this project in this period.</p>'}
     </div>
+    <h3>Cost &amp; Profitability Analysis</h3>
+    <div class="print-block">
+      <p>Revenue is Provisional (quantity × the contract rate in effect that day), not verified/invoiced revenue. Profit here can't absorb Logistics/Other costs, which only attribute at the project level.</p>
+    </div>
+    <div class="print-meta-grid">
+      <div><strong>Total Revenue (Provisional):</strong> ${formatCurrency(data.totals.revenue)}</div>
+      <div><strong>Total Diesel Cost:</strong> ${formatCurrency(data.totals.dieselCost)}</div>
+      <div><strong>Total Repairs/Maintenance:</strong> ${formatCurrency(data.totals.maintenanceCost)}</div>
+      <div><strong>Total Profit (Provisional):</strong> ${formatCurrency(data.totals.profit)}</div>
+    </div>
+    <table class="print-table">
+      <thead>
+        <tr>
+          <th>Dozer</th><th>% Optimization</th><th>Revenue (Provisional)</th><th>Diesel Cost</th><th>Repairs/Maintenance</th><th>Profit (Provisional)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${data.rows.map((r) => `
+          <tr>
+            <td>${r.name}</td>
+            <td>${r.optimizationPct.toFixed(0)}%</td>
+            <td>${formatCurrency(r.revenue)}</td>
+            <td>${formatCurrency(r.dieselCost)}</td>
+            <td>${formatCurrency(r.maintenanceCost)}</td>
+            <td>${formatCurrency(r.profit)}</td>
+          </tr>
+        `).join('') || '<tr><td colspan="6">No fleet assets assigned to this project, and no operations logged against it in this period.</td></tr>'}
+      </tbody>
+    </table>
   `;
   render(html);
 }
