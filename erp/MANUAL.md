@@ -189,11 +189,11 @@ A browsable wall of every photo attached to Daily Operations reports.
 
 Two sub-tabs generate the standard weekly field-reporting documents, straight from Daily Operations data.
 
-**Weekly Performance sub-tab:** pick a **Project** and a **Week Of** date (it auto-snaps to that week's Monday). Shows one row per fleet asset currently assigned to that project (set via **Current Project** on its Fleet Roster record), with a Mon–Sun breakdown of hectares cleared, a weekly total, its speed (Ha/Day, based on days it actually worked that week — not divided by 7), and a bolded **Cumulative** row summing every dozer. Click **🖨 Print Report** for a printable "WEEKLY PERFORMANCE REPORT."
+**Weekly Performance sub-tab:** pick a **Project** and a **From**/**To** date range — despite the tab's name, the period isn't locked to a Mon–Sun week; pick any range from a single day to a month or more, and the day columns resize to match. Rows are every fleet asset currently assigned to that project (**Current Project** on its Fleet Roster record) *plus* any dozer with an operations report logged against the project in that period even if its Current Project has since changed or was never set correctly — so a dozer that actually worked there won't silently disappear from the report. Each row shows a day-by-day breakdown of hectares cleared, a period total, its speed (Ha/Day, based on days it actually worked — not divided by the period length), and its own average Start/Close time. A bolded **Cumulative** row sums every dozer's daily totals and also shows the fleet-wide average Start/Close across every report in the period. Click **🖨 Print Report** for a printable "WEEKLY PERFORMANCE REPORT."
 
-If nothing shows: check that the fleet asset's **Current Project** is set correctly on the Fleet Roster.
+If a dozer you expect to see is missing: it has neither its Current Project set to this project nor any operations report logged against it in the selected period.
 
-**Milestone Tracker sub-tab:** pick a **Project**. Shows all-time (not week-limited) progress: Project Start Date, Days on Project, Project Speed (Ha/Day), Grand Cumulative Achieved, Total Contract Area, and Remaining to Complete — plus a table of every machine/operator that's ever worked the project, broken down by operation type. Requires **Project Start Date** and **Total Contract Area (Ha)** to be set on the Projects tab for the full set of figures to compute (otherwise they show "—"). Click **🖨 Print Tracker** for a printable "MILESTONE REPORT TRACKING SYSTEM" document.
+**Milestone Tracker sub-tab:** pick a **Project**. Shows all-time (not period-limited) progress: Project Start Date, Days on Project, Project Speed (Ha/Day), Grand Cumulative Achieved, Total Contract Area, and Remaining to Complete — plus a table of every machine/operator that's ever worked the project (same Current-Project-or-actually-worked-here roster rule as Weekly Performance above), broken down by operation type. Requires **Project Start Date** and **Total Contract Area (Ha)** to be set on the Projects tab for the full set of figures to compute (otherwise they show "—"). Click **🖨 Print Tracker** for a printable "MILESTONE REPORT TRACKING SYSTEM" document.
 
 ### Rate History tab (Admin/Accounts only)
 
@@ -323,7 +323,7 @@ Stat cards: Fleet Size, Company Owned, Partnership, Rented, Down / Under Mainten
 | Diesel Consumption — Trekking (L/hr, flat) | **leave blank** unless this machine differs — blank uses the fleet default of 20 |
 
 > These three exist only to override a machine that burns differently from the rest of the fleet. Since every current dozer is a D8K, all three should stay blank and the fleet-wide rates apply automatically — nobody has to configure a dozer before Fuel Used will calculate on a daily report.
-| Current Project | which project it's currently deployed to — this drives the Weekly Report tab |
+| Current Project | which project it's currently deployed to — feeds the Weekly Report tab's roster (a dozer also appears there for any project it has an operations report against, even without this field set correctly, but keeping it current is what makes an idle dozer show up as a zero-activity row instead of not appearing at all) |
 | Location | required |
 | Acquisition Value (₦) | |
 | Service Interval (engine hours) | default 250 |
