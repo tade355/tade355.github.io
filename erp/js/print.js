@@ -363,6 +363,7 @@ export function printWeeklyPerformanceReport(project, data) {
     </div>
     <div class="print-meta-grid">
       <div><strong>Total Revenue (Provisional):</strong> ${formatCurrency(data.totals.revenue)}</div>
+      <div><strong>Total Diesel Used:</strong> ${data.totals.dieselLitres.toLocaleString()} L</div>
       <div><strong>Total Diesel Cost:</strong> ${formatCurrency(data.totals.dieselCost)}</div>
       <div><strong>Total Repairs/Maintenance:</strong> ${formatCurrency(data.totals.maintenanceCost)}</div>
       <div><strong>Total Profit (Provisional):</strong> ${formatCurrency(data.totals.profit)}</div>
@@ -370,7 +371,7 @@ export function printWeeklyPerformanceReport(project, data) {
     <table class="print-table">
       <thead>
         <tr>
-          <th>Dozer</th><th>% Optimization</th><th>Revenue (Provisional)</th><th>Diesel Cost</th><th>Repairs/Maintenance</th><th>Profit (Provisional)</th>
+          <th>Dozer</th><th>% Optimization</th><th>Revenue (Provisional)</th><th>Diesel Used</th><th>Diesel Cost</th><th>Repairs/Maintenance</th><th>Profit (Provisional)</th>
         </tr>
       </thead>
       <tbody>
@@ -379,13 +380,65 @@ export function printWeeklyPerformanceReport(project, data) {
             <td>${r.name}</td>
             <td>${r.optimizationPct.toFixed(0)}%</td>
             <td>${formatCurrency(r.revenue)}</td>
+            <td>${r.dieselLitres.toLocaleString()} L</td>
             <td>${formatCurrency(r.dieselCost)}</td>
             <td>${formatCurrency(r.maintenanceCost)}</td>
             <td>${formatCurrency(r.profit)}</td>
           </tr>
-        `).join('') || '<tr><td colspan="6">No fleet assets assigned to this project, and no operations logged against it in this period.</td></tr>'}
+        `).join('') || '<tr><td colspan="7">No fleet assets assigned to this project, and no operations logged against it in this period.</td></tr>'}
       </tbody>
     </table>
+    ${data.payments ? `
+    <h3>Payments Summary</h3>
+    <div class="print-block">
+      <p>Diesel Vendor and Machine Owner balances are current running totals (all-time, not limited to this period). Total Paid Out is scoped to this period and covers every project company-wide, not just this one.</p>
+    </div>
+    <div class="print-meta-grid">
+      <div><strong>Diesel Vendor — Total Owed:</strong> ${formatCurrency(data.payments.vendorTotals.owed)}</div>
+      <div><strong>Diesel Vendor — Paid:</strong> ${formatCurrency(data.payments.vendorTotals.paid)}</div>
+      <div><strong>Diesel Vendor — Balance:</strong> ${formatCurrency(data.payments.vendorTotals.balance)}</div>
+      <div><strong>Machine Owner — Total Owed:</strong> ${formatCurrency(data.payments.ownerTotals.owed)}</div>
+      <div><strong>Machine Owner — Paid:</strong> ${formatCurrency(data.payments.ownerTotals.paid)}</div>
+      <div><strong>Machine Owner — Balance:</strong> ${formatCurrency(data.payments.ownerTotals.balance)}</div>
+    </div>
+    ${data.payments.ownerBalances.length ? `
+    <table class="print-table">
+      <thead><tr><th>Dozer</th><th>Owner</th><th>Owed</th><th>Paid</th><th>Balance</th></tr></thead>
+      <tbody>
+        ${data.payments.ownerBalances.map((o) => `
+          <tr>
+            <td>${o.name}</td>
+            <td>${o.owner}</td>
+            <td>${formatCurrency(o.generated)}</td>
+            <td>${formatCurrency(o.paid)}</td>
+            <td>${formatCurrency(o.balance)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    ` : ''}
+    <p><strong>Total Paid Out This Period (All Projects):</strong> ${formatCurrency(data.payments.totalPaidOut)}</p>
+    <div class="print-meta-grid">
+      <div>
+        <strong>By Category</strong>
+        <table class="print-table">
+          <thead><tr><th>Cost Head</th><th>Amount</th></tr></thead>
+          <tbody>
+            ${data.payments.byCategory.map((c) => `<tr><td>${c.category}</td><td>${formatCurrency(c.amount)}</td></tr>`).join('') || '<tr><td colspan="2">None</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <strong>By Project</strong>
+        <table class="print-table">
+          <thead><tr><th>Project</th><th>Amount</th></tr></thead>
+          <tbody>
+            ${data.payments.byProject.map((p) => `<tr><td>${p.project}</td><td>${formatCurrency(p.amount)}</td></tr>`).join('') || '<tr><td colspan="2">None</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    ` : ''}
   `;
   render(html);
 }
