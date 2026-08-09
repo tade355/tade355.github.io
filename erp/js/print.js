@@ -314,21 +314,19 @@ export function printDozerSettlement(settlement, ownerName) {
   render(html);
 }
 
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
 export function printWeeklyPerformanceReport(project, data) {
   const cumulativeTotal = data.cumulative.reduce((a, b) => a + b, 0);
   const html = `
-    ${letterhead('WEEKLY PERFORMANCE REPORT', `${formatDate(data.weekStart)} – ${formatDate(data.weekEnd)}`)}
+    ${letterhead('WEEKLY PERFORMANCE REPORT', `${formatDate(data.periodStart)} – ${formatDate(data.periodEnd)}`)}
     <div class="print-meta-grid">
       <div><strong>Project:</strong> ${project}</div>
-      <div><strong>Week:</strong> ${formatDate(data.weekStart)} – ${formatDate(data.weekEnd)}</div>
+      <div><strong>Period:</strong> ${formatDate(data.periodStart)} – ${formatDate(data.periodEnd)}</div>
     </div>
     <table class="print-table">
       <thead>
         <tr>
           <th>Dozer</th><th>Type</th><th>Start</th><th>Close</th>
-          ${DAY_LABELS.map((d) => `<th>${d}</th>`).join('')}
+          ${data.dayLabels.map((d) => `<th>${d}</th>`).join('')}
           <th>Total</th><th>Speed Ha/Day</th><th>Planned</th><th>Actual</th>
         </tr>
       </thead>
@@ -347,14 +345,17 @@ export function printWeeklyPerformanceReport(project, data) {
           </tr>
         `).join('')}
         <tr>
-          <td colspan="4"><strong>Cumulative</strong></td>
+          <td><strong>Cumulative</strong></td>
+          <td></td>
+          <td><strong>${data.avgStart || '—'}</strong></td>
+          <td><strong>${data.avgClose || '—'}</strong></td>
           ${data.cumulative.map((v) => `<td><strong>${v.toFixed(1)}</strong></td>`).join('')}
           <td><strong>${cumulativeTotal.toFixed(1)}</strong></td><td></td><td></td><td></td>
         </tr>
       </tbody>
     </table>
     <div class="print-block">
-      ${data.typeTotals.map((t) => `<p><strong>Total ${t.unit} Achieved for ${t.type}:</strong> ${t.total.toFixed(2)} ${t.unit}</p>`).join('') || '<p>No operations logged for this project this week.</p>'}
+      ${data.typeTotals.map((t) => `<p><strong>Total ${t.unit} Achieved for ${t.type}:</strong> ${t.total.toFixed(2)} ${t.unit}</p>`).join('') || '<p>No operations logged for this project in this period.</p>'}
     </div>
   `;
   render(html);

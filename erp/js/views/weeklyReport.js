@@ -4,7 +4,7 @@ import { sectionHeader, renderTable, statCard } from '../ui.js';
 import { OPERATION_TYPES, isHaOperationType } from '../constants.js';
 import { printWeeklyPerformanceReport, printMilestoneTracker } from '../print.js';
 
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const WEEKDAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function projectOptions() {
   return store.get('projects').map((p) => p.name);
@@ -48,6 +48,21 @@ function addDays(iso, n) {
   return d.toISOString().slice(0, 10);
 }
 
+function datesInRange(start, end) {
+  const dates = [];
+  let d = start;
+  while (d <= end) {
+    dates.push(d);
+    d = addDays(d, 1);
+  }
+  return dates;
+}
+
+function dayLabel(iso) {
+  const weekday = WEEKDAY_ABBR[new Date(`${iso}T00:00:00`).getDay()];
+  return `${weekday} ${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+}
+
 function timeToMinutes(hhmm) {
   const [h, m] = hhmm.split(':').map(Number);
   return h * 60 + m;
@@ -64,19 +79,19 @@ function avgTime(list) {
 
 // Weekly Performance Report: per dozer assigned to the project (via its
 // Current Project on the Fleet Roster), Ha achieved each day of the
-// selected Mon-Sun week, plus a Cumulative row and per-operation-type
-// weekly totals — matching the real field report format.
-function computeWeeklyPerformance(project, weekStart) {
-  const weekEnd = addDays(weekStart, 6);
-  const weekOps = store.get('operations').filter((o) => o.siteName === project && dateInRange(o.date, weekStart, weekEnd));
-  const dozers = rosterForProject(project, weekOps);
+// selected period, plus a Cumulative row and per-operation-type period
+// totals — matching the real field report format. The period is whatever
+// From/To dates were picked (not forced to a Mon-Sun week), so it can cover
+// a single day, a partial week, or a longer stretch.
+function computeWeeklyPerformance(project, periodStart, periodEnd) {
+  const dates = datesInRange(periodStart, periodEnd);
+  const dayLabels = dates.map(dayLabel);
+  const periodOps = store.get('operations').filter((o) => o.siteName === project && dateInRange(o.date, periodStart, periodEnd));
+  const dozers = rosterForProject(project, periodOps);
 
   const rows = dozers.map((d) => {
-    const ops = weekOps.filter((o) => o.equipment === d.name);
-    const byDay = DAY_LABELS.map((_, i) => {
-      const date = addDays(weekStart, i);
-      return ops.filter((o) => o.date === date && isHaOperationType(o.operationType)).reduce((sum, o) => sum + o.quantity, 0);
-    });
+    const ops = periodOps.filter((o) => o.equipment === d.name);
+    const byDay = dates.map((date) => ops.filter((o) => o.date === date && isHaOperationType(o.operationType)).reduce((sum, o) => sum + o.quantity, 0));
     const total = byDay.reduce((a, b) => a + b, 0);
     const actualDays = byDay.filter((v) => v > 0).length;
     const types = [...new Set(ops.map((o) => o.operationType).filter(Boolean))];
@@ -88,31 +103,41 @@ function computeWeeklyPerformance(project, weekStart) {
       byDay,
       total,
       speedPerDay: actualDays ? total / actualDays : 0,
-      plannedDays: 7,
+      plannedDays: dates.length,
       actualDays,
     };
   });
 
-  const cumulative = DAY_LABELS.map((_, i) => rows.reduce((sum, r) => sum + r.byDay[i], 0));
+  const cumulative = dates.map((_, i) => rows.reduce((sum, r) => sum + r.byDay[i], 0));
+
+  // Fleet-wide average Start/Close across every dozer's reports this
+  // period, shown on the Cumulative row — "what time did the fleet
+  // generally start/close" at a glance, alongside each dozer's own average.
+  const avgStart = avgTime(periodOps.filter((o) => o.timeResumed).map((o) => timeToMinutes(o.timeResumed)));
+  const avgClose = avgTime(periodOps.filter((o) => o.timeClosed).map((o) => timeToMinutes(o.timeClosed)));
 
   const typeTotals = OPERATION_TYPES
-    .map((t) => ({ type: t.value, unit: t.unit, total: weekOps.filter((o) => o.operationType === t.value).reduce((sum, o) => sum + o.quantity, 0) }))
+    .map((t) => ({ type: t.value, unit: t.unit, total: periodOps.filter((o) => o.operationType === t.value).reduce((sum, o) => sum + o.quantity, 0) }))
     .filter((t) => t.total > 0);
 
-  return { rows, cumulative, typeTotals, weekStart, weekEnd };
+  return { rows, cumulative, typeTotals, periodStart, periodEnd, dayLabels, avgStart, avgClose };
 }
 
 function renderWeeklyPerformanceTab(container) {
   const filterBar = el('div', { class: 'filter-bar' });
   const projectSelect = el('select', {}, projectOptions().map((p) => el('option', { value: p }, p)));
-  const weekInput = el('input', { type: 'date' });
-  weekInput.value = mondayOf(new Date().toISOString().slice(0, 10));
+  const today = new Date().toISOString().slice(0, 10);
+  const startInput = el('input', { type: 'date' });
+  startInput.value = mondayOf(today);
+  const endInput = el('input', { type: 'date' });
+  endInput.value = addDays(startInput.value, 6);
   const printBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '🖨 Print Report');
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Project'), projectSelect]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Week Of (any day in the week)'), weekInput]));
+  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'From'), startInput]));
+  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), endInput]));
   filterBar.appendChild(printBtn);
   container.appendChild(filterBar);
-  container.appendChild(el('p', { class: 'section-subtitle' }, 'Rows are every dozer currently assigned to this project (Fleet Management → Fleet Roster → Current Project), plus any dozer with an operations report logged against this project this week even if its Current Project has since changed. Only Ha-unit operation types count toward the daily grid — see the totals below it for Road/Trekking.'));
+  container.appendChild(el('p', { class: 'section-subtitle' }, 'Rows are every dozer currently assigned to this project (Fleet Management → Fleet Roster → Current Project), plus any dozer with an operations report logged against this project in the selected period even if its Current Project has since changed. Only Ha-unit operation types count toward the daily grid — see the totals below it for Road/Trekking.'));
 
   const body = el('div');
   container.appendChild(body);
@@ -125,15 +150,19 @@ function renderWeeklyPerformanceTab(container) {
       printBtn.disabled = true;
       return;
     }
-    const weekStart = mondayOf(weekInput.value || new Date().toISOString().slice(0, 10));
-    const data = computeWeeklyPerformance(project, weekStart);
+    // If From/To got picked out of order, just swap rather than error.
+    let periodStart = startInput.value || today;
+    let periodEnd = endInput.value || today;
+    if (periodEnd < periodStart) [periodStart, periodEnd] = [periodEnd, periodStart];
 
-    body.appendChild(el('h3', { class: 'subsection-title' }, `Week of ${formatDate(weekStart)} – ${formatDate(data.weekEnd)}`));
+    const data = computeWeeklyPerformance(project, periodStart, periodEnd);
+
+    body.appendChild(el('h3', { class: 'subsection-title' }, `Period: ${formatDate(periodStart)} – ${formatDate(periodEnd)}`));
 
     const table = el('table', { class: 'data-table' });
     const thead = el('thead', {}, [el('tr', {}, [
       el('th', {}, 'Dozer'), el('th', {}, 'Type'), el('th', {}, 'Start'), el('th', {}, 'Close'),
-      ...DAY_LABELS.map((d) => el('th', {}, d)),
+      ...data.dayLabels.map((d) => el('th', {}, d)),
       el('th', {}, 'Total'), el('th', {}, 'Speed Ha/Day'), el('th', {}, 'Planned Days'), el('th', {}, 'Actual Days'),
     ])]);
     table.appendChild(thead);
@@ -148,28 +177,29 @@ function renderWeeklyPerformanceTab(container) {
     });
     const cumulativeTotal = data.cumulative.reduce((a, b) => a + b, 0);
     tbody.appendChild(el('tr', { class: 'row-cumulative' }, [
-      el('td', { colspan: '4' }, el('strong', {}, 'Cumulative')),
+      el('td', {}, el('strong', {}, 'Cumulative')), el('td', {}, ''), el('td', {}, el('strong', {}, data.avgStart || '—')), el('td', {}, el('strong', {}, data.avgClose || '—')),
       ...data.cumulative.map((v) => el('td', {}, el('strong', {}, v.toFixed(1)))),
       el('td', {}, el('strong', {}, cumulativeTotal.toFixed(1))), el('td', {}, ''), el('td', {}, ''), el('td', {}, ''),
     ]));
     table.appendChild(tbody);
     if (!data.rows.length) {
-      body.appendChild(el('p', { class: 'section-subtitle' }, 'No fleet assets assigned to this project, and no operations logged against it this week.'));
+      body.appendChild(el('p', { class: 'section-subtitle' }, 'No fleet assets assigned to this project, and no operations logged against it in this period.'));
     }
-    body.appendChild(table);
+    const tableWrap = el('div', { class: 'table-wrap' }, [table]);
+    body.appendChild(tableWrap);
 
     const footer = el('div', { class: 'weekly-report-footer' });
     data.typeTotals.forEach((t) => {
       footer.appendChild(el('p', {}, [el('strong', {}, `Total ${t.unit === 'Ha' ? 'Ha' : t.unit} Achieved for ${t.type}: `), `${t.total.toFixed(2)} ${t.unit}`]));
     });
-    if (!data.typeTotals.length) footer.appendChild(el('p', { class: 'section-subtitle' }, 'No operations logged for this project this week yet.'));
+    if (!data.typeTotals.length) footer.appendChild(el('p', { class: 'section-subtitle' }, 'No operations logged for this project in this period yet.'));
     body.appendChild(footer);
 
     printBtn.disabled = false;
     printBtn.onclick = () => printWeeklyPerformanceReport(project, data);
   }
 
-  [projectSelect, weekInput].forEach((input) => input.addEventListener('change', refresh));
+  [projectSelect, startInput, endInput].forEach((input) => input.addEventListener('change', refresh));
   refresh();
 }
 
