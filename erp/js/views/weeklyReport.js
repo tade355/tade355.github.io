@@ -14,6 +14,27 @@ function fleetForProject(project) {
   return store.get('inventory').filter((i) => i.currentProject === project);
 }
 
+// The roster for a week is the union of dozers currently assigned to the
+// project AND dozers with real operations logged under it that week — not
+// just currentProject alone. currentProject is a single mutable snapshot
+// (today's assignment), so a dozer moved, reassigned, or simply lagging
+// that field would otherwise silently vanish from a week it actually
+// worked, even though "all dozers under this project this week" should
+// include it. Currently-assigned-but-idle dozers still show up (as a
+// zero-activity row), which matters for weekly meetings flagging no-shows.
+function rosterForProject(project, ops) {
+  const assigned = fleetForProject(project);
+  const assignedNames = new Set(assigned.map((d) => d.name));
+  const inventoryByName = new Map(store.get('inventory').map((i) => [i.name, i]));
+  const workedNames = [...new Set(ops.map((o) => o.equipment))].filter(Boolean);
+
+  const extra = workedNames
+    .filter((name) => !assignedNames.has(name))
+    .map((name) => inventoryByName.get(name) || { name });
+
+  return [...assigned, ...extra];
+}
+
 function mondayOf(iso) {
   const d = new Date(`${iso}T00:00:00`);
   const diff = d.getDay() === 0 ? 6 : d.getDay() - 1;
@@ -47,8 +68,8 @@ function avgTime(list) {
 // weekly totals — matching the real field report format.
 function computeWeeklyPerformance(project, weekStart) {
   const weekEnd = addDays(weekStart, 6);
-  const dozers = fleetForProject(project);
   const weekOps = store.get('operations').filter((o) => o.siteName === project && dateInRange(o.date, weekStart, weekEnd));
+  const dozers = rosterForProject(project, weekOps);
 
   const rows = dozers.map((d) => {
     const ops = weekOps.filter((o) => o.equipment === d.name);
@@ -91,7 +112,7 @@ function renderWeeklyPerformanceTab(container) {
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Week Of (any day in the week)'), weekInput]));
   filterBar.appendChild(printBtn);
   container.appendChild(filterBar);
-  container.appendChild(el('p', { class: 'section-subtitle' }, 'Rows are the fleet assets whose Current Project (Fleet Management → Fleet Roster) is set to this project. Only Ha-unit operation types count toward the daily grid — see the totals below it for Road/Trekking.'));
+  container.appendChild(el('p', { class: 'section-subtitle' }, 'Rows are every dozer currently assigned to this project (Fleet Management → Fleet Roster → Current Project), plus any dozer with an operations report logged against this project this week even if its Current Project has since changed. Only Ha-unit operation types count toward the daily grid — see the totals below it for Road/Trekking.'));
 
   const body = el('div');
   container.appendChild(body);
@@ -133,7 +154,7 @@ function renderWeeklyPerformanceTab(container) {
     ]));
     table.appendChild(tbody);
     if (!data.rows.length) {
-      body.appendChild(el('p', { class: 'section-subtitle' }, 'No fleet assets currently assigned to this project (set Current Project on the asset in Fleet Roster).'));
+      body.appendChild(el('p', { class: 'section-subtitle' }, 'No fleet assets assigned to this project, and no operations logged against it this week.'));
     }
     body.appendChild(table);
 
@@ -167,7 +188,7 @@ function computeMilestoneTracker(project) {
 
   const activeTypes = OPERATION_TYPES.filter((t) => allOps.some((o) => o.operationType === t.value));
 
-  const machineRows = fleetForProject(project).map((d) => {
+  const machineRows = rosterForProject(project, allOps).map((d) => {
     const ops = allOps.filter((o) => o.equipment === d.name);
     const combinedDays = new Set(ops.map((o) => o.date)).size;
     const officeDays = new Set(ops.filter((o) => o.workType !== 'Business').map((o) => o.date)).size;
