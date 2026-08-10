@@ -17,14 +17,14 @@ function fleetForProject(project) {
   return store.get('inventory').filter((i) => i.currentProject === project);
 }
 
-// The roster for a week is the union of dozers currently assigned to the
-// project AND dozers with real operations logged under it that week — not
-// just currentProject alone. currentProject is a single mutable snapshot
-// (today's assignment), so a dozer moved, reassigned, or simply lagging
-// that field would otherwise silently vanish from a week it actually
-// worked, even though "all dozers under this project this week" should
-// include it. Currently-assigned-but-idle dozers still show up (as a
-// zero-activity row), which matters for weekly meetings flagging no-shows.
+// The roster for a project is the union of dozers currently assigned to it
+// AND dozers with real operations logged under it in the given ops set —
+// not just currentProject alone. currentProject is a single mutable
+// snapshot (today's assignment), so a dozer moved, reassigned, or simply
+// lagging that field would otherwise silently vanish from a period it
+// actually worked. This union can still include currently-assigned-but-idle
+// dozers with zero activity in `ops`; callers that only want dozers that
+// actually worked (e.g. Weekly Performance) filter those back out.
 function rosterForProject(project, ops) {
   const assigned = fleetForProject(project);
   const assignedNames = new Set(assigned.map((d) => d.name));
@@ -105,7 +105,9 @@ function unitForType(type) {
 // selected period, plus a Cumulative row — matching the real field report
 // format. The period is whatever From/To dates were picked (not forced to
 // a Mon-Sun week), so it can cover a single day, a partial week, or a
-// longer stretch.
+// longer stretch. Only dozers with at least one working day this period
+// make the report — a currently-assigned-but-idle dozer just clutters a
+// weekly meeting instead of informing it.
 function computeWeeklyPerformance(project, periodStart, periodEnd) {
   const dates = datesInRange(periodStart, periodEnd);
   const dayLabels = dates.map(dayLabel);
@@ -148,7 +150,7 @@ function computeWeeklyPerformance(project, periodStart, periodEnd) {
       plannedDays: dates.length,
       actualDays,
     };
-  });
+  }).filter((r) => r.daysWorkedAny > 0);
 
   const cumulative = dates.map((_, i) => rows.reduce((sum, r) => sum + r.byDay[i], 0));
 
@@ -161,6 +163,12 @@ function computeWeeklyPerformance(project, periodStart, periodEnd) {
   return { rows, cumulative, periodStart, periodEnd, dayLabels, avgStart, avgClose };
 }
 
+// Trekking is repositioning time between sites/blocks, not billable
+// production — it never earns revenue even if a contract rate happens to
+// be on file for the project (e.g. a general fallback rate meant for
+// other operation types).
+const NON_REVENUE_OPERATION_TYPES = new Set(['Trekking']);
+
 // Expected Revenue: quantity achieved this period x the contract rate in
 // effect that day, broken out per operation type (Ha and Ha-rate types
 // achieve/earn very differently from Trekking's hrs, say, so a single
@@ -170,7 +178,8 @@ function computeExpectedRevenue(periodOps) {
     .map((t) => {
       const ops = periodOps.filter((o) => o.operationType === t.value);
       const qty = ops.reduce((sum, o) => sum + o.quantity, 0);
-      return { type: t.value, unit: t.unit, qty, revenue: provisionalRevenueForRows(ops) };
+      const revenue = NON_REVENUE_OPERATION_TYPES.has(t.value) ? 0 : provisionalRevenueForRows(ops);
+      return { type: t.value, unit: t.unit, qty, revenue };
     })
     .filter((t) => t.qty > 0);
   return { byType, total: byType.reduce((sum, t) => sum + t.revenue, 0) };
@@ -222,7 +231,7 @@ function renderWeeklyPerformanceTab(container) {
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), endInput]));
   filterBar.appendChild(printBtn);
   container.appendChild(filterBar);
-  container.appendChild(el('p', { class: 'section-subtitle' }, 'Rows are every dozer currently assigned to this project (Fleet Management → Fleet Roster → Current Project), plus any dozer with an operations report logged against this project in the selected period even if its Current Project has since changed. Only Ha-unit operation types count toward the daily grid.'));
+  container.appendChild(el('p', { class: 'section-subtitle' }, 'Rows are every dozer with at least one working day on this project in the selected period (currently-assigned-but-idle dozers are left off). Only Ha-unit operation types count toward the daily grid.'));
 
   const body = el('div');
   container.appendChild(body);
