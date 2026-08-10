@@ -379,6 +379,24 @@ export function printWeeklyPerformanceReport(project, data) {
         <p><strong>Operator Cost:</strong> ${formatCurrency(data.costData.operatorCost)} (₦30,000/8hrs, Company &amp; Partnership only)</p>
       </div>
     </div>
+    <h4>Rental Cost — by Dozer</h4>
+    <table class="print-table">
+      <thead><tr><th>Dozer</th><th>Ownership</th><th>Days Worked</th><th>Rate/Day</th><th>Cost</th></tr></thead>
+      <tbody>
+        ${data.costData.rentalBreakdown.length ? data.costData.rentalBreakdown.map((r) => `
+          <tr><td>${r.name}</td><td>${r.ownership}</td><td>${r.days}</td><td>${formatCurrency(r.ratePerDay)}</td><td>${formatCurrency(r.cost)}</td></tr>
+        `).join('') : '<tr><td colspan="5">No Partnership/Rented dozers worked this project in this period.</td></tr>'}
+      </tbody>
+    </table>
+    <h4>Diesel Cost — by Day</h4>
+    <table class="print-table">
+      <thead><tr><th>Date</th><th>Litres Used</th><th>Rate/L</th><th>Cost</th></tr></thead>
+      <tbody>
+        ${data.costData.dieselBreakdown.length ? data.costData.dieselBreakdown.map((d) => `
+          <tr><td>${formatDate(d.date)}</td><td>${d.litres.toLocaleString()} L</td><td>${formatCurrency(d.rate)}</td><td>${formatCurrency(d.cost)}</td></tr>
+        `).join('') : '<tr><td colspan="4">No fuel logged for this project in this period.</td></tr>'}
+      </tbody>
+    </table>
     <h3>Actual Weekly Summary</h3>
     <div class="print-block">
       <p>Revenue here is the same Expected Revenue figure above (reported Ha × contract rate), not a separately-invoiced amount. Dozer Cost uses hours worked × hourly rate for every dozer on the roster regardless of ownership (Profitability's standard formula). M/c Recovered is the Management Fee retained on Partnership/Rented dozers, plus the rental rate saved by using Company-owned dozers instead of renting equivalent capacity — net of the roster's Maintenance Log cost this period.</p>

@@ -203,16 +203,26 @@ function computeTentativeCost(periodOps, rosterNames) {
   const dieselCost = periodOps.reduce((sum, o) => sum + (o.fuelUsed || 0) * dieselRateAsOf(o.date), 0);
   const totalDieselLitres = periodOps.reduce((sum, o) => sum + (o.fuelUsed || 0), 0);
 
+  // Diesel rate is looked up per calendar day (it can change mid-period), so
+  // the breakdown groups by date rather than by dozer — each row shows
+  // exactly which rate applied and why the cost is what it is.
+  const dieselDates = [...new Set(periodOps.map((o) => o.date))].sort();
+  const dieselBreakdown = dieselDates.map((date) => {
+    const litres = periodOps.filter((o) => o.date === date).reduce((sum, o) => sum + (o.fuelUsed || 0), 0);
+    const rate = dieselRateAsOf(date);
+    return { date, litres, rate, cost: litres * rate };
+  });
+
   const roster = store.get('inventory').filter((i) => rosterNames.includes(i.name));
 
-  const rentalCost = roster
-    .filter((i) => i.ownership === 'Partnership' || i.ownership === 'Rented')
-    .reduce((sum, i) => {
-      const days = new Set(
-        periodOps.filter((o) => o.equipment === i.name && o.workType !== 'Business').map((o) => o.date),
-      ).size;
-      return sum + days * (i.rentalRatePerDay || 0);
-    }, 0);
+  const rentalDozers = roster.filter((i) => i.ownership === 'Partnership' || i.ownership === 'Rented');
+  const rentalBreakdown = rentalDozers.map((i) => {
+    const days = new Set(
+      periodOps.filter((o) => o.equipment === i.name && o.workType !== 'Business').map((o) => o.date),
+    ).size;
+    return { name: i.name, ownership: i.ownership, days, ratePerDay: i.rentalRatePerDay || 0, cost: days * (i.rentalRatePerDay || 0) };
+  }).filter((r) => r.days > 0);
+  const rentalCost = rentalBreakdown.reduce((sum, r) => sum + r.cost, 0);
 
   const workingDays = new Set(periodOps.map((o) => o.date)).size;
   const siteLogistics = workingDays * 12800;
@@ -227,6 +237,7 @@ function computeTentativeCost(periodOps, rosterNames) {
 
   return {
     rentalCost, dieselCost, siteLogistics, dieselLogistics, operatorCost,
+    rentalBreakdown, dieselBreakdown,
     total: rentalCost + dieselCost + siteLogistics + dieselLogistics + operatorCost,
   };
 }
@@ -406,6 +417,26 @@ function renderWeeklyPerformanceTab(container) {
       ]),
     ]);
     body.appendChild(breakdown);
+
+    body.appendChild(el('h4', { class: 'subsection-title' }, 'Rental Cost — by Dozer'));
+    body.appendChild(el('div', { class: 'table-wrap' }, [el('table', { class: 'data-table' }, [
+      el('thead', {}, [el('tr', {}, [el('th', {}, 'Dozer'), el('th', {}, 'Ownership'), el('th', {}, 'Days Worked'), el('th', {}, 'Rate/Day'), el('th', {}, 'Cost')])]),
+      el('tbody', {}, costData.rentalBreakdown.length
+        ? costData.rentalBreakdown.map((r) => el('tr', {}, [
+            el('td', {}, r.name), el('td', {}, r.ownership), el('td', {}, String(r.days)), el('td', {}, formatCurrency(r.ratePerDay)), el('td', {}, formatCurrency(r.cost)),
+          ]))
+        : [el('tr', {}, [el('td', { colspan: '5' }, 'No Partnership/Rented dozers worked this project in this period.')])]),
+    ])]));
+
+    body.appendChild(el('h4', { class: 'subsection-title' }, 'Diesel Cost — by Day'));
+    body.appendChild(el('div', { class: 'table-wrap' }, [el('table', { class: 'data-table' }, [
+      el('thead', {}, [el('tr', {}, [el('th', {}, 'Date'), el('th', {}, 'Litres Used'), el('th', {}, 'Rate/L'), el('th', {}, 'Cost')])]),
+      el('tbody', {}, costData.dieselBreakdown.length
+        ? costData.dieselBreakdown.map((d) => el('tr', {}, [
+            el('td', {}, formatDate(d.date)), el('td', {}, `${d.litres.toLocaleString()} L`), el('td', {}, formatCurrency(d.rate)), el('td', {}, formatCurrency(d.cost)),
+          ]))
+        : [el('tr', {}, [el('td', { colspan: '4' }, 'No fuel logged for this project in this period.')])]),
+    ])]));
 
     body.appendChild(el('h3', { class: 'subsection-title' }, 'Actual Weekly Summary'));
     body.appendChild(el('p', { class: 'section-subtitle' }, 'Revenue here is the same Expected Revenue figure as above (reported Ha × contract rate), not a separately-invoiced amount. Dozer Cost uses hours worked × hourly rate for every dozer on the roster regardless of ownership (Profitability\'s standard formula) — a different figure from Tentative Cost\'s Rental Cost above. M/c Recovered is the Management Fee retained on Partnership/Rented dozers, plus the rental rate saved by using Company-owned dozers instead of renting equivalent capacity — net of the roster\'s Maintenance Log cost this period.'));
