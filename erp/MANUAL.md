@@ -189,7 +189,7 @@ A browsable wall of every photo attached to Daily Operations reports.
 
 Two sub-tabs generate the standard weekly field-reporting documents, straight from Daily Operations data.
 
-**Weekly Performance sub-tab:** pick a **Project** and a **From**/**To** date range — despite the tab's name, the period isn't locked to a Mon–Sun week; pick any range from a single day to 92 days (the hard cap — a longer range shows a notice and truncates rather than trying to render an unbounded number of day columns), and the day columns resize to match. Rows are every fleet asset currently assigned to that project (**Current Project** on its Fleet Roster record) *plus* any dozer with an operations report logged against the project in that period even if its Current Project has since changed or was never set correctly — so a dozer that actually worked there won't silently disappear from the report. Each row shows:
+**Weekly Performance sub-tab:** pick a **Project** and a **From**/**To** date range — despite the tab's name, the period isn't locked to a Mon–Sun week; pick any range from a single day to 92 days (the hard cap — a longer range shows a notice and truncates rather than trying to render an unbounded number of day columns), and the day columns resize to match. Rows are every dozer with **at least one working day on this project in the selected period** — an operations report logged against the project, whether or not that dozer's Current Project has since changed or was never set correctly. A dozer currently assigned to the project but idle all period is left off, so the report stays focused on who actually worked. Each row shows:
 - A day-by-day breakdown of hectares cleared, a period total, and its own average Start/Close time.
 - **Type (Speed/Day)** — each operation type the dozer worked this period gets its own speed figure (e.g. "Phase 2: 4.0 Ha/day, Trekking: 2.0 hrs/day") rather than one blended average, since different operation types genuinely run at different rates and averaging them together is misleading.
 - **% Optimization** — days the dozer did any work this period ÷ days in the period (same definition as Fleet Management → Dozer Economics → Company-Owned Dozer Performance).
@@ -197,7 +197,7 @@ Two sub-tabs generate the standard weekly field-reporting documents, straight fr
 A bolded **Cumulative** row sums every dozer's daily totals and also shows the fleet-wide average Start/Close across every report in the period.
 
 Below the daily grid, a compact **Revenue & Cost (Tentative)** section keeps the report focused on what management needs at a glance:
-- **Expected Revenue** — quantity achieved this period × the contract rate in effect that day (Rate History), broken down **by Operation Type** (Felling, Stacking, etc. each get their own line, since they earn at very different rates). This is provisional/expected revenue, not verified or invoiced revenue.
+- **Expected Revenue** — quantity achieved this period × the contract rate in effect that day (Rate History), broken down **by Operation Type** (Felling, Stacking, etc. each get their own line, since they earn at very different rates). **Trekking always shows ₦0 revenue** — it's repositioning time between sites/blocks, not billable production, even if a general fallback contract rate happens to be on file for the project. This is provisional/expected revenue, not verified or invoiced revenue.
 - **Tentative Cost** — a four-line field estimate: **Rental Cost** (Partnership/Rented dozers on this roster, days worked this period × their day rate), **Diesel Cost** (Fuel Used × the diesel rate in effect that day, summed across the roster), **Site Logistics** and **Diesel Logistics** (this project's Logistics-cost-head spend for the period, split by whether the expense description mentions diesel/fuel).
 - **Tentative Profit** — Expected Revenue minus Tentative Cost.
 
@@ -205,7 +205,7 @@ This is a quick estimate for a weekly meeting, not a full ledger reconciliation 
 
 Click **🖨 Print Report** for a printable "WEEKLY PERFORMANCE REPORT" that includes the daily grid and the Revenue & Cost (Tentative) section.
 
-If a dozer you expect to see is missing: it has neither its Current Project set to this project nor any operations report logged against it in the selected period.
+If a dozer you expect to see is missing: it has no operations report logged against this project in the selected period — check the date range, or whether the report was logged against a different project name.
 
 **Milestone Tracker sub-tab:** pick a **Project**. Shows all-time (not period-limited) progress: Project Start Date, Days on Project, Project Speed (Ha/Day), Grand Cumulative Achieved, Total Contract Area, and Remaining to Complete — plus a table of every machine/operator that's ever worked the project (same Current-Project-or-actually-worked-here roster rule as Weekly Performance above), broken down by operation type. Requires **Project Start Date** and **Total Contract Area (Ha)** to be set on the Projects tab for the full set of figures to compute (otherwise they show "—"). Click **🖨 Print Tracker** for a printable "MILESTONE REPORT TRACKING SYSTEM" document.
 
