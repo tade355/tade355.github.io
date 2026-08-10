@@ -203,7 +203,18 @@ Below the daily grid, a compact **Revenue & Cost (Tentative)** section keeps the
 
 This is a quick estimate for a weekly meeting, not a full ledger reconciliation — see Profitability, Fuel Credit Tracking, and Dozer Rent Payments for the authoritative figures behind each of these.
 
-Click **🖨 Print Report** for a printable "WEEKLY PERFORMANCE REPORT" that includes the daily grid and the Revenue & Cost (Tentative) section.
+Below that, an **Actual Weekly Summary** section mirrors the fuller cost-and-margin table used for the company's own weekly field-report review — a different lens from Revenue & Cost (Tentative) above, not a replacement for it:
+- **Total {Operation Type}** rows and **Actual Revenue** — the same Expected Revenue figure as above (reported Ha × contract rate), broken down by operation type. Trekking is excluded (it never earns revenue).
+- **Total Cost** — Diesel Cost (Fuel Used × the diesel rate in effect that day) + Dozer Cost (hours worked × the hourly rate on file for each dozer — Profitability's standard formula, so **every dozer gets a cost figure here regardless of ownership**, unlike Tentative Cost's Rental Cost which only applies to Partnership/Rented dozers) + Logistics & Others (this project's Logistics and other expense-category spend for the period; Fuel- and Maintenance-category expenses are excluded since they're already covered by Diesel Cost and Maintenance Incurred below, so they don't get double-counted).
+- **Actual Profit** — Actual Revenue minus Total Cost, with the margin shown as a percentage of Actual Revenue.
+- **M/c Recovered / Maintenance Incurred / Net M/c Recovered** — the Management Fee retained on this project's Partnership/Rented dozers (days worked × fee/day), net of their Maintenance Log repair costs this period. This is the same bookkeeping a Dozer Rent Payments settlement uses, auto-computed here for the whole roster instead of entered per dozer.
+- **Total Margin** — Actual Profit plus Net M/c Recovered, the combined bottom line.
+
+A **Daily Summary** table breaks the same Revenue/Cost/Profit down by day, plus how many dozers worked each day — the daily figures always sum to the weekly totals above.
+
+Finally, a short breakdown lists **Total Litres of Diesel Used** and each cost bucket (Diesel, Dozer, Logistics & Others) as a percentage of Total Cost, plus Total Cost of Maintenance shown for reference (it's part of the M/c Recovery bookkeeping above, not part of Total Cost itself).
+
+Click **🖨 Print Report** for a printable "WEEKLY PERFORMANCE REPORT" that includes the daily grid, Revenue & Cost (Tentative), and the Actual Weekly Summary.
 
 If a dozer you expect to see is missing: it has no operations report logged against this project in the selected period — check the date range, or whether the report was logged against a different project name.
 

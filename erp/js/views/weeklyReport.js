@@ -4,7 +4,7 @@ import { sectionHeader, renderTable, statCard } from '../ui.js';
 import { OPERATION_TYPES, isHaOperationType } from '../constants.js';
 import { printWeeklyPerformanceReport, printMilestoneTracker } from '../print.js';
 import { provisionalRevenueForRows } from './profitability.js';
-import { dieselRateAsOf } from '../rateHistory.js';
+import { dieselRateAsOf, hourlyRateAsOf } from '../rateHistory.js';
 import { collectEntries } from './incomeExpenditure.js';
 
 const WEEKDAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -217,6 +217,71 @@ function computeTentativeCost(project, periodStart, periodEnd, periodOps, roster
   return { rentalCost, dieselCost, siteLogistics, dieselLogistics, total: rentalCost + dieselCost + siteLogistics + dieselLogistics };
 }
 
+// Actual Weekly Summary: a fuller cost-and-margin table mirroring the
+// company's own weekly field-report spreadsheet — a different lens from
+// Revenue & Cost (Tentative) above, not a replacement for it. Actual
+// Revenue reuses the same Expected Revenue figure (reported Ha x contract
+// rate) rather than a separately-invoiced figure. Total Cost here uses the
+// app's standard Profitability-style Dozer Cost (hoursWorked x hourlyRate,
+// same formula as Profitability/Dozer Economics), so every dozer gets a
+// cost figure regardless of ownership — unlike Tentative Cost's Rental
+// Cost, which only applies to Partnership/Rented dozers. Fuel- and
+// Maintenance-cost-head ledger entries are excluded from Logistics/Others
+// since Diesel Cost is already derived from litres consumed and
+// Maintenance is tracked separately via the Maintenance Log below — adding
+// either back in would double them up (same reasoning Profitability
+// already applies to Fuel-category expenses).
+//
+// M/c Recovered is the Management Fee retained on this project's
+// Partnership/Rented dozers (days worked x fee/day), net of their
+// Maintenance Log repair costs this period — the same bookkeeping Dozer
+// Rent Payments uses for a formal owner settlement, auto-computed here
+// instead of manually entered per dozer.
+function computeActualWeeklySummary(project, periodStart, periodEnd, dates, periodOps, revenueData, rosterNames) {
+  const dieselCost = periodOps.reduce((sum, o) => sum + (o.fuelUsed || 0) * dieselRateAsOf(o.date), 0);
+  const dozerCost = periodOps.reduce((sum, o) => sum + (o.hoursWorked || 0) * hourlyRateAsOf(o.equipment, o.date), 0);
+
+  const otherEntries = collectEntries().filter((e) =>
+    e.type === 'Expenditure' && e.project === project && e.costHead !== 'Fuel' && e.costHead !== 'Maintenance');
+  const logisticsOthersCost = otherEntries.filter((e) => dateInRange(e.date, periodStart, periodEnd)).reduce((sum, e) => sum + e.amount, 0);
+
+  const totalCost = dieselCost + dozerCost + logisticsOthersCost;
+  const actualProfit = revenueData.total - totalCost;
+  const actualProfitPct = revenueData.total ? (actualProfit / revenueData.total) * 100 : 0;
+
+  const settleable = store.get('inventory').filter((i) => rosterNames.includes(i.name) && (i.ownership === 'Partnership' || i.ownership === 'Rented'));
+  const mcRecovered = settleable.reduce((sum, i) => {
+    const officeDays = new Set(periodOps.filter((o) => o.equipment === i.name && o.workType !== 'Business').map((o) => o.date)).size;
+    return sum + officeDays * (i.managementFeePerDay || 0);
+  }, 0);
+  const settleableNames = new Set(settleable.map((i) => i.name));
+  const maintenanceIncurred = store.get('maintenanceLogs')
+    .filter((m) => settleableNames.has(m.equipment) && dateInRange(m.date, periodStart, periodEnd))
+    .reduce((sum, m) => sum + (m.cost || 0), 0);
+  const netMcRecovered = mcRecovered - maintenanceIncurred;
+  const totalMargin = actualProfit + netMcRecovered;
+
+  const totalDieselLitres = periodOps.reduce((sum, o) => sum + (o.fuelUsed || 0), 0);
+
+  const dailyRows = dates.map((date) => {
+    const dayOps = periodOps.filter((o) => o.date === date);
+    const dozersToday = new Set(dayOps.map((o) => o.equipment)).size;
+    const dayRevenue = computeExpectedRevenue(dayOps).total;
+    const dayDiesel = dayOps.reduce((sum, o) => sum + (o.fuelUsed || 0) * dieselRateAsOf(o.date), 0);
+    const dayDozer = dayOps.reduce((sum, o) => sum + (o.hoursWorked || 0) * hourlyRateAsOf(o.equipment, o.date), 0);
+    const dayLogisticsOthers = otherEntries.filter((e) => e.date === date).reduce((sum, e) => sum + e.amount, 0);
+    const dayCost = dayDiesel + dayDozer + dayLogisticsOthers;
+    return { date, label: dayLabel(date), dozers: dozersToday, revenue: dayRevenue, cost: dayCost, profit: dayRevenue - dayCost };
+  });
+
+  return {
+    dieselCost, dozerCost, logisticsOthersCost, totalCost,
+    actualProfit, actualProfitPct,
+    mcRecovered, maintenanceIncurred, netMcRecovered, totalMargin,
+    totalDieselLitres, dailyRows,
+  };
+}
+
 function renderWeeklyPerformanceTab(container) {
   const filterBar = el('div', { class: 'filter-bar' });
   const projectSelect = el('select', {}, projectOptions().map((p) => el('option', { value: p }, p)));
@@ -252,7 +317,9 @@ function renderWeeklyPerformanceTab(container) {
     const data = computeWeeklyPerformance(project, periodStart, periodEnd);
     const periodOps = store.get('operations').filter((o) => o.siteName === project && dateInRange(o.date, periodStart, periodEnd));
     const revenueData = computeExpectedRevenue(periodOps);
-    const costData = computeTentativeCost(project, periodStart, periodEnd, periodOps, data.rows.map((r) => r.name));
+    const rosterNames = data.rows.map((r) => r.name);
+    const costData = computeTentativeCost(project, periodStart, periodEnd, periodOps, rosterNames);
+    const actualData = computeActualWeeklySummary(project, periodStart, periodEnd, datesInRange(periodStart, periodEnd), periodOps, revenueData, rosterNames);
 
     body.appendChild(el('h3', { class: 'subsection-title' }, `Period: ${formatDate(periodStart)} – ${formatDate(periodEnd)}`));
     if (data.dayLabels.length >= MAX_PERIOD_DAYS) {
@@ -318,8 +385,57 @@ function renderWeeklyPerformanceTab(container) {
     ]);
     body.appendChild(breakdown);
 
+    body.appendChild(el('h3', { class: 'subsection-title' }, 'Actual Weekly Summary'));
+    body.appendChild(el('p', { class: 'section-subtitle' }, 'Revenue here is the same Expected Revenue figure as above (reported Ha × contract rate), not a separately-invoiced amount. Dozer Cost uses hours worked × hourly rate for every dozer on the roster regardless of ownership (Profitability\'s standard formula) — a different figure from Tentative Cost\'s Rental Cost above. M/c Recovered / Maintenance Incurred is the Management Fee and Maintenance Log cost for this project\'s Partnership/Rented dozers this period — the same bookkeeping as a Dozer Rent Payments settlement.'));
+
+    const revenueRows = revenueData.byType.filter((t) => !NON_REVENUE_OPERATION_TYPES.has(t.type));
+    const summaryTable = el('table', { class: 'data-table' }, [
+      el('thead', {}, [el('tr', {}, [el('th', {}, 'Key Weekly KPI'), el('th', {}, 'Qty'), el('th', {}, 'Amount (₦)')])]),
+      el('tbody', {}, [
+        ...revenueRows.map((t) => el('tr', {}, [
+          el('td', {}, `Total ${t.type}`), el('td', {}, `${t.qty.toFixed(2)} ${t.unit}`), el('td', {}, formatCurrency(t.revenue)),
+        ])),
+        el('tr', { class: 'row-cumulative' }, [el('td', { colspan: '2' }, el('strong', {}, 'Actual Revenue')), el('td', {}, el('strong', {}, formatCurrency(revenueData.total)))]),
+        el('tr', {}, [el('td', { colspan: '2' }, 'Total Cost'), el('td', {}, formatCurrency(actualData.totalCost))]),
+        el('tr', {}, [
+          el('td', { colspan: '2' }, el('strong', {}, 'Actual Profit')),
+          el('td', { class: actualData.actualProfit >= 0 ? 'text-good' : 'text-critical' }, el('strong', {}, `${formatCurrency(actualData.actualProfit)} (${actualData.actualProfitPct.toFixed(0)}%)`)),
+        ]),
+        el('tr', {}, [el('td', { colspan: '2' }, 'M/c Recovered'), el('td', {}, formatCurrency(actualData.mcRecovered))]),
+        el('tr', {}, [el('td', { colspan: '2' }, '　Maintenance Incurred'), el('td', {}, `-${formatCurrency(actualData.maintenanceIncurred)}`)]),
+        el('tr', {}, [el('td', { colspan: '2' }, 'Net M/c Recovered'), el('td', {}, formatCurrency(actualData.netMcRecovered))]),
+        el('tr', { class: 'row-cumulative' }, [
+          el('td', { colspan: '2' }, el('strong', {}, 'Total Margin')),
+          el('td', { class: actualData.totalMargin >= 0 ? 'text-good' : 'text-critical' }, el('strong', {}, formatCurrency(actualData.totalMargin))),
+        ]),
+      ]),
+    ]);
+    body.appendChild(el('div', { class: 'table-wrap' }, [summaryTable]));
+
+    body.appendChild(el('h4', { class: 'subsection-title' }, 'Daily Summary'));
+    const dailyTable = el('table', { class: 'data-table' }, [
+      el('thead', {}, [el('tr', {}, [el('th', {}, 'Date'), el('th', {}, 'No of Dozers'), el('th', {}, 'Revenue'), el('th', {}, 'Cost'), el('th', {}, 'Profit')])]),
+      el('tbody', {}, actualData.dailyRows.map((d) => el('tr', {}, [
+        el('td', {}, d.label),
+        el('td', {}, String(d.dozers)),
+        el('td', {}, d.revenue ? formatCurrency(d.revenue) : '—'),
+        el('td', {}, d.cost ? formatCurrency(d.cost) : '—'),
+        el('td', { class: d.profit >= 0 ? 'text-good' : 'text-critical' }, (d.revenue || d.cost) ? formatCurrency(d.profit) : '—'),
+      ]))),
+    ]);
+    body.appendChild(el('div', { class: 'table-wrap' }, [dailyTable]));
+
+    const pctOfCost = (v) => (actualData.totalCost ? `${((v / actualData.totalCost) * 100).toFixed(1)}%` : '—');
+    body.appendChild(el('div', {}, [
+      el('p', {}, [el('strong', {}, 'Total Litres of Diesel Used: '), `${actualData.totalDieselLitres.toLocaleString()} L`]),
+      el('p', {}, [el('strong', {}, 'Total Cost of Diesel: '), `${formatCurrency(actualData.dieselCost)}  (${pctOfCost(actualData.dieselCost)})`]),
+      el('p', {}, [el('strong', {}, 'Total Cost of Dozer: '), `${formatCurrency(actualData.dozerCost)}  (${pctOfCost(actualData.dozerCost)})`]),
+      el('p', {}, [el('strong', {}, 'Total Cost of Logistics & Others: '), `${formatCurrency(actualData.logisticsOthersCost)}  (${pctOfCost(actualData.logisticsOthersCost)})`]),
+      el('p', {}, [el('strong', {}, 'Total Cost of Maintenance: '), formatCurrency(actualData.maintenanceIncurred)]),
+    ]));
+
     printBtn.disabled = false;
-    printBtn.onclick = () => printWeeklyPerformanceReport(project, { ...data, revenueData, costData });
+    printBtn.onclick = () => printWeeklyPerformanceReport(project, { ...data, revenueData, costData, actualData });
   }
 
   [projectSelect, startInput, endInput].forEach((input) => input.addEventListener('change', refresh));
