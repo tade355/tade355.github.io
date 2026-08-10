@@ -203,6 +203,8 @@ Below the daily grid, a compact **Revenue & Cost (Tentative)** section keeps the
 
 This is a quick estimate for a weekly meeting, not a full ledger reconciliation — see Profitability, Fuel Credit Tracking, and Dozer Rent Payments for the authoritative figures behind each of these.
 
+Two detail tables show exactly how Rental Cost and Diesel Cost were arrived at: **Rental Cost — by Dozer** (one row per Partnership/Rented dozer that worked this period, with Days Worked, Rate/Day, and Cost) and **Diesel Cost — by Day** (one row per day, with Litres Used, the diesel rate in effect that day, and Cost) — useful when the rate changed mid-period, since each row shows exactly which rate applied.
+
 Below that, an **Actual Weekly Summary** section mirrors the fuller cost-and-margin table used for the company's own weekly field-report review — a different lens from Revenue & Cost (Tentative) above, not a replacement for it:
 - **Total {Operation Type}** rows and **Actual Revenue** — the same Expected Revenue figure as above (reported Ha × contract rate), broken down by operation type. Trekking is excluded (it never earns revenue).
 - **Total Cost** — Diesel Cost (Fuel Used × the diesel rate in effect that day) + Dozer Cost (hours worked × the hourly rate on file for each dozer — Profitability's standard formula, so **every dozer gets a cost figure here regardless of ownership**, unlike Tentative Cost's Rental Cost which only applies to Partnership/Rented dozers) + Logistics & Others (this project's Logistics and other expense-category spend for the period; Fuel- and Maintenance-category expenses are excluded since they're already covered by Diesel Cost and Maintenance Incurred below, so they don't get double-counted).
