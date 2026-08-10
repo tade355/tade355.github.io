@@ -378,6 +378,47 @@ export function printWeeklyPerformanceReport(project, data) {
         <p><strong>Diesel Logistics:</strong> ${formatCurrency(data.costData.dieselLogistics)}</p>
       </div>
     </div>
+    <h3>Actual Weekly Summary</h3>
+    <div class="print-block">
+      <p>Revenue here is the same Expected Revenue figure above (reported Ha × contract rate), not a separately-invoiced amount. Dozer Cost uses hours worked × hourly rate for every dozer on the roster regardless of ownership (Profitability's standard formula). M/c Recovered / Maintenance Incurred is the Management Fee and Maintenance Log cost for this project's Partnership/Rented dozers this period.</p>
+    </div>
+    <table class="print-table">
+      <thead><tr><th>Key Weekly KPI</th><th>Qty</th><th>Amount (₦)</th></tr></thead>
+      <tbody>
+        ${data.revenueData.byType.filter((t) => t.revenue > 0).map((t) => `
+          <tr><td>Total ${t.type}</td><td>${t.qty.toFixed(2)} ${t.unit}</td><td>${formatCurrency(t.revenue)}</td></tr>
+        `).join('')}
+        <tr><td colspan="2"><strong>Actual Revenue</strong></td><td><strong>${formatCurrency(data.revenueData.total)}</strong></td></tr>
+        <tr><td colspan="2">Total Cost</td><td>${formatCurrency(data.actualData.totalCost)}</td></tr>
+        <tr><td colspan="2"><strong>Actual Profit</strong></td><td><strong>${formatCurrency(data.actualData.actualProfit)} (${data.actualData.actualProfitPct.toFixed(0)}%)</strong></td></tr>
+        <tr><td colspan="2">M/c Recovered</td><td>${formatCurrency(data.actualData.mcRecovered)}</td></tr>
+        <tr><td colspan="2">Maintenance Incurred</td><td>-${formatCurrency(data.actualData.maintenanceIncurred)}</td></tr>
+        <tr><td colspan="2">Net M/c Recovered</td><td>${formatCurrency(data.actualData.netMcRecovered)}</td></tr>
+        <tr><td colspan="2"><strong>Total Margin</strong></td><td><strong>${formatCurrency(data.actualData.totalMargin)}</strong></td></tr>
+      </tbody>
+    </table>
+    <h4>Daily Summary</h4>
+    <table class="print-table">
+      <thead><tr><th>Date</th><th>No of Dozers</th><th>Revenue</th><th>Cost</th><th>Profit</th></tr></thead>
+      <tbody>
+        ${data.actualData.dailyRows.map((d) => `
+          <tr>
+            <td>${d.label}</td>
+            <td>${d.dozers}</td>
+            <td>${d.revenue ? formatCurrency(d.revenue) : '—'}</td>
+            <td>${d.cost ? formatCurrency(d.cost) : '—'}</td>
+            <td>${(d.revenue || d.cost) ? formatCurrency(d.profit) : '—'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    <div class="print-block">
+      <p><strong>Total Litres of Diesel Used:</strong> ${data.actualData.totalDieselLitres.toLocaleString()} L</p>
+      <p><strong>Total Cost of Diesel:</strong> ${formatCurrency(data.actualData.dieselCost)} ${data.actualData.totalCost ? `(${((data.actualData.dieselCost / data.actualData.totalCost) * 100).toFixed(1)}%)` : ''}</p>
+      <p><strong>Total Cost of Dozer:</strong> ${formatCurrency(data.actualData.dozerCost)} ${data.actualData.totalCost ? `(${((data.actualData.dozerCost / data.actualData.totalCost) * 100).toFixed(1)}%)` : ''}</p>
+      <p><strong>Total Cost of Logistics &amp; Others:</strong> ${formatCurrency(data.actualData.logisticsOthersCost)} ${data.actualData.totalCost ? `(${((data.actualData.logisticsOthersCost / data.actualData.totalCost) * 100).toFixed(1)}%)` : ''}</p>
+      <p><strong>Total Cost of Maintenance:</strong> ${formatCurrency(data.actualData.maintenanceIncurred)}</p>
+    </div>
   `;
   render(html);
 }
