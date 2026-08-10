@@ -354,91 +354,30 @@ export function printWeeklyPerformanceReport(project, data) {
         </tr>
       </tbody>
     </table>
+    <h3>Revenue &amp; Cost (Tentative)</h3>
     <div class="print-block">
-      ${data.typeTotals.map((t) => `<p><strong>Total ${t.unit} Achieved for ${t.type}:</strong> ${t.total.toFixed(2)} ${t.unit}</p>`).join('') || '<p>No operations logged for this project in this period.</p>'}
-    </div>
-    <h3>Cost &amp; Profitability Analysis</h3>
-    <div class="print-block">
-      <p>Revenue is Provisional (quantity × the contract rate in effect that day), not verified/invoiced revenue. Profit here can't absorb Logistics/Other costs, which only attribute at the project level.</p>
+      <p>Expected Revenue is quantity × the contract rate in effect that day (Projects → Rate History), not verified/invoiced revenue. Tentative Cost is a quick field estimate, not a full ledger reconciliation — see Profitability, Fuel Credit Tracking, and Dozer Rent Payments for the authoritative figures.</p>
     </div>
     <div class="print-meta-grid">
-      <div><strong>Total Revenue (Provisional):</strong> ${formatCurrency(data.totals.revenue)}</div>
-      <div><strong>Total Diesel Used:</strong> ${data.totals.dieselLitres.toLocaleString()} L</div>
-      <div><strong>Total Diesel Cost:</strong> ${formatCurrency(data.totals.dieselCost)}</div>
-      <div><strong>Total Repairs/Maintenance:</strong> ${formatCurrency(data.totals.maintenanceCost)}</div>
-      <div><strong>Total Profit (Provisional):</strong> ${formatCurrency(data.totals.profit)}</div>
+      <div><strong>Expected Revenue:</strong> ${formatCurrency(data.revenueData.total)}</div>
+      <div><strong>Tentative Cost:</strong> ${formatCurrency(data.costData.total)}</div>
+      <div><strong>Tentative Profit:</strong> ${formatCurrency(data.revenueData.total - data.costData.total)}</div>
     </div>
-    <table class="print-table">
-      <thead>
-        <tr>
-          <th>Dozer</th><th>% Optimization</th><th>Revenue (Provisional)</th><th>Diesel Used</th><th>Diesel Cost</th><th>Repairs/Maintenance</th><th>Profit (Provisional)</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${data.rows.map((r) => `
-          <tr>
-            <td>${r.name}</td>
-            <td>${r.optimizationPct.toFixed(0)}%</td>
-            <td>${formatCurrency(r.revenue)}</td>
-            <td>${r.dieselLitres.toLocaleString()} L</td>
-            <td>${formatCurrency(r.dieselCost)}</td>
-            <td>${formatCurrency(r.maintenanceCost)}</td>
-            <td>${formatCurrency(r.profit)}</td>
-          </tr>
-        `).join('') || '<tr><td colspan="7">No fleet assets assigned to this project, and no operations logged against it in this period.</td></tr>'}
-      </tbody>
-    </table>
-    ${data.payments ? `
-    <h3>Payments Summary</h3>
-    <div class="print-block">
-      <p>Diesel Vendor and Machine Owner balances are current running totals (all-time, not limited to this period). Total Paid Out is scoped to this period and covers every project company-wide, not just this one.</p>
-    </div>
-    <div class="print-meta-grid">
-      <div><strong>Diesel Vendor — Total Owed:</strong> ${formatCurrency(data.payments.vendorTotals.owed)}</div>
-      <div><strong>Diesel Vendor — Paid:</strong> ${formatCurrency(data.payments.vendorTotals.paid)}</div>
-      <div><strong>Diesel Vendor — Balance:</strong> ${formatCurrency(data.payments.vendorTotals.balance)}</div>
-      <div><strong>Machine Owner — Total Owed:</strong> ${formatCurrency(data.payments.ownerTotals.owed)}</div>
-      <div><strong>Machine Owner — Paid:</strong> ${formatCurrency(data.payments.ownerTotals.paid)}</div>
-      <div><strong>Machine Owner — Balance:</strong> ${formatCurrency(data.payments.ownerTotals.balance)}</div>
-    </div>
-    ${data.payments.ownerBalances.length ? `
-    <table class="print-table">
-      <thead><tr><th>Dozer</th><th>Owner</th><th>Owed</th><th>Paid</th><th>Balance</th></tr></thead>
-      <tbody>
-        ${data.payments.ownerBalances.map((o) => `
-          <tr>
-            <td>${o.name}</td>
-            <td>${o.owner}</td>
-            <td>${formatCurrency(o.generated)}</td>
-            <td>${formatCurrency(o.paid)}</td>
-            <td>${formatCurrency(o.balance)}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-    ` : ''}
-    <p><strong>Total Paid Out This Period (All Projects):</strong> ${formatCurrency(data.payments.totalPaidOut)}</p>
     <div class="print-meta-grid">
       <div>
-        <strong>By Category</strong>
-        <table class="print-table">
-          <thead><tr><th>Cost Head</th><th>Amount</th></tr></thead>
-          <tbody>
-            ${data.payments.byCategory.map((c) => `<tr><td>${c.category}</td><td>${formatCurrency(c.amount)}</td></tr>`).join('') || '<tr><td colspan="2">None</td></tr>'}
-          </tbody>
-        </table>
+        <strong>Expected Revenue by Operation Type</strong>
+        ${data.revenueData.byType.length
+          ? data.revenueData.byType.map((t) => `<p><strong>${t.type}:</strong> ${t.qty.toFixed(2)} ${t.unit} — ${formatCurrency(t.revenue)}</p>`).join('')
+          : '<p>No operations logged for this project in this period yet.</p>'}
       </div>
       <div>
-        <strong>By Project</strong>
-        <table class="print-table">
-          <thead><tr><th>Project</th><th>Amount</th></tr></thead>
-          <tbody>
-            ${data.payments.byProject.map((p) => `<tr><td>${p.project}</td><td>${formatCurrency(p.amount)}</td></tr>`).join('') || '<tr><td colspan="2">None</td></tr>'}
-          </tbody>
-        </table>
+        <strong>Tentative Cost Breakdown</strong>
+        <p><strong>Rental Cost:</strong> ${formatCurrency(data.costData.rentalCost)}</p>
+        <p><strong>Diesel Cost:</strong> ${formatCurrency(data.costData.dieselCost)}</p>
+        <p><strong>Site Logistics:</strong> ${formatCurrency(data.costData.siteLogistics)}</p>
+        <p><strong>Diesel Logistics:</strong> ${formatCurrency(data.costData.dieselLogistics)}</p>
       </div>
     </div>
-    ` : ''}
   `;
   render(html);
 }
