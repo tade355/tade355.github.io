@@ -183,14 +183,14 @@ function computeExpectedRevenue(periodOps) {
 // Tentative Cost: a compact field estimate for management, not a full
 // ledger reconciliation (see Profitability, Fuel Credit Tracking, and
 // Dozer Rent Payments for the authoritative figures behind each of these).
-// - Rental Cost: every dozer on this roster with a Rental Rate/Day set,
-//   days worked (any operation, excluding Business days) x that day rate —
-//   including Company-owned dozers, at whatever notional rate is on file
-//   for them. For a 3rd-party dozer this is real rent paid out; for a
-//   Company dozer it's the imputed cost of using owned equipment (what it
-//   would cost to replicate the operation from scratch), consistent with
-//   how M/c Recovered in Actual Weekly Summary credits Company dozers the
-//   same way.
+// - Rental Cost: always covers every dozer on the roster, by ownership —
+//   Partnership/Rented: days worked (excluding Business days) x Rental
+//   Rate/Day, real rent paid out. Company: hours worked x Hourly Rate,
+//   the imputed cost of using owned equipment (what it would cost to
+//   replicate the operation from scratch) — hours rather than days
+//   because Hourly Rate is a required field on every dozer, so this
+//   always produces a real figure instead of depending on an optional
+//   Rental Rate/Day that a Company dozer may never have had set.
 // - Diesel Cost: Fuel Used x the diesel rate in effect that day.
 // - Site Logistics: a flat ₦12,800 per working day (any day this period
 //   with at least one roster dozer active) — a standard daily site-support
@@ -217,10 +217,14 @@ function computeTentativeCost(periodOps, rosterNames) {
   const roster = store.get('inventory').filter((i) => rosterNames.includes(i.name));
 
   const rentalBreakdown = roster.map((i) => {
-    const days = new Set(
-      periodOps.filter((o) => o.equipment === i.name && o.workType !== 'Business').map((o) => o.date),
-    ).size;
-    return { name: i.name, ownership: i.ownership || 'Company', days, ratePerDay: i.rentalRatePerDay || 0, cost: days * (i.rentalRatePerDay || 0) };
+    const ownership = i.ownership || 'Company';
+    const dozerOps = periodOps.filter((o) => o.equipment === i.name && o.workType !== 'Business');
+    if (ownership === 'Partnership' || ownership === 'Rented') {
+      const days = new Set(dozerOps.map((o) => o.date)).size;
+      return { name: i.name, ownership, basis: `${days} day(s) × ${formatCurrency(i.rentalRatePerDay || 0)}/day`, cost: days * (i.rentalRatePerDay || 0) };
+    }
+    const hours = dozerOps.reduce((sum, o) => sum + (o.hoursWorked || 0), 0);
+    return { name: i.name, ownership, basis: `${hours.toFixed(1)} hr(s) × ${formatCurrency(i.hourlyRate || 0)}/hr`, cost: hours * (i.hourlyRate || 0) };
   }).filter((r) => r.cost > 0);
   const rentalCost = rentalBreakdown.reduce((sum, r) => sum + r.cost, 0);
 
@@ -261,10 +265,10 @@ function computeTentativeCost(periodOps, rosterNames) {
 // - Partnership/Rented: the Management Fee retained (days worked x fee/day)
 //   — the same bookkeeping Dozer Rent Payments uses for a formal owner
 //   settlement, auto-computed here instead of manually entered per dozer.
-// - Company-owned: the day rate a rental would have cost (days worked x
-//   Rental Rate/Day, if set on the dozer) — no rent is actually paid out,
-//   so this is value generated/cost saved by using owned equipment instead
-//   of renting equivalent capacity.
+// - Company-owned: hours worked x Hourly Rate (the same basis Tentative
+//   Cost's Rental Cost uses for Company dozers) — no rent is actually paid
+//   out, so this is money saved by using owned equipment instead of
+//   renting equivalent capacity.
 // Either way, it's net of the roster's Maintenance Log repair costs this
 // period (Maintenance Incurred below).
 function computeActualWeeklySummary(project, periodStart, periodEnd, dates, periodOps, revenueData, rosterNames) {
@@ -281,10 +285,13 @@ function computeActualWeeklySummary(project, periodStart, periodEnd, dates, peri
 
   const roster = store.get('inventory').filter((i) => rosterNames.includes(i.name));
   const mcRecovered = roster.reduce((sum, i) => {
-    const officeDays = new Set(periodOps.filter((o) => o.equipment === i.name && o.workType !== 'Business').map((o) => o.date)).size;
-    const isThirdParty = i.ownership === 'Partnership' || i.ownership === 'Rented';
-    const rate = isThirdParty ? (i.managementFeePerDay || 0) : (i.rentalRatePerDay || 0);
-    return sum + officeDays * rate;
+    const dozerOps = periodOps.filter((o) => o.equipment === i.name && o.workType !== 'Business');
+    if (i.ownership === 'Partnership' || i.ownership === 'Rented') {
+      const officeDays = new Set(dozerOps.map((o) => o.date)).size;
+      return sum + officeDays * (i.managementFeePerDay || 0);
+    }
+    const hours = dozerOps.reduce((s, o) => s + (o.hoursWorked || 0), 0);
+    return sum + hours * (i.hourlyRate || 0);
   }, 0);
   const rosterNameSet = new Set(roster.map((i) => i.name));
   const maintenanceIncurred = store.get('maintenanceLogs')
@@ -419,7 +426,7 @@ function renderWeeklyPerformanceTab(container) {
     body.appendChild(el('div', { class: 'table-wrap' }, [el('table', { class: 'data-table' }, [
       el('thead', {}, [el('tr', {}, [el('th', {}, 'Cost Item'), el('th', {}, 'Basis'), el('th', {}, 'Amount')])]),
       el('tbody', {}, [
-        el('tr', {}, [el('td', {}, 'Rental Cost'), el('td', {}, 'Days worked × Rental Rate/Day (every dozer, any ownership)'), el('td', {}, formatCurrency(costData.rentalCost))]),
+        el('tr', {}, [el('td', {}, 'Rental Cost'), el('td', {}, 'Partnership/Rented: days × Rental Rate/Day. Company: hours × Hourly Rate.'), el('td', {}, formatCurrency(costData.rentalCost))]),
         el('tr', {}, [el('td', {}, 'Diesel Cost'), el('td', {}, 'Fuel Used × the diesel rate in effect that day'), el('td', {}, formatCurrency(costData.dieselCost))]),
         el('tr', {}, [el('td', {}, 'Site Logistics'), el('td', {}, `₦12,800 × ${costData.workingDays} working day(s)`), el('td', {}, formatCurrency(costData.siteLogistics))]),
         el('tr', {}, [el('td', {}, 'Diesel Logistics'), el('td', {}, `₦1,500 per 30L × ${costData.totalDieselLitres.toLocaleString()}L`), el('td', {}, formatCurrency(costData.dieselLogistics))]),
@@ -430,12 +437,12 @@ function renderWeeklyPerformanceTab(container) {
 
     body.appendChild(el('h4', { class: 'subsection-title' }, 'Rental Cost — by Dozer'));
     body.appendChild(el('div', { class: 'table-wrap' }, [el('table', { class: 'data-table' }, [
-      el('thead', {}, [el('tr', {}, [el('th', {}, 'Dozer'), el('th', {}, 'Ownership'), el('th', {}, 'Days Worked'), el('th', {}, 'Rate/Day'), el('th', {}, 'Cost')])]),
+      el('thead', {}, [el('tr', {}, [el('th', {}, 'Dozer'), el('th', {}, 'Ownership'), el('th', {}, 'Basis'), el('th', {}, 'Cost')])]),
       el('tbody', {}, costData.rentalBreakdown.length
         ? costData.rentalBreakdown.map((r) => el('tr', {}, [
-            el('td', {}, r.name), el('td', {}, r.ownership), el('td', {}, String(r.days)), el('td', {}, formatCurrency(r.ratePerDay)), el('td', {}, formatCurrency(r.cost)),
+            el('td', {}, r.name), el('td', {}, r.ownership), el('td', {}, r.basis), el('td', {}, formatCurrency(r.cost)),
           ]))
-        : [el('tr', {}, [el('td', { colspan: '5' }, 'No dozer on this roster has a Rental Rate/Day set, or none worked this period.')])]),
+        : [el('tr', {}, [el('td', { colspan: '4' }, 'No dozer on this roster has a rate set, or none worked this period.')])]),
     ])]));
 
     body.appendChild(el('h4', { class: 'subsection-title' }, 'Diesel Cost — by Day'));
@@ -471,7 +478,7 @@ function renderWeeklyPerformanceTab(container) {
     body.appendChild(el('p', { class: 'section-subtitle' }, `Total Litres of Diesel Used: ${actualData.totalDieselLitres.toLocaleString()} L`));
 
     body.appendChild(el('h4', { class: 'subsection-title' }, 'Machine Recovery'));
-    body.appendChild(el('p', { class: 'section-subtitle' }, 'The Management Fee retained on Partnership/Rented dozers, plus the rental rate saved by using Company-owned dozers instead of renting equivalent capacity — net of the roster\'s Maintenance Log cost this period. Maintenance Incurred here is informational, not part of Total Cost above (it\'s already excluded there to avoid double-counting).'));
+    body.appendChild(el('p', { class: 'section-subtitle' }, 'The Management Fee retained on Partnership/Rented dozers, plus money saved by using Company-owned dozers instead of renting equivalent capacity (hours worked × Hourly Rate) — net of the roster\'s Maintenance Log cost this period. Maintenance Incurred here is informational, not part of Total Cost above (it\'s already excluded there to avoid double-counting).'));
     body.appendChild(el('div', { class: 'table-wrap' }, [el('table', { class: 'data-table' }, [
       el('tbody', {}, [
         el('tr', {}, [el('td', {}, 'M/c Recovered'), el('td', {}, formatCurrency(actualData.mcRecovered))]),
