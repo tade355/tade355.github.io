@@ -379,7 +379,7 @@ export function printWeeklyPerformanceReport(project, data) {
     <table class="print-table">
       <thead><tr><th>Cost Item</th><th>Basis</th><th>Amount</th></tr></thead>
       <tbody>
-        <tr><td>Rental Cost</td><td>Days worked × Rental Rate/Day (every dozer, any ownership)</td><td>${formatCurrency(data.costData.rentalCost)}</td></tr>
+        <tr><td>Rental Cost</td><td>Partnership/Rented: days × Rental Rate/Day. Company: hours × Hourly Rate.</td><td>${formatCurrency(data.costData.rentalCost)}</td></tr>
         <tr><td>Diesel Cost</td><td>Fuel Used × the diesel rate in effect that day</td><td>${formatCurrency(data.costData.dieselCost)}</td></tr>
         <tr><td>Site Logistics</td><td>₦12,800 × ${data.costData.workingDays} working day(s)</td><td>${formatCurrency(data.costData.siteLogistics)}</td></tr>
         <tr><td>Diesel Logistics</td><td>₦1,500 per 30L × ${data.costData.totalDieselLitres.toLocaleString()}L</td><td>${formatCurrency(data.costData.dieselLogistics)}</td></tr>
@@ -389,11 +389,11 @@ export function printWeeklyPerformanceReport(project, data) {
     </table>
     <h4>Rental Cost — by Dozer</h4>
     <table class="print-table">
-      <thead><tr><th>Dozer</th><th>Ownership</th><th>Days Worked</th><th>Rate/Day</th><th>Cost</th></tr></thead>
+      <thead><tr><th>Dozer</th><th>Ownership</th><th>Basis</th><th>Cost</th></tr></thead>
       <tbody>
         ${data.costData.rentalBreakdown.length ? data.costData.rentalBreakdown.map((r) => `
-          <tr><td>${r.name}</td><td>${r.ownership}</td><td>${r.days}</td><td>${formatCurrency(r.ratePerDay)}</td><td>${formatCurrency(r.cost)}</td></tr>
-        `).join('') : '<tr><td colspan="5">No dozer on this roster has a Rental Rate/Day set, or none worked this period.</td></tr>'}
+          <tr><td>${r.name}</td><td>${r.ownership}</td><td>${r.basis}</td><td>${formatCurrency(r.cost)}</td></tr>
+        `).join('') : '<tr><td colspan="4">No dozer on this roster has a rate set, or none worked this period.</td></tr>'}
       </tbody>
     </table>
     <h4>Diesel Cost — by Day</h4>
@@ -428,7 +428,7 @@ export function printWeeklyPerformanceReport(project, data) {
 
     <h4>Machine Recovery</h4>
     <div class="print-block">
-      <p>The Management Fee retained on Partnership/Rented dozers, plus the rental rate saved by using Company-owned dozers instead of renting equivalent capacity — net of the roster's Maintenance Log cost this period. Maintenance Incurred here is informational, not part of Total Cost above (it's already excluded there to avoid double-counting).</p>
+      <p>The Management Fee retained on Partnership/Rented dozers, plus money saved by using Company-owned dozers instead of renting equivalent capacity (hours worked × Hourly Rate) — net of the roster's Maintenance Log cost this period. Maintenance Incurred here is informational, not part of Total Cost above (it's already excluded there to avoid double-counting).</p>
     </div>
     <table class="print-table">
       <tbody>
