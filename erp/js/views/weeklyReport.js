@@ -185,22 +185,28 @@ function computeExpectedRevenue(periodOps) {
   return { byType, total: byType.reduce((sum, t) => sum + t.revenue, 0) };
 }
 
-// Tentative Cost: a compact, four-line field estimate for management, not a
-// full ledger reconciliation (see Profitability, Fuel Credit Tracking, and
+// Tentative Cost: a compact field estimate for management, not a full
+// ledger reconciliation (see Profitability, Fuel Credit Tracking, and
 // Dozer Rent Payments for the authoritative figures behind each of these).
 // - Rental Cost: Partnership/Rented dozers on this roster, days worked
 //   (any operation, excluding Business days) x their day rate.
 // - Diesel Cost: Fuel Used x the diesel rate in effect that day.
-// - Site Logistics / Diesel Logistics: this project's Logistics-cost-head
-//   expenditure (Expenses + Approved/Paid Fund Requests) this period, split
-//   by whether the description mentions diesel/fuel — kept separate from
-//   Diesel Cost above so a real diesel-delivery expense doesn't get
-//   double-counted against the computed fuel-usage estimate.
-function computeTentativeCost(project, periodStart, periodEnd, periodOps, rosterNames) {
+// - Site Logistics: a flat ₦12,800 per working day (any day this period
+//   with at least one roster dozer active) — a standard daily site-support
+//   rate, not derived from logged Logistics expenses.
+// - Diesel Logistics: a flat ₦1,500 per 30 litres of diesel used this
+//   period — a standard delivery/handling rate, not a logged expense.
+// - Operator Cost: ₦30,000 per 8 hours worked, for Company and Partnership
+//   dozers only — a Rented dozer's day rate already includes the owner's
+//   own operator, so it doesn't get this on top.
+function computeTentativeCost(periodOps, rosterNames) {
   const dieselCost = periodOps.reduce((sum, o) => sum + (o.fuelUsed || 0) * dieselRateAsOf(o.date), 0);
+  const totalDieselLitres = periodOps.reduce((sum, o) => sum + (o.fuelUsed || 0), 0);
 
-  const rentalCost = store.get('inventory')
-    .filter((i) => rosterNames.includes(i.name) && (i.ownership === 'Partnership' || i.ownership === 'Rented'))
+  const roster = store.get('inventory').filter((i) => rosterNames.includes(i.name));
+
+  const rentalCost = roster
+    .filter((i) => i.ownership === 'Partnership' || i.ownership === 'Rented')
     .reduce((sum, i) => {
       const days = new Set(
         periodOps.filter((o) => o.equipment === i.name && o.workType !== 'Business').map((o) => o.date),
@@ -208,13 +214,21 @@ function computeTentativeCost(project, periodStart, periodEnd, periodOps, roster
       return sum + days * (i.rentalRatePerDay || 0);
     }, 0);
 
-  const logisticsEntries = collectEntries().filter((e) =>
-    e.type === 'Expenditure' && e.project === project && e.costHead === 'Logistics' && dateInRange(e.date, periodStart, periodEnd));
-  const dieselKeywords = /diesel|fuel|\bago\b/i;
-  const dieselLogistics = logisticsEntries.filter((e) => dieselKeywords.test(e.description || '')).reduce((sum, e) => sum + e.amount, 0);
-  const siteLogistics = logisticsEntries.filter((e) => !dieselKeywords.test(e.description || '')).reduce((sum, e) => sum + e.amount, 0);
+  const workingDays = new Set(periodOps.map((o) => o.date)).size;
+  const siteLogistics = workingDays * 12800;
+  const dieselLogistics = (totalDieselLitres / 30) * 1500;
 
-  return { rentalCost, dieselCost, siteLogistics, dieselLogistics, total: rentalCost + dieselCost + siteLogistics + dieselLogistics };
+  const rosterByName = new Map(roster.map((i) => [i.name, i]));
+  const operatorCost = periodOps.reduce((sum, o) => {
+    const ownership = rosterByName.get(o.equipment)?.ownership || 'Company';
+    if (ownership === 'Rented') return sum;
+    return sum + ((o.hoursWorked || 0) / 8) * 30000;
+  }, 0);
+
+  return {
+    rentalCost, dieselCost, siteLogistics, dieselLogistics, operatorCost,
+    total: rentalCost + dieselCost + siteLogistics + dieselLogistics + operatorCost,
+  };
 }
 
 // Actual Weekly Summary: a fuller cost-and-margin table mirroring the
@@ -232,11 +246,16 @@ function computeTentativeCost(project, periodStart, periodEnd, periodOps, roster
 // either back in would double them up (same reasoning Profitability
 // already applies to Fuel-category expenses).
 //
-// M/c Recovered is the Management Fee retained on this project's
-// Partnership/Rented dozers (days worked x fee/day), net of their
-// Maintenance Log repair costs this period — the same bookkeeping Dozer
-// Rent Payments uses for a formal owner settlement, auto-computed here
-// instead of manually entered per dozer.
+// M/c Recovered has two components, by ownership:
+// - Partnership/Rented: the Management Fee retained (days worked x fee/day)
+//   — the same bookkeeping Dozer Rent Payments uses for a formal owner
+//   settlement, auto-computed here instead of manually entered per dozer.
+// - Company-owned: the day rate a rental would have cost (days worked x
+//   Rental Rate/Day, if set on the dozer) — no rent is actually paid out,
+//   so this is value generated/cost saved by using owned equipment instead
+//   of renting equivalent capacity.
+// Either way, it's net of the roster's Maintenance Log repair costs this
+// period (Maintenance Incurred below).
 function computeActualWeeklySummary(project, periodStart, periodEnd, dates, periodOps, revenueData, rosterNames) {
   const dieselCost = periodOps.reduce((sum, o) => sum + (o.fuelUsed || 0) * dieselRateAsOf(o.date), 0);
   const dozerCost = periodOps.reduce((sum, o) => sum + (o.hoursWorked || 0) * hourlyRateAsOf(o.equipment, o.date), 0);
@@ -249,14 +268,16 @@ function computeActualWeeklySummary(project, periodStart, periodEnd, dates, peri
   const actualProfit = revenueData.total - totalCost;
   const actualProfitPct = revenueData.total ? (actualProfit / revenueData.total) * 100 : 0;
 
-  const settleable = store.get('inventory').filter((i) => rosterNames.includes(i.name) && (i.ownership === 'Partnership' || i.ownership === 'Rented'));
-  const mcRecovered = settleable.reduce((sum, i) => {
+  const roster = store.get('inventory').filter((i) => rosterNames.includes(i.name));
+  const mcRecovered = roster.reduce((sum, i) => {
     const officeDays = new Set(periodOps.filter((o) => o.equipment === i.name && o.workType !== 'Business').map((o) => o.date)).size;
-    return sum + officeDays * (i.managementFeePerDay || 0);
+    const isThirdParty = i.ownership === 'Partnership' || i.ownership === 'Rented';
+    const rate = isThirdParty ? (i.managementFeePerDay || 0) : (i.rentalRatePerDay || 0);
+    return sum + officeDays * rate;
   }, 0);
-  const settleableNames = new Set(settleable.map((i) => i.name));
+  const rosterNameSet = new Set(roster.map((i) => i.name));
   const maintenanceIncurred = store.get('maintenanceLogs')
-    .filter((m) => settleableNames.has(m.equipment) && dateInRange(m.date, periodStart, periodEnd))
+    .filter((m) => rosterNameSet.has(m.equipment) && dateInRange(m.date, periodStart, periodEnd))
     .reduce((sum, m) => sum + (m.cost || 0), 0);
   const netMcRecovered = mcRecovered - maintenanceIncurred;
   const totalMargin = actualProfit + netMcRecovered;
@@ -318,7 +339,7 @@ function renderWeeklyPerformanceTab(container) {
     const periodOps = store.get('operations').filter((o) => o.siteName === project && dateInRange(o.date, periodStart, periodEnd));
     const revenueData = computeExpectedRevenue(periodOps);
     const rosterNames = data.rows.map((r) => r.name);
-    const costData = computeTentativeCost(project, periodStart, periodEnd, periodOps, rosterNames);
+    const costData = computeTentativeCost(periodOps, rosterNames);
     const actualData = computeActualWeeklySummary(project, periodStart, periodEnd, datesInRange(periodStart, periodEnd), periodOps, revenueData, rosterNames);
 
     body.appendChild(el('h3', { class: 'subsection-title' }, `Period: ${formatDate(periodStart)} – ${formatDate(periodEnd)}`));
@@ -379,14 +400,15 @@ function renderWeeklyPerformanceTab(container) {
         el('h4', { class: 'subsection-title' }, 'Tentative Cost Breakdown'),
         el('p', {}, [el('strong', {}, 'Rental Cost: '), formatCurrency(costData.rentalCost)]),
         el('p', {}, [el('strong', {}, 'Diesel Cost: '), formatCurrency(costData.dieselCost)]),
-        el('p', {}, [el('strong', {}, 'Site Logistics: '), formatCurrency(costData.siteLogistics)]),
-        el('p', {}, [el('strong', {}, 'Diesel Logistics: '), formatCurrency(costData.dieselLogistics)]),
+        el('p', {}, [el('strong', {}, 'Site Logistics: '), `${formatCurrency(costData.siteLogistics)} (₦12,800/working day)`]),
+        el('p', {}, [el('strong', {}, 'Diesel Logistics: '), `${formatCurrency(costData.dieselLogistics)} (₦1,500/30L)`]),
+        el('p', {}, [el('strong', {}, 'Operator Cost: '), `${formatCurrency(costData.operatorCost)} (₦30,000/8hrs, Company & Partnership only)`]),
       ]),
     ]);
     body.appendChild(breakdown);
 
     body.appendChild(el('h3', { class: 'subsection-title' }, 'Actual Weekly Summary'));
-    body.appendChild(el('p', { class: 'section-subtitle' }, 'Revenue here is the same Expected Revenue figure as above (reported Ha × contract rate), not a separately-invoiced amount. Dozer Cost uses hours worked × hourly rate for every dozer on the roster regardless of ownership (Profitability\'s standard formula) — a different figure from Tentative Cost\'s Rental Cost above. M/c Recovered / Maintenance Incurred is the Management Fee and Maintenance Log cost for this project\'s Partnership/Rented dozers this period — the same bookkeeping as a Dozer Rent Payments settlement.'));
+    body.appendChild(el('p', { class: 'section-subtitle' }, 'Revenue here is the same Expected Revenue figure as above (reported Ha × contract rate), not a separately-invoiced amount. Dozer Cost uses hours worked × hourly rate for every dozer on the roster regardless of ownership (Profitability\'s standard formula) — a different figure from Tentative Cost\'s Rental Cost above. M/c Recovered is the Management Fee retained on Partnership/Rented dozers, plus the rental rate saved by using Company-owned dozers instead of renting equivalent capacity — net of the roster\'s Maintenance Log cost this period.'));
 
     const revenueRows = revenueData.byType.filter((t) => !NON_REVENUE_OPERATION_TYPES.has(t.type));
     const summaryTable = el('table', { class: 'data-table' }, [
