@@ -5,8 +5,6 @@ import { OPERATION_TYPES, isHaOperationType } from '../constants.js';
 import { printWeeklyPerformanceReport, printMilestoneTracker } from '../print.js';
 import { provisionalRevenueForRows } from './profitability.js';
 import { dieselRateAsOf } from '../rateHistory.js';
-import { stationBalances } from './fuelCredit.js';
-import { ownerSettlementBalances } from './dozerRentPayments.js';
 import { collectEntries } from './incomeExpenditure.js';
 
 const WEEKDAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -102,20 +100,12 @@ function unitForType(type) {
   return OPERATION_TYPES.find((t) => t.value === type)?.unit || '';
 }
 
-// Same accumulate-by-date-range pattern as Dozer Economics' maintenanceCostFor
-// — every maintenance_logs row for this equipment logged within the period.
-function maintenanceCostFor(equipment, from, to) {
-  return store.get('maintenanceLogs')
-    .filter((m) => m.equipment === equipment && dateInRange(m.date, from, to))
-    .reduce((sum, m) => sum + (m.cost || 0), 0);
-}
-
 // Weekly Performance Report: per dozer assigned to the project (via its
 // Current Project on the Fleet Roster), Ha achieved each day of the
-// selected period, plus a Cumulative row and per-operation-type period
-// totals — matching the real field report format. The period is whatever
-// From/To dates were picked (not forced to a Mon-Sun week), so it can cover
-// a single day, a partial week, or a longer stretch.
+// selected period, plus a Cumulative row — matching the real field report
+// format. The period is whatever From/To dates were picked (not forced to
+// a Mon-Sun week), so it can cover a single day, a partial week, or a
+// longer stretch.
 function computeWeeklyPerformance(project, periodStart, periodEnd) {
   const dates = datesInRange(periodStart, periodEnd);
   const dayLabels = dates.map(dayLabel);
@@ -145,12 +135,6 @@ function computeWeeklyPerformance(project, periodStart, periodEnd) {
     const daysWorkedAny = new Set(ops.map((o) => o.date)).size;
     const optimizationPct = dates.length ? (daysWorkedAny / dates.length) * 100 : 0;
 
-    const revenue = provisionalRevenueForRows(ops);
-    const dieselLitres = ops.reduce((sum, o) => sum + (o.fuelUsed || 0), 0);
-    const dieselCost = ops.reduce((sum, o) => sum + (o.fuelUsed || 0) * dieselRateAsOf(o.date), 0);
-    const maintenanceCost = maintenanceCostFor(d.name, periodStart, periodEnd);
-    const profit = revenue - dieselCost - maintenanceCost;
-
     return {
       name: d.name,
       types: types.join(', ') || '—',
@@ -163,22 +147,10 @@ function computeWeeklyPerformance(project, periodStart, periodEnd) {
       optimizationPct,
       plannedDays: dates.length,
       actualDays,
-      revenue,
-      dieselLitres,
-      dieselCost,
-      maintenanceCost,
-      profit,
     };
   });
 
   const cumulative = dates.map((_, i) => rows.reduce((sum, r) => sum + r.byDay[i], 0));
-  const totals = {
-    revenue: rows.reduce((sum, r) => sum + r.revenue, 0),
-    dieselLitres: rows.reduce((sum, r) => sum + r.dieselLitres, 0),
-    dieselCost: rows.reduce((sum, r) => sum + r.dieselCost, 0),
-    maintenanceCost: rows.reduce((sum, r) => sum + r.maintenanceCost, 0),
-    profit: rows.reduce((sum, r) => sum + r.profit, 0),
-  };
 
   // Fleet-wide average Start/Close across every dozer's reports this
   // period, shown on the Cumulative row — "what time did the fleet
@@ -186,59 +158,54 @@ function computeWeeklyPerformance(project, periodStart, periodEnd) {
   const avgStart = avgTime(periodOps.filter((o) => o.timeResumed).map((o) => timeToMinutes(o.timeResumed)));
   const avgClose = avgTime(periodOps.filter((o) => o.timeClosed).map((o) => timeToMinutes(o.timeClosed)));
 
-  const typeTotals = OPERATION_TYPES
-    .map((t) => ({ type: t.value, unit: t.unit, total: periodOps.filter((o) => o.operationType === t.value).reduce((sum, o) => sum + o.quantity, 0) }))
-    .filter((t) => t.total > 0);
-
-  return { rows, cumulative, totals, typeTotals, periodStart, periodEnd, dayLabels, avgStart, avgClose };
+  return { rows, cumulative, periodStart, periodEnd, dayLabels, avgStart, avgClose };
 }
 
-// Payments Summary: diesel vendor and machine-owner running balances are
-// credit accounts, not period totals — shown as a current, all-time
-// snapshot (vendor balances are company-wide across all fuel stations;
-// owner balances are restricted to the dozers on this project's roster).
-// "Total Paid Out" is genuinely period-scoped and deliberately company-wide
-// (all projects), reusing the same Income & Expenditure aggregator so the
-// numbers can't drift from that report — a weekly meeting reviewing one
-// project still wants to see the whole company's spend for the week.
-function computePaymentsSummary(periodStart, periodEnd, rosterNames) {
-  const vendorBalances = stationBalances();
-  const vendorTotals = vendorBalances.reduce((acc, v) => ({
-    owed: acc.owed + v.totalCollected,
-    paid: acc.paid + v.totalPaid,
-    balance: acc.balance + v.balance,
-  }), { owed: 0, paid: 0, balance: 0 });
+// Expected Revenue: quantity achieved this period x the contract rate in
+// effect that day, broken out per operation type (Ha and Ha-rate types
+// achieve/earn very differently from Trekking's hrs, say, so a single
+// blended total would hide which operation type is actually driving it).
+function computeExpectedRevenue(periodOps) {
+  const byType = OPERATION_TYPES
+    .map((t) => {
+      const ops = periodOps.filter((o) => o.operationType === t.value);
+      const qty = ops.reduce((sum, o) => sum + o.quantity, 0);
+      return { type: t.value, unit: t.unit, qty, revenue: provisionalRevenueForRows(ops) };
+    })
+    .filter((t) => t.qty > 0);
+  return { byType, total: byType.reduce((sum, t) => sum + t.revenue, 0) };
+}
 
-  const ownerBalances = ownerSettlementBalances().filter((b) => rosterNames.includes(b.name));
-  const ownerTotals = ownerBalances.reduce((acc, o) => ({
-    owed: acc.owed + o.generated,
-    paid: acc.paid + o.paid,
-    balance: acc.balance + o.balance,
-  }), { owed: 0, paid: 0, balance: 0 });
+// Tentative Cost: a compact, four-line field estimate for management, not a
+// full ledger reconciliation (see Profitability, Fuel Credit Tracking, and
+// Dozer Rent Payments for the authoritative figures behind each of these).
+// - Rental Cost: Partnership/Rented dozers on this roster, days worked
+//   (any operation, excluding Business days) x their day rate.
+// - Diesel Cost: Fuel Used x the diesel rate in effect that day.
+// - Site Logistics / Diesel Logistics: this project's Logistics-cost-head
+//   expenditure (Expenses + Approved/Paid Fund Requests) this period, split
+//   by whether the description mentions diesel/fuel — kept separate from
+//   Diesel Cost above so a real diesel-delivery expense doesn't get
+//   double-counted against the computed fuel-usage estimate.
+function computeTentativeCost(project, periodStart, periodEnd, periodOps, rosterNames) {
+  const dieselCost = periodOps.reduce((sum, o) => sum + (o.fuelUsed || 0) * dieselRateAsOf(o.date), 0);
 
-  const paidEntries = collectEntries().filter((e) => e.type === 'Expenditure' && dateInRange(e.date, periodStart, periodEnd));
-  const totalPaidOut = paidEntries.reduce((sum, e) => sum + e.amount, 0);
+  const rentalCost = store.get('inventory')
+    .filter((i) => rosterNames.includes(i.name) && (i.ownership === 'Partnership' || i.ownership === 'Rented'))
+    .reduce((sum, i) => {
+      const days = new Set(
+        periodOps.filter((o) => o.equipment === i.name && o.workType !== 'Business').map((o) => o.date),
+      ).size;
+      return sum + days * (i.rentalRatePerDay || 0);
+    }, 0);
 
-  const byCategory = {};
-  paidEntries.forEach((e) => {
-    const key = e.costHead || 'Uncategorized';
-    byCategory[key] = (byCategory[key] || 0) + e.amount;
-  });
-  const byProject = {};
-  paidEntries.forEach((e) => {
-    const key = e.project || 'Unassigned';
-    byProject[key] = (byProject[key] || 0) + e.amount;
-  });
+  const logisticsEntries = collectEntries().filter((e) =>
+    e.type === 'Expenditure' && e.project === project && e.costHead === 'Logistics' && dateInRange(e.date, periodStart, periodEnd));
+  const dieselKeywords = /diesel|fuel|\bago\b/i;
+  const dieselLogistics = logisticsEntries.filter((e) => dieselKeywords.test(e.description || '')).reduce((sum, e) => sum + e.amount, 0);
+  const siteLogistics = logisticsEntries.filter((e) => !dieselKeywords.test(e.description || '')).reduce((sum, e) => sum + e.amount, 0);
 
-  return {
-    vendorBalances,
-    vendorTotals,
-    ownerBalances,
-    ownerTotals,
-    totalPaidOut,
-    byCategory: Object.entries(byCategory).map(([category, amount]) => ({ category, amount })).sort((a, b) => b.amount - a.amount),
-    byProject: Object.entries(byProject).map(([project, amount]) => ({ project, amount })).sort((a, b) => b.amount - a.amount),
-  };
+  return { rentalCost, dieselCost, siteLogistics, dieselLogistics, total: rentalCost + dieselCost + siteLogistics + dieselLogistics };
 }
 
 function renderWeeklyPerformanceTab(container) {
@@ -255,7 +222,7 @@ function renderWeeklyPerformanceTab(container) {
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), endInput]));
   filterBar.appendChild(printBtn);
   container.appendChild(filterBar);
-  container.appendChild(el('p', { class: 'section-subtitle' }, 'Rows are every dozer currently assigned to this project (Fleet Management → Fleet Roster → Current Project), plus any dozer with an operations report logged against this project in the selected period even if its Current Project has since changed. Only Ha-unit operation types count toward the daily grid — see the totals below it for Road/Trekking.'));
+  container.appendChild(el('p', { class: 'section-subtitle' }, 'Rows are every dozer currently assigned to this project (Fleet Management → Fleet Roster → Current Project), plus any dozer with an operations report logged against this project in the selected period even if its Current Project has since changed. Only Ha-unit operation types count toward the daily grid.'));
 
   const body = el('div');
   container.appendChild(body);
@@ -274,6 +241,9 @@ function renderWeeklyPerformanceTab(container) {
     if (periodEnd < periodStart) [periodStart, periodEnd] = [periodEnd, periodStart];
 
     const data = computeWeeklyPerformance(project, periodStart, periodEnd);
+    const periodOps = store.get('operations').filter((o) => o.siteName === project && dateInRange(o.date, periodStart, periodEnd));
+    const revenueData = computeExpectedRevenue(periodOps);
+    const costData = computeTentativeCost(project, periodStart, periodEnd, periodOps, data.rows.map((r) => r.name));
 
     body.appendChild(el('h3', { class: 'subsection-title' }, `Period: ${formatDate(periodStart)} – ${formatDate(periodEnd)}`));
     if (data.dayLabels.length >= MAX_PERIOD_DAYS) {
@@ -312,96 +282,35 @@ function renderWeeklyPerformanceTab(container) {
     const tableWrap = el('div', { class: 'table-wrap' }, [table]);
     body.appendChild(tableWrap);
 
-    const footer = el('div', { class: 'weekly-report-footer' });
-    data.typeTotals.forEach((t) => {
-      footer.appendChild(el('p', {}, [el('strong', {}, `Total ${t.unit === 'Ha' ? 'Ha' : t.unit} Achieved for ${t.type}: `), `${t.total.toFixed(2)} ${t.unit}`]));
-    });
-    if (!data.typeTotals.length) footer.appendChild(el('p', { class: 'section-subtitle' }, 'No operations logged for this project in this period yet.'));
-    body.appendChild(footer);
-
-    body.appendChild(el('h3', { class: 'subsection-title' }, 'Cost & Profitability Analysis'));
-    body.appendChild(el('p', { class: 'section-subtitle' }, 'Revenue is Provisional (quantity × the contract rate in effect that day for that operation type — see Projects → Rate History), not verified/invoiced revenue. Diesel Cost uses each day\'s Fuel Used × the diesel rate in effect that day; Repairs/Maintenance Cost is every Maintenance Log entry for that dozer in this period. Profit here can\'t absorb Logistics/Other costs, which only attribute at the project level (see Profitability tab) — treat it as a per-dozer field estimate, not the project\'s full bottom line.'));
+    body.appendChild(el('h3', { class: 'subsection-title' }, 'Revenue & Cost (Tentative)'));
+    body.appendChild(el('p', { class: 'section-subtitle' }, 'Expected Revenue is quantity × the contract rate in effect that day (Projects → Rate History), not verified/invoiced revenue. Tentative Cost is a quick field estimate, not a full ledger reconciliation — see Profitability, Fuel Credit Tracking, and Dozer Rent Payments for the authoritative figures.'));
 
     const summaryGrid = el('div', { class: 'stats-grid' }, [
-      statCard({ label: 'Total Revenue (Provisional)', value: formatCurrency(data.totals.revenue), tone: 'good' }),
-      statCard({ label: 'Total Diesel Used', value: `${data.totals.dieselLitres.toLocaleString()} L` }),
-      statCard({ label: 'Total Diesel Cost', value: formatCurrency(data.totals.dieselCost) }),
-      statCard({ label: 'Total Repairs/Maintenance', value: formatCurrency(data.totals.maintenanceCost) }),
-      statCard({ label: 'Total Profit (Provisional)', value: formatCurrency(data.totals.profit), tone: data.totals.profit >= 0 ? 'good' : 'critical' }),
+      statCard({ label: 'Expected Revenue', value: formatCurrency(revenueData.total), tone: 'good' }),
+      statCard({ label: 'Tentative Cost', value: formatCurrency(costData.total) }),
+      statCard({ label: 'Tentative Profit', value: formatCurrency(revenueData.total - costData.total), tone: revenueData.total - costData.total >= 0 ? 'good' : 'critical' }),
     ]);
     body.appendChild(summaryGrid);
 
-    const costTableContainer = el('div');
-    body.appendChild(costTableContainer);
-    renderTable(costTableContainer, {
-      columns: [
-        { key: 'name', label: 'Dozer' },
-        { key: 'optimizationPct', label: '% Optimization', render: (r) => `${r.optimizationPct.toFixed(0)}%` },
-        { key: 'revenue', label: 'Revenue (Provisional)', render: (r) => formatCurrency(r.revenue) },
-        { key: 'dieselLitres', label: 'Diesel Used', render: (r) => `${r.dieselLitres.toLocaleString()} L` },
-        { key: 'dieselCost', label: 'Diesel Cost', render: (r) => formatCurrency(r.dieselCost) },
-        { key: 'maintenanceCost', label: 'Repairs/Maintenance', render: (r) => formatCurrency(r.maintenanceCost) },
-        { key: 'profit', label: 'Profit (Provisional)', render: (r) => el('strong', { class: r.profit >= 0 ? 'text-good' : 'text-critical' }, formatCurrency(r.profit)) },
-      ],
-      rows: data.rows,
-      emptyText: 'No fleet assets assigned to this project, and no operations logged against it in this period.',
-    });
-
-    const payments = computePaymentsSummary(periodStart, periodEnd, data.rows.map((r) => r.name));
-
-    body.appendChild(el('h3', { class: 'subsection-title' }, 'Payments Summary'));
-    body.appendChild(el('p', { class: 'section-subtitle' }, 'Diesel Vendor and Machine Owner balances are current running totals (all-time, not limited to this period) — Diesel Vendor is company-wide across all fuel stations (see Resource Management → Fuel Credit Tracking); Machine Owner covers Partnership/Rented dozers on this project\'s roster (see Fleet Management → Dozer Rent Payments). Total Paid Out below IS scoped to this period, and deliberately company-wide across every project, not just this one — reused from Accounting → Income & Expenditure.'));
-
-    const balanceGrid = el('div', { class: 'stats-grid' }, [
-      statCard({ label: 'Diesel Vendor — Total Owed', value: formatCurrency(payments.vendorTotals.owed) }),
-      statCard({ label: 'Diesel Vendor — Paid', value: formatCurrency(payments.vendorTotals.paid) }),
-      statCard({ label: 'Diesel Vendor — Balance', value: formatCurrency(payments.vendorTotals.balance), tone: payments.vendorTotals.balance > 0 ? 'critical' : 'good' }),
-      statCard({ label: 'Machine Owner — Total Owed', value: formatCurrency(payments.ownerTotals.owed) }),
-      statCard({ label: 'Machine Owner — Paid', value: formatCurrency(payments.ownerTotals.paid) }),
-      statCard({ label: 'Machine Owner — Balance', value: formatCurrency(payments.ownerTotals.balance), tone: payments.ownerTotals.balance > 0 ? 'critical' : 'good' }),
+    const breakdown = el('div', { class: 'form-grid-2' }, [
+      el('div', {}, [
+        el('h4', { class: 'subsection-title' }, 'Expected Revenue by Operation Type'),
+        ...(revenueData.byType.length
+          ? revenueData.byType.map((t) => el('p', {}, [el('strong', {}, `${t.type}: `), `${t.qty.toFixed(2)} ${t.unit} — ${formatCurrency(t.revenue)}`]))
+          : [el('p', { class: 'section-subtitle' }, 'No operations logged for this project in this period yet.')]),
+      ]),
+      el('div', {}, [
+        el('h4', { class: 'subsection-title' }, 'Tentative Cost Breakdown'),
+        el('p', {}, [el('strong', {}, 'Rental Cost: '), formatCurrency(costData.rentalCost)]),
+        el('p', {}, [el('strong', {}, 'Diesel Cost: '), formatCurrency(costData.dieselCost)]),
+        el('p', {}, [el('strong', {}, 'Site Logistics: '), formatCurrency(costData.siteLogistics)]),
+        el('p', {}, [el('strong', {}, 'Diesel Logistics: '), formatCurrency(costData.dieselLogistics)]),
+      ]),
     ]);
-    body.appendChild(balanceGrid);
-
-    if (payments.ownerBalances.length) {
-      const ownerTableContainer = el('div');
-      body.appendChild(ownerTableContainer);
-      renderTable(ownerTableContainer, {
-        columns: [
-          { key: 'name', label: 'Dozer' },
-          { key: 'owner', label: 'Owner' },
-          { key: 'generated', label: 'Owed', render: (r) => formatCurrency(r.generated) },
-          { key: 'paid', label: 'Paid', render: (r) => formatCurrency(r.paid) },
-          { key: 'balance', label: 'Balance', render: (r) => el('strong', { class: r.balance > 0 ? 'text-critical' : 'text-good' }, formatCurrency(r.balance)) },
-        ],
-        rows: payments.ownerBalances,
-        emptyText: 'No Partnership/Rented dozers on this roster.',
-      });
-    }
-
-    body.appendChild(el('h4', { class: 'subsection-title' }, `Total Paid Out This Period (All Projects): ${formatCurrency(payments.totalPaidOut)}`));
-    const byCategoryContainer = el('div', {}, [el('h5', {}, 'By Category')]);
-    body.appendChild(byCategoryContainer);
-    renderTable(byCategoryContainer, {
-      columns: [
-        { key: 'category', label: 'Cost Head' },
-        { key: 'amount', label: 'Amount', render: (r) => formatCurrency(r.amount) },
-      ],
-      rows: payments.byCategory,
-      emptyText: 'No expenditure logged in this period yet.',
-    });
-    const byProjectContainer = el('div', {}, [el('h5', {}, 'By Project')]);
-    body.appendChild(byProjectContainer);
-    renderTable(byProjectContainer, {
-      columns: [
-        { key: 'project', label: 'Project' },
-        { key: 'amount', label: 'Amount', render: (r) => formatCurrency(r.amount) },
-      ],
-      rows: payments.byProject,
-      emptyText: 'No expenditure logged in this period yet.',
-    });
+    body.appendChild(breakdown);
 
     printBtn.disabled = false;
-    printBtn.onclick = () => printWeeklyPerformanceReport(project, { ...data, payments });
+    printBtn.onclick = () => printWeeklyPerformanceReport(project, { ...data, revenueData, costData });
   }
 
   [projectSelect, startInput, endInput].forEach((input) => input.addEventListener('change', refresh));
