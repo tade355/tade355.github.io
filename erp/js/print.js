@@ -354,38 +354,46 @@ export function printWeeklyPerformanceReport(project, data) {
         </tr>
       </tbody>
     </table>
-    <h3>Revenue &amp; Cost (Tentative)</h3>
+    <h3>Revenue</h3>
     <div class="print-block">
-      <p>Expected Revenue is quantity × the contract rate in effect that day (Projects → Rate History), not verified/invoiced revenue. Tentative Cost is a quick field estimate, not a full ledger reconciliation — see Profitability, Fuel Credit Tracking, and Dozer Rent Payments for the authoritative figures.</p>
+      <p>Quantity achieved this period × the contract rate in effect that day (Projects → Rate History) — provisional/expected revenue, not verified or invoiced revenue.</p>
+    </div>
+    <div class="print-meta-grid"><div><strong>Revenue:</strong> ${formatCurrency(data.revenueData.total)}</div></div>
+    <table class="print-table">
+      <thead><tr><th>Operation Type</th><th>Quantity</th><th>Revenue</th></tr></thead>
+      <tbody>
+        ${data.revenueData.byType.length ? data.revenueData.byType.map((t) => `
+          <tr><td>${t.type}</td><td>${t.qty.toFixed(2)} ${t.unit}</td><td>${formatCurrency(t.revenue)}</td></tr>
+        `).join('') : '<tr><td colspan="3">No operations logged for this project in this period yet.</td></tr>'}
+      </tbody>
+    </table>
+
+    <h3>Cost &amp; Profit — Tentative (Field Estimate)</h3>
+    <div class="print-block">
+      <p>A quick field estimate using standard flat rates, not a full ledger reconciliation — see Profitability, Fuel Credit Tracking, and Dozer Rent Payments for the authoritative figures.</p>
     </div>
     <div class="print-meta-grid">
-      <div><strong>Expected Revenue:</strong> ${formatCurrency(data.revenueData.total)}</div>
       <div><strong>Tentative Cost:</strong> ${formatCurrency(data.costData.total)}</div>
       <div><strong>Tentative Profit:</strong> ${formatCurrency(data.revenueData.total - data.costData.total)}</div>
     </div>
-    <div class="print-meta-grid">
-      <div>
-        <strong>Expected Revenue by Operation Type</strong>
-        ${data.revenueData.byType.length
-          ? data.revenueData.byType.map((t) => `<p><strong>${t.type}:</strong> ${t.qty.toFixed(2)} ${t.unit} — ${formatCurrency(t.revenue)}</p>`).join('')
-          : '<p>No operations logged for this project in this period yet.</p>'}
-      </div>
-      <div>
-        <strong>Tentative Cost Breakdown</strong>
-        <p><strong>Rental Cost:</strong> ${formatCurrency(data.costData.rentalCost)}</p>
-        <p><strong>Diesel Cost:</strong> ${formatCurrency(data.costData.dieselCost)}</p>
-        <p><strong>Site Logistics:</strong> ${formatCurrency(data.costData.siteLogistics)} (₦12,800/working day)</p>
-        <p><strong>Diesel Logistics:</strong> ${formatCurrency(data.costData.dieselLogistics)} (₦1,500/30L)</p>
-        <p><strong>Operator Cost:</strong> ${formatCurrency(data.costData.operatorCost)} (₦30,000/8hrs, Company &amp; Partnership only)</p>
-      </div>
-    </div>
+    <table class="print-table">
+      <thead><tr><th>Cost Item</th><th>Basis</th><th>Amount</th></tr></thead>
+      <tbody>
+        <tr><td>Rental Cost</td><td>Days worked × Rental Rate/Day (every dozer, any ownership)</td><td>${formatCurrency(data.costData.rentalCost)}</td></tr>
+        <tr><td>Diesel Cost</td><td>Fuel Used × the diesel rate in effect that day</td><td>${formatCurrency(data.costData.dieselCost)}</td></tr>
+        <tr><td>Site Logistics</td><td>₦12,800 × ${data.costData.workingDays} working day(s)</td><td>${formatCurrency(data.costData.siteLogistics)}</td></tr>
+        <tr><td>Diesel Logistics</td><td>₦1,500 per 30L × ${data.costData.totalDieselLitres.toLocaleString()}L</td><td>${formatCurrency(data.costData.dieselLogistics)}</td></tr>
+        <tr><td>Operator Cost</td><td>₦30,000 per 8 hrs worked (Company &amp; Partnership only)</td><td>${formatCurrency(data.costData.operatorCost)}</td></tr>
+        <tr><td><strong>Tentative Cost</strong></td><td></td><td><strong>${formatCurrency(data.costData.total)}</strong></td></tr>
+      </tbody>
+    </table>
     <h4>Rental Cost — by Dozer</h4>
     <table class="print-table">
       <thead><tr><th>Dozer</th><th>Ownership</th><th>Days Worked</th><th>Rate/Day</th><th>Cost</th></tr></thead>
       <tbody>
         ${data.costData.rentalBreakdown.length ? data.costData.rentalBreakdown.map((r) => `
           <tr><td>${r.name}</td><td>${r.ownership}</td><td>${r.days}</td><td>${formatCurrency(r.ratePerDay)}</td><td>${formatCurrency(r.cost)}</td></tr>
-        `).join('') : '<tr><td colspan="5">No Partnership/Rented dozers worked this project in this period.</td></tr>'}
+        `).join('') : '<tr><td colspan="5">No dozer on this roster has a Rental Rate/Day set, or none worked this period.</td></tr>'}
       </tbody>
     </table>
     <h4>Diesel Cost — by Day</h4>
@@ -397,25 +405,40 @@ export function printWeeklyPerformanceReport(project, data) {
         `).join('') : '<tr><td colspan="4">No fuel logged for this project in this period.</td></tr>'}
       </tbody>
     </table>
-    <h3>Actual Weekly Summary</h3>
+
+    <h3>Cost &amp; Profit — Actual (Ledger-Based)</h3>
     <div class="print-block">
-      <p>Revenue here is the same Expected Revenue figure above (reported Ha × contract rate), not a separately-invoiced amount. Dozer Cost uses hours worked × hourly rate for every dozer on the roster regardless of ownership (Profitability's standard formula). M/c Recovered is the Management Fee retained on Partnership/Rented dozers, plus the rental rate saved by using Company-owned dozers instead of renting equivalent capacity — net of the roster's Maintenance Log cost this period.</p>
+      <p>Dozer Cost uses hours worked × hourly rate for every dozer on the roster (Profitability's standard formula) — a different figure from Tentative Cost's Rental Cost above. Not a full ledger reconciliation either — see Profitability for the company-wide authoritative figures.</p>
+    </div>
+    <div class="print-meta-grid">
+      <div><strong>Total Cost:</strong> ${formatCurrency(data.actualData.totalCost)}</div>
+      <div><strong>Actual Profit:</strong> ${formatCurrency(data.actualData.actualProfit)} (${data.actualData.actualProfitPct.toFixed(0)}%)</div>
+      <div><strong>Total Margin:</strong> ${formatCurrency(data.actualData.totalMargin)}</div>
     </div>
     <table class="print-table">
-      <thead><tr><th>Key Weekly KPI</th><th>Qty</th><th>Amount (₦)</th></tr></thead>
+      <thead><tr><th>Cost Item</th><th>Basis</th><th>Amount</th><th>% of Total</th></tr></thead>
       <tbody>
-        ${data.revenueData.byType.filter((t) => t.revenue > 0).map((t) => `
-          <tr><td>Total ${t.type}</td><td>${t.qty.toFixed(2)} ${t.unit}</td><td>${formatCurrency(t.revenue)}</td></tr>
-        `).join('')}
-        <tr><td colspan="2"><strong>Actual Revenue</strong></td><td><strong>${formatCurrency(data.revenueData.total)}</strong></td></tr>
-        <tr><td colspan="2">Total Cost</td><td>${formatCurrency(data.actualData.totalCost)}</td></tr>
-        <tr><td colspan="2"><strong>Actual Profit</strong></td><td><strong>${formatCurrency(data.actualData.actualProfit)} (${data.actualData.actualProfitPct.toFixed(0)}%)</strong></td></tr>
-        <tr><td colspan="2">M/c Recovered</td><td>${formatCurrency(data.actualData.mcRecovered)}</td></tr>
-        <tr><td colspan="2">Maintenance Incurred</td><td>-${formatCurrency(data.actualData.maintenanceIncurred)}</td></tr>
-        <tr><td colspan="2">Net M/c Recovered</td><td>${formatCurrency(data.actualData.netMcRecovered)}</td></tr>
-        <tr><td colspan="2"><strong>Total Margin</strong></td><td><strong>${formatCurrency(data.actualData.totalMargin)}</strong></td></tr>
+        <tr><td>Diesel Cost</td><td>Fuel Used × the diesel rate in effect that day</td><td>${formatCurrency(data.actualData.dieselCost)}</td><td>${data.actualData.totalCost ? `${((data.actualData.dieselCost / data.actualData.totalCost) * 100).toFixed(1)}%` : '—'}</td></tr>
+        <tr><td>Dozer Cost</td><td>Hours Worked × the hourly rate on file for each dozer</td><td>${formatCurrency(data.actualData.dozerCost)}</td><td>${data.actualData.totalCost ? `${((data.actualData.dozerCost / data.actualData.totalCost) * 100).toFixed(1)}%` : '—'}</td></tr>
+        <tr><td>Logistics &amp; Others</td><td>This project's Logistics/other expenses this period</td><td>${formatCurrency(data.actualData.logisticsOthersCost)}</td><td>${data.actualData.totalCost ? `${((data.actualData.logisticsOthersCost / data.actualData.totalCost) * 100).toFixed(1)}%` : '—'}</td></tr>
+        <tr><td><strong>Total Cost</strong></td><td></td><td><strong>${formatCurrency(data.actualData.totalCost)}</strong></td><td>100%</td></tr>
       </tbody>
     </table>
+    <p>Total Litres of Diesel Used: ${data.actualData.totalDieselLitres.toLocaleString()} L</p>
+
+    <h4>Machine Recovery</h4>
+    <div class="print-block">
+      <p>The Management Fee retained on Partnership/Rented dozers, plus the rental rate saved by using Company-owned dozers instead of renting equivalent capacity — net of the roster's Maintenance Log cost this period. Maintenance Incurred here is informational, not part of Total Cost above (it's already excluded there to avoid double-counting).</p>
+    </div>
+    <table class="print-table">
+      <tbody>
+        <tr><td>M/c Recovered</td><td>${formatCurrency(data.actualData.mcRecovered)}</td></tr>
+        <tr><td>Maintenance Incurred</td><td>-${formatCurrency(data.actualData.maintenanceIncurred)}</td></tr>
+        <tr><td><strong>Net M/c Recovered</strong></td><td><strong>${formatCurrency(data.actualData.netMcRecovered)}</strong></td></tr>
+        <tr><td><strong>Total Margin (Actual Profit + Net M/c Recovered)</strong></td><td><strong>${formatCurrency(data.actualData.totalMargin)}</strong></td></tr>
+      </tbody>
+    </table>
+
     <h4>Daily Summary</h4>
     <table class="print-table">
       <thead><tr><th>Date</th><th>No of Dozers</th><th>Revenue</th><th>Cost</th><th>Profit</th></tr></thead>
@@ -431,13 +454,6 @@ export function printWeeklyPerformanceReport(project, data) {
         `).join('')}
       </tbody>
     </table>
-    <div class="print-block">
-      <p><strong>Total Litres of Diesel Used:</strong> ${data.actualData.totalDieselLitres.toLocaleString()} L</p>
-      <p><strong>Total Cost of Diesel:</strong> ${formatCurrency(data.actualData.dieselCost)} ${data.actualData.totalCost ? `(${((data.actualData.dieselCost / data.actualData.totalCost) * 100).toFixed(1)}%)` : ''}</p>
-      <p><strong>Total Cost of Dozer:</strong> ${formatCurrency(data.actualData.dozerCost)} ${data.actualData.totalCost ? `(${((data.actualData.dozerCost / data.actualData.totalCost) * 100).toFixed(1)}%)` : ''}</p>
-      <p><strong>Total Cost of Logistics &amp; Others:</strong> ${formatCurrency(data.actualData.logisticsOthersCost)} ${data.actualData.totalCost ? `(${((data.actualData.logisticsOthersCost / data.actualData.totalCost) * 100).toFixed(1)}%)` : ''}</p>
-      <p><strong>Total Cost of Maintenance:</strong> ${formatCurrency(data.actualData.maintenanceIncurred)}</p>
-    </div>
   `;
   render(html);
 }

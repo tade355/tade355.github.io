@@ -144,8 +144,18 @@ function groupLabel(groupBy, key) {
   return key || '—';
 }
 
+// Trekking is repositioning time between sites/blocks, not billable
+// production — it never earns revenue even if a contract rate happens to
+// be on file for the project (e.g. a general fallback rate meant for other
+// operation types). Applied here, at the source, so every consumer of this
+// function (Profitability, Projects → Profitability, Weekly Report, and
+// any grouped-stats view) gets the same rule automatically.
+const NON_REVENUE_OPERATION_TYPES = new Set(['Trekking']);
+
 export function provisionalRevenueForRows(operations) {
-  return operations.reduce((sum, o) => sum + (o.quantity || 0) * (projectRateAsOf(o.siteName, o.operationType, o.date).rate || 0), 0);
+  return operations
+    .filter((o) => !NON_REVENUE_OPERATION_TYPES.has(o.operationType))
+    .reduce((sum, o) => sum + (o.quantity || 0) * (projectRateAsOf(o.siteName, o.operationType, o.date).rate || 0), 0);
 }
 
 export function computeGroupedStats({ groupBy, from, to, project }) {
