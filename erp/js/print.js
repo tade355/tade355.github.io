@@ -374,13 +374,14 @@ export function printWeeklyPerformanceReport(project, data) {
         <strong>Tentative Cost Breakdown</strong>
         <p><strong>Rental Cost:</strong> ${formatCurrency(data.costData.rentalCost)}</p>
         <p><strong>Diesel Cost:</strong> ${formatCurrency(data.costData.dieselCost)}</p>
-        <p><strong>Site Logistics:</strong> ${formatCurrency(data.costData.siteLogistics)}</p>
-        <p><strong>Diesel Logistics:</strong> ${formatCurrency(data.costData.dieselLogistics)}</p>
+        <p><strong>Site Logistics:</strong> ${formatCurrency(data.costData.siteLogistics)} (₦12,800/working day)</p>
+        <p><strong>Diesel Logistics:</strong> ${formatCurrency(data.costData.dieselLogistics)} (₦1,500/30L)</p>
+        <p><strong>Operator Cost:</strong> ${formatCurrency(data.costData.operatorCost)} (₦30,000/8hrs, Company &amp; Partnership only)</p>
       </div>
     </div>
     <h3>Actual Weekly Summary</h3>
     <div class="print-block">
-      <p>Revenue here is the same Expected Revenue figure above (reported Ha × contract rate), not a separately-invoiced amount. Dozer Cost uses hours worked × hourly rate for every dozer on the roster regardless of ownership (Profitability's standard formula). M/c Recovered / Maintenance Incurred is the Management Fee and Maintenance Log cost for this project's Partnership/Rented dozers this period.</p>
+      <p>Revenue here is the same Expected Revenue figure above (reported Ha × contract rate), not a separately-invoiced amount. Dozer Cost uses hours worked × hourly rate for every dozer on the roster regardless of ownership (Profitability's standard formula). M/c Recovered is the Management Fee retained on Partnership/Rented dozers, plus the rental rate saved by using Company-owned dozers instead of renting equivalent capacity — net of the roster's Maintenance Log cost this period.</p>
     </div>
     <table class="print-table">
       <thead><tr><th>Key Weekly KPI</th><th>Qty</th><th>Amount (₦)</th></tr></thead>
