@@ -1,7 +1,7 @@
 import { store } from '../store.js';
 import { formatCurrency, formatMonthLong, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
-import { printPayslip, printPayrollRegister } from '../print.js';
+import { printPayslip, printPayrollRegister, printSalaryStatement } from '../print.js';
 
 function employeeLabel(id) {
   const e = store.get('employees').find((x) => x.id === id);
@@ -12,7 +12,7 @@ function employeeNameOnly(id) {
   return store.get('employees').find((x) => x.id === id)?.name || 'Unknown';
 }
 
-function netPay(line) {
+export function netPay(line) {
   return (line.baseSalary || 0) + (line.bonus || 0) - (line.deductions || 0);
 }
 
@@ -24,6 +24,47 @@ function currentMonthKey() {
   return new Date().toISOString().slice(0, 7);
 }
 
+// Every Approved/Paid period's line for one employee, oldest first, each
+// carrying its own running balance — a salary increase mid-year (or a
+// month only partly paid) just falls out of this naturally, since
+// baseSalary/amountPaid are captured per period, not derived from a
+// single current rate. Draft runs are excluded — those aren't confirmed
+// pay yet, so they shouldn't count toward what's owed. Exported so the
+// self-service "My Salary" view (mySalary.js) shows the exact same
+// figures an Admin sees here, not a separately-derived copy.
+export function salaryStatementRows(employeeId) {
+  const rows = [];
+  store.get('payrollRuns')
+    .filter((r) => r.status !== 'Draft')
+    .sort((a, b) => (a.month < b.month ? -1 : 1))
+    .forEach((run) => {
+      run.lines.filter((l) => l.employeeId === employeeId).forEach((l) => {
+        rows.push({ runId: run.id, status: run.status, month: run.month, baseSalary: l.baseSalary || 0, bonus: l.bonus || 0, deductions: l.deductions || 0, netPay: netPay(l), amountPaid: l.amountPaid || 0 });
+      });
+    });
+  let running = 0;
+  rows.forEach((r) => {
+    running += r.netPay - r.amountPaid;
+    r.runningBalance = running;
+  });
+  return rows;
+}
+
+// Running balance across every non-Draft run: what's been earned vs. what's
+// actually been paid out — same definition Operator Allowance (day-rate
+// payroll) already uses for balanceOwed().
+export function balanceOwed(employeeId) {
+  let earned = 0;
+  let paid = 0;
+  store.get('payrollRuns').filter((r) => r.status !== 'Draft').forEach((run) => {
+    run.lines.filter((l) => l.employeeId === employeeId).forEach((l) => {
+      earned += netPay(l);
+      paid += l.amountPaid || 0;
+    });
+  });
+  return earned - paid;
+}
+
 function buildLineRow(line, onChange, getRunContext) {
   const employee = store.get('employees').find((e) => e.id === line.employeeId);
   const base = el('input', { type: 'number', class: 'li-base', min: 0 });
@@ -32,13 +73,15 @@ function buildLineRow(line, onChange, getRunContext) {
   bonus.value = line.bonus ?? 0;
   const deductions = el('input', { type: 'number', class: 'li-deductions', min: 0 });
   deductions.value = line.deductions ?? 0;
+  const paid = el('input', { type: 'number', class: 'li-paid', min: 0 });
+  paid.value = line.amountPaid ?? 0;
   const netSpan = el('strong', {}, formatCurrency(netPay(line)));
   const printBtn = el('button', { type: 'button', class: 'icon-btn', title: 'Print payslip' }, '🖨');
   const removeBtn = el('button', { type: 'button', class: 'icon-btn icon-btn-danger', title: 'Remove' }, '✕');
 
   const row = el('div', { class: 'payroll-line-row', 'data-employee-id': line.employeeId }, [
     el('span', {}, employee ? `${employee.name} (${employee.role})` : 'Unknown'),
-    base, bonus, deductions, netSpan, printBtn, removeBtn,
+    base, bonus, deductions, paid, netSpan, printBtn, removeBtn,
   ]);
 
   function recompute() {
@@ -50,12 +93,14 @@ function buildLineRow(line, onChange, getRunContext) {
   base.addEventListener('input', recompute);
   bonus.addEventListener('input', recompute);
   deductions.addEventListener('input', recompute);
+  paid.addEventListener('input', onChange);
   removeBtn.addEventListener('click', () => { row.remove(); onChange(); });
   printBtn.addEventListener('click', () => {
     printPayslip(getRunContext(), {
       baseSalary: Number(base.value) || 0,
       bonus: Number(bonus.value) || 0,
       deductions: Number(deductions.value) || 0,
+      amountPaid: Number(paid.value) || 0,
     }, employeeNameOnly(line.employeeId));
   });
 
@@ -86,7 +131,7 @@ function openRunForm(record, onSaved) {
       const topGrid = el('div', { class: 'form-grid-2' }, [monthField, statusField]);
 
       const itemsHeader = el('div', { class: 'payroll-line-header' }, [
-        el('span', {}, 'Employee'), el('span', {}, 'Base Salary'), el('span', {}, 'Bonus'), el('span', {}, 'Deductions'), el('span', {}, 'Net Pay'), el('span', {}, ''), el('span', {}, ''),
+        el('span', {}, 'Employee'), el('span', {}, 'Base Salary'), el('span', {}, 'Bonus'), el('span', {}, 'Deductions'), el('span', {}, 'Paid'), el('span', {}, 'Net Pay'), el('span', {}, ''), el('span', {}, ''),
       ]);
       const itemsContainer = el('div', { class: 'line-items-container' });
       const totalDisplay = el('strong', {}, formatCurrency(0));
@@ -105,7 +150,7 @@ function openRunForm(record, onSaved) {
 
       const initialLines = record?.lines?.length
         ? record.lines
-        : store.get('employees').filter((e) => e.status === 'Active').map((e) => ({ employeeId: e.id, baseSalary: e.salary || 0, bonus: 0, deductions: 0 }));
+        : store.get('employees').filter((e) => e.status === 'Active').map((e) => ({ employeeId: e.id, baseSalary: e.salary || 0, bonus: 0, deductions: 0, amountPaid: 0 }));
       initialLines.forEach((line) => itemsContainer.appendChild(buildLineRow(line, recomputeTotal, runContext)));
       recomputeTotal();
 
@@ -118,7 +163,7 @@ function openRunForm(record, onSaved) {
       addSelect.addEventListener('change', () => {
         if (!addSelect.value) return;
         const emp = store.get('employees').find((e) => e.id === addSelect.value);
-        itemsContainer.appendChild(buildLineRow({ employeeId: emp.id, baseSalary: emp.salary || 0, bonus: 0, deductions: 0 }, recomputeTotal, runContext));
+        itemsContainer.appendChild(buildLineRow({ employeeId: emp.id, baseSalary: emp.salary || 0, bonus: 0, deductions: 0, amountPaid: 0 }, recomputeTotal, runContext));
         recomputeTotal();
         addSelect.querySelectorAll(`option[value="${emp.id}"]`).forEach((o) => o.remove());
         addSelect.value = '';
@@ -138,6 +183,7 @@ function openRunForm(record, onSaved) {
           baseSalary: Number(row.querySelector('.li-base').value) || 0,
           bonus: Number(row.querySelector('.li-bonus').value) || 0,
           deductions: Number(row.querySelector('.li-deductions').value) || 0,
+          amountPaid: Number(row.querySelector('.li-paid').value) || 0,
         }));
         if (!monthInput.value) { window.alert('Pay period is required.'); return; }
         if (!lines.length) { window.alert('Add at least one employee.'); return; }
@@ -199,6 +245,9 @@ export function renderPayroll(container) {
   container.appendChild(summarySlot);
   const tableContainer = el('div');
   container.appendChild(tableContainer);
+  container.appendChild(el('h3', { class: 'subsection-title' }, 'Employee Balances'));
+  const balancesContainer = el('div');
+  container.appendChild(balancesContainer);
 
   function refresh() {
     const rows = store.get('payrollRuns').slice().sort((a, b) => (a.month < b.month ? 1 : -1));
@@ -238,6 +287,25 @@ export function renderPayroll(container) {
       ],
       rows,
       emptyText: "No payroll runs yet. Salaries come from each employee's record in HR — set those first if they're blank.",
+    });
+
+    const employeeIds = [...new Set(rows.filter((r) => r.status !== 'Draft').flatMap((r) => r.lines.map((l) => l.employeeId)))];
+    const balances = employeeIds.map((id) => ({ id, balance: balanceOwed(id) })).filter((b) => b.balance !== 0);
+    renderTable(balancesContainer, {
+      columns: [
+        { key: 'employee', label: 'Employee', render: (r) => employeeLabel(r.id) },
+        { key: 'balance', label: 'Outstanding Balance', render: (r) => el('strong', { class: r.balance >= 0 ? 'text-critical' : 'text-good' }, formatCurrency(r.balance)) },
+        {
+          key: 'actions',
+          label: '',
+          render: (r) => el('button', {
+            type: 'button', class: 'icon-btn', title: 'Print salary statement',
+            onClick: () => printSalaryStatement(employeeNameOnly(r.id), salaryStatementRows(r.id)),
+          }, '🖨'),
+        },
+      ],
+      rows: balances,
+      emptyText: 'No outstanding balances — every Approved/Paid run has been fully paid out.',
     });
   }
 

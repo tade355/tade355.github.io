@@ -134,6 +134,7 @@ export function printFundRequest(request, { projectLabel, submittedByName, appro
 
 export function printPayslip(run, line, employeeName) {
   const netPay = (line.baseSalary || 0) + (line.bonus || 0) - (line.deductions || 0);
+  const balance = netPay - (line.amountPaid || 0);
   const html = `
     ${letterhead('PAYSLIP', run.id)}
     <div class="print-meta-grid">
@@ -147,8 +148,10 @@ export function printPayslip(run, line, employeeName) {
         <tr><td>Base Salary</td><td>${formatCurrency(line.baseSalary)}</td></tr>
         <tr><td>Bonus</td><td>${formatCurrency(line.bonus)}</td></tr>
         <tr><td>Deductions</td><td>-${formatCurrency(line.deductions)}</td></tr>
+        <tr><td>Net Pay (Due)</td><td>${formatCurrency(netPay)}</td></tr>
+        <tr><td>Amount Paid</td><td>${formatCurrency(line.amountPaid)}</td></tr>
       </tbody>
-      <tfoot><tr><td>Net Pay</td><td>${formatCurrency(netPay)}</td></tr></tfoot>
+      <tfoot><tr><td>Balance</td><td>${formatCurrency(balance)}</td></tr></tfoot>
     </table>
     ${signatureBlock(['Employee Signature', 'Authorized Signature'])}
   `;
@@ -556,6 +559,48 @@ export function printLoanStatement(loan, repayments) {
     </div>
     ${loan.notes ? `<div class="print-block"><strong>Notes:</strong><p>${loan.notes}</p></div>` : ''}
     ${signatureBlock(['Prepared By', 'Authorized Signature'])}
+  `;
+  render(html);
+}
+
+// A running statement across every Approved/Paid payroll period for one
+// employee — what's been earned vs. what's actually been paid, period by
+// period, with a cumulative running balance. Rows are pre-sorted oldest
+// first (like a bank statement) and each already carries its own balance
+// (Net Pay minus Amount Paid, summed with every prior period's balance) —
+// computed once in mySalary.js/payroll.js rather than re-derived here, so
+// the screen and the printout can never disagree on the running total.
+export function printSalaryStatement(employeeName, rows) {
+  const totalDue = rows.reduce((sum, r) => sum + r.netPay, 0);
+  const totalPaid = rows.reduce((sum, r) => sum + r.amountPaid, 0);
+  const outstanding = totalDue - totalPaid;
+  const html = `
+    ${letterhead('SALARY STATEMENT', employeeName)}
+    <div class="print-meta-grid">
+      <div><strong>Employee:</strong> ${employeeName}</div>
+      <div><strong>Periods Covered:</strong> ${rows.length}</div>
+    </div>
+    <table class="print-table">
+      <thead><tr><th>Pay Period</th><th>Base Salary</th><th>Bonus</th><th>Deductions</th><th>Net Pay (Due)</th><th>Paid</th><th>Running Balance</th></tr></thead>
+      <tbody>
+        ${rows.length ? rows.map((r) => `
+          <tr>
+            <td>${formatMonthLong(r.month)}</td>
+            <td>${formatCurrency(r.baseSalary)}</td>
+            <td>${formatCurrency(r.bonus)}</td>
+            <td>-${formatCurrency(r.deductions)}</td>
+            <td>${formatCurrency(r.netPay)}</td>
+            <td>${formatCurrency(r.amountPaid)}</td>
+            <td>${formatCurrency(r.runningBalance)}</td>
+          </tr>
+        `).join('') : '<tr><td colspan="7">No Approved/Paid payroll periods yet.</td></tr>'}
+      </tbody>
+      <tfoot><tr><td colspan="4">Total</td><td>${formatCurrency(totalDue)}</td><td>${formatCurrency(totalPaid)}</td><td>${formatCurrency(outstanding)}</td></tr></tfoot>
+    </table>
+    <div class="print-block">
+      <strong>Outstanding Balance:</strong> ${formatCurrency(outstanding)}
+    </div>
+    ${signatureBlock(['Employee Signature', 'Authorized Signature'])}
   `;
   render(html);
 }

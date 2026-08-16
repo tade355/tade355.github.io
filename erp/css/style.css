@@ -873,7 +873,7 @@ button { font-family: inherit; }
 }
 .payroll-line-header, .payroll-line-row {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto auto;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr auto auto;
   gap: 0.5rem;
   align-items: center;
 }

@@ -23,11 +23,12 @@ Use **Ctrl+F** (or your browser's "Find" feature) to jump to a section by name �
 13. [Accounting & Expenses](#13-accounting--expenses)
 14. [Fund Requests & Approvals](#14-fund-requests--approvals)
 15. [HR & Employees](#15-hr--employees)
-16. [Leave & Attendance](#16-leave--attendance)
-17. [Backup & Data](#17-backup--data)
-18. [Step-by-Step Workflows](#18-step-by-step-workflows)
-19. [Glossary](#19-glossary)
-20. [Known Limitations](#20-known-limitations)
+16. [My Salary](#16-my-salary)
+17. [Leave & Attendance](#17-leave--attendance)
+18. [Backup & Data](#18-backup--data)
+19. [Step-by-Step Workflows](#19-step-by-step-workflows)
+20. [Glossary](#20-glossary)
+21. [Known Limitations](#21-known-limitations)
 
 ---
 
@@ -67,9 +68,9 @@ Every staff account is assigned one of four **ERP Access Levels** in HR & Employ
 | Tier | Who this is for | What they get |
 |---|---|---|
 | **Admin** | Management / ownership | Everything — every module, every tab, every action, including HR, Payroll, and the Admin-only Internal Ledger inside Dozer Economics. |
-| **Accounts** | Office / accounts staff | Dashboard, Documents and Notices, Projects (including Profitability and Rate History), Resource Management, Sales & Invoicing, Purchasing & Suppliers, Accounting & Expenses, Fund Requests & Approvals, Leave & Attendance. **Not**: Daily Operations, Fleet Management, HR & Employees. |
-| **Supervisor** | Site supervisors | Documents and Notices, Projects (Map View, Photo Gallery, and Weekly Report only — no Projects list, Rate History, or Profitability tab), Daily Operations, Fleet Management, Resource Management, Fund Requests & Approvals (including the Approvals inbox), Leave & Attendance. A Supervisor's view of Fund Requests, Leave Requests, and Fueling Vouchers is further narrowed to their own **Assigned Project** (set on their HR record) — see the note under each relevant module. **Not**: Dashboard, Sales, Purchasing, Accounting, HR. |
-| **Staff** | Everyone else (general/field staff) | Documents and Notices, Fund Requests & Approvals (their own requests only — no Approvals tab), Leave & Attendance (their own leave/attendance only). Nothing else. |
+| **Accounts** | Office / accounts staff | Dashboard, Documents and Notices, Projects (including Profitability and Rate History), Resource Management, Sales & Invoicing, Purchasing & Suppliers, Accounting & Expenses, Fund Requests & Approvals, My Salary, Leave & Attendance. **Not**: Daily Operations, Fleet Management, HR & Employees. |
+| **Supervisor** | Site supervisors | Documents and Notices, Projects (Map View, Photo Gallery, and Weekly Report only — no Projects list, Rate History, or Profitability tab), Daily Operations, Fleet Management, Resource Management, Fund Requests & Approvals (including the Approvals inbox), My Salary, Leave & Attendance. A Supervisor's view of Fund Requests, Leave Requests, and Fueling Vouchers is further narrowed to their own **Assigned Project** (set on their HR record) — see the note under each relevant module. **Not**: Dashboard, Sales, Purchasing, Accounting, HR. |
+| **Staff** | Everyone else (general/field staff) | Documents and Notices, Fund Requests & Approvals (their own requests only — no Approvals tab), My Salary (their own pay history only), Leave & Attendance (their own leave/attendance only). Nothing else. |
 
 > **Important caveat:** this tier system controls what the app's screens *show and offer* — it is not a database-level security wall. Anyone determined enough with technical access to the underlying system could bypass it. Treat it as "the right doors are hidden from the wrong people," not "the wrong people are locked out even if they try to force their way in."
 
@@ -84,7 +85,7 @@ These conventions repeat across almost every module — learn them once here ins
 - **`+ Add / New / Log / Submit …` button** — top-right of most list screens. Opens a form (a "modal" popup) to create a new record. Required fields are marked with `*`.
 - **Row icons**:
   - **✎ Edit** — opens the same form, pre-filled, to change that record.
-  - **🗑 Delete** — always asks to confirm first (*"Delete '&lt;record name&gt;'? This cannot be undone."*). There is no undo after confirming, other than restoring from a backup (see [Backup & Data](#17-backup--data)).
+  - **🗑 Delete** — always asks to confirm first (*"Delete '&lt;record name&gt;'? This cannot be undone."*). There is no undo after confirming, other than restoring from a backup (see [Backup & Data](#18-backup--data)).
   - **🖨 Print** — only appears where a printable document exists for that record (see each module's Print section below). Opens your browser's print dialog with a formatted letterhead document — print it, or use "Save as PDF" in the print dialog to get a PDF file instead of paper.
 - **Status pills** — colored badges showing a record's status. As a rough guide: **green** = good/complete/paid/active, **amber** = pending/in-progress/needs attention, **red** = a problem, rejected, overdue, or unpaid.
 - **Search and filter bars** — most list screens have a search box and/or dropdown filters just above the table. These only change what's *displayed*; they never delete or alter data.
@@ -752,11 +753,13 @@ No print button.
 
 Stat cards: Payroll Runs, Draft Runs, Total Paid (All Time).
 
-**"+ New Payroll Run":** pick a **Pay Period** (month) and **Status** (Draft / Approved / Paid). Every Active employee is automatically added as a line, pre-filled with their HR salary as **Base Salary** — you can then adjust **Bonus** and **Deductions** per person; **Net Pay** (Base + Bonus − Deductions) recalculates live. Use the **"+ Add an employee to this run"** dropdown to bring in anyone missing, and the ✕ icon to drop someone from just this run.
+**"+ New Payroll Run":** pick a **Pay Period** (month) and **Status** (Draft / Approved / Paid). Every Active employee is automatically added as a line, pre-filled with their HR salary as **Base Salary** — you can then adjust **Bonus**, **Deductions**, and **Paid** per person; **Net Pay** (Base + Bonus − Deductions) recalculates live. A salary increase mid-year needs no special handling — since Base Salary is captured per period (not derived from a single current rate), a new run just picks up whatever's on the employee's HR record that month, and older runs keep whatever was owed back then. **Paid** doesn't have to equal Net Pay — enter only what was actually paid out this period (e.g. ₦250,000 of a ₦270,000 month) and the shortfall carries forward as a balance (see **Employee Balances** below). Use the **"+ Add an employee to this run"** dropdown to bring in anyone missing, and the ✕ icon to drop someone from just this run.
 
-**Print (per row in the runs table)** produces a **Payroll Register** — everyone on that run, with a grand total, signed "Prepared By" / "Approved By." **Print (per line, inside the edit form)** produces one employee's individual **Payslip**.
+**Print (per row in the runs table)** produces a **Payroll Register** — everyone on that run, with a grand total, signed "Prepared By" / "Approved By." **Print (per line, inside the edit form)** produces one employee's individual **Payslip**, now including Amount Paid and Balance alongside Base Salary/Bonus/Deductions/Net Pay.
 
-> **Marking a run "Paid" automatically creates a matching entry in Accounting & Expenses** (Category "Payroll," amount = the run's total net pay) — this only happens once per run, even if you edit it again afterward.
+An **Employee Balances** table at the bottom lists anyone still owed money across every run that's Approved or Paid (Draft runs don't count). Its 🖨 button prints a **Salary Statement** — every Approved/Paid period for that employee, oldest first, with Base Salary/Bonus/Deductions/Net Pay/Paid and a running balance column that carries a shortfall forward month to month, ending in a total Outstanding Balance. This is the document to hand someone (or file) showing exactly how an arrears balance built up over several months, not just this month's payslip.
+
+> **Marking a run "Paid" automatically creates a matching entry in Accounting & Expenses** (Category "Payroll," amount = the run's total net pay — the full amount due, not just what's entered as Paid) — this only happens once per run, even if you edit it again afterward.
 
 ### Operator Allowance tab
 
@@ -778,7 +781,17 @@ An **Operator Balances** table at the bottom flags anyone still owed money (or o
 
 ---
 
-## 16. Leave & Attendance
+## 16. My Salary
+
+**Who sees it:** everyone — but only their own record.
+
+A read-only, self-service view of your own pay history, straight from Payroll (regular staff) — it doesn't cover Operator Allowance's day-rate pay. Stat cards: **Outstanding Balance**, **Total Paid (All Time)**, **Periods Recorded**. A table lists every Approved/Paid pay period (Draft runs aren't shown — those aren't confirmed pay yet) with Base Salary, Bonus, Deductions, Net Pay (Due), Paid, and a running Balance that carries any shortfall forward — the same figures and the same running-balance math Payroll's Employee Balances table uses, so nothing here can ever disagree with what an Admin sees.
+
+**🖨 Print Salary Statement** (top of the page) prints the whole history at once. The 🖨 icon on each row prints just that period's individual **Payslip**.
+
+---
+
+## 17. Leave & Attendance
 
 **Who sees it:** everyone.
 
@@ -808,7 +821,7 @@ Attendance times **cannot be edited** through the app — clicking Edit just tel
 
 ---
 
-## 17. Backup & Data
+## 18. Backup & Data
 
 **Who sees it:** Admin only.
 
@@ -819,7 +832,7 @@ Everything in this ERP lives in one shared, central database — not on any one 
 
 ---
 
-## 18. Step-by-Step Workflows
+## 19. Step-by-Step Workflows
 
 ### Onboard a new employee
 1. Go to **HR & Employees → Employees → + Add Employee**.
@@ -894,7 +907,7 @@ Everything in this ERP lives in one shared, central database — not on any one 
 
 ---
 
-## 19. Glossary
+## 20. Glossary
 
 | Term | Meaning |
 |---|---|
@@ -912,7 +925,7 @@ Everything in this ERP lives in one shared, central database — not on any one 
 
 ---
 
-## 20. Known Limitations
+## 21. Known Limitations
 
 Worth knowing about, so nothing here surprises you:
 
