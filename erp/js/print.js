@@ -12,7 +12,7 @@ function letterhead(docTitle, docNumber) {
       <img src="assets/logo.png" alt="Emagrims Ltd" class="print-logo">
       <div class="print-company">
         <h1>Emagrims Ltd</h1>
-        <p>Land Clearing &amp; Earthmoving</p>
+        <p>Your Dependable Agricultural Partner</p>
       </div>
       <div class="print-doc-meta">
         <div class="print-doc-title">${docTitle}</div>
