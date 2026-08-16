@@ -590,7 +590,8 @@ create table payroll_lines (
   employee_id    text not null references employees(id) on delete cascade,
   base_salary    numeric not null default 0,
   bonus          numeric not null default 0,
-  deductions     numeric not null default 0
+  deductions     numeric not null default 0,
+  amount_paid    numeric not null default 0
 );
 create index idx_payroll_lines_run on payroll_lines(payroll_run_id);
 
