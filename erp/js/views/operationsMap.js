@@ -1,25 +1,64 @@
 import { store } from '../store.js';
-import { formatDate, el } from '../utils.js';
+import { formatDate, el, dateInRange } from '../utils.js';
 import { colorForOperationType, unitForOperationType } from '../constants.js';
 import { filterByProject } from '../session.js';
 import { loadLeaflet } from '../maplib.js';
 import { parseKml, isKmlAttachment, decodeAttachmentText } from '../kml.js';
+import { printOperationsMap } from '../print.js';
 
 function siteOptions(rows) {
   return [...new Set(rows.map((r) => r.siteName).filter(Boolean))].sort();
+}
+
+// One legend/print entry per operations record that carries at least one
+// KML boundary — same attribution the on-screen tooltip already uses (every
+// geometry in a record's KML is credited to that record's date/operator/
+// equipment, even if the file itself covers more than one dozer), so the
+// printed key never disagrees with what the map on screen is showing.
+function geoEntriesFor(rows, employees) {
+  return rows
+    .map((r) => {
+      const geometries = (r.attachments || [])
+        .filter(isKmlAttachment)
+        .flatMap((att) => {
+          try {
+            return parseKml(decodeAttachmentText(att));
+          } catch {
+            return [];
+          }
+        });
+      if (!geometries.length) return null;
+      return {
+        date: r.date,
+        operatorName: employees.find((e) => e.id === r.operatorId)?.name || 'Unknown',
+        equipment: r.equipment,
+        operationType: r.operationType,
+        quantity: r.quantity,
+        unit: unitForOperationType(r.operationType),
+        geometries,
+      };
+    })
+    .filter(Boolean);
 }
 
 export function renderOperationsMap(container) {
   container.innerHTML = '';
 
   const baseRows = filterByProject(store.get('operations'), 'siteName');
+  const employees = store.get('employees');
 
   const filterBar = el('div', { class: 'filter-bar' });
   const siteSelect = el('select', {}, [
     el('option', { value: '' }, 'All Sites'),
     ...siteOptions(baseRows).map((s) => el('option', { value: s }, s)),
   ]);
+  const fromInput = el('input', { type: 'date' });
+  const toInput = el('input', { type: 'date' });
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Site'), siteSelect]));
+  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'From'), fromInput]));
+  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), toInput]));
+  const printBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '🖨 Print Map (PDF)');
+  filterBar.appendChild(printBtn);
   container.appendChild(filterBar);
 
   const mapShell = el('div', { class: 'map-shell' });
@@ -36,12 +75,16 @@ export function renderOperationsMap(container) {
   let map;
   let layerGroups = {};
 
+  function filteredRows() {
+    const site = siteSelect.value;
+    return baseRows.filter((r) => (!site || r.siteName === site) && dateInRange(r.date, fromInput.value, toInput.value));
+  }
+
   function draw() {
     Object.values(layerGroups).forEach((lg) => lg.remove());
     layerGroups = {};
 
-    const site = siteSelect.value;
-    const rows = baseRows.filter((r) => !site || r.siteName === site);
+    const rows = filteredRows();
 
     const bounds = [];
     const typesPresent = new Set();
@@ -114,5 +157,10 @@ export function renderOperationsMap(container) {
     status.textContent = err.message;
   });
 
-  siteSelect.addEventListener('change', () => { if (map) draw(); });
+  [siteSelect, fromInput, toInput].forEach((input) => input.addEventListener('change', () => { if (map) draw(); }));
+
+  printBtn.addEventListener('click', () => {
+    const entries = geoEntriesFor(filteredRows(), employees);
+    printOperationsMap(entries, { from: fromInput.value, to: toInput.value, site: siteSelect.value });
+  });
 }

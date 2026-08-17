@@ -636,6 +636,112 @@ export function printDieselStationReport(station, from, to, rows) {
   render(html);
 }
 
+// Fixed distinguishable colors first (same hues used elsewhere on the map),
+// then a hue rotation for any entry count beyond that so a long date range
+// never runs out of distinct colors.
+const MAP_KEY_COLORS = ['#2a78d6', '#1baf7a', '#eda100', '#e34948', '#6c5ce7', '#b5842a', '#e87ba4', '#12a4a4', '#4a3aa7', '#eb6834'];
+function colorForIndex(i) {
+  if (i < MAP_KEY_COLORS.length) return MAP_KEY_COLORS[i];
+  return `hsl(${(i * 47) % 360}, 65%, 45%)`;
+}
+
+// Plain equirectangular projection with a longitude correction for the
+// entry set's mid-latitude — accurate enough for a single site's extent
+// (a few hundred meters to a few km) and needs no basemap tiles, so it
+// prints cleanly with no external image fetches or CORS concerns.
+function buildMapSvg(entries) {
+  const allCoords = entries.flatMap((e) => e.geometries.flatMap((g) => g.coords));
+  if (!allCoords.length) return '';
+
+  const lats = allCoords.map((c) => c[0]);
+  const lngs = allCoords.map((c) => c[1]);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs);
+  const maxLng = Math.max(...lngs);
+  const cos = Math.max(Math.cos(((minLat + maxLat) / 2) * Math.PI / 180), 0.01);
+
+  const width = 720;
+  const height = 460;
+  const pad = 24;
+  const spanX = Math.max((maxLng - minLng) * cos, 0.0005);
+  const spanY = Math.max(maxLat - minLat, 0.0005);
+  const scale = Math.min((width - pad * 2) / spanX, (height - pad * 2) / spanY);
+  const offX = (width - spanX * scale) / 2;
+  const offY = (height - spanY * scale) / 2;
+
+  function project([lat, lng]) {
+    const x = offX + (lng - minLng) * cos * scale;
+    const y = offY + (maxLat - lat) * scale;
+    return [x.toFixed(1), y.toFixed(1)];
+  }
+
+  const shapes = entries.map((e) => e.geometries.map((g) => {
+    const pts = g.coords.map(project);
+    if (g.type === 'Polygon') {
+      return `<polygon points="${pts.map((p) => p.join(',')).join(' ')}" fill="${e.color}" fill-opacity="0.35" stroke="${e.color}" stroke-width="2" />`;
+    }
+    if (g.type === 'LineString') {
+      return `<polyline points="${pts.map((p) => p.join(',')).join(' ')}" fill="none" stroke="${e.color}" stroke-width="3" />`;
+    }
+    const [x, y] = pts[0];
+    return `<circle cx="${x}" cy="${y}" r="5" fill="${e.color}" stroke="#fff" stroke-width="1" />`;
+  }).join('')).join('');
+
+  return `
+    <svg viewBox="0 0 ${width} ${height}" class="print-map-svg" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="${width}" height="${height}" fill="#eef3ee" stroke="#14261c" stroke-width="1" />
+      ${shapes}
+    </svg>
+  `;
+}
+
+// Draws every KML boundary in the filtered date range as a plain SVG map
+// (no basemap — see buildMapSvg) with each entry colored distinctly, and a
+// key table beneath it: Date, Operator, Equipment, Operation, Size. Total
+// Size is only shown when every entry shares one unit (Ha vs KM vs hrs
+// can't be meaningfully summed together).
+export function printOperationsMap(entries, { from, to, site } = {}) {
+  const periodLabel = (from || to) ? `${from ? formatDate(from) : 'Start'} – ${to ? formatDate(to) : 'Present'}` : 'All Dates';
+  const withGeo = entries.filter((e) => e.geometries.length);
+  const colored = withGeo
+    .slice()
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+    .map((e, i) => ({ ...e, color: colorForIndex(i) }));
+  const svg = buildMapSvg(colored);
+  const units = new Set(colored.map((e) => e.unit).filter(Boolean));
+  const totalLabel = units.size === 1
+    ? `${colored.reduce((sum, e) => sum + (Number(e.quantity) || 0), 0).toFixed(2)} ${[...units][0]}`
+    : '—';
+
+  const html = `
+    ${letterhead('OPERATIONS MAP', periodLabel)}
+    <div class="print-meta-grid">
+      <div><strong>Period:</strong> ${periodLabel}</div>
+      <div><strong>Site:</strong> ${site || 'All Sites'}</div>
+      <div><strong>Boundaries Mapped:</strong> ${colored.length}</div>
+    </div>
+    ${svg ? `<div class="print-map-frame">${svg}</div>` : '<div class="print-block"><p>No KML boundaries found for these filters.</p></div>'}
+    <table class="print-table">
+      <thead><tr><th></th><th>Date</th><th>Operator</th><th>Equipment</th><th>Operation</th><th>Size</th></tr></thead>
+      <tbody>
+        ${colored.length ? colored.map((e) => `
+          <tr>
+            <td><span class="print-map-swatch" style="background:${e.color}"></span></td>
+            <td>${formatDate(e.date)}</td>
+            <td>${e.operatorName || 'Unknown'}</td>
+            <td>${e.equipment || '—'}</td>
+            <td>${e.operationType || '—'}</td>
+            <td>${e.quantity ?? '—'} ${e.unit || ''}</td>
+          </tr>
+        `).join('') : '<tr><td colspan="6">No boundaries in this range.</td></tr>'}
+      </tbody>
+      <tfoot><tr><td colspan="5">Total</td><td>${totalLabel}</td></tr></tfoot>
+    </table>
+  `;
+  render(html);
+}
+
 export function printStaffMemo(memo, { employeeName, issuedByName }) {
   const html = `
     ${letterhead(memo.type.toUpperCase(), memo.id)}
