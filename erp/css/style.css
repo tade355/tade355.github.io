@@ -822,6 +822,10 @@ button { font-family: inherit; }
 .print-signature { flex: 1; text-align: center; font-size: 0.85rem; }
 .print-signature-line { border-top: 1px solid #333; margin-bottom: 0.35rem; padding-top: 2.5rem; }
 
+.print-map-frame { margin-bottom: 1rem; }
+.print-map-svg { width: 100%; height: auto; max-width: 100%; }
+.print-map-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: middle; }
+
 .form-grid-2 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
