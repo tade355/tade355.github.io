@@ -159,8 +159,15 @@ export function renderOperationsMap(container) {
 
   [siteSelect, fromInput, toInput].forEach((input) => input.addEventListener('change', () => { if (map) draw(); }));
 
-  printBtn.addEventListener('click', () => {
+  printBtn.addEventListener('click', async () => {
     const entries = geoEntriesFor(filteredRows(), employees);
-    printOperationsMap(entries, { from: fromInput.value, to: toInput.value, site: siteSelect.value });
+    printBtn.disabled = true;
+    printBtn.textContent = 'Loading map tiles…';
+    try {
+      await printOperationsMap(entries, { from: fromInput.value, to: toInput.value, site: siteSelect.value });
+    } finally {
+      printBtn.disabled = false;
+      printBtn.textContent = '🖨 Print Map (PDF)';
+    }
   });
 }
