@@ -175,8 +175,11 @@ export function renderHR(container) {
     const tableContainer = el('div');
     body.appendChild(tableContainer);
 
+    const STATUS_ORDER = ['Active', 'Suspended', 'Disengaged'];
     function refresh() {
-      const rows = store.get('employees');
+      const rows = store.get('employees')
+        .slice()
+        .sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status));
       renderTable(tableContainer, {
         columns: [
           { key: 'name', label: 'Name' },
