@@ -755,18 +755,23 @@ function buildMapSvg(entries) {
 
 // Draws every KML boundary in the filtered date range over real OpenStreetMap
 // imagery (vegetation cover, roads, administrative borders — see
-// buildMapSvg) with each entry colored distinctly, and a key table beneath
-// it: Date, Operator, Equipment, Operation, Size. Total Size is only shown
-// when every entry shares one unit (Ha vs KM vs hrs can't be meaningfully
-// summed together). Async because it waits for the map tiles to finish
-// loading before opening the print dialog — otherwise they'd print blank.
+// buildMapSvg). Color is assigned per DAY, not per record, so every
+// boundary worked on the same date — however many dozers contributed to it —
+// shares one color both on the map and in the key. A small Date Key sits
+// above the detail table (Date, Operator, Equipment, Operation, Size); Total
+// Size is only shown when every entry shares one unit (Ha vs KM vs hrs can't
+// be meaningfully summed together). Async because it waits for the map
+// tiles to finish loading before opening the print dialog — otherwise
+// they'd print blank.
 export async function printOperationsMap(entries, { from, to, site } = {}) {
   const periodLabel = (from || to) ? `${from ? formatDate(from) : 'Start'} – ${to ? formatDate(to) : 'Present'}` : 'All Dates';
   const withGeo = entries.filter((e) => e.geometries.length);
+  const dates = [...new Set(withGeo.map((e) => e.date))].sort();
+  const colorForDate = Object.fromEntries(dates.map((d, i) => [d, colorForIndex(i)]));
   const colored = withGeo
     .slice()
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
-    .map((e, i) => ({ ...e, color: colorForIndex(i) }));
+    .map((e) => ({ ...e, color: colorForDate[e.date] }));
   const svg = buildMapSvg(colored);
   const units = new Set(colored.map((e) => e.unit).filter(Boolean));
   const totalLabel = units.size === 1
@@ -781,6 +786,12 @@ export async function printOperationsMap(entries, { from, to, site } = {}) {
       <div><strong>Boundaries Mapped:</strong> ${colored.length}</div>
     </div>
     ${svg ? `<div class="print-map-frame">${svg}<p class="print-map-attribution">Map data © OpenStreetMap contributors</p></div>` : '<div class="print-block"><p>No KML boundaries found for these filters.</p></div>'}
+    ${dates.length ? `
+      <div class="print-block">
+        <strong>Date Key:</strong>
+        ${dates.map((d) => `<span class="print-map-key-item"><span class="print-map-swatch" style="background:${colorForDate[d]}"></span> ${formatDate(d)}</span>`).join(' ')}
+      </div>
+    ` : ''}
     <table class="print-table">
       <thead><tr><th></th><th>Date</th><th>Operator</th><th>Equipment</th><th>Operation</th><th>Size</th></tr></thead>
       <tbody>
