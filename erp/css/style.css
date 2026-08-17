@@ -824,6 +824,7 @@ button { font-family: inherit; }
 
 .print-map-frame { margin-bottom: 1rem; }
 .print-map-svg { width: 100%; height: auto; max-width: 100%; }
+.print-map-attribution { margin: 0.25rem 0 0; font-size: 0.7rem; color: #666; text-align: right; }
 .print-map-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: middle; }
 
 .form-grid-2 {

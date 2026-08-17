@@ -6,6 +6,22 @@ function render(html) {
   window.print();
 }
 
+// Same as render(), but for documents with embedded map tile images — waits
+// for every <image>/<img> to finish loading (or a 6s cap, so one slow/dead
+// tile can't hang the print forever) before opening the print dialog,
+// otherwise unloaded tiles would print as blank squares.
+function renderAndWaitForImages(html) {
+  const area = document.getElementById('printArea');
+  area.innerHTML = html;
+  const images = [...area.querySelectorAll('image, img')];
+  const loaded = Promise.all(images.map((img) => new Promise((resolve) => {
+    img.addEventListener('load', resolve, { once: true });
+    img.addEventListener('error', resolve, { once: true });
+  })));
+  const timeout = new Promise((resolve) => setTimeout(resolve, 6000));
+  return Promise.race([loaded, timeout]).then(() => window.print());
+}
+
 function letterhead(docTitle, docNumber) {
   return `
     <div class="print-header">
@@ -645,10 +661,32 @@ function colorForIndex(i) {
   return `hsl(${(i * 47) % 360}, 65%, 45%)`;
 }
 
-// Plain equirectangular projection with a longitude correction for the
-// entry set's mid-latitude — accurate enough for a single site's extent
-// (a few hundred meters to a few km) and needs no basemap tiles, so it
-// prints cleanly with no external image fetches or CORS concerns.
+// Standard Web Mercator slippy-map tile math (same projection Leaflet/OSM
+// use), so the printed map lines up tile-for-tile with the on-screen one
+// instead of a synthetic projection of our own.
+const TILE_SIZE = 256;
+function lonToTileX(lon, z) { return ((lon + 180) / 360) * (1 << z); }
+function latToTileY(lat, z) {
+  const rad = (lat * Math.PI) / 180;
+  return ((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2) * (1 << z);
+}
+// Highest zoom (most detail) whose bounding box still fits inside the
+// target pixel box — mirrors what Leaflet's fitBounds picks.
+function chooseZoom(minLat, maxLat, minLng, maxLng, targetW, targetH) {
+  for (let z = 18; z >= 2; z -= 1) {
+    const spanXpx = (lonToTileX(maxLng, z) - lonToTileX(minLng, z)) * TILE_SIZE;
+    const spanYpx = (latToTileY(minLat, z) - latToTileY(maxLat, z)) * TILE_SIZE;
+    if (spanXpx <= targetW && spanYpx <= targetH) return z;
+  }
+  return 2;
+}
+
+// Real OpenStreetMap imagery (vegetation cover, roads, administrative
+// borders) as the background, with the KML boundaries drawn on top in the
+// same Web Mercator pixel space — same source and projection as the
+// on-screen map, so the printout matches what's shown live. Loading tiles
+// is a plain cross-origin image fetch (no canvas rasterization involved),
+// so it needs no CORS support from the tile server.
 function buildMapSvg(entries) {
   const allCoords = entries.flatMap((e) => e.geometries.flatMap((g) => g.coords));
   if (!allCoords.length) return '';
@@ -659,21 +697,39 @@ function buildMapSvg(entries) {
   const maxLat = Math.max(...lats);
   const minLng = Math.min(...lngs);
   const maxLng = Math.max(...lngs);
-  const cos = Math.max(Math.cos(((minLat + maxLat) / 2) * Math.PI / 180), 0.01);
 
   const width = 720;
   const height = 460;
-  const pad = 24;
-  const spanX = Math.max((maxLng - minLng) * cos, 0.0005);
-  const spanY = Math.max(maxLat - minLat, 0.0005);
-  const scale = Math.min((width - pad * 2) / spanX, (height - pad * 2) / spanY);
-  const offX = (width - spanX * scale) / 2;
-  const offY = (height - spanY * scale) / 2;
+  const z = chooseZoom(minLat, maxLat, minLng, maxLng, width * 0.8, height * 0.8);
+
+  const pxMinX = lonToTileX(minLng, z) * TILE_SIZE;
+  const pxMaxX = lonToTileX(maxLng, z) * TILE_SIZE;
+  const pxMinY = latToTileY(maxLat, z) * TILE_SIZE;
+  const pxMaxY = latToTileY(minLat, z) * TILE_SIZE;
+  const spanPxX = Math.max(pxMaxX - pxMinX, 1);
+  const spanPxY = Math.max(pxMaxY - pxMinY, 1);
+  const offX = (width - spanPxX) / 2 - pxMinX;
+  const offY = (height - spanPxY) / 2 - pxMinY;
 
   function project([lat, lng]) {
-    const x = offX + (lng - minLng) * cos * scale;
-    const y = offY + (maxLat - lat) * scale;
+    const x = lonToTileX(lng, z) * TILE_SIZE + offX;
+    const y = latToTileY(lat, z) * TILE_SIZE + offY;
     return [x.toFixed(1), y.toFixed(1)];
+  }
+
+  const maxTileIndex = (1 << z) - 1;
+  const tileXStart = Math.max(Math.floor(-offX / TILE_SIZE), 0);
+  const tileXEnd = Math.min(Math.floor((width - offX) / TILE_SIZE), maxTileIndex);
+  const tileYStart = Math.max(Math.floor(-offY / TILE_SIZE), 0);
+  const tileYEnd = Math.min(Math.floor((height - offY) / TILE_SIZE), maxTileIndex);
+
+  const tiles = [];
+  for (let tx = tileXStart; tx <= tileXEnd; tx += 1) {
+    for (let ty = tileYStart; ty <= tileYEnd; ty += 1) {
+      const px = tx * TILE_SIZE + offX;
+      const py = ty * TILE_SIZE + offY;
+      tiles.push(`<image href="https://tile.openstreetmap.org/${z}/${tx}/${ty}.png" x="${px}" y="${py}" width="${TILE_SIZE}" height="${TILE_SIZE}" />`);
+    }
   }
 
   const shapes = entries.map((e) => e.geometries.map((g) => {
@@ -689,19 +745,22 @@ function buildMapSvg(entries) {
   }).join('')).join('');
 
   return `
-    <svg viewBox="0 0 ${width} ${height}" class="print-map-svg" xmlns="http://www.w3.org/2000/svg">
-      <rect x="0" y="0" width="${width}" height="${height}" fill="#eef3ee" stroke="#14261c" stroke-width="1" />
+    <svg viewBox="0 0 ${width} ${height}" class="print-map-svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <rect x="0" y="0" width="${width}" height="${height}" fill="#dce6dc" stroke="#14261c" stroke-width="1" />
+      ${tiles.join('')}
       ${shapes}
     </svg>
   `;
 }
 
-// Draws every KML boundary in the filtered date range as a plain SVG map
-// (no basemap — see buildMapSvg) with each entry colored distinctly, and a
-// key table beneath it: Date, Operator, Equipment, Operation, Size. Total
-// Size is only shown when every entry shares one unit (Ha vs KM vs hrs
-// can't be meaningfully summed together).
-export function printOperationsMap(entries, { from, to, site } = {}) {
+// Draws every KML boundary in the filtered date range over real OpenStreetMap
+// imagery (vegetation cover, roads, administrative borders — see
+// buildMapSvg) with each entry colored distinctly, and a key table beneath
+// it: Date, Operator, Equipment, Operation, Size. Total Size is only shown
+// when every entry shares one unit (Ha vs KM vs hrs can't be meaningfully
+// summed together). Async because it waits for the map tiles to finish
+// loading before opening the print dialog — otherwise they'd print blank.
+export async function printOperationsMap(entries, { from, to, site } = {}) {
   const periodLabel = (from || to) ? `${from ? formatDate(from) : 'Start'} – ${to ? formatDate(to) : 'Present'}` : 'All Dates';
   const withGeo = entries.filter((e) => e.geometries.length);
   const colored = withGeo
@@ -721,7 +780,7 @@ export function printOperationsMap(entries, { from, to, site } = {}) {
       <div><strong>Site:</strong> ${site || 'All Sites'}</div>
       <div><strong>Boundaries Mapped:</strong> ${colored.length}</div>
     </div>
-    ${svg ? `<div class="print-map-frame">${svg}</div>` : '<div class="print-block"><p>No KML boundaries found for these filters.</p></div>'}
+    ${svg ? `<div class="print-map-frame">${svg}<p class="print-map-attribution">Map data © OpenStreetMap contributors</p></div>` : '<div class="print-block"><p>No KML boundaries found for these filters.</p></div>'}
     <table class="print-table">
       <thead><tr><th></th><th>Date</th><th>Operator</th><th>Equipment</th><th>Operation</th><th>Size</th></tr></thead>
       <tbody>
@@ -739,7 +798,7 @@ export function printOperationsMap(entries, { from, to, site } = {}) {
       <tfoot><tr><td colspan="5">Total</td><td>${totalLabel}</td></tr></tfoot>
     </table>
   `;
-  render(html);
+  await renderAndWaitForImages(html);
 }
 
 export function printStaffMemo(memo, { employeeName, issuedByName }) {
