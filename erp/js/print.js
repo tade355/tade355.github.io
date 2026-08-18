@@ -812,6 +812,81 @@ export async function printOperationsMap(entries, { from, to, site } = {}) {
   await renderAndWaitForImages(html);
 }
 
+// One row per project (or a single row when one project is selected) —
+// same figures as the Profitability screen: Provisional Revenue (quantity x
+// the contract rate in effect that day, straight from Daily Operations,
+// whether invoiced yet or not) alongside Verified Revenue (actual invoices
+// tagged to the project) and the cost/profit breakdown. Profit/Margin stay
+// based on Verified Revenue only, matching the on-screen rule.
+export function printProfitabilityReport(stats, { from, to, projectLabel } = {}) {
+  const periodLabel = (from || to) ? `${from ? formatDate(from) : 'Start'} – ${to ? formatDate(to) : 'Present'}` : 'All Time';
+  const totals = stats.reduce((acc, s) => ({
+    areaCleared: acc.areaCleared + s.areaCleared,
+    provisionalRevenue: acc.provisionalRevenue + s.provisionalRevenue,
+    revenue: acc.revenue + s.revenue,
+    dozerCost: acc.dozerCost + s.dozerCost,
+    dieselCost: acc.dieselCost + s.dieselCost,
+    logisticsCost: acc.logisticsCost + s.logisticsCost,
+    otherCost: acc.otherCost + s.otherCost,
+    totalCost: acc.totalCost + s.totalCost,
+    profit: acc.profit + s.profit,
+  }), { areaCleared: 0, provisionalRevenue: 0, revenue: 0, dozerCost: 0, dieselCost: 0, logisticsCost: 0, otherCost: 0, totalCost: 0, profit: 0 });
+  const totalMargin = totals.revenue ? (totals.profit / totals.revenue) * 100 : null;
+
+  const html = `
+    ${letterhead('PROFITABILITY REPORT', periodLabel)}
+    <div class="print-meta-grid">
+      <div><strong>Project:</strong> ${projectLabel || 'All Projects'}</div>
+      <div><strong>Period:</strong> ${periodLabel}</div>
+    </div>
+    <table class="print-table">
+      <thead>
+        <tr>
+          <th>Project</th><th>Area Cleared</th><th>Provisional Revenue</th><th>Verified Revenue</th>
+          <th>Dozer Cost</th><th>Diesel Cost</th><th>Logistics Cost</th><th>Other Cost</th>
+          <th>Total Cost</th><th>Profit</th><th>Margin</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${stats.length ? stats.map((s) => `
+          <tr>
+            <td>${s.project}</td>
+            <td>${s.areaCleared.toFixed(1)} ha</td>
+            <td>${formatCurrency(s.provisionalRevenue)}</td>
+            <td>${formatCurrency(s.revenue)}</td>
+            <td>${formatCurrency(s.dozerCost)}</td>
+            <td>${formatCurrency(s.dieselCost)}</td>
+            <td>${formatCurrency(s.logisticsCost)}</td>
+            <td>${formatCurrency(s.otherCost)}</td>
+            <td>${formatCurrency(s.totalCost)}</td>
+            <td>${formatCurrency(s.profit)}</td>
+            <td>${s.margin === null ? '—' : `${s.margin.toFixed(0)}%`}</td>
+          </tr>
+        `).join('') : '<tr><td colspan="11">No projects to show.</td></tr>'}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td>Total</td>
+          <td>${totals.areaCleared.toFixed(1)} ha</td>
+          <td>${formatCurrency(totals.provisionalRevenue)}</td>
+          <td>${formatCurrency(totals.revenue)}</td>
+          <td>${formatCurrency(totals.dozerCost)}</td>
+          <td>${formatCurrency(totals.dieselCost)}</td>
+          <td>${formatCurrency(totals.logisticsCost)}</td>
+          <td>${formatCurrency(totals.otherCost)}</td>
+          <td>${formatCurrency(totals.totalCost)}</td>
+          <td>${formatCurrency(totals.profit)}</td>
+          <td>${totalMargin === null ? '—' : `${totalMargin.toFixed(0)}%`}</td>
+        </tr>
+      </tfoot>
+    </table>
+    <div class="print-block">
+      <p>Provisional Revenue is quantity x the contract rate in effect that day, straight from Daily Operations reports — a same-day figure, whether or not it has been invoiced yet. Verified Revenue and Logistics/Other costs only include invoices and expenses explicitly tagged to a project. Profit and Margin are based on Verified Revenue only.</p>
+    </div>
+  `;
+  render(html);
+}
+
 export function printStaffMemo(memo, { employeeName, issuedByName }) {
   const html = `
     ${letterhead(memo.type.toUpperCase(), memo.id)}

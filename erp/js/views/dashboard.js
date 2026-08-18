@@ -151,11 +151,11 @@ export function renderDashboard(container) {
   const dailyHectares = last7Days.map((day) => operations.filter((o) => o.date === day && isHaOperationType(o.operationType)).reduce((sum, o) => sum + o.quantity, 0));
   const todaysDiesel = dailyDiesel[6];
   const todaysHectares = dailyHectares[6];
-  // ROI here means Profit ÷ Cost for the day — a return-on-operating-spend
-  // proxy, not the finance-textbook return-on-capital-employed (capital
-  // expenditure per machine isn't tracked in this system).
-  const todayROI = todayStats.totalCost ? (todayStats.profit / todayStats.totalCost) * 100 : null;
-  const yesterdayROI = yesterdayStats.totalCost ? (yesterdayStats.profit / yesterdayStats.totalCost) * 100 : null;
+  // ROI here means Tentative Profit ÷ Cost for the day — a return-on-
+  // operating-spend proxy, not the finance-textbook return-on-capital-
+  // employed (capital expenditure per machine isn't tracked in this system).
+  const todayROI = todayStats.totalCost ? (todayStats.tentativeProfit / todayStats.totalCost) * 100 : null;
+  const yesterdayROI = yesterdayStats.totalCost ? (yesterdayStats.tentativeProfit / yesterdayStats.totalCost) * 100 : null;
 
   // Fleet health — feeds both the KPI row and the Executive Alert Center.
   const dozers = fleetItems();
@@ -199,9 +199,10 @@ export function renderDashboard(container) {
     statCard({ icon: '✅', label: 'Active Machines', value: String(activeFleetCount), tone: 'good', href: '#/fleet' }),
     statCard({ icon: '🔧', label: 'Machines Under Repair', value: String(downFleetCount), tone: downFleetCount ? 'warning' : 'good', href: '#/fleet' }),
     statCard({
-      icon: '💰', label: "Today's Revenue", value: formatCurrency(todayStats.revenue), href: '#/sales',
-      trend: trendFor(todayStats.revenue, yesterdayStats.revenue, { periodLabel: 'yesterday' }),
-      sparkline: dailyStats.map((d) => d.revenue),
+      icon: '💰', label: "Today's Revenue (Tentative)", value: formatCurrency(todayStats.provisionalRevenue), href: '#/projects',
+      hint: "Today's submitted reports x contract rate — not yet invoiced",
+      trend: trendFor(todayStats.provisionalRevenue, yesterdayStats.provisionalRevenue, { periodLabel: 'yesterday' }),
+      sparkline: dailyStats.map((d) => d.provisionalRevenue),
     }),
     statCard({
       icon: '💸', label: "Today's Cost", value: formatCurrency(todayStats.totalCost), href: '#/accounting',
@@ -209,12 +210,13 @@ export function renderDashboard(container) {
       sparkline: dailyStats.map((d) => d.totalCost),
     }),
     statCard({
-      icon: '📈', label: "Today's Profit", value: formatCurrency(todayStats.profit), href: '#/accounting',
-      trend: trendFor(todayStats.profit, yesterdayStats.profit, { periodLabel: 'yesterday' }),
-      sparkline: dailyStats.map((d) => d.profit),
+      icon: '📈', label: "Today's Profit (Tentative)", value: formatCurrency(todayStats.tentativeProfit), href: '#/projects',
+      hint: 'Tentative Revenue minus Cost, today',
+      trend: trendFor(todayStats.tentativeProfit, yesterdayStats.tentativeProfit, { periodLabel: 'yesterday' }),
+      sparkline: dailyStats.map((d) => d.tentativeProfit),
     }),
     statCard({
-      icon: '📊', label: 'ROI', value: todayROI === null ? '—' : `${todayROI.toFixed(0)}%`, hint: 'Profit ÷ Cost, today',
+      icon: '📊', label: 'ROI', value: todayROI === null ? '—' : `${todayROI.toFixed(0)}%`, hint: 'Tentative Profit ÷ Cost, today',
       trend: todayROI !== null && yesterdayROI !== null ? trendFor(todayROI, yesterdayROI, { periodLabel: 'yesterday' }) : undefined,
       href: '#/accounting',
     }),
