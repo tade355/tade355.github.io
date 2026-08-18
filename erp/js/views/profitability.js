@@ -4,6 +4,7 @@ import { sectionHeader, statCard, renderTable } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { isHaOperationType } from '../constants.js';
 import { hourlyRateAsOf, dieselRateAsOf, projectRateAsOf } from '../rateHistory.js';
+import { printProfitabilityReport } from '../print.js';
 
 export function projectNames() {
   return store.get('projects').map((p) => p.name);
@@ -66,14 +67,20 @@ export function computeProjectStats(project, from, to) {
 // Summed across every project — used where a figure needs to be
 // company-wide rather than tied to one project (e.g. a loan with no
 // Linked Project, priced against turnover/profit generally rather than a
-// specific job).
+// specific job). Also sums provisionalRevenue and derives tentativeProfit
+// (provisionalRevenue - totalCost) — the same-day submitted-reports view
+// used for "today" figures (Dashboard), since verified revenue lags real
+// invoicing and reads as ₦0 for almost any single day even when real work
+// went in.
 export function companyWideStats(from, to) {
   const stats = projectNames().map((p) => computeProjectStats(p, from, to));
-  return stats.reduce((acc, s) => ({
+  const totals = stats.reduce((acc, s) => ({
     revenue: acc.revenue + s.revenue,
     profit: acc.profit + s.profit,
     totalCost: acc.totalCost + s.totalCost,
-  }), { revenue: 0, profit: 0, totalCost: 0 });
+    provisionalRevenue: acc.provisionalRevenue + s.provisionalRevenue,
+  }), { revenue: 0, profit: 0, totalCost: 0, provisionalRevenue: 0 });
+  return { ...totals, tentativeProfit: totals.provisionalRevenue - totals.totalCost };
 }
 
 function formatMaybe(value, suffix = '') {
@@ -236,6 +243,8 @@ export function renderProfitability(container) {
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'From'), fromInput]));
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), toInput]));
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Group By'), groupBySelect]));
+  const printBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '🖨 Print Report');
+  filterBar.appendChild(printBtn);
   container.appendChild(filterBar);
 
   const body = el('div');
@@ -258,6 +267,20 @@ export function renderProfitability(container) {
   }
 
   [projectSelect, fromInput, toInput, groupBySelect].forEach((input) => input.addEventListener('change', refresh));
+
+  // Always a project-level report — the Provisional/Verified Revenue and
+  // full cost breakdown only exist at project granularity (see the Fixed
+  // Constraint note above renderGroupedTable), so this ignores whatever
+  // Group By is currently on screen and reports by project regardless.
+  printBtn.addEventListener('click', () => {
+    const project = projectSelect.value;
+    const from = fromInput.value;
+    const to = toInput.value;
+    const stats = project === 'all'
+      ? projectNames().map((p) => computeProjectStats(p, from, to))
+      : [computeProjectStats(project, from, to)];
+    printProfitabilityReport(stats, { from, to, projectLabel: project === 'all' ? 'All Projects' : project });
+  });
 
   refresh();
 }
