@@ -4,25 +4,38 @@ import { colorForOperationType, unitForOperationType } from '../constants.js';
 import { filterByProject } from '../session.js';
 import { loadLeaflet } from '../maplib.js';
 import { parseKml, isKmlAttachment, decodeAttachmentText } from '../kml.js';
+import { parseGpx, isGpxAttachment } from '../gpx.js';
 import { printOperationsMap } from '../print.js';
 
 function siteOptions(rows) {
   return [...new Set(rows.map((r) => r.siteName).filter(Boolean))].sort();
 }
 
+// KML boundary files and GPX track logs (field GPS trackers export GPX,
+// not KML) both map to the same { type, coords } geometry shape once
+// parsed, so every consumer below treats them identically.
+function isTrackAttachment(att) {
+  return isKmlAttachment(att) || isGpxAttachment(att);
+}
+function parseTrackAttachment(att) {
+  const text = decodeAttachmentText(att);
+  return isGpxAttachment(att) ? parseGpx(text) : parseKml(text);
+}
+
 // One legend/print entry per operations record that carries at least one
-// KML boundary — same attribution the on-screen tooltip already uses (every
-// geometry in a record's KML is credited to that record's date/operator/
-// equipment, even if the file itself covers more than one dozer), so the
-// printed key never disagrees with what the map on screen is showing.
+// KML/GPX boundary — same attribution the on-screen tooltip already uses
+// (every geometry in a record's file is credited to that record's
+// date/operator/equipment, even if the file itself covers more than one
+// dozer), so the printed key never disagrees with what the map on screen is
+// showing.
 function geoEntriesFor(rows, employees) {
   return rows
     .map((r) => {
       const geometries = (r.attachments || [])
-        .filter(isKmlAttachment)
+        .filter(isTrackAttachment)
         .flatMap((att) => {
           try {
-            return parseKml(decodeAttachmentText(att));
+            return parseTrackAttachment(att);
           } catch {
             return [];
           }
@@ -90,11 +103,11 @@ export function renderOperationsMap(container) {
     const typesPresent = new Set();
 
     rows.forEach((r) => {
-      const kmlAttachments = (r.attachments || []).filter(isKmlAttachment);
-      kmlAttachments.forEach((att) => {
+      const trackAttachments = (r.attachments || []).filter(isTrackAttachment);
+      trackAttachments.forEach((att) => {
         let geometries;
         try {
-          geometries = parseKml(decodeAttachmentText(att));
+          geometries = parseTrackAttachment(att);
         } catch {
           return;
         }
