@@ -753,16 +753,64 @@ function buildMapSvg(entries) {
   `;
 }
 
+// Shoelace polygon area over a simple equirectangular projection (accurate
+// enough for a single site's extent) — treats every LineString/Polygon
+// geometry as a closed loop, since that's how these field-survey files are
+// actually used here (walk the perimeter, GPS logs a near-closed path).
+// Points contribute nothing (no enclosed area). Sums across every geometry
+// in the entry rather than one combined shoelace pass, so a file with more
+// than one placemark doesn't corrupt the result by treating disjoint loops
+// as a single polygon.
+function measuredAreaHa(geometries) {
+  const lats = geometries.flatMap((g) => g.coords.map((c) => c[0]));
+  if (!lats.length) return 0;
+  const lat0 = lats.reduce((a, b) => a + b, 0) / lats.length;
+  const cos = Math.cos((lat0 * Math.PI) / 180);
+  const toXY = ([lat, lng]) => [lng * 111320 * cos, lat * 111320];
+  let totalSqM = 0;
+  geometries.forEach((g) => {
+    if (g.type === 'Point' || g.coords.length < 3) return;
+    const xy = g.coords.map(toXY);
+    let area = 0;
+    for (let i = 0; i < xy.length; i += 1) {
+      const [x1, y1] = xy[i];
+      const [x2, y2] = xy[(i + 1) % xy.length];
+      area += x1 * y2 - x2 * y1;
+    }
+    totalSqM += Math.abs(area) / 2;
+  });
+  return totalSqM / 10000;
+}
+
+// Two entries carry the exact same measured boundary whenever a field crew
+// attaches one shared file to more than one dozer's record (e.g. a boundary
+// walked once for two dozers working the same block) — this fingerprints
+// an entry's geometries so those duplicates can be detected instead of
+// having their area double-counted once per record that references them.
+function geometryFingerprint(geometries) {
+  return JSON.stringify(geometries.map((g) => [g.type, g.coords.map(([lat, lng]) => [Math.round(lat * 1e6), Math.round(lng * 1e6)])]));
+}
+
 // Draws every KML boundary in the filtered date range over real OpenStreetMap
 // imagery (vegetation cover, roads, administrative borders — see
 // buildMapSvg). Color is assigned per DAY, not per record, so every
 // boundary worked on the same date — however many dozers contributed to it —
 // shares one color both on the map and in the key. A small Date Key sits
-// above the detail table (Date, Operator, Equipment, Operation, Size); Total
-// Size is only shown when every entry shares one unit (Ha vs KM vs hrs can't
-// be meaningfully summed together). Async because it waits for the map
-// tiles to finish loading before opening the print dialog — otherwise
-// they'd print blank.
+// above the detail table (Date, Operator, Equipment, Operation, Reported,
+// Measured, Variance) — Measured is the shoelace-enclosed area of the
+// boundary itself (measuredAreaHa), shown only for Ha-unit operation types
+// since a KM/hrs figure isn't an enclosed area to measure; Reported is the
+// quantity actually logged on the Daily Operations record. When two or more
+// records share the identical attached file (same fingerprint), Measured is
+// only counted once toward the Total (not once per record), and each of
+// those rows' Variance compares against the group's combined Reported total
+// rather than that one record's Reported alone — otherwise a shared file
+// would look like a huge mismatch on every row that references it, when
+// it's actually one boundary correctly covering several dozers' combined
+// work. Total Reported/Measured are only shown when every entry shares one
+// unit (Ha vs KM vs hrs can't be meaningfully summed together). Async
+// because it waits for the map tiles to finish loading before opening the
+// print dialog — otherwise they'd print blank.
 export async function printOperationsMap(entries, { from, to, site } = {}) {
   const periodLabel = (from || to) ? `${from ? formatDate(from) : 'Start'} – ${to ? formatDate(to) : 'Present'}` : 'All Dates';
   const withGeo = entries.filter((e) => e.geometries.length);
@@ -771,11 +819,29 @@ export async function printOperationsMap(entries, { from, to, site } = {}) {
   const colored = withGeo
     .slice()
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
-    .map((e) => ({ ...e, color: colorForDate[e.date] }));
+    .map((e) => ({ ...e, color: colorForDate[e.date], measuredHa: e.unit === 'Ha' ? measuredAreaHa(e.geometries) : null }));
+
+  // Group by shared geometry so duplicate-file records are only counted once.
+  const groupByFingerprint = new Map();
+  colored.filter((e) => e.measuredHa !== null).forEach((e) => {
+    const fp = geometryFingerprint(e.geometries);
+    if (!groupByFingerprint.has(fp)) groupByFingerprint.set(fp, { measuredHa: e.measuredHa, reportedSum: 0 });
+    groupByFingerprint.get(fp).reportedSum += Number(e.quantity) || 0;
+  });
+  colored.forEach((e) => {
+    if (e.measuredHa === null) return;
+    const group = groupByFingerprint.get(geometryFingerprint(e.geometries));
+    e.groupVariance = e.measuredHa - group.reportedSum;
+  });
+
   const svg = buildMapSvg(colored);
   const units = new Set(colored.map((e) => e.unit).filter(Boolean));
-  const totalLabel = units.size === 1
+  const totalReportedLabel = units.size === 1
     ? `${colored.reduce((sum, e) => sum + (Number(e.quantity) || 0), 0).toFixed(2)} ${[...units][0]}`
+    : '—';
+  const distinctGroups = [...groupByFingerprint.values()];
+  const totalMeasuredLabel = distinctGroups.length && units.size === 1
+    ? `${distinctGroups.reduce((sum, g) => sum + g.measuredHa, 0).toFixed(2)} Ha`
     : '—';
 
   const html = `
@@ -793,7 +859,7 @@ export async function printOperationsMap(entries, { from, to, site } = {}) {
       </div>
     ` : ''}
     <table class="print-table">
-      <thead><tr><th></th><th>Date</th><th>Operator</th><th>Equipment</th><th>Operation</th><th>Size</th></tr></thead>
+      <thead><tr><th></th><th>Date</th><th>Operator</th><th>Equipment</th><th>Operation</th><th>Reported</th><th>Measured (KML)</th><th>Variance</th></tr></thead>
       <tbody>
         ${colored.length ? colored.map((e) => `
           <tr>
@@ -803,11 +869,14 @@ export async function printOperationsMap(entries, { from, to, site } = {}) {
             <td>${e.equipment || '—'}</td>
             <td>${e.operationType || '—'}</td>
             <td>${e.quantity ?? '—'} ${e.unit || ''}</td>
+            <td>${e.measuredHa === null ? '—' : `${e.measuredHa.toFixed(2)} Ha`}</td>
+            <td>${e.measuredHa === null ? '—' : `${(e.groupVariance >= 0 ? '+' : '')}${e.groupVariance.toFixed(2)} Ha`}</td>
           </tr>
-        `).join('') : '<tr><td colspan="6">No boundaries in this range.</td></tr>'}
+        `).join('') : '<tr><td colspan="8">No boundaries in this range.</td></tr>'}
       </tbody>
-      <tfoot><tr><td colspan="5">Total</td><td>${totalLabel}</td></tr></tfoot>
+      <tfoot><tr><td colspan="5">Total</td><td>${totalReportedLabel}</td><td>${totalMeasuredLabel}</td><td></td></tr></tfoot>
     </table>
+    ${distinctGroups.length ? '<div class="print-block"><p>Measured (KML) is the enclosed area of the boundary walked/driven with GPS, computed directly from the attached KML/GPX file — an independent check against the Reported figure from the Daily Operations record, not a replacement for it. When two or more records share the same attached file (one boundary covering several dozers\' combined work), Measured is only counted once in the Total, and Variance compares against that group\'s combined Reported total rather than any single record\'s Reported alone.</p></div>' : ''}
   `;
   await renderAndWaitForImages(html);
 }
