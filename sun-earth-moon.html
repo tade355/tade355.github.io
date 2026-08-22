@@ -107,6 +107,13 @@ button{
   background:var(--panel);border:1px solid var(--line);border-radius:.6rem;
   padding:.45rem .8rem;cursor:pointer;
 }
+select{
+  font-family:inherit;font-size:.8rem;color:var(--text);
+  background:var(--panel);border:1px solid var(--line);border-radius:.6rem;
+  padding:.45rem .6rem;flex:1;min-width:150px;cursor:pointer;
+}
+select:hover{border-color:var(--accent-2);}
+select optgroup, select option{background:var(--panel-2);color:var(--text);}
 button:hover{border-color:var(--accent-2);color:var(--accent-2);}
 button:focus-visible, input:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
 button.primary{background:var(--accent);color:#20180a;border-color:var(--accent);font-weight:600;}
@@ -218,6 +225,30 @@ footer{
         <p class="sub">A spinning globe viewed from the side, with the Sun always shining from the right.</p>
         <canvas id="globeCanvas" width="360" height="300" role="img" aria-label="Rotating globe showing the day and night boundary and an observer marker"></canvas>
         <div class="controls-row" style="margin-top:.75rem;">
+          <label for="locationPreset">Location</label>
+          <select id="locationPreset" aria-label="Jump to a named location">
+            <option value="">Custom (use slider) &rarr;</option>
+            <optgroup label="Northern Hemisphere">
+              <option value="78.2">Longyearbyen, Svalbard (78&deg;N)</option>
+              <option value="64.1">Reykjavik, Iceland (64&deg;N)</option>
+              <option value="51.5">London, UK (51&deg;N)</option>
+              <option value="40.7">New York, USA (41&deg;N)</option>
+              <option value="30.0">Cairo, Egypt (30&deg;N)</option>
+              <option value="6.5">Lagos, Nigeria (6&deg;N)</option>
+              <option value="1.3">Singapore (1&deg;N)</option>
+            </optgroup>
+            <optgroup label="Southern Hemisphere">
+              <option value="-1.3">Nairobi, Kenya (1&deg;S)</option>
+              <option value="-6.2">Jakarta, Indonesia (6&deg;S)</option>
+              <option value="-22.9">Rio de Janeiro, Brazil (23&deg;S)</option>
+              <option value="-33.9">Sydney, Australia (34&deg;S)</option>
+              <option value="-41.3">Wellington, New Zealand (41&deg;S)</option>
+              <option value="-54.8">Ushuaia, Argentina (55&deg;S)</option>
+              <option value="-77.8">McMurdo Station, Antarctica (78&deg;S)</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="controls-row">
           <label for="latitude">Latitude</label>
           <input type="range" id="latitude" min="-90" max="90" step="1" value="40" aria-label="Observer latitude in degrees">
           <span class="val" id="latVal">40&deg; N</span>
@@ -249,7 +280,7 @@ footer{
   <div class="layout2">
     <section class="card" aria-labelledby="sky-h">
       <h2 id="sky-h">🔭 Moon in the sky from your location</h2>
-      <p class="sub">Horizon view for the latitude set in the Day &amp; Night panel (<span id="skyLatLabel">40&deg; N</span>), at the selected day &amp; time.</p>
+      <p class="sub">Horizon view for <span id="skyLatLabel">40&deg; N</span> (choose a location or drag the latitude slider in the Day &amp; Night panel), at the selected day &amp; time.</p>
       <canvas id="skyCanvas" width="480" height="220" role="img" aria-label="Horizon view showing whether the Moon is above or below the horizon"></canvas>
       <div class="readouts">
         <div class="readout"><div class="k">Moon altitude</div><div class="v" id="rMoonAlt">–</div></div>
@@ -311,7 +342,8 @@ footer{
     t: 15.33,          // total simulated days elapsed (day-of-year + time-of-day fraction)
     playing: false,
     speed: 0.12,        // days per real second
-    lat: 40
+    lat: 40,
+    locationName: null  // set when a named preset is chosen; null = custom (slider-only)
   };
 
   function deg2rad(d){ return d * Math.PI/180; }
@@ -773,6 +805,7 @@ footer{
     timeVal: document.getElementById("timeVal"),
     latitude: document.getElementById("latitude"),
     latVal: document.getElementById("latVal"),
+    locationPreset: document.getElementById("locationPreset"),
     headline: document.getElementById("headline"),
     rLocalTime: document.getElementById("rLocalTime"),
     rStatus: document.getElementById("rStatus"),
@@ -835,9 +868,11 @@ footer{
     els.mNote.textContent = phaseNote(pName);
 
     var seas = seasonName(t);
-    els.headline.innerHTML = fmtDate(dayOfYear(t)) + " &middot; <b>"+seas.n+"</b> in the Northern Hemisphere ("+seas.s+" in the Southern) &middot; Moon: <b>"+pName+"</b> &middot; Subsolar latitude "+dec.toFixed(1)+"&deg;";
+    var locBit = state.locationName ? " at <b>"+state.locationName+"</b>" : "";
+    els.headline.innerHTML = fmtDate(dayOfYear(t)) + locBit + " &middot; <b>"+seas.n+"</b> in the Northern Hemisphere ("+seas.s+" in the Southern) &middot; Moon: <b>"+pName+"</b> &middot; Subsolar latitude "+dec.toFixed(1)+"&deg;";
 
-    els.skyLatLabel.innerHTML = Math.abs(state.lat)+"&deg; "+(state.lat>=0?"N":"S");
+    var latStr = Math.abs(state.lat).toFixed(state.locationName?1:0)+"&deg; "+(state.lat>=0?"N":"S");
+    els.skyLatLabel.innerHTML = state.locationName ? state.locationName+" &middot; "+latStr : latStr;
     var geo = moonLocalGeometry(t, state.lat);
     if(geo.polar==="up"){
       els.rMoonAlt.textContent = "Always up";
@@ -889,8 +924,17 @@ footer{
   });
   els.latitude.addEventListener("input", function(){
     state.lat = parseFloat(this.value);
-    els.latVal.textContent = Math.abs(state.lat)+"&deg; "+(state.lat>=0?"N":"S");
+    state.locationName = null;
+    els.locationPreset.value = "";
     els.latVal.innerHTML = Math.abs(state.lat)+"&deg; "+(state.lat>=0?"N":"S");
+    render();
+  });
+  els.locationPreset.addEventListener("change", function(){
+    if(this.value === ""){ state.locationName = null; return; }
+    state.lat = parseFloat(this.value);
+    state.locationName = this.options[this.selectedIndex].text.replace(/\s*\([^)]*\)\s*$/, "");
+    els.latitude.value = state.lat;
+    els.latVal.innerHTML = Math.abs(state.lat).toFixed(1)+"&deg; "+(state.lat>=0?"N":"S");
     render();
   });
   document.querySelectorAll(".presets button").forEach(function(btn){
@@ -927,6 +971,8 @@ footer{
     els.playBtn.textContent="▶ Play";
     state.t = 15.33;
     state.lat = 40;
+    state.locationName = null;
+    els.locationPreset.value = "";
     els.latitude.value = 40;
     els.latVal.innerHTML = "40&deg; N";
     els.speed.value = 0.12;
