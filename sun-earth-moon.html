@@ -1095,6 +1095,10 @@ footer{
     els.speedVal.textContent = state.speed.toFixed(2)+" d/s";
   });
   function yearBase(t){ return Math.floor(t/ORBIT_PERIOD)*ORBIT_PERIOD; } // preserves which year-chunk of t we're in
+  // Midnight of "today": NOT Math.floor(t) — ORBIT_PERIOD (365.25) is non-integer, so yearBase(t)
+  // often lands on a quarter/half/three-quarter day, and flooring the raw absolute t instead of the
+  // day-of-year can land up to 18h into the wrong day. Always floor the within-year day, then re-add yearBase.
+  function startOfDay(t){ return yearBase(t) + Math.floor(dayOfYear(t)); }
   els.dayOfYear.addEventListener("input", function(){
     var frac = timeOfDayFrac(state.t);
     state.t = yearBase(state.t) + parseFloat(this.value) + frac;
@@ -1102,9 +1106,10 @@ footer{
     els.dateVal.textContent = fmtDate(dayOfYear(state.t));
   });
   els.timeOfDay.addEventListener("input", function(){
-    state.t = Math.floor(state.t) + parseFloat(this.value)/24;
+    state.t = startOfDay(state.t) + parseFloat(this.value)/24;
     render();
     els.timeVal.textContent = fmtHM(parseFloat(this.value));
+    els.dateVal.textContent = fmtDate(dayOfYear(state.t));
   });
   els.latitude.addEventListener("input", function(){
     state.lat = parseFloat(this.value);
@@ -1196,8 +1201,11 @@ footer{
     setTimeout(function(){ el.textContent = orig; }, delay || 2200);
   }
   els.gpsBtn.addEventListener("click", function(){
-    if(!navigator.geolocation){ flashText(els.gpsBtn, "❌ Not supported here"); return; }
-    els.gpsBtn.textContent = "📡 Locating…";
+    if(!navigator.geolocation){ flashText(els.gpsBtn, "❌ Not supported in this browser", 3500); return; }
+    if(location.protocol!=="https:" && location.hostname!=="localhost" && location.hostname!=="127.0.0.1"){
+      flashText(els.gpsBtn, "❌ Needs HTTPS", 3500); return;
+    }
+    els.gpsBtn.textContent = "📡 Requesting permission…";
     navigator.geolocation.getCurrentPosition(function(pos){
       state.lat = clamp(pos.coords.latitude, -90, 90);
       state.locationName = "My location";
@@ -1208,8 +1216,12 @@ footer{
       syncSlidersFromState();
       render();
       flashText(els.gpsBtn, "✓ Using your location");
-    }, function(){
-      flashText(els.gpsBtn, "❌ Location denied/unavailable");
+    }, function(err){
+      var msg = "❌ Location unavailable";
+      if(err && err.code===1) msg = "❌ Permission denied — allow location access";
+      else if(err && err.code===2) msg = "❌ Position unavailable";
+      else if(err && err.code===3) msg = "❌ Timed out — try again";
+      flashText(els.gpsBtn, msg, 3500);
     }, { timeout: 10000, maximumAge: 60000 });
   });
 
