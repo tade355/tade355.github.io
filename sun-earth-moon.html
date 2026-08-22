@@ -268,37 +268,37 @@ footer{
         <canvas id="globeCanvas" width="360" height="300" role="img" aria-label="Rotating globe showing the day and night boundary and an observer marker"></canvas>
         <div class="controls-row" style="margin-top:.75rem;">
           <label for="locationPreset">Location</label>
-          <select id="locationPreset" aria-label="Jump to a named location">
+          <select id="locationPreset" aria-label="Jump to a named location" title="Also jumps the date and time to that location's current local time">
             <option value="">Custom (use slider) &rarr;</option>
             <optgroup label="Polar">
-              <option value="78.2">Longyearbyen, Svalbard (78&deg;N)</option>
-              <option value="-77.8">McMurdo Station, Antarctica (78&deg;S)</option>
+              <option value="78.2" data-tz="Arctic/Longyearbyen">Longyearbyen, Svalbard (78&deg;N)</option>
+              <option value="-77.8" data-tz="Antarctica/McMurdo">McMurdo Station, Antarctica (78&deg;S)</option>
             </optgroup>
             <optgroup label="Subpolar / cool">
-              <option value="64.1">Reykjavik, Iceland (64&deg;N)</option>
-              <option value="55.9">Glasgow, Scotland (56&deg;N)</option>
-              <option value="53.7">Navan, Ireland (54&deg;N)</option>
-              <option value="-54.8">Ushuaia, Argentina (55&deg;S)</option>
+              <option value="64.1" data-tz="Atlantic/Reykjavik">Reykjavik, Iceland (64&deg;N)</option>
+              <option value="55.9" data-tz="Europe/London">Glasgow, Scotland (56&deg;N)</option>
+              <option value="53.7" data-tz="Europe/Dublin">Navan, Ireland (54&deg;N)</option>
+              <option value="-54.8" data-tz="America/Argentina/Ushuaia">Ushuaia, Argentina (55&deg;S)</option>
             </optgroup>
             <optgroup label="Temperate">
-              <option value="51.5">London, UK (52&deg;N)</option>
-              <option value="40.7">New York, USA (41&deg;N)</option>
-              <option value="38.9">Washington, D.C., USA (39&deg;N)</option>
-              <option value="35.7">Tehran, Iran (36&deg;N)</option>
-              <option value="-33.9">Sydney, Australia (34&deg;S)</option>
-              <option value="-41.3">Wellington, New Zealand (41&deg;S)</option>
+              <option value="51.5" data-tz="Europe/London">London, UK (52&deg;N)</option>
+              <option value="40.7" data-tz="America/New_York">New York, USA (41&deg;N)</option>
+              <option value="38.9" data-tz="America/New_York">Washington, D.C., USA (39&deg;N)</option>
+              <option value="35.7" data-tz="Asia/Tehran">Tehran, Iran (36&deg;N)</option>
+              <option value="-33.9" data-tz="Australia/Sydney">Sydney, Australia (34&deg;S)</option>
+              <option value="-41.3" data-tz="Pacific/Auckland">Wellington, New Zealand (41&deg;S)</option>
             </optgroup>
             <optgroup label="Subtropical">
-              <option value="30.0">Cairo, Egypt (30&deg;N)</option>
-              <option value="-22.9">Rio de Janeiro, Brazil (23&deg;S)</option>
+              <option value="30.0" data-tz="Africa/Cairo">Cairo, Egypt (30&deg;N)</option>
+              <option value="-22.9" data-tz="America/Sao_Paulo">Rio de Janeiro, Brazil (23&deg;S)</option>
             </optgroup>
             <optgroup label="Tropical / equatorial">
-              <option value="9.6">Minna, Nigeria (10&deg;N)</option>
-              <option value="9.1">Abuja, Nigeria (9&deg;N)</option>
-              <option value="6.5">Lagos, Nigeria (6&deg;N)</option>
-              <option value="1.3">Singapore (1&deg;N)</option>
-              <option value="-1.3">Nairobi, Kenya (1&deg;S)</option>
-              <option value="-6.2">Jakarta, Indonesia (6&deg;S)</option>
+              <option value="9.6" data-tz="Africa/Lagos">Minna, Nigeria (10&deg;N)</option>
+              <option value="9.1" data-tz="Africa/Lagos">Abuja, Nigeria (9&deg;N)</option>
+              <option value="6.5" data-tz="Africa/Lagos">Lagos, Nigeria (6&deg;N)</option>
+              <option value="1.3" data-tz="Asia/Singapore">Singapore (1&deg;N)</option>
+              <option value="-1.3" data-tz="Africa/Nairobi">Nairobi, Kenya (1&deg;S)</option>
+              <option value="-6.2" data-tz="Asia/Jakarta">Jakarta, Indonesia (6&deg;S)</option>
             </optgroup>
           </select>
         </div>
@@ -599,12 +599,14 @@ footer{
     return (h<10?"0":"")+h+":"+(m<10?"0":"")+m;
   }
   var MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  var MDAYS=[31,28,31,30,31,30,31,31,30,31,30,31];
-  function fmtDate(d){
-    d = Math.floor(((d%365)+365)%365);
-    var m=0;
-    while(d>=MDAYS[m]){ d-=MDAYS[m]; m++; }
-    return MONTHS[m]+" "+(d+1);
+  // Real calendar-day arithmetic (not t % 365.25): ORBIT_PERIOD is the right period for the continuous
+  // astronomical season cycle, but real years alternate 365/366 days irregularly relative to a fixed
+  // epoch, so a naive mod-365.25 silently drifts out of alignment with actual calendar dates over the
+  // years (confirmed: it was off by exactly 12h for "now" in 2026). Delegate to Date, which handles
+  // leap years correctly and never drifts.
+  function fmtDate(t){
+    var d = new Date(EPOCH.getFullYear(), EPOCH.getMonth(), EPOCH.getDate() + Math.floor(t));
+    return MONTHS[d.getMonth()]+" "+d.getDate();
   }
 
   function phaseName(elong){
@@ -993,7 +995,7 @@ footer{
   function syncSlidersFromState(){
     els.dayOfYear.value = dayOfYear(state.t).toFixed(1);
     els.timeOfDay.value = (timeOfDayFrac(state.t)*24).toFixed(2);
-    els.dateVal.textContent = fmtDate(dayOfYear(state.t));
+    els.dateVal.textContent = fmtDate(state.t);
     els.timeVal.textContent = fmtHM(timeOfDayFrac(state.t)*24);
   }
 
@@ -1051,7 +1053,7 @@ footer{
 
     var seas = seasonName(t);
     var locBit = state.locationName ? " at <b>"+state.locationName+"</b>" : "";
-    els.headline.innerHTML = fmtDate(dayOfYear(t)) + locBit + " &middot; <b>"+seas.n+"</b> in the Northern Hemisphere ("+seas.s+" in the Southern) &middot; Moon: <b>"+pName+"</b> &middot; Subsolar latitude "+dec.toFixed(1)+"&deg;";
+    els.headline.innerHTML = fmtDate(t) + locBit + " &middot; <b>"+seas.n+"</b> in the Northern Hemisphere ("+seas.s+" in the Southern) &middot; Moon: <b>"+pName+"</b> &middot; Subsolar latitude "+dec.toFixed(1)+"&deg;";
 
     var latStr = Math.abs(state.lat).toFixed(state.locationName?1:0)+"&deg; "+(state.lat>=0?"N":"S");
     els.skyLatLabel.innerHTML = state.locationName ? state.locationName+" &middot; "+latStr : latStr;
@@ -1094,22 +1096,25 @@ footer{
     els.realtimeBtn.classList.remove("active");
     els.speedVal.textContent = state.speed.toFixed(2)+" d/s";
   });
-  function yearBase(t){ return Math.floor(t/ORBIT_PERIOD)*ORBIT_PERIOD; } // preserves which year-chunk of t we're in
-  // Midnight of "today": NOT Math.floor(t) — ORBIT_PERIOD (365.25) is non-integer, so yearBase(t)
-  // often lands on a quarter/half/three-quarter day, and flooring the raw absolute t instead of the
-  // day-of-year can land up to 18h into the wrong day. Always floor the within-year day, then re-add yearBase.
-  function startOfDay(t){ return yearBase(t) + Math.floor(dayOfYear(t)); }
+  // t-value of real January 1st of whichever real year `t` currently falls in. NOT yearBase(t)=
+  // floor(t/365.25)*365.25 — that's a fictional, non-integer-aligned chunk boundary (real years
+  // alternate 365/366 days), so reconstructing "day V of the year" from it can land up to 18h into
+  // the wrong real day. This anchors to the actual calendar Jan 1, matching fmtDate exactly.
+  function realYearStartT(t){
+    var d = new Date(EPOCH.getFullYear(), EPOCH.getMonth(), EPOCH.getDate()+Math.floor(t));
+    return Math.round((new Date(d.getFullYear(),0,1) - EPOCH)/86400000);
+  }
   els.dayOfYear.addEventListener("input", function(){
     var frac = timeOfDayFrac(state.t);
-    state.t = yearBase(state.t) + parseFloat(this.value) + frac;
+    state.t = realYearStartT(state.t) + parseFloat(this.value) + frac;
     render();
-    els.dateVal.textContent = fmtDate(dayOfYear(state.t));
+    els.dateVal.textContent = fmtDate(state.t);
   });
   els.timeOfDay.addEventListener("input", function(){
-    state.t = startOfDay(state.t) + parseFloat(this.value)/24;
+    state.t = Math.floor(state.t) + parseFloat(this.value)/24;
     render();
     els.timeVal.textContent = fmtHM(parseFloat(this.value));
-    els.dateVal.textContent = fmtDate(dayOfYear(state.t));
+    els.dateVal.textContent = fmtDate(state.t);
   });
   els.latitude.addEventListener("input", function(){
     state.lat = parseFloat(this.value);
@@ -1118,18 +1123,42 @@ footer{
     els.latVal.innerHTML = Math.abs(state.lat)+"&deg; "+(state.lat>=0?"N":"S");
     render();
   });
+  function nowAtTimeZone(tz){
+    // Wall-clock date/time "now" as experienced in an IANA timezone, converted to our epoch-relative t.
+    try{
+      var fmt = new Intl.DateTimeFormat("en-US", {
+        timeZone: tz, year:"numeric", month:"2-digit", day:"2-digit",
+        hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false
+      });
+      var obj = {};
+      fmt.formatToParts(new Date()).forEach(function(p){ obj[p.type]=p.value; });
+      var hour = parseInt(obj.hour,10); if(hour>=24) hour -= 24;
+      var dateAtLocation = new Date(parseInt(obj.year,10), parseInt(obj.month,10)-1, parseInt(obj.day,10));
+      var dayCount = Math.round((dateAtLocation - EPOCH) / 86400000);
+      var frac = (hour + parseInt(obj.minute,10)/60 + parseInt(obj.second,10)/3600) / 24;
+      return dayCount + frac;
+    } catch(e){ return null; } // unsupported/invalid timezone id — caller keeps current t
+  }
+
   els.locationPreset.addEventListener("change", function(){
     if(this.value === ""){ state.locationName = null; return; }
     state.lat = parseFloat(this.value);
-    state.locationName = this.options[this.selectedIndex].text.replace(/\s*\([^)]*\)\s*$/, "");
+    var opt = this.options[this.selectedIndex];
+    state.locationName = opt.text.replace(/\s*\([^)]*\)\s*$/, "");
+    var tz = opt.dataset.tz;
+    if(tz){
+      var t2 = nowAtTimeZone(tz);
+      if(t2!==null) state.t = t2;
+    }
     els.latitude.value = state.lat;
     els.latVal.innerHTML = Math.abs(state.lat).toFixed(1)+"&deg; "+(state.lat>=0?"N":"S");
+    syncSlidersFromState();
     render();
   });
   document.querySelectorAll(".presets button").forEach(function(btn){
     btn.addEventListener("click", function(){
       var d = parseFloat(this.dataset.day);
-      state.t = yearBase(state.t) + d + timeOfDayFrac(state.t);
+      state.t = realYearStartT(state.t) + d + timeOfDayFrac(state.t);
       syncSlidersFromState();
       render();
     });
@@ -1283,7 +1312,7 @@ footer{
       if(!blob) return;
       var url=URL.createObjectURL(blob);
       var a=document.createElement("a");
-      a.href=url; a.download="sun-earth-moon-"+fmtDate(dayOfYear(state.t)).replace(" ","-")+".png";
+      a.href=url; a.download="sun-earth-moon-"+fmtDate(state.t).replace(" ","-")+".png";
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function(){ URL.revokeObjectURL(url); }, 3000);
     });
@@ -1416,7 +1445,7 @@ footer{
       if(!isNaN(tt)) state.t = tt;
     } else if(params.has("d")){ // legacy links: day-of-year only, applied to the default year
       var d = parseFloat(params.get("d"));
-      if(!isNaN(d)) state.t = yearBase(state.t) + d;
+      if(!isNaN(d)) state.t = realYearStartT(state.t) + d;
     }
     if(params.has("lat")){
       var la = parseFloat(params.get("lat"));
