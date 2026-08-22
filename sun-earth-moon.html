@@ -123,6 +123,7 @@ button:hover{border-color:var(--accent-2);color:var(--accent-2);}
 button:focus-visible, input:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
 button.primary{background:var(--accent);color:#20180a;border-color:var(--accent);font-weight:600;}
 button.primary:hover{filter:brightness(1.08);color:#20180a;}
+button.active{border-color:var(--good);color:var(--good);}
 .presets{display:flex;gap:.4rem;flex-wrap:wrap;}
 .presets button{font-size:.72rem;padding:.35rem .6rem;}
 
@@ -219,6 +220,7 @@ footer{
 
   <div class="toolbar">
     <button id="nowBtn" type="button">📍 Jump to now</button>
+    <button id="gpsBtn" type="button">📡 Use my location &amp; time</button>
     <button id="shareBtn" type="button">🔗 Share this view</button>
     <button id="unitBtn" type="button">&deg;C &middot; km/h</button>
     <button id="snapshotBtn" type="button">📸 Save snapshot</button>
@@ -238,6 +240,7 @@ footer{
           <label for="speed" style="min-width:4rem;">Speed</label>
           <input type="range" id="speed" min="0.01" max="3" step="0.01" value="0.12" aria-label="Simulation speed in days per second">
           <span class="val" id="speedVal">0.12 d/s</span>
+          <button id="realtimeBtn" type="button" title="1 real second = 1 real second: watch the sky change at actual speed">⏱ Real-time</button>
         </div>
         <div class="controls-row">
           <label for="dayOfYear">Day of year</label>
@@ -979,10 +982,12 @@ footer{
     mTide: document.getElementById("mTide"),
     mEclipse: document.getElementById("mEclipse"),
     nowBtn: document.getElementById("nowBtn"),
+    gpsBtn: document.getElementById("gpsBtn"),
     shareBtn: document.getElementById("shareBtn"),
     unitBtn: document.getElementById("unitBtn"),
     snapshotBtn: document.getElementById("snapshotBtn"),
-    tourBtn: document.getElementById("tourBtn")
+    tourBtn: document.getElementById("tourBtn"),
+    realtimeBtn: document.getElementById("realtimeBtn")
   };
 
   function syncSlidersFromState(){
@@ -1083,8 +1088,10 @@ footer{
     updateReadouts();
   }
 
+  var REALTIME_SPEED = 1/86400; // 1 simulated day per 86400 real seconds = actual wall-clock speed
   els.speed.addEventListener("input", function(){
     state.speed = parseFloat(this.value);
+    els.realtimeBtn.classList.remove("active");
     els.speedVal.textContent = state.speed.toFixed(2)+" d/s";
   });
   function yearBase(t){ return Math.floor(t/ORBIT_PERIOD)*ORBIT_PERIOD; } // preserves which year-chunk of t we're in
@@ -1155,6 +1162,7 @@ footer{
     els.speed.value = 0.12;
     state.speed=0.12;
     els.speedVal.textContent="0.12 d/s";
+    els.realtimeBtn.classList.remove("active");
     syncSlidersFromState();
     render();
   });
@@ -1172,6 +1180,37 @@ footer{
     state.t = (new Date() - EPOCH) / 86400000;
     syncSlidersFromState();
     render();
+  });
+
+  els.realtimeBtn.addEventListener("click", function(){
+    state.speed = REALTIME_SPEED;
+    els.speed.value = els.speed.min;
+    els.speedVal.textContent = "Real-time (1×)";
+    els.realtimeBtn.classList.add("active");
+    if(!state.playing){ state.playing = true; els.playBtn.textContent = "⏸ Pause"; }
+  });
+
+  function flashText(el, msg, delay){
+    var orig = el.textContent;
+    el.textContent = msg;
+    setTimeout(function(){ el.textContent = orig; }, delay || 2200);
+  }
+  els.gpsBtn.addEventListener("click", function(){
+    if(!navigator.geolocation){ flashText(els.gpsBtn, "❌ Not supported here"); return; }
+    els.gpsBtn.textContent = "📡 Locating…";
+    navigator.geolocation.getCurrentPosition(function(pos){
+      state.lat = clamp(pos.coords.latitude, -90, 90);
+      state.locationName = "My location";
+      state.t = (new Date() - EPOCH) / 86400000;
+      els.locationPreset.value = "";
+      els.latitude.value = state.lat;
+      els.latVal.innerHTML = Math.abs(state.lat).toFixed(1)+"&deg; "+(state.lat>=0?"N":"S");
+      syncSlidersFromState();
+      render();
+      flashText(els.gpsBtn, "✓ Using your location");
+    }, function(){
+      flashText(els.gpsBtn, "❌ Location denied/unavailable");
+    }, { timeout: 10000, maximumAge: 60000 });
   });
 
   function buildShareUrl(){
