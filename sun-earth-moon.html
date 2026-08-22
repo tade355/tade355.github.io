@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sun, Earth &amp; Moon Explorer | Interactive Astronomy</title>
+<meta name="description" content="An interactive, animated simulation of the Sun-Earth-Moon system explaining day and night, moon phases, sunrise and sunset, and the seasons.">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#05060f">
+<link rel="canonical" href="https://tade355.github.io/sun-earth-moon.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%2305060f'/%3E%3Ccircle cx='42' cy='50' r='24' fill='%233a8bd8'/%3E%3Cpath d='M42 26a24 24 0 000 48 19 19 0 010-48z' fill='%230a0f2a'/%3E%3Ccircle cx='78' cy='30' r='10' fill='%23ffcf5c'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#05060f;
+  --panel:#0d1024;
+  --panel-2:#12172e;
+  --line:#242a4d;
+  --text:#e8ebff;
+  --text-dim:#9aa1c9;
+  --accent:#ffcf5c;
+  --accent-2:#6fd3ff;
+  --day:#3a8bd8;
+  --night:#0a0f2a;
+  --moon-lit:#e9e6da;
+  --moon-dark:#2b2b33;
+  --good:#7be08a;
+  --focus:#8fb8ff;
+  font-size:16px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:radial-gradient(1200px 800px at 20% -10%, #131735 0%, var(--bg) 55%);
+  color:var(--text);
+  font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  min-height:100vh;
+}
+a{color:var(--accent-2);}
+.skip-link{position:absolute;left:-999px;top:auto;}
+.skip-link:focus{left:1rem;top:1rem;background:var(--panel);padding:.5rem 1rem;border-radius:.5rem;z-index:100;}
+header.top{
+  padding:1.1rem 1.5rem;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--line);
+  flex-wrap:wrap;gap:.5rem;
+}
+header.top .back{font-size:.85rem;color:var(--text-dim);text-decoration:none;}
+header.top .back:hover{color:var(--accent-2);}
+header.top h1{
+  font-size:1.05rem;margin:0;font-weight:600;letter-spacing:.01em;
+  display:flex;align-items:center;gap:.5rem;
+}
+header.top h1 .dot{width:.5rem;height:.5rem;border-radius:50%;background:var(--accent);display:inline-block;box-shadow:0 0 10px var(--accent);}
+main{max-width:1240px;margin:0 auto;padding:1.25rem 1.25rem 3rem;}
+.intro{max-width:780px;margin:0 0 1.5rem;color:var(--text-dim);font-size:.95rem;line-height:1.55;}
+.intro strong{color:var(--text);}
+.headline{
+  background:linear-gradient(135deg, rgba(255,207,92,.12), rgba(111,211,255,.08));
+  border:1px solid var(--line);
+  border-radius:.9rem;
+  padding:.9rem 1.1rem;
+  margin-bottom:1.25rem;
+  font-size:.95rem;
+  line-height:1.5;
+}
+.headline b{color:var(--accent);}
+
+.layout{
+  display:grid;
+  grid-template-columns:1.35fr 1fr;
+  gap:1.25rem;
+}
+@media (max-width:920px){ .layout{grid-template-columns:1fr;} }
+
+.card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:1rem;
+  padding:1rem;
+}
+.card h2{
+  font-size:.95rem;margin:0 0 .25rem;font-weight:600;
+  display:flex;align-items:center;gap:.4rem;
+}
+.card p.sub{margin:0 0 .75rem;color:var(--text-dim);font-size:.8rem;}
+canvas{display:block;width:100%;height:auto;background:transparent;border-radius:.7rem;}
+
+.orbit-card canvas{background:radial-gradient(ellipse at 50% 45%, #0a0d20 0%, #05060a 75%);}
+
+.controls{
+  margin-top:1rem;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-radius:.85rem;
+  padding:.9rem 1rem 1rem;
+}
+.controls-row{
+  display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;
+  margin-bottom:.65rem;
+}
+.controls-row:last-child{margin-bottom:0;}
+.controls label{font-size:.78rem;color:var(--text-dim);min-width:6.5rem;}
+.controls input[type=range]{flex:1;min-width:120px;accent-color:var(--accent);}
+.controls .val{font-size:.8rem;color:var(--text);min-width:8.5rem;text-align:right;font-variant-numeric:tabular-nums;}
+button{
+  font-family:inherit;font-size:.8rem;color:var(--text);
+  background:var(--panel);border:1px solid var(--line);border-radius:.6rem;
+  padding:.45rem .8rem;cursor:pointer;
+}
+button:hover{border-color:var(--accent-2);color:var(--accent-2);}
+button:focus-visible, input:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
+button.primary{background:var(--accent);color:#20180a;border-color:var(--accent);font-weight:600;}
+button.primary:hover{filter:brightness(1.08);color:#20180a;}
+.presets{display:flex;gap:.4rem;flex-wrap:wrap;}
+.presets button{font-size:.72rem;padding:.35rem .6rem;}
+
+.side-stack{display:flex;flex-direction:column;gap:1.25rem;}
+
+.readouts{
+  display:grid;grid-template-columns:1fr 1fr;gap:.5rem;
+  margin-top:.75rem;
+}
+.readout{
+  background:var(--panel-2);border:1px solid var(--line);border-radius:.6rem;
+  padding:.5rem .65rem;
+}
+.readout .k{font-size:.68rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em;}
+.readout .v{font-size:.95rem;font-weight:600;margin-top:.1rem;}
+.readout .v.day{color:var(--accent);}
+.readout .v.night{color:var(--accent-2);}
+
+.moon-wrap{display:flex;gap:1rem;align-items:center;}
+.moon-wrap canvas{width:120px;height:120px;flex:0 0 auto;}
+.moon-info .name{font-size:1.05rem;font-weight:700;margin:0 0 .15rem;}
+.moon-info .pct{color:var(--text-dim);font-size:.85rem;margin:0 0 .5rem;}
+.moon-info .note{font-size:.8rem;color:var(--text-dim);line-height:1.45;margin:0;}
+
+.explainers{
+  margin-top:1.5rem;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;
+}
+@media (max-width:920px){ .explainers{grid-template-columns:1fr 1fr;} }
+@media (max-width:560px){ .explainers{grid-template-columns:1fr;} }
+.explainers .card h3{font-size:.85rem;margin:0 0 .4rem;color:var(--accent-2);}
+.explainers .card p{font-size:.82rem;color:var(--text-dim);line-height:1.5;margin:0;}
+
+footer{
+  text-align:center;color:var(--text-dim);font-size:.75rem;
+  padding:2rem 1rem;border-top:1px solid var(--line);margin-top:1.5rem;
+}
+.legend-dot{display:inline-block;width:.6rem;height:.6rem;border-radius:50%;margin-right:.35rem;vertical-align:middle;}
+.vis-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
+</style>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to main content</a>
+
+<header class="top">
+  <a class="back" href="index.html">&larr; Back to site</a>
+  <h1><span class="dot" aria-hidden="true"></span> Sun, Earth &amp; Moon Explorer</h1>
+  <span class="vis-hidden">Interactive astronomy simulation</span>
+</header>
+
+<main id="main">
+  <p class="intro">
+    Drag the sliders or press <strong>Play</strong> to watch one simulated clock drive three linked views at once:
+    the Earth's yearly orbit and axial tilt (<strong>seasons</strong>), a spinning globe showing the
+    <strong>day/night</strong> line and a chosen location's <strong>sunrise &amp; sunset</strong>, and the Moon's
+    real orbital geometry producing its <strong>phases</strong>.
+  </p>
+
+  <div class="headline" id="headline">Loading simulation&hellip;</div>
+
+  <div class="layout">
+    <section class="card orbit-card" aria-labelledby="orbit-h">
+      <h2 id="orbit-h">🪐 Orbital view — seasons &amp; geometry</h2>
+      <p class="sub">Top-down view of the Sun–Earth–Moon system (not to scale). The white tick marks the Earth's fixed axial tilt.</p>
+      <canvas id="orbitCanvas" width="720" height="460" role="img" aria-label="Top down diagram of Earth orbiting the Sun with the Moon orbiting Earth"></canvas>
+
+      <div class="controls">
+        <div class="controls-row">
+          <button id="playBtn" class="primary" type="button">▶ Play</button>
+          <button id="resetBtn" type="button">Reset</button>
+          <label for="speed" style="min-width:4rem;">Speed</label>
+          <input type="range" id="speed" min="0.01" max="3" step="0.01" value="0.12" aria-label="Simulation speed in days per second">
+          <span class="val" id="speedVal">0.12 d/s</span>
+        </div>
+        <div class="controls-row">
+          <label for="dayOfYear">Day of year</label>
+          <input type="range" id="dayOfYear" min="0" max="365" step="0.5" value="15" aria-label="Day of year, controls Earth's position in orbit and season">
+          <span class="val" id="dateVal">Jan 15</span>
+        </div>
+        <div class="controls-row">
+          <label for="timeOfDay">Time of day</label>
+          <input type="range" id="timeOfDay" min="0" max="24" step="0.05" value="8" aria-label="Time of day, controls Earth's rotation">
+          <span class="val" id="timeVal">08:00</span>
+        </div>
+        <div class="controls-row presets">
+          <button type="button" data-day="79">Mar equinox</button>
+          <button type="button" data-day="172">Jun solstice</button>
+          <button type="button" data-day="265">Sep equinox</button>
+          <button type="button" data-day="355">Dec solstice</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="side-stack">
+      <section class="card" aria-labelledby="globe-h">
+        <h2 id="globe-h">🌍 Day &amp; night — sunrise/sunset</h2>
+        <p class="sub">A spinning globe viewed from the side, with the Sun always shining from the right.</p>
+        <canvas id="globeCanvas" width="360" height="300" role="img" aria-label="Rotating globe showing the day and night boundary and an observer marker"></canvas>
+        <div class="controls-row" style="margin-top:.75rem;">
+          <label for="latitude">Latitude</label>
+          <input type="range" id="latitude" min="-90" max="90" step="1" value="40" aria-label="Observer latitude in degrees">
+          <span class="val" id="latVal">40&deg; N</span>
+        </div>
+        <div class="readouts">
+          <div class="readout"><div class="k">Local time</div><div class="v" id="rLocalTime">–</div></div>
+          <div class="readout"><div class="k">Right now</div><div class="v" id="rStatus">–</div></div>
+          <div class="readout"><div class="k">Sunrise</div><div class="v" id="rSunrise">–</div></div>
+          <div class="readout"><div class="k">Sunset</div><div class="v" id="rSunset">–</div></div>
+          <div class="readout" style="grid-column:1/-1;"><div class="k">Day length</div><div class="v" id="rDaylen">–</div></div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="moon-h">
+        <h2 id="moon-h">🌙 Moon phase</h2>
+        <p class="sub">Computed live from the real Sun–Earth–Moon angle, not looked up.</p>
+        <div class="moon-wrap">
+          <canvas id="moonCanvas" width="200" height="200" role="img" aria-label="Current moon phase"></canvas>
+          <div class="moon-info">
+            <p class="name" id="mName">–</p>
+            <p class="pct" id="mPct">–</p>
+            <p class="note" id="mNote">–</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="explainers">
+    <div class="card">
+      <h3>Day &amp; night</h3>
+      <p>Earth spins on its axis roughly once every 24 hours. Half the globe always faces the Sun (day) while the other half faces away (night). The line between them is the <em>terminator</em>.</p>
+    </div>
+    <div class="card">
+      <h3>Sunrise &amp; sunset</h3>
+      <p>As your location spins into the lit half you get sunrise; as it spins out, sunset. How long daylight lasts depends on your latitude <em>and</em> the season — try dragging both sliders.</p>
+    </div>
+    <div class="card">
+      <h3>Moon phases</h3>
+      <p>The Moon doesn't change shape — we just see different amounts of its sunlit half as it orbits Earth roughly every 27.3 days, changing the Sun–Earth–Moon angle.</p>
+    </div>
+    <div class="card">
+      <h3>Seasons</h3>
+      <p>Earth's axis stays tilted 23.4&deg; in the <em>same</em> direction all year. As Earth orbits, that tilt points the Northern or Southern Hemisphere toward the Sun — that's what makes summer and winter, not distance from the Sun.</p>
+    </div>
+  </div>
+
+  <footer>
+    Simplified educational model &middot; not to scale &middot; sunrise/sunset use standard solar-declination geometry (ignores atmospheric refraction &amp; the equation of time).
+  </footer>
+</main>
+
+<script>
+(function(){
+  "use strict";
+
+  var TILT = 23.44;                 // Earth's axial tilt, degrees
+  var TILT_PHASE_DAY = 172;         // day-of-year of the June solstice (max northern tilt toward Sun)
+  var ORBIT_PERIOD = 365.25;        // days
+  var MOON_PERIOD = 27.32;          // sidereal days, Moon around Earth
+
+  var state = {
+    t: 15.33,          // total simulated days elapsed (day-of-year + time-of-day fraction)
+    playing: false,
+    speed: 0.12,        // days per real second
+    lat: 40
+  };
+
+  function deg2rad(d){ return d * Math.PI/180; }
+  function rad2deg(r){ return r * 180/Math.PI; }
+  function norm360(a){ a = a % 360; if(a<0) a += 360; return a; }
+  function clamp(v,lo,hi){ return Math.min(hi, Math.max(lo, v)); }
+
+  // ---- Astronomical derived quantities from t ----
+  function orbitAngleDeg(t){ return norm360((t / ORBIT_PERIOD) * 360); }          // Earth's position on its orbit
+  function declinationDeg(t){                                                     // subsolar latitude (season)
+    var theta = orbitAngleDeg(t);
+    return TILT * Math.cos(deg2rad(theta - (TILT_PHASE_DAY/ORBIT_PERIOD*360)));
+  }
+  function moonAngleDeg(t){ return norm360((t / MOON_PERIOD) * 360 + 200); }        // Moon's inertial orbital angle
+  function elongationDeg(t){                                                       // Sun-Earth-Moon angle, 0=new,180=full
+    return norm360(moonAngleDeg(t) - orbitAngleDeg(t) - 180);
+  }
+  function dayOfYear(t){ return t % ORBIT_PERIOD; }
+  function timeOfDayFrac(t){ var f = t % 1; if(f<0) f += 1; return f; } // 0..1, 0=midnight 0.5=noon
+
+  function seasonName(t){
+    var d = dayOfYear(t);
+    if(d>=79 && d<172) return {n:"Northern Spring", s:"Southern Autumn"};
+    if(d>=172 && d<265) return {n:"Northern Summer", s:"Southern Winter"};
+    if(d>=265 && d<355) return {n:"Northern Autumn", s:"Southern Spring"};
+    return {n:"Northern Winter", s:"Southern Summer"};
+  }
+
+  function sunTimes(latDeg, decDeg){
+    var lat = deg2rad(latDeg), dec = deg2rad(decDeg);
+    var x = -Math.tan(lat)*Math.tan(dec);
+    if(x <= -1) return {polar:"day", h0:180};
+    if(x >= 1)  return {polar:"night", h0:0};
+    var h0 = rad2deg(Math.acos(x));
+    return {polar:null, h0:h0, sunrise:12-h0/15, sunset:12+h0/15, daylen:2*h0/15};
+  }
+
+  function fmtHM(hours){
+    hours = ((hours % 24)+24)%24;
+    var h = Math.floor(hours);
+    var m = Math.round((hours-h)*60);
+    if(m===60){ m=0; h=(h+1)%24; }
+    return (h<10?"0":"")+h+":"+(m<10?"0":"")+m;
+  }
+  var MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var MDAYS=[31,28,31,30,31,30,31,31,30,31,30,31];
+  function fmtDate(d){
+    d = Math.floor(((d%365)+365)%365);
+    var m=0;
+    while(d>=MDAYS[m]){ d-=MDAYS[m]; m++; }
+    return MONTHS[m]+" "+(d+1);
+  }
+
+  function phaseName(elong){
+    if(elong<22.5||elong>=337.5) return "New Moon";
+    if(elong<67.5) return "Waxing Crescent";
+    if(elong<112.5) return "First Quarter";
+    if(elong<157.5) return "Waxing Gibbous";
+    if(elong<202.5) return "Full Moon";
+    if(elong<247.5) return "Waning Gibbous";
+    if(elong<292.5) return "Last Quarter";
+    return "Waning Crescent";
+  }
+  function phaseNote(name){
+    switch(name){
+      case "New Moon": return "The Moon sits near the Sun in our sky, so its lit side faces away from us — it rises and sets with the Sun and is invisible.";
+      case "Waxing Crescent": return "A thin sliver grows on the right. The Moon now trails the Sun across the sky, setting a bit after sunset each night.";
+      case "First Quarter": return "Exactly half lit. Rises around midday and sets around midnight — good for evening viewing.";
+      case "Waxing Gibbous": return "More than half lit and growing toward full. Rises in the afternoon, visible most of the night.";
+      case "Full Moon": return "Fully lit — Earth sits roughly between Sun and Moon. Rises around sunset and sets around sunrise.";
+      case "Waning Gibbous": return "Shrinking from full. Rises later each night, after sunset.";
+      case "Last Quarter": return "Half lit on the left. Rises around midnight, visible in the morning sky.";
+      case "Waning Crescent": return "A thin sliver before new moon. Rises shortly before the Sun, low in the dawn sky.";
+    }
+    return "";
+  }
+
+  // ================= Canvas: orbital view =================
+  var orbitCv = document.getElementById("orbitCanvas");
+  var octx = orbitCv.getContext("2d");
+  var stars = null;
+  function buildStars(w,h){
+    stars=[];
+    for(var i=0;i<140;i++){
+      stars.push({x:Math.random()*w, y:Math.random()*h, r:Math.random()*1.3+0.2, a:Math.random()*0.6+0.25});
+    }
+  }
+
+  function drawLitCircle(ctx, cx, cy, r, sunAngleRad, litColor, darkColor){
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fillStyle=darkColor; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.clip();
+    ctx.translate(cx,cy); ctx.rotate(sunAngleRad);
+    ctx.fillStyle=litColor;
+    ctx.fillRect(-1, -r-2, r+2, 2*r+4); // lit half faces +x (toward sun) after rotation
+    ctx.restore();
+  }
+
+  function drawOrbit(){
+    var w=orbitCv.width, h=orbitCv.height;
+    if(!stars) buildStars(w,h);
+    octx.clearRect(0,0,w,h);
+    octx.save();
+    octx.globalAlpha=1;
+    for(var i=0;i<stars.length;i++){
+      var s=stars[i];
+      octx.beginPath(); octx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      octx.fillStyle="rgba(255,255,255,"+s.a+")"; octx.fill();
+    }
+    octx.restore();
+
+    var cx=w/2, cy=h/2+8;
+    var Rorbit = Math.min(w,h)*0.34;
+    var sunR = 26;
+
+    // orbit path + season ticks
+    octx.beginPath(); octx.arc(cx,cy,Rorbit,0,Math.PI*2);
+    octx.strokeStyle="rgba(255,255,255,.12)"; octx.lineWidth=1; octx.stroke();
+
+    var ticks=[{d:79,l:"Mar"},{d:172,l:"Jun"},{d:265,l:"Sep"},{d:355,l:"Dec"}];
+    octx.font="11px Inter, sans-serif";
+    ticks.forEach(function(tk){
+      var a = deg2rad(orbitAngleDeg(tk.d));
+      var x1=cx+Math.cos(a)*(Rorbit-6), y1=cy+Math.sin(a)*(Rorbit-6);
+      var x2=cx+Math.cos(a)*(Rorbit+6), y2=cy+Math.sin(a)*(Rorbit+6);
+      octx.beginPath(); octx.moveTo(x1,y1); octx.lineTo(x2,y2);
+      octx.strokeStyle="rgba(255,255,255,.35)"; octx.stroke();
+      var lx=cx+Math.cos(a)*(Rorbit+18), ly=cy+Math.sin(a)*(Rorbit+18);
+      octx.fillStyle="rgba(255,255,255,.45)";
+      octx.textAlign="center"; octx.textBaseline="middle";
+      octx.fillText(tk.l, lx, ly);
+    });
+
+    // Sun
+    var grad = octx.createRadialGradient(cx,cy,2,cx,cy,sunR*1.8);
+    grad.addColorStop(0,"#fff6d8"); grad.addColorStop(0.4,"#ffd76a"); grad.addColorStop(1,"rgba(255,180,40,0)");
+    octx.beginPath(); octx.arc(cx,cy,sunR*1.8,0,Math.PI*2); octx.fillStyle=grad; octx.fill();
+    octx.beginPath(); octx.arc(cx,cy,sunR,0,Math.PI*2); octx.fillStyle="#ffcf5c"; octx.fill();
+
+    var t = state.t;
+    var thetaE = deg2rad(orbitAngleDeg(t));
+    var ex = cx + Math.cos(thetaE)*Rorbit;
+    var ey = cy + Math.sin(thetaE)*Rorbit;
+    var earthR = 11;
+
+    var thetaM = deg2rad(moonAngleDeg(t));
+    var moonOrbitR = 30;
+    var mx = ex + Math.cos(thetaM)*moonOrbitR;
+    var my = ey + Math.sin(thetaM)*moonOrbitR;
+
+    // sun-earth / earth-moon guide lines
+    octx.setLineDash([3,4]);
+    octx.strokeStyle="rgba(255,255,255,.18)";
+    octx.beginPath(); octx.moveTo(cx,cy); octx.lineTo(ex,ey); octx.stroke();
+    octx.beginPath(); octx.moveTo(ex,ey); octx.lineTo(mx,my); octx.stroke();
+    octx.setLineDash([]);
+
+    octx.beginPath(); octx.arc(ex,ey,moonOrbitR,0,Math.PI*2);
+    octx.strokeStyle="rgba(255,255,255,.08)"; octx.stroke();
+
+    // Earth: lit hemisphere faces the Sun => direction from Earth to Sun
+    var sunDirFromEarth = Math.atan2(cy-ey, cx-ex);
+    drawLitCircle(octx, ex, ey, earthR, sunDirFromEarth, "#bfe0ff", "#0c1633");
+    octx.beginPath(); octx.arc(ex,ey,earthR,0,Math.PI*2);
+    octx.strokeStyle="rgba(255,255,255,.35)"; octx.lineWidth=1; octx.stroke();
+
+    // fixed axial tilt indicator (constant direction in space)
+    var poleAngle = deg2rad((TILT_PHASE_DAY/ORBIT_PERIOD*360) + 180);
+    var tiltLen = earthR*2.1;
+    var px1=ex-Math.cos(poleAngle)*tiltLen, py1=ey-Math.sin(poleAngle)*tiltLen;
+    var px2=ex+Math.cos(poleAngle)*tiltLen, py2=ey+Math.sin(poleAngle)*tiltLen;
+    octx.beginPath(); octx.moveTo(px1,py1); octx.lineTo(px2,py2);
+    octx.strokeStyle="#ffffff"; octx.lineWidth=1.4; octx.stroke();
+    octx.fillStyle="rgba(255,255,255,.7)"; octx.font="9px Inter, sans-serif";
+    octx.textAlign="center";
+    octx.fillText("N", px2, py2-6);
+
+    // Moon lit hemisphere faces the Sun too
+    var sunDirFromMoon = Math.atan2(cy-my, cx-mx);
+    drawLitCircle(octx, mx, my, 4.2, sunDirFromMoon, "#f1efe4", "#2b2b33");
+  }
+
+  // ================= Canvas: globe (day/night) =================
+  var globeCv = document.getElementById("globeCanvas");
+  var gctx = globeCv.getContext("2d");
+
+  function drawGlobe(){
+    var w=globeCv.width, h=globeCv.height;
+    gctx.clearRect(0,0,w,h);
+    var cx=w*0.42, cy=h/2, R=Math.min(w,h)*0.4;
+
+    var t=state.t;
+    var dec = declinationDeg(t);
+    var decRad = deg2rad(dec);
+
+    // Sun icon
+    var sx = cx + R*1.55, sy = cy - dec/23.44*R*0.35;
+    var sg = gctx.createRadialGradient(sx,sy,1,sx,sy,26);
+    sg.addColorStop(0,"#fff6d8"); sg.addColorStop(0.5,"#ffd76a"); sg.addColorStop(1,"rgba(255,180,40,0)");
+    gctx.beginPath(); gctx.arc(sx,sy,26,0,Math.PI*2); gctx.fillStyle=sg; gctx.fill();
+    gctx.beginPath(); gctx.arc(sx,sy,9,0,Math.PI*2); gctx.fillStyle="#ffcf5c"; gctx.fill();
+    gctx.strokeStyle="rgba(255,207,92,.5)"; gctx.lineWidth=1;
+    gctx.beginPath(); gctx.moveTo(sx-16,sy); gctx.lineTo(cx+R+6,sy); gctx.stroke();
+
+    // globe base
+    gctx.save();
+    gctx.beginPath(); gctx.arc(cx,cy,R,0,Math.PI*2); gctx.clip();
+    gctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--night');
+    gctx.fillRect(cx-R-2,cy-R-2,2*R+4,2*R+4);
+
+    gctx.translate(cx,cy);
+    gctx.rotate(-decRad);
+    gctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--day');
+    gctx.fillRect(0,-R-2,R+2,2*R+4);
+    gctx.rotate(decRad);
+    gctx.translate(-cx,-cy);
+
+    // soft twilight blend near terminator
+    gctx.save();
+    gctx.translate(cx,cy); gctx.rotate(-decRad);
+    var band=gctx.createLinearGradient(-R*0.22,0,R*0.22,0);
+    band.addColorStop(0,"rgba(10,15,42,0.85)");
+    band.addColorStop(0.5,"rgba(120,120,140,0.25)");
+    band.addColorStop(1,"rgba(58,139,216,0)");
+    gctx.fillStyle=band;
+    gctx.fillRect(-R*0.22,-R-2,R*0.44,2*R+4);
+    gctx.restore();
+    gctx.restore();
+
+    // outline
+    gctx.beginPath(); gctx.arc(cx,cy,R,0,Math.PI*2);
+    gctx.strokeStyle="rgba(255,255,255,.35)"; gctx.lineWidth=1.4; gctx.stroke();
+
+    // latitude grid: equator, tropics, polar circles
+    function chordAt(latDeg,color,dash){
+      var phi=deg2rad(latDeg);
+      var y = cy - R*Math.sin(phi);
+      var halfw = R*Math.cos(phi);
+      gctx.beginPath();
+      gctx.setLineDash(dash||[]);
+      gctx.moveTo(cx-halfw,y); gctx.lineTo(cx+halfw,y);
+      gctx.strokeStyle=color; gctx.lineWidth=1; gctx.stroke();
+      gctx.setLineDash([]);
+    }
+    chordAt(0,"rgba(255,255,255,.25)");
+    chordAt(23.44,"rgba(255,255,255,.12)",[2,3]);
+    chordAt(-23.44,"rgba(255,255,255,.12)",[2,3]);
+    chordAt(66.5,"rgba(255,255,255,.08)",[2,3]);
+    chordAt(-66.5,"rgba(255,255,255,.08)",[2,3]);
+
+    // subsolar point marker (directly under the Sun)
+    var subX = cx, subY = cy - R*Math.sin(decRad);
+    gctx.beginPath(); gctx.arc(subX,subY,3,0,Math.PI*2);
+    gctx.fillStyle="#ffcf5c"; gctx.fill();
+
+    // observer marker
+    var f = timeOfDayFrac(t);
+    var lamP = deg2rad(norm360(360*f - 90));
+    var phi = deg2rad(state.lat);
+    var ox = cx + R*Math.cos(phi)*Math.sin(lamP);
+    var oy = cy - R*Math.sin(phi);
+    var front = Math.cos(lamP) > 0;
+    gctx.beginPath(); gctx.arc(ox,oy, front?5:4,0,Math.PI*2);
+    gctx.fillStyle = front ? "#ff5c6c" : "rgba(255,92,108,.35)";
+    gctx.fill();
+    gctx.lineWidth=1.5; gctx.strokeStyle= front? "#fff":"rgba(255,255,255,.4)"; gctx.stroke();
+  }
+
+  // ================= Canvas: moon phase =================
+  var moonCv = document.getElementById("moonCanvas");
+  var mctx = moonCv.getContext("2d");
+  function drawMoonPhase(elongDeg){
+    var w=moonCv.width, h=moonCv.height;
+    mctx.clearRect(0,0,w,h);
+    var cx=w/2, cy=h/2, R=Math.min(w,h)*0.42;
+    var phase = elongDeg/360; // 0=new,0.5=full
+    var litFrac = (1-Math.cos(phase*2*Math.PI))/2;
+    var waxing = phase < 0.5;
+
+    // subtle glow ring
+    var glow = mctx.createRadialGradient(cx,cy,R*0.9,cx,cy,R*1.35);
+    glow.addColorStop(0,"rgba(233,230,218,.18)"); glow.addColorStop(1,"rgba(233,230,218,0)");
+    mctx.beginPath(); mctx.arc(cx,cy,R*1.35,0,Math.PI*2); mctx.fillStyle=glow; mctx.fill();
+
+    mctx.save();
+    mctx.beginPath(); mctx.arc(cx,cy,R,0,Math.PI*2); mctx.clip();
+    mctx.fillStyle="#2b2b33"; mctx.fillRect(cx-R-2,cy-R-2,2*R+4,2*R+4);
+
+    mctx.fillStyle="#e9e6da";
+    mctx.beginPath();
+    if(waxing) mctx.rect(cx, cy-R-2, R+2, 2*R+4);
+    else mctx.rect(cx-R-2, cy-R-2, R+2, 2*R+4);
+    mctx.fill();
+
+    var rx = R*Math.abs(Math.cos(phase*2*Math.PI));
+    if(rx>0.5){
+      mctx.beginPath();
+      mctx.ellipse(cx,cy,rx,R,0,0,Math.PI*2);
+      mctx.fillStyle = litFrac>0.5 ? "#e9e6da" : "#2b2b33";
+      mctx.fill();
+    }
+    mctx.restore();
+
+    mctx.beginPath(); mctx.arc(cx,cy,R,0,Math.PI*2);
+    mctx.strokeStyle="rgba(255,255,255,.18)"; mctx.stroke();
+    return litFrac;
+  }
+
+  // ================= UI wiring =================
+  var els = {
+    playBtn: document.getElementById("playBtn"),
+    resetBtn: document.getElementById("resetBtn"),
+    speed: document.getElementById("speed"),
+    speedVal: document.getElementById("speedVal"),
+    dayOfYear: document.getElementById("dayOfYear"),
+    dateVal: document.getElementById("dateVal"),
+    timeOfDay: document.getElementById("timeOfDay"),
+    timeVal: document.getElementById("timeVal"),
+    latitude: document.getElementById("latitude"),
+    latVal: document.getElementById("latVal"),
+    headline: document.getElementById("headline"),
+    rLocalTime: document.getElementById("rLocalTime"),
+    rStatus: document.getElementById("rStatus"),
+    rSunrise: document.getElementById("rSunrise"),
+    rSunset: document.getElementById("rSunset"),
+    rDaylen: document.getElementById("rDaylen"),
+    mName: document.getElementById("mName"),
+    mPct: document.getElementById("mPct"),
+    mNote: document.getElementById("mNote")
+  };
+
+  function syncSlidersFromState(){
+    els.dayOfYear.value = dayOfYear(state.t).toFixed(1);
+    els.timeOfDay.value = (timeOfDayFrac(state.t)*24).toFixed(2);
+    els.dateVal.textContent = fmtDate(dayOfYear(state.t));
+    els.timeVal.textContent = fmtHM(timeOfDayFrac(state.t)*24);
+  }
+
+  function updateReadouts(){
+    var t=state.t;
+    var dec = declinationDeg(t);
+    var st = sunTimes(state.lat, dec);
+    var localHours = timeOfDayFrac(t)*24;
+    els.rLocalTime.textContent = fmtHM(localHours);
+
+    var isDay;
+    if(st.polar==="day"){ isDay=true; }
+    else if(st.polar==="night"){ isDay=false; }
+    else {
+      var afterRise = ((localHours - st.sunrise)+24)%24;
+      var window = ((st.sunset-st.sunrise)+24)%24;
+      isDay = afterRise <= window;
+    }
+    els.rStatus.textContent = isDay ? "☀ Daylight" : "🌙 Night";
+    els.rStatus.className = "v " + (isDay?"day":"night");
+
+    if(st.polar==="day"){ els.rSunrise.textContent="—"; els.rSunset.textContent="—"; els.rDaylen.textContent="24h (polar day)"; }
+    else if(st.polar==="night"){ els.rSunrise.textContent="—"; els.rSunset.textContent="—"; els.rDaylen.textContent="0h (polar night)"; }
+    else {
+      els.rSunrise.textContent = fmtHM(st.sunrise);
+      els.rSunset.textContent = fmtHM(st.sunset);
+      var hh=Math.floor(st.daylen), mm=Math.round((st.daylen-hh)*60);
+      els.rDaylen.textContent = hh+"h "+mm+"m";
+    }
+
+    var elong = elongationDeg(t);
+    var pName = phaseName(elong);
+    var litFrac = drawMoonPhase(elong);
+    els.mName.textContent = pName;
+    els.mPct.textContent = Math.round(litFrac*100)+"% illuminated";
+    els.mNote.textContent = phaseNote(pName);
+
+    var seas = seasonName(t);
+    els.headline.innerHTML = fmtDate(dayOfYear(t)) + " &middot; <b>"+seas.n+"</b> in the Northern Hemisphere ("+seas.s+" in the Southern) &middot; Moon: <b>"+pName+"</b> &middot; Subsolar latitude "+dec.toFixed(1)+"&deg;";
+  }
+
+  function render(){
+    drawOrbit();
+    drawGlobe();
+    updateReadouts();
+  }
+
+  els.speed.addEventListener("input", function(){
+    state.speed = parseFloat(this.value);
+    els.speedVal.textContent = state.speed.toFixed(2)+" d/s";
+  });
+  els.dayOfYear.addEventListener("input", function(){
+    var frac = timeOfDayFrac(state.t);
+    state.t = parseFloat(this.value) + frac;
+    render();
+    els.dateVal.textContent = fmtDate(dayOfYear(state.t));
+  });
+  els.timeOfDay.addEventListener("input", function(){
+    var d = Math.floor(dayOfYear(state.t));
+    state.t = d + parseFloat(this.value)/24;
+    render();
+    els.timeVal.textContent = fmtHM(parseFloat(this.value));
+  });
+  els.latitude.addEventListener("input", function(){
+    state.lat = parseFloat(this.value);
+    els.latVal.textContent = Math.abs(state.lat)+"&deg; "+(state.lat>=0?"N":"S");
+    els.latVal.innerHTML = Math.abs(state.lat)+"&deg; "+(state.lat>=0?"N":"S");
+    render();
+  });
+  document.querySelectorAll(".presets button").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var d = parseFloat(this.dataset.day);
+      state.t = d + timeOfDayFrac(state.t);
+      syncSlidersFromState();
+      render();
+    });
+  });
+
+  var lastTs = null;
+  function tick(ts){
+    if(state.playing){
+      if(lastTs!==null){
+        var dt = (ts-lastTs)/1000;
+        state.t += dt*state.speed;
+      }
+      lastTs = ts;
+      syncSlidersFromState();
+      render();
+    } else {
+      lastTs = null;
+    }
+    requestAnimationFrame(tick);
+  }
+
+  els.playBtn.addEventListener("click", function(){
+    state.playing = !state.playing;
+    this.textContent = state.playing ? "⏸ Pause" : "▶ Play";
+  });
+  els.resetBtn.addEventListener("click", function(){
+    state.playing=false;
+    els.playBtn.textContent="▶ Play";
+    state.t = 15.33;
+    state.lat = 40;
+    els.latitude.value = 40;
+    els.latVal.innerHTML = "40&deg; N";
+    els.speed.value = 0.12;
+    state.speed=0.12;
+    els.speedVal.textContent="0.12 d/s";
+    syncSlidersFromState();
+    render();
+  });
+
+  syncSlidersFromState();
+  render();
+  requestAnimationFrame(tick);
+
+  window.addEventListener("resize", function(){ stars=null; });
+})();
+</script>
+</body>
+</html>
