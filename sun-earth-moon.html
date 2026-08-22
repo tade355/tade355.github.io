@@ -65,6 +65,11 @@ main{max-width:1240px;margin:0 auto;padding:1.25rem 1.25rem 3rem;}
 }
 .headline b{color:var(--accent);}
 
+.toolbar{display:flex;gap:.5rem;flex-wrap:wrap;margin:-0.4rem 0 1.25rem;}
+.toolbar button{font-size:.76rem;}
+
+.h-icon{flex:0 0 auto;display:block;}
+
 .layout{
   display:grid;
   grid-template-columns:1.35fr 1fr;
@@ -142,6 +147,12 @@ button.primary:hover{filter:brightness(1.08);color:#20180a;}
 .moon-info .pct{color:var(--text-dim);font-size:.85rem;margin:0 0 .5rem;}
 .moon-info .note{font-size:.8rem;color:var(--text-dim);line-height:1.45;margin:0;}
 
+.moon-extra{margin-top:.75rem;display:grid;grid-template-columns:1fr 1fr;gap:.5rem;}
+.mini-stat{background:var(--panel-2);border:1px solid var(--line);border-radius:.5rem;padding:.4rem .6rem;display:flex;flex-direction:column;gap:.15rem;}
+.mini-k{font-size:.64rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em;}
+.mini-v{font-size:.78rem;color:var(--text);font-weight:600;}
+.mini-v.active{color:var(--accent);}
+
 .layout2{
   display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;
   margin-top:1.25rem;
@@ -165,6 +176,26 @@ footer{
 }
 .legend-dot{display:inline-block;width:.6rem;height:.6rem;border-radius:50%;margin-right:.35rem;vertical-align:middle;}
 .vis-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
+
+.quiz-body{display:flex;gap:1.25rem;align-items:flex-start;flex-wrap:wrap;margin-top:.75rem;}
+.quiz-body canvas{border-radius:.7rem;background:#05060a;flex:0 0 auto;}
+.quiz-main{flex:1;min-width:220px;}
+.quiz-question{font-size:.95rem;margin:0 0 .75rem;}
+.quiz-options{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.75rem;}
+.quiz-options button{width:100%;text-align:left;}
+.quiz-options button.correct{border-color:var(--good);color:var(--good);}
+.quiz-options button.wrong{border-color:#ff6b6b;color:#ff6b6b;}
+.quiz-feedback{font-size:.82rem;color:var(--text-dim);min-height:1.2em;margin:0 0 .75rem;}
+
+.tour-overlay{position:fixed;inset:0;background:rgba(2,3,10,.72);z-index:200;display:flex;align-items:flex-end;justify-content:center;padding:1.5rem;}
+.tour-overlay[hidden]{display:none;}
+@media (min-width:700px){ .tour-overlay{align-items:center;} }
+.tour-box{background:var(--panel-2);border:1px solid var(--accent-2);border-radius:1rem;padding:1.25rem;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+.tour-step{font-size:.7rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;margin:0 0 .35rem;}
+.tour-box h3{margin:0 0 .5rem;font-size:1.05rem;}
+.tour-box p:not(.tour-step){font-size:.85rem;color:var(--text-dim);line-height:1.5;margin:0 0 1rem;}
+.tour-actions{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;}
+.tour-highlight{outline:3px solid var(--accent-2);outline-offset:3px;}
 </style>
 </head>
 <body>
@@ -186,9 +217,17 @@ footer{
 
   <div class="headline" id="headline">Loading simulation&hellip;</div>
 
+  <div class="toolbar">
+    <button id="nowBtn" type="button">📍 Jump to now</button>
+    <button id="shareBtn" type="button">🔗 Share this view</button>
+    <button id="unitBtn" type="button">&deg;C &middot; km/h</button>
+    <button id="snapshotBtn" type="button">📸 Save snapshot</button>
+    <button id="tourBtn" type="button">❔ Take the tour</button>
+  </div>
+
   <div class="layout">
     <section class="card orbit-card" aria-labelledby="orbit-h">
-      <h2 id="orbit-h">🪐 Orbital view — seasons &amp; geometry</h2>
+      <h2 id="orbit-h"><svg class="h-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><ellipse cx="10" cy="10" rx="8.4" ry="3.6" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.3" transform="rotate(-18 10 10)"/><circle cx="10" cy="10" r="2.6" fill="#ffcf5c"/><circle cx="17" cy="7.6" r="1.5" fill="#6fd3ff"/></svg> Orbital view — seasons &amp; geometry</h2>
       <p class="sub">Top-down view of the Sun–Earth–Moon system (not to scale). The white tick marks the Earth's fixed axial tilt.</p>
       <canvas id="orbitCanvas" width="720" height="460" role="img" aria-label="Top down diagram of Earth orbiting the Sun with the Moon orbiting Earth"></canvas>
 
@@ -221,7 +260,7 @@ footer{
 
     <div class="side-stack">
       <section class="card" aria-labelledby="globe-h">
-        <h2 id="globe-h">🌍 Day &amp; night — sunrise/sunset</h2>
+        <h2 id="globe-h"><svg class="h-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="none" stroke="#6fd3ff" stroke-width="1.3"/><path d="M10 2a8 8 0 000 16z" fill="#3a8bd8"/></svg> Day &amp; night — sunrise/sunset</h2>
         <p class="sub">A spinning globe viewed from the side, with the Sun always shining from the right.</p>
         <canvas id="globeCanvas" width="360" height="300" role="img" aria-label="Rotating globe showing the day and night boundary and an observer marker"></canvas>
         <div class="controls-row" style="margin-top:.75rem;">
@@ -275,7 +314,7 @@ footer{
       </section>
 
       <section class="card" aria-labelledby="moon-h">
-        <h2 id="moon-h">🌙 Moon phase</h2>
+        <h2 id="moon-h"><svg class="h-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M13 2.5a8 8 0 100 15 6.2 6.2 0 010-15z" fill="#e9e6da"/></svg> Moon phase</h2>
         <p class="sub">Computed live from the real Sun–Earth–Moon angle, not looked up.</p>
         <div class="moon-wrap">
           <canvas id="moonCanvas" width="200" height="200" role="img" aria-label="Current moon phase"></canvas>
@@ -285,13 +324,18 @@ footer{
             <p class="note" id="mNote">–</p>
           </div>
         </div>
+        <div class="moon-extra">
+          <div class="mini-stat"><span class="mini-k">Distance</span><span class="mini-v" id="mDist">–</span></div>
+          <div class="mini-stat"><span class="mini-k">Tides</span><span class="mini-v" id="mTide">–</span></div>
+          <div class="mini-stat" style="grid-column:1/-1;"><span class="mini-k">Eclipse watch</span><span class="mini-v" id="mEclipse">–</span></div>
+        </div>
       </section>
     </div>
   </div>
 
   <div class="layout2">
     <section class="card" aria-labelledby="sky-h">
-      <h2 id="sky-h">🔭 Moon in the sky from your location</h2>
+      <h2 id="sky-h"><svg class="h-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="3" y="9" width="10" height="3.2" rx="1.4" fill="#6fd3ff" transform="rotate(-20 3 9)"/><circle cx="14.5" cy="6.2" r="1.9" fill="none" stroke="#6fd3ff" stroke-width="1.3"/><path d="M6.5 14.5L4 18M9 15.5l-1.2 3" stroke="rgba(255,255,255,.5)" stroke-width="1.2" stroke-linecap="round"/></svg> Moon in the sky from your location</h2>
       <p class="sub">Horizon view for <span id="skyLatLabel">40&deg; N</span> (choose a location or drag the latitude slider in the Day &amp; Night panel), at the selected day &amp; time.</p>
       <canvas id="skyCanvas" width="480" height="220" role="img" aria-label="Horizon view showing whether the Moon is above or below the horizon"></canvas>
       <div class="readouts">
@@ -304,7 +348,7 @@ footer{
     </section>
 
     <section class="card" aria-labelledby="climate-h">
-      <h2 id="climate-h">🌦️ Simulated local climate</h2>
+      <h2 id="climate-h"><svg class="h-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="6" cy="6" r="3" fill="#ffcf5c"/><path d="M6 15a4 4 0 01.6-7.96A5 5 0 0116 9a3.4 3.4 0 01-.4 6.9z" fill="none" stroke="#9aa1c9" stroke-width="1.3"/></svg> Simulated local climate</h2>
       <p class="sub">Illustrative average conditions for this latitude, season and time of day — not a real weather forecast.</p>
       <div class="readouts">
         <div class="readout"><div class="k">Temperature</div><div class="v" id="rTemp">–</div></div>
@@ -335,10 +379,38 @@ footer{
     </div>
   </div>
 
+  <section class="card quiz-card" aria-labelledby="quiz-h" style="margin-top:1.5rem;">
+    <h2 id="quiz-h"><svg class="h-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="none" stroke="#7be08a" stroke-width="1.3"/><circle cx="10" cy="10" r="4.5" fill="none" stroke="#7be08a" stroke-width="1.3"/><circle cx="10" cy="10" r="1.4" fill="#7be08a"/></svg> Quiz yourself</h2>
+    <p class="sub">Random scenarios to test what you've learned. Score: <span id="qScore">0 / 0</span></p>
+    <div class="quiz-body">
+      <canvas id="quizCanvas" width="140" height="140" role="img" aria-label="Quiz moon phase" style="display:none;"></canvas>
+      <div class="quiz-main">
+        <p class="quiz-question" id="qQuestion">Press "New question" to start.</p>
+        <div class="quiz-options" id="qOptions"></div>
+        <p class="quiz-feedback" id="qFeedback"></p>
+        <button id="qNextBtn" type="button" class="primary">New question</button>
+      </div>
+    </div>
+  </section>
+
   <footer>
     Simplified educational model &middot; not to scale &middot; sunrise/sunset use standard solar-declination geometry (ignores atmospheric refraction &amp; the equation of time).
   </footer>
 </main>
+
+<div id="tourOverlay" class="tour-overlay" hidden>
+  <div class="tour-box" id="tourBox">
+    <p class="tour-step" id="tourStepLabel">Step 1 of 7</p>
+    <h3 id="tourTitle"></h3>
+    <p id="tourText"></p>
+    <div class="tour-actions">
+      <button type="button" id="tourSkip">Skip tour</button>
+      <div style="flex:1"></div>
+      <button type="button" id="tourPrev">&larr; Back</button>
+      <button type="button" id="tourNext" class="primary">Next &rarr;</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -355,8 +427,10 @@ footer{
     playing: false,
     speed: 0.12,        // days per real second
     lat: 40,
-    locationName: null  // set when a named preset is chosen; null = custom (slider-only)
+    locationName: null, // set when a named preset is chosen; null = custom (slider-only)
+    unit: "c"           // "c" (°C, km/h) or "f" (°F, mph)
   };
+  try{ var savedUnit = localStorage.getItem("sem_unit"); if(savedUnit==="c"||savedUnit==="f") state.unit = savedUnit; }catch(e){}
 
   function deg2rad(d){ return d * Math.PI/180; }
   function rad2deg(r){ return r * 180/Math.PI; }
@@ -415,6 +489,35 @@ footer{
     return {decMoon:decMoon, alt:alt, Hmoon:norm360(Hmoon+180)-180, culmination:cul, rise:rs.rise, set:rs.set, polar:rs.polar};
   }
 
+  var MOON_MEAN_KM = 384400, MOON_ECC = 0.0549;  // real mean distance & orbital eccentricity
+  function moonDistanceKm(t){
+    return MOON_MEAN_KM * (1 - MOON_ECC*Math.cos(deg2rad(moonAngleDeg(t))));
+  }
+  var NODE_PERIOD = 6798.38;  // days, ~18.6yr nodal regression
+  var MOON_INCL = 5.14;       // degrees, Moon's real orbital inclination to the ecliptic
+  function nodeAngleDeg(t){ return norm360(-(t/NODE_PERIOD)*360); }
+  function moonEclipticLat(t){ return MOON_INCL*Math.sin(deg2rad(moonAngleDeg(t)-nodeAngleDeg(t))); }
+  function eclipseWatch(t){
+    var elong = elongationDeg(t);
+    var eclLat = moonEclipticLat(t);
+    var nearNode = Math.abs(eclLat) < 1.5;
+    var nearNew = elong<10 || elong>350;
+    var nearFull = Math.abs(elong-180)<10;
+    if(nearNode && nearNew) return {active:true, text:"🌑☀️ Solar eclipse conditions — Moon is crossing Earth's orbital plane near new moon"};
+    if(nearNode && nearFull) return {active:true, text:"🌕🌘 Lunar eclipse conditions — Moon is crossing Earth's orbital plane near full moon"};
+    return {active:false, text:"No eclipse now — Moon is "+Math.abs(eclLat).toFixed(1)+"° off the Sun-Earth-Moon plane"};
+  }
+  function tideInfo(t, distFrac){
+    var elong = elongationDeg(t);
+    var springNess = Math.abs(Math.cos(deg2rad(elong))); // 1 at new/full, 0 at quarters
+    var proxigean = springNess>0.9 && distFrac<0.975;
+    if(springNess>0.6) return proxigean ? "🌊 Extra-strong spring tide (Moon near perigee)" : "🌊 Spring tide — Sun & Moon combine, bigger high/low swings";
+    if(springNess<0.3) return "🌊 Neap tide — Sun & Moon partly cancel, smaller swings";
+    return "🌊 Intermediate tide";
+  }
+  function fmtTemp(c){ return state.unit==="f" ? Math.round(c*9/5+32)+"°F" : Math.round(c)+"°C"; }
+  function fmtWind(kmh){ return state.unit==="f" ? Math.round(kmh/1.60934)+" mph" : Math.round(kmh)+" km/h"; }
+
   function bandInterp(x, stops){
     if(x<=stops[0][0]) return stops[0][1];
     for(var i=0;i<stops.length-1;i++){
@@ -427,7 +530,29 @@ footer{
   }
   var WIND_STOPS=[[0,8],[10,14],[25,10],[35,22],[50,32],[65,24],[90,18]];
   var RAIN_STOPS=[[0,75],[8,68],[15,55],[25,32],[35,25],[45,32],[60,48],[75,35],[90,18]];
-  function simulateClimate(t, latDeg){
+  var LOCATION_CLIMATE = {                    // per-city flavor: {dt: temp offset °C, rm: rain multiplier, dw: wind offset km/h}
+    "78.2":{dt:6,rm:0.8,dw:5},      // Longyearbyen — maritime-moderated Arctic
+    "-77.8":{dt:-8,rm:0.3,dw:15},   // McMurdo Station — continental Antarctic, katabatic winds
+    "64.1":{dt:5,rm:1.3,dw:10},     // Reykjavik — mild, wet, windy maritime
+    "55.9":{dt:2,rm:1.35,dw:6},     // Glasgow — wet maritime
+    "53.7":{dt:2,rm:1.3,dw:4},      // Navan — mild, wet maritime
+    "-54.8":{dt:6,rm:1.1,dw:18},    // Ushuaia — windy subpolar maritime
+    "51.5":{dt:1,rm:1.1,dw:2},      // London — maritime temperate
+    "40.7":{dt:0,rm:1.0,dw:2},      // New York — continental
+    "38.9":{dt:1,rm:1.05,dw:0},     // Washington, D.C. — humid continental
+    "35.7":{dt:3,rm:0.35,dw:-2},    // Tehran — arid continental
+    "-33.9":{dt:1,rm:1.0,dw:4},     // Sydney — coastal temperate
+    "-41.3":{dt:2,rm:1.15,dw:20},   // Wellington — very windy maritime
+    "30":{dt:4,rm:0.1,dw:-3},       // Cairo — desert
+    "-22.9":{dt:2,rm:1.1,dw:3},     // Rio de Janeiro — coastal tropical
+    "9.6":{dt:2,rm:0.9,dw:-2},      // Minna — tropical savanna
+    "9.1":{dt:1,rm:0.95,dw:-2},     // Abuja — tropical savanna
+    "6.5":{dt:0,rm:1.25,dw:2},      // Lagos — humid coastal tropical
+    "1.3":{dt:0,rm:1.3,dw:-2},      // Singapore — equatorial maritime
+    "-1.3":{dt:-8,rm:1.0,dw:0},     // Nairobi — cooled by real-world highland elevation
+    "-6.2":{dt:1,rm:1.3,dw:-2}      // Jakarta — humid coastal equatorial
+  };
+  function simulateClimate(t, latDeg, locName){
     var absLat = Math.abs(latDeg);
     var dec = declinationDeg(t);
     var seasonPhase = latDeg===0 ? 0 : (dec/TILT)*(latDeg>0?1:-1);  // -1..1, +1 = local-summer peak
@@ -444,6 +569,15 @@ footer{
     var tropicalMod = absLat<25 ? seasonPhase*18 : 0;                // monsoon-like local-summer boost
     var midLatMod = (absLat>=35 && absLat<=60) ? -seasonPhase*10 : 0; // storm-track wetter in local winter
     var rainPct = clamp(rainBase+tropicalMod+midLatMod, 3, 95);
+
+    if(locName){
+      var mod = LOCATION_CLIMATE[String(latDeg)];
+      if(mod){
+        tempC += mod.dt;
+        rainPct = clamp(rainPct*mod.rm, 3, 97);
+        windKmh = Math.max(2, windKmh+mod.dw);
+      }
+    }
     var rainLabel = rainPct<20?"Low":rainPct<45?"Moderate":rainPct<70?"High":"Very high";
 
     return {tempC:tempC, windKmh:windKmh, rainPct:rainPct, rainLabel:rainLabel};
@@ -835,7 +969,15 @@ footer{
     rTemp: document.getElementById("rTemp"),
     rWind: document.getElementById("rWind"),
     rRain: document.getElementById("rRain"),
-    rSeasonHere: document.getElementById("rSeasonHere")
+    rSeasonHere: document.getElementById("rSeasonHere"),
+    mDist: document.getElementById("mDist"),
+    mTide: document.getElementById("mTide"),
+    mEclipse: document.getElementById("mEclipse"),
+    nowBtn: document.getElementById("nowBtn"),
+    shareBtn: document.getElementById("shareBtn"),
+    unitBtn: document.getElementById("unitBtn"),
+    snapshotBtn: document.getElementById("snapshotBtn"),
+    tourBtn: document.getElementById("tourBtn")
   };
 
   function syncSlidersFromState(){
@@ -879,6 +1021,24 @@ footer{
     els.mPct.textContent = Math.round(litFrac*100)+"% illuminated";
     els.mNote.textContent = phaseNote(pName);
 
+    var distKm = moonDistanceKm(t);
+    var distFrac = distKm/MOON_MEAN_KM;
+    var sizePct = Math.round((1/distFrac - 1)*100);
+    var supermoon = litFrac>0.97 && distFrac<0.975;
+    var micromoon = litFrac>0.97 && distFrac>1.025;
+    var distTag = distFrac<0.97 ? " · near perigee" : distFrac>1.03 ? " · near apogee" : "";
+    var distText = Math.round(distKm).toLocaleString()+" km"+distTag;
+    if(supermoon) distText = "🌕 Supermoon — "+distText+" ("+(sizePct>=0?"+":"")+sizePct+"% bigger)";
+    else if(micromoon) distText = "🌑 Micromoon — "+distText;
+    els.mDist.textContent = distText;
+    els.mDist.className = "mini-v" + (supermoon||micromoon ? " active":"");
+
+    els.mTide.textContent = tideInfo(t, distFrac);
+
+    var ecl = eclipseWatch(t);
+    els.mEclipse.textContent = ecl.text;
+    els.mEclipse.className = "mini-v" + (ecl.active ? " active":"");
+
     var seas = seasonName(t);
     var locBit = state.locationName ? " at <b>"+state.locationName+"</b>" : "";
     els.headline.innerHTML = fmtDate(dayOfYear(t)) + locBit + " &middot; <b>"+seas.n+"</b> in the Northern Hemisphere ("+seas.s+" in the Southern) &middot; Moon: <b>"+pName+"</b> &middot; Subsolar latitude "+dec.toFixed(1)+"&deg;";
@@ -904,9 +1064,9 @@ footer{
       els.rMoonset.textContent = fmtHM(geo.set);
     }
 
-    var clim = simulateClimate(t, state.lat);
-    els.rTemp.textContent = Math.round(clim.tempC)+"°C";
-    els.rWind.textContent = Math.round(clim.windKmh)+" km/h";
+    var clim = simulateClimate(t, state.lat, state.locationName);
+    els.rTemp.textContent = fmtTemp(clim.tempC);
+    els.rWind.textContent = fmtWind(clim.windKmh);
     els.rRain.textContent = Math.round(clim.rainPct)+"% ("+clim.rainLabel+")";
     els.rSeasonHere.textContent = state.lat>=0 ? seas.n : seas.s;
   }
@@ -994,9 +1154,238 @@ footer{
     render();
   });
 
+  // ---- Toolbar: Now / Share / Units / Snapshot ----
+  els.unitBtn.textContent = state.unit==="f" ? "°F · mph" : "°C · km/h";
+  els.unitBtn.addEventListener("click", function(){
+    state.unit = state.unit==="c" ? "f" : "c";
+    try{ localStorage.setItem("sem_unit", state.unit); }catch(e){}
+    els.unitBtn.textContent = state.unit==="f" ? "°F · mph" : "°C · km/h";
+    render();
+  });
+
+  els.nowBtn.addEventListener("click", function(){
+    var now = new Date();
+    var startOfYear = new Date(now.getFullYear(), 0, 1);
+    state.t = (now - startOfYear) / 86400000;
+    syncSlidersFromState();
+    render();
+  });
+
+  function buildShareUrl(){
+    var params = new URLSearchParams();
+    params.set("d", dayOfYear(state.t).toFixed(2));
+    params.set("lat", state.lat);
+    if(state.locationName) params.set("loc", state.locationName);
+    params.set("u", state.unit);
+    return location.origin + location.pathname + "?" + params.toString();
+  }
+  els.shareBtn.addEventListener("click", function(){
+    var url = buildShareUrl();
+    try{ history.replaceState(null, "", url); }catch(e){}
+    var orig = els.shareBtn.textContent;
+    function flash(msg){ els.shareBtn.textContent = msg; setTimeout(function(){ els.shareBtn.textContent = orig; }, 1600); }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(function(){ flash("✓ Link copied"); }, function(){ window.prompt("Copy this link:", url); });
+    } else {
+      window.prompt("Copy this link:", url);
+    }
+  });
+
+  function wrapText(ctx, text, x, y, maxWidth, lineHeight){
+    var words=text.split(" "), line="", yy=y;
+    for(var i=0;i<words.length;i++){
+      var test=line+words[i]+" ";
+      if(ctx.measureText(test).width>maxWidth && line){ ctx.fillText(line,x,yy); line=words[i]+" "; yy+=lineHeight; }
+      else line=test;
+    }
+    ctx.fillText(line,x,yy);
+    return yy+lineHeight;
+  }
+  function downloadSnapshot(){
+    var out=document.createElement("canvas");
+    out.width=760; out.height=980;
+    var c=out.getContext("2d");
+    c.fillStyle="#05060f"; c.fillRect(0,0,out.width,out.height);
+    c.fillStyle="#e8ebff"; c.font="bold 20px Inter, Arial, sans-serif";
+    c.fillText("Sun, Earth & Moon Explorer", 20, 32);
+    c.fillStyle="#9aa1c9"; c.font="13px Inter, Arial, sans-serif";
+    wrapText(c, els.headline.textContent.replace(/\s+/g," ").trim(), 20, 54, 720, 16);
+    c.drawImage(orbitCv, 20, 76, 720, 720*orbitCv.height/orbitCv.width);
+    var gy=76+720*orbitCv.height/orbitCv.width+20;
+    c.drawImage(globeCv, 20, gy, 350, 350*globeCv.height/globeCv.width);
+    c.drawImage(moonCv, 400, gy, 175, 175);
+    var ty=gy+300;
+    c.fillStyle="#e8ebff"; c.font="bold 13px Inter, Arial, sans-serif";
+    var lines=[
+      "Sunrise "+els.rSunrise.textContent+"   Sunset "+els.rSunset.textContent+"   Day length "+els.rDaylen.textContent,
+      "Moonrise "+els.rMoonrise.textContent+"   Moonset "+els.rMoonset.textContent+"   "+els.rMoonVis.textContent,
+      "Temp "+els.rTemp.textContent+"   Wind "+els.rWind.textContent+"   Rain "+els.rRain.textContent+"   "+els.rSeasonHere.textContent
+    ];
+    lines.forEach(function(l,i){ c.fillText(l, 20, ty+22*(i+1)); });
+    c.fillStyle="#5b6290"; c.font="11px Inter, Arial, sans-serif";
+    c.fillText("Simplified educational simulation — tade355.github.io/sun-earth-moon.html", 20, out.height-16);
+
+    out.toBlob(function(blob){
+      if(!blob) return;
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement("a");
+      a.href=url; a.download="sun-earth-moon-"+fmtDate(dayOfYear(state.t)).replace(" ","-")+".png";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 3000);
+    });
+  }
+  els.snapshotBtn.addEventListener("click", downloadSnapshot);
+
+  // ---- Quiz ----
+  var quiz = { score:0, total:0, current:null };
+  var quizCv = document.getElementById("quizCanvas");
+  var qctx = quizCv.getContext("2d");
+  var PHASE_NAMES=["New Moon","Waxing Crescent","First Quarter","Waxing Gibbous","Full Moon","Waning Gibbous","Last Quarter","Waning Crescent"];
+  var SEASON_NAMES=["Spring","Summer","Autumn","Winter"];
+
+  function randRange(a,b){ return a+Math.random()*(b-a); }
+  function pickDistinct(pool, correct, n){
+    var opts=[correct];
+    var candidates = pool.filter(function(x){ return x!==correct; });
+    while(opts.length<n && candidates.length){
+      var idx=Math.floor(Math.random()*candidates.length);
+      opts.push(candidates.splice(idx,1)[0]);
+    }
+    for(var i=opts.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var tmp=opts[i]; opts[i]=opts[j]; opts[j]=tmp; }
+    return opts;
+  }
+
+  function newQuizQuestion(){
+    var qtype = ["phase","season","daynight"][Math.floor(Math.random()*3)];
+    quizCv.style.display = qtype==="phase" ? "block":"none";
+    var q;
+    if(qtype==="phase"){
+      var randT = randRange(0,365);
+      var elong = elongationDeg(randT);
+      var correct = phaseName(elong);
+      qctx.clearRect(0,0,quizCv.width,quizCv.height);
+      renderMoonDisc(qctx, 70,70,58, elong);
+      q = { question:"What moon phase is shown?", options: pickDistinct(PHASE_NAMES, correct, 4), answer: correct };
+    } else if(qtype==="season"){
+      var randLat = (Math.random()<0.5?1:-1)*randRange(20,60);
+      var randDay = Math.floor(randRange(0,365));
+      var seas = seasonName(randDay);
+      var name = randLat>=0 ? seas.n.replace("Northern ","") : seas.s.replace("Southern ","");
+      var hemi = randLat>=0 ? "Northern" : "Southern";
+      q = { question:"It's "+fmtDate(randDay)+" at "+Math.abs(randLat).toFixed(0)+"°"+(randLat>=0?"N":"S")+" ("+hemi+" Hemisphere). What season is it there?", options: pickDistinct(SEASON_NAMES, name, 4), answer:name };
+    } else {
+      var randLat2 = randRange(-60,60);
+      var randT2 = randRange(0,365);
+      var alt = sunAltitudeDeg(randT2, randLat2);
+      var correct2 = alt>0 ? "Daytime" : "Nighttime";
+      q = { question:"At "+Math.abs(randLat2).toFixed(0)+"°"+(randLat2>=0?"N":"S")+", the local clock reads "+fmtHM(timeOfDayFrac(randT2)*24)+" on "+fmtDate(randT2)+". Is it day or night there?", options: pickDistinct(["Daytime","Nighttime"], correct2, 4), answer: correct2 };
+    }
+    quiz.current = q;
+    document.getElementById("qQuestion").textContent = q.question;
+    var optsEl = document.getElementById("qOptions");
+    optsEl.innerHTML="";
+    q.options.forEach(function(opt){
+      var b=document.createElement("button");
+      b.type="button"; b.textContent=opt;
+      b.addEventListener("click", function(){ answerQuiz(opt,b); });
+      optsEl.appendChild(b);
+    });
+    document.getElementById("qFeedback").textContent="";
+  }
+  function answerQuiz(opt, btnEl){
+    if(!quiz.current || quiz.current.answered) return;
+    quiz.current.answered = true;
+    quiz.total++;
+    var correct = opt === quiz.current.answer;
+    if(correct) quiz.score++;
+    document.getElementById("qScore").textContent = quiz.score+" / "+quiz.total;
+    var opts = document.getElementById("qOptions").children;
+    for(var i=0;i<opts.length;i++){
+      if(opts[i].textContent===quiz.current.answer) opts[i].classList.add("correct");
+      else if(opts[i]===btnEl) opts[i].classList.add("wrong");
+      opts[i].disabled=true;
+    }
+    document.getElementById("qFeedback").textContent = correct ? "Correct!" : ("Not quite — the answer is "+quiz.current.answer+".");
+  }
+  document.getElementById("qNextBtn").addEventListener("click", newQuizQuestion);
+
+  // ---- Guided tour ----
+  var TOUR_STEPS=[
+    {sel:"#headline", title:"Welcome", text:"One simulated clock drives every panel on this page. Scrub the sliders or press Play, and everything updates together."},
+    {sel:".orbit-card", title:"Orbital view", text:"Top-down view of Earth orbiting the Sun with the Moon orbiting Earth. The white tick is Earth's fixed axial tilt — the reason for seasons."},
+    {sel:"#globe-h", title:"Day & night", text:"Pick a location by name (or drag the latitude slider) and watch the spinning globe show sunrise, sunset, and day length there."},
+    {sel:"#moon-h", title:"Moon phase", text:"Computed live from the real Sun-Earth-Moon angle — plus distance (supermoons), eclipse potential, and tide strength."},
+    {sel:"#sky-h", title:"Moon in the sky", text:"A horizon view showing exactly when the Moon rises, sets, and how high it climbs from your chosen spot."},
+    {sel:"#climate-h", title:"Simulated climate", text:"An illustrative estimate of temperature, wind, and rain chance for that location and season — not a real forecast."},
+    {sel:".quiz-card", title:"Quiz yourself", text:"Test what you've learned with random scenarios — phases, seasons, and day/night calls."}
+  ];
+  var tourIdx=0, tourLastHighlighted=null;
+  var tourOverlay=document.getElementById("tourOverlay");
+  function showTourStep(i){
+    if(tourLastHighlighted) tourLastHighlighted.classList.remove("tour-highlight");
+    var step = TOUR_STEPS[i];
+    var target = document.querySelector(step.sel);
+    if(target){
+      var card = target.closest(".card") || target;
+      card.classList.add("tour-highlight");
+      tourLastHighlighted = card;
+      card.scrollIntoView({behavior:"smooth", block:"center"});
+    }
+    document.getElementById("tourStepLabel").textContent = "Step "+(i+1)+" of "+TOUR_STEPS.length;
+    document.getElementById("tourTitle").textContent = step.title;
+    document.getElementById("tourText").textContent = step.text;
+    document.getElementById("tourPrev").disabled = i===0;
+    document.getElementById("tourNext").textContent = i===TOUR_STEPS.length-1 ? "Done" : "Next →";
+  }
+  function openTour(){ tourIdx=0; tourOverlay.hidden=false; showTourStep(0); }
+  function closeTour(){
+    tourOverlay.hidden=true;
+    if(tourLastHighlighted) tourLastHighlighted.classList.remove("tour-highlight");
+    tourLastHighlighted=null;
+    try{ localStorage.setItem("sem_tour_seen","1"); }catch(e){}
+  }
+  document.getElementById("tourNext").addEventListener("click", function(){
+    if(tourIdx>=TOUR_STEPS.length-1){ closeTour(); return; }
+    tourIdx++; showTourStep(tourIdx);
+  });
+  document.getElementById("tourPrev").addEventListener("click", function(){
+    if(tourIdx>0){ tourIdx--; showTourStep(tourIdx); }
+  });
+  document.getElementById("tourSkip").addEventListener("click", closeTour);
+  els.tourBtn.addEventListener("click", openTour);
+
+  // ---- Shareable permalink: read state from URL on load ----
+  (function initFromUrl(){
+    var params = new URLSearchParams(window.location.search);
+    if(params.has("d")){
+      var d = parseFloat(params.get("d"));
+      if(!isNaN(d)) state.t = d;
+    }
+    if(params.has("lat")){
+      var la = parseFloat(params.get("lat"));
+      if(!isNaN(la)) state.lat = clamp(la,-90,90);
+    }
+    if(params.has("loc")){
+      state.locationName = params.get("loc");
+      for(var i=0;i<els.locationPreset.options.length;i++){
+        if(parseFloat(els.locationPreset.options[i].value)===state.lat){ els.locationPreset.selectedIndex=i; break; }
+      }
+    }
+    if(params.has("u")){
+      var u = params.get("u");
+      if(u==="c"||u==="f") state.unit = u;
+    }
+    els.latitude.value = state.lat;
+    els.latVal.innerHTML = Math.abs(state.lat).toFixed(state.locationName?1:0)+"&deg; "+(state.lat>=0?"N":"S");
+    els.unitBtn.textContent = state.unit==="f" ? "°F · mph" : "°C · km/h";
+  })();
+
   syncSlidersFromState();
   render();
   requestAnimationFrame(tick);
+  newQuizQuestion();
+
+  try{ if(!localStorage.getItem("sem_tour_seen")) openTour(); }catch(e){}
 
   window.addEventListener("resize", function(){ stars=null; skyStars=null; });
 })();
