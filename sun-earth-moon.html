@@ -421,9 +421,13 @@ footer{
   var ORBIT_PERIOD = 365.25;        // days
   var MOON_PERIOD = 27.32;          // sidereal days, Moon around Earth
   var TILT_PHASE_DEG = TILT_PHASE_DAY/ORBIT_PERIOD*360;
+  var EPOCH = new Date(2000, 0, 1); // t=0 reference: 2000-01-01 00:00 local time. Keeping t absolute (not
+                                     // reset to 0 every Jan 1) lets the Moon's phase stay calibrated to a
+                                     // real reference new moon (see MOON_PHASE_OFFSET) for any real date,
+                                     // since the phase drifts ~11 days earlier each year relative to Jan 1.
 
   var state = {
-    t: 15.33,          // total simulated days elapsed (day-of-year + time-of-day fraction)
+    t: 9512.33,        // days since EPOCH (~Jan 16, 2026) + time-of-day fraction — arbitrary demo start
     playing: false,
     speed: 0.12,        // days per real second
     lat: 40,
@@ -442,7 +446,8 @@ footer{
   function declinationOf(eclipticLonDeg){ return TILT * Math.cos(deg2rad(eclipticLonDeg - TILT_PHASE_DEG)); }
   function declinationDeg(t){ return declinationOf(orbitAngleDeg(t)); }            // subsolar latitude (season)
   function moonDeclinationDeg(t){ return declinationOf(moonAngleDeg(t)); }         // simplified: ignores Moon's ~5° orbital tilt
-  function moonAngleDeg(t){ return norm360((t / MOON_PERIOD) * 360 + 200); }        // Moon's inertial orbital angle
+  var MOON_PHASE_OFFSET = 109.8;    // calibrated so elongation()=0 (new moon) at the reference epoch below
+  function moonAngleDeg(t){ return norm360((t / MOON_PERIOD) * 360 + MOON_PHASE_OFFSET); }  // Moon's inertial orbital angle
   function elongationDeg(t){                                                       // Sun-Earth-Moon angle, 0=new,180=full
     return norm360(moonAngleDeg(t) - orbitAngleDeg(t) - 180);
   }
@@ -1082,15 +1087,15 @@ footer{
     state.speed = parseFloat(this.value);
     els.speedVal.textContent = state.speed.toFixed(2)+" d/s";
   });
+  function yearBase(t){ return Math.floor(t/ORBIT_PERIOD)*ORBIT_PERIOD; } // preserves which year-chunk of t we're in
   els.dayOfYear.addEventListener("input", function(){
     var frac = timeOfDayFrac(state.t);
-    state.t = parseFloat(this.value) + frac;
+    state.t = yearBase(state.t) + parseFloat(this.value) + frac;
     render();
     els.dateVal.textContent = fmtDate(dayOfYear(state.t));
   });
   els.timeOfDay.addEventListener("input", function(){
-    var d = Math.floor(dayOfYear(state.t));
-    state.t = d + parseFloat(this.value)/24;
+    state.t = Math.floor(state.t) + parseFloat(this.value)/24;
     render();
     els.timeVal.textContent = fmtHM(parseFloat(this.value));
   });
@@ -1112,7 +1117,7 @@ footer{
   document.querySelectorAll(".presets button").forEach(function(btn){
     btn.addEventListener("click", function(){
       var d = parseFloat(this.dataset.day);
-      state.t = d + timeOfDayFrac(state.t);
+      state.t = yearBase(state.t) + d + timeOfDayFrac(state.t);
       syncSlidersFromState();
       render();
     });
@@ -1141,7 +1146,7 @@ footer{
   els.resetBtn.addEventListener("click", function(){
     state.playing=false;
     els.playBtn.textContent="▶ Play";
-    state.t = 15.33;
+    state.t = 9512.33;
     state.lat = 40;
     state.locationName = null;
     els.locationPreset.value = "";
@@ -1164,16 +1169,14 @@ footer{
   });
 
   els.nowBtn.addEventListener("click", function(){
-    var now = new Date();
-    var startOfYear = new Date(now.getFullYear(), 0, 1);
-    state.t = (now - startOfYear) / 86400000;
+    state.t = (new Date() - EPOCH) / 86400000;
     syncSlidersFromState();
     render();
   });
 
   function buildShareUrl(){
     var params = new URLSearchParams();
-    params.set("d", dayOfYear(state.t).toFixed(2));
+    params.set("t", state.t.toFixed(3));
     params.set("lat", state.lat);
     if(state.locationName) params.set("loc", state.locationName);
     params.set("u", state.unit);
@@ -1357,9 +1360,12 @@ footer{
   // ---- Shareable permalink: read state from URL on load ----
   (function initFromUrl(){
     var params = new URLSearchParams(window.location.search);
-    if(params.has("d")){
+    if(params.has("t")){
+      var tt = parseFloat(params.get("t"));
+      if(!isNaN(tt)) state.t = tt;
+    } else if(params.has("d")){ // legacy links: day-of-year only, applied to the default year
       var d = parseFloat(params.get("d"));
-      if(!isNaN(d)) state.t = d;
+      if(!isNaN(d)) state.t = yearBase(state.t) + d;
     }
     if(params.has("lat")){
       var la = parseFloat(params.get("lat"));
