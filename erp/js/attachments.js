@@ -90,7 +90,7 @@ export function createAttachmentPicker(initialAttachments = []) {
   const fileInput = document.createElement('input');
   fileInput.type = 'file';
   fileInput.multiple = true;
-  fileInput.accept = 'image/*,application/pdf,.kml,application/vnd.google-earth.kml+xml,.gpx,application/gpx+xml';
+  fileInput.accept = 'image/*,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.kml,application/vnd.google-earth.kml+xml,.gpx,application/gpx+xml';
   fileInput.addEventListener('change', async () => {
     const files = [...fileInput.files];
     for (const file of files) {

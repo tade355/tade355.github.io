@@ -65,17 +65,56 @@ export function renderTraining(container) {
 
   const actionSlot = el('div');
   container.appendChild(sectionHeader(
-    'Day 1 Knowledge Check',
-    'Seven short questions on the Manual and your Training Plan — written answers, plus one short recorded answer.',
+    'Training',
+    'Your assigned training program\'s materials, and its Day 1 Knowledge Check.',
     actionSlot,
   ));
+
+  const programPanel = el('div');
+  container.appendChild(programPanel);
 
   const body = el('div');
   container.appendChild(body);
 
+  function currentProgram() {
+    const employee = getCurrentUser();
+    if (!employee || !employee.trainingProgramId) return null;
+    return store.get('trainingPrograms').find((p) => p.id === employee.trainingProgramId) || null;
+  }
+
+  function docBlock(label, attachments) {
+    const list = attachments || [];
+    const block = el('div', { class: 'quiz-summary-block' }, [el('div', { class: 'field-label' }, label)]);
+    if (!list.length) {
+      block.appendChild(el('p', { style: 'margin: 0.3rem 0 0; color: var(--text-muted);' }, 'Not yet uploaded.'));
+    } else {
+      block.appendChild(el('div', { style: 'margin-top: 0.3rem; display: flex; flex-wrap: wrap; gap: 0.5rem;' }, list.map((att) => el('a', {
+        class: 'notice-attachment-file', href: att.dataUrl, target: '_blank', rel: 'noopener',
+      }, `📄 ${att.name}`))));
+    }
+    return block;
+  }
+
+  function renderProgramPanel() {
+    programPanel.innerHTML = '';
+    const program = currentProgram();
+    if (!program) {
+      programPanel.appendChild(el('p', { class: 'section-subtitle' }, 'No training program is currently assigned to you.'));
+      return;
+    }
+    programPanel.appendChild(el('h3', { class: 'subsection-title', style: 'margin-top: 0;' }, program.name));
+    if (program.description) programPanel.appendChild(el('p', { class: 'section-subtitle' }, program.description));
+    programPanel.appendChild(docBlock('Manual', program.manual));
+    programPanel.appendChild(docBlock('Training Plan', program.plan));
+    programPanel.appendChild(docBlock('Training Syllabus', program.syllabus));
+  }
+
   function showList() {
+    renderProgramPanel();
     actionSlot.innerHTML = '';
-    actionSlot.appendChild(el('button', { class: 'btn btn-primary', type: 'button', onClick: () => showQuiz() }, '+ Take the Check'));
+    if (currentProgram()) {
+      actionSlot.appendChild(el('button', { class: 'btn btn-primary', type: 'button', onClick: () => showQuiz() }, '+ Take the Check'));
+    }
     renderListBody();
   }
 
@@ -129,7 +168,7 @@ export function renderTraining(container) {
       rows,
       emptyText: (tier === 'Admin' || tier === 'Accounts' || tier === 'Supervisor')
         ? 'No submissions yet.'
-        : 'You haven’t taken the check yet — click "Take the Check" above to begin.',
+        : (currentProgram() ? 'You haven’t taken the check yet — click "Take the Check" above to begin.' : 'Nothing to show yet.'),
     });
   }
 

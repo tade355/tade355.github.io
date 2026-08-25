@@ -35,7 +35,7 @@ export const ROUTES = [
   { path: 'hr', label: 'HR & Employees', icon: ICONS.users, load: () => import('./views/hr.js').then((m) => m.renderHR), tiers: ['Admin'] },
   { path: 'leave', label: 'Leave & Attendance', icon: ICONS.clock, load: () => import('./views/leaveAttendance.js').then((m) => m.renderLeaveAttendance), tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   { path: 'mySalary', label: 'My Salary', icon: ICONS.banknote, load: () => import('./views/mySalary.js').then((m) => m.renderMySalary), tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
-  { path: 'training', label: 'Day 1 Knowledge Check', icon: ICONS.checkCircle, load: () => import('./views/training.js').then((m) => m.renderTraining), tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
+  { path: 'training', label: 'Training', icon: ICONS.checkCircle, load: () => import('./views/training.js').then((m) => m.renderTraining), tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   // System
   { path: 'backup', label: 'Backup & Data', icon: ICONS.database, load: () => import('./views/backup.js').then((m) => m.renderBackup), tiers: ['Admin'] },
 ];
