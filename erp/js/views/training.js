@@ -5,16 +5,31 @@ import { renderTable, statusPill, sectionHeader, openCustomModal, confirmDelete,
 import { getCurrentUser, getCurrentTier, filterTrainingSubmissions } from '../session.js';
 
 const QUESTIONS = [
-  { num: 1, key: 'a1', label: "Where does the COO's Office sit in Emagrims' structure, and who does the COO report to?" },
-  { num: 2, key: 'a2', label: "Name two of the Company's core expectations for staff conduct (Section 25)." },
+  {
+    num: 1,
+    key: 'a1',
+    video: true,
+    label: "Where does the COO's Office sit in Emagrims' structure, and who does the COO report to?",
+  },
+  {
+    num: 2,
+    key: 'a2',
+    video: true,
+    label: "Name two of the Company's core expectations for staff conduct (Section 25).",
+  },
   {
     num: 3,
-    key: null,
+    key: 'a3',
     video: true,
     label: 'Scenario: you notice a colleague appears to be falsifying a report.',
-    hint: 'Explain out loud what the Whistleblower Policy says you should do, and whether you can be punished for reporting it in good faith even if you turn out to be wrong.',
+    hint: 'Explain what the Whistleblower Policy says you should do, and whether you can be punished for reporting it in good faith even if you turn out to be wrong.',
   },
-  { num: 4, key: 'a4', label: 'In your own words: what is your actual role and title, and who is your direct supervisor during training?' },
+  {
+    num: 4,
+    key: 'a4',
+    video: true,
+    label: 'What is your actual role and title, and who is your direct supervisor during training?',
+  },
   { num: 5, key: 'a5', label: 'How long is your initial training period, and what happens at the end of it?' },
   { num: 6, key: 'a6', label: 'Give one example of something you should always get approval for before acting, and one example of something you can take initiative on yourself.' },
   { num: 7, key: 'a7', label: "What's one thing from yesterday's reading you found unclear or would like explained further?" },
@@ -25,7 +40,7 @@ const QUESTIONS = [
   { num: 12, key: 'a12', label: "Where can you find the Company's official page online?" },
   { num: 13, key: 'a13', label: 'What system does the Company use to run its daily operations, fleet, sales, purchasing, accounting, and HR?' },
   { num: 14, key: 'a14', label: "Where is the Company's registered office located?" },
-  { num: 15, key: 'a15', label: 'Name one other functional area under the COO\'s Office you might get exposure to during training, besides your immediate desk.' },
+  { num: 15, key: 'a15', label: "Name one other functional area under the COO's Office you might get exposure to during training, besides your immediate desk." },
 ];
 
 const TOTAL_SECONDS = 20 * 60;
@@ -41,13 +56,19 @@ function employeeName(id) {
   return store.get('employees').find((e) => e.id === id)?.name || 'Unknown';
 }
 
+function recordedVideoCount(record) {
+  const answers = record.answers || {};
+  return QUESTIONS.filter((q) => q.video && answers[q.key]?.videoUrl).length;
+}
+
 function viewSubmission(record) {
+  const videoQuestionCount = QUESTIONS.filter((q) => q.video).length;
   openCustomModal({
     title: employeeName(record.employeeId),
     wide: true,
     build: (modalContainer) => {
       const when = record.submittedAt ? new Date(record.submittedAt).toLocaleString('en-GB') : '—';
-      modalContainer.appendChild(el('p', { class: 'section-subtitle' }, `Submitted ${when}${record.timedOut ? ' · timed out before finishing' : ''}`));
+      modalContainer.appendChild(el('p', { class: 'section-subtitle' }, `Submitted ${when}${record.timedOut ? ' · timed out before finishing' : ''} · ${recordedVideoCount(record)}/${videoQuestionCount} video answers recorded`));
       if (record.tabSwitchCount) {
         modalContainer.appendChild(el('p', { class: 'section-subtitle', style: 'color: var(--warning);' }, `⚠ Left the tab ${record.tabSwitchCount} time${record.tabSwitchCount === 1 ? '' : 's'} during the check (${record.tabAwaySeconds || 0}s away total). Not proof of anything on its own — worth a look alongside the answers.`));
       }
@@ -55,9 +76,10 @@ function viewSubmission(record) {
       QUESTIONS.forEach((q) => {
         const block = el('div', { class: 'quiz-summary-block' }, [el('div', { class: 'field-label' }, `Question ${q.num} — ${q.label}`)]);
         if (q.video) {
-          if (record.videoUrl) {
+          const videoUrl = answers[q.key]?.videoUrl;
+          if (videoUrl) {
             const video = el('video', { controls: 'controls', style: 'width: 100%; max-width: 420px; border-radius: 6px; margin-top: 0.5rem;' });
-            video.src = record.videoUrl;
+            video.src = videoUrl;
             block.appendChild(video);
           } else {
             block.appendChild(el('p', { style: 'margin: 0.4rem 0 0;' }, 'Not recorded.'));
@@ -148,12 +170,22 @@ export function renderTraining(container) {
     const tableContainer = el('div');
     body.appendChild(tableContainer);
     const tier = getCurrentTier();
+    const videoQuestionCount = QUESTIONS.filter((q) => q.video).length;
     renderTable(tableContainer, {
       columns: [
         { key: 'employeeId', label: 'Employee', render: (r) => employeeName(r.employeeId) },
         { key: 'submittedAt', label: 'Submitted', render: (r) => (r.submittedAt ? new Date(r.submittedAt).toLocaleString('en-GB') : '—') },
         { key: 'timedOut', label: 'Status', render: (r) => statusPill(r.timedOut ? 'Timed Out' : 'Completed') },
-        { key: 'videoRecorded', label: 'Video (Q3)', render: (r) => statusPill(r.videoRecorded ? 'Recorded' : 'Not Recorded') },
+        {
+          key: 'videos',
+          label: 'Videos',
+          render: (r) => {
+            const n = recordedVideoCount(r);
+            if (n === videoQuestionCount) return statusPill('Recorded');
+            if (n === 0) return statusPill('Not Recorded');
+            return statusPill(`${n}/${videoQuestionCount}`);
+          },
+        },
         { key: 'tabSwitchCount', label: 'Left Tab', render: (r) => (r.tabSwitchCount ? `⚠ ${r.tabSwitchCount}×` : '—') },
         {
           key: 'actions',
@@ -203,9 +235,9 @@ export function renderTraining(container) {
 
     const state = {
       step: 'intro',
-      answers: { a1: '', a2: '', a4: '', a5: '', a6: '', a7: '', a8: '', a9: '', a10: '', a11: '', a12: '', a13: '', a14: '', a15: '' },
-      videoBlob: null,
-      recSeconds: 0,
+      answers: Object.fromEntries(QUESTIONS.filter((q) => !q.video).map((q) => [q.key, ''])),
+      videoBlobs: {},
+      videoSeconds: {},
       totalSeconds: TOTAL_SECONDS,
       timedOut: false,
       tabSwitchCount: 0,
@@ -219,7 +251,7 @@ export function renderTraining(container) {
     // Logged for review, not enforced — this app has no way to lock down
     // another tab/device or detect AI use. Leaving the tab is a real
     // (if imperfect) signal a reviewer can weigh alongside the answers
-    // themselves, particularly the unscripted video answer for Q3.
+    // themselves, particularly the unscripted video answers.
     function onVisibilityChange() {
       if (document.visibilityState === 'hidden') {
         state.tabSwitchCount++;
@@ -304,16 +336,49 @@ export function renderTraining(container) {
     }
 
     function renderIntro() {
+      const videoCount = QUESTIONS.filter((q) => q.video).length;
+      const textCount = QUESTIONS.length - videoCount;
+
+      const agreeCheckbox = el('input', { type: 'checkbox', id: 'quiz-agree' });
+      const beginBtn = el('button', { class: 'btn btn-primary', type: 'button', disabled: 'disabled' }, 'Begin');
+      agreeCheckbox.addEventListener('change', () => {
+        if (agreeCheckbox.checked) beginBtn.removeAttribute('disabled');
+        else beginBtn.setAttribute('disabled', 'disabled');
+      });
+      beginBtn.addEventListener('click', () => {
+        state.step = 1;
+        startTimer();
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        renderScreen();
+      });
+
       return el('div', {}, [
         el('p', { class: 'section-subtitle' }, `Signed in as ${employee.name}`),
         el('h3', { class: 'subsection-title', style: 'margin-top: 0.75rem;' }, "Let's see what stuck from Day 1."),
-        el('p', {}, `${QUESTIONS.length} short questions on the Company, the Manual, and your Training Plan. One of them asks for a short recorded answer instead of typed text. Answer in your own words — this isn’t about perfect phrasing, it’s about whether it makes sense to you.`),
+        el('p', {}, `${QUESTIONS.length} short questions on the Company, the Manual, and your Training Plan — ${textCount} written, ${videoCount} recorded on camera.`),
+
+        el('h4', { style: 'margin: 1.25rem 0 0.4rem; font-size: 0.95rem;' }, 'Format'),
         el('ul', { class: 'quiz-notice' }, [
-          el('li', {}, [el('strong', {}, '20 minutes'), ', once you start. The clock keeps running even if you switch tabs.']),
-          el('li', {}, [el('strong', {}, 'Question 3'), ' needs your camera and microphone — you’ll be asked for permission when you reach it.']),
-          el('li', {}, 'Everything saves automatically when you finish — your written answers and your video.'),
+          el('li', {}, [el('strong', {}, `${videoCount} questions`), ' need your camera and microphone — you\'ll be asked for permission the first time you reach one.']),
+          el('li', {}, [el('strong', {}, `${textCount} questions`), ' are typed answers.']),
+          el('li', {}, [el('strong', {}, '20 minutes'), ' total, once you start. The clock keeps running even if you switch tabs.']),
+          el('li', {}, 'Everything saves automatically when you finish — written answers and video together.'),
         ]),
-        el('button', { class: 'btn btn-primary', type: 'button', onClick: () => { state.step = 1; startTimer(); document.addEventListener('visibilitychange', onVisibilityChange); renderScreen(); } }, 'Begin'),
+
+        el('h4', { style: 'margin: 1.25rem 0 0.4rem; font-size: 0.95rem;' }, 'Please read before you start'),
+        el('ul', { class: 'quiz-notice', style: 'border-left-color: var(--critical);' }, [
+          el('li', {}, 'Answer in your own words. This is checking whether what you read actually made sense to you, not how well you can search for it or ask someone else.'),
+          el('li', {}, 'For the recorded questions, speak naturally — don\'t read from a script or from the Manual on another screen.'),
+          el('li', {}, 'Leaving this browser tab during the check is logged — how many times, and for how long — and is visible to whoever reviews your answers.'),
+          el('li', {}, 'If you\'re not sure about something, say so honestly. A partial answer told straight is worth more than a confident one copied from somewhere.'),
+        ]),
+
+        el('label', { class: 'field', style: 'flex-direction: row; align-items: center; gap: 0.5rem; margin-top: 1.25rem;' }, [
+          agreeCheckbox,
+          el('span', {}, 'I\'ve read the above and will complete this honestly, in my own words.'),
+        ]),
+
+        el('div', { style: 'margin-top: 1rem;' }, [beginBtn]),
       ]);
     }
 
@@ -352,12 +417,15 @@ export function renderTraining(container) {
       const btnRetake = el('button', { class: 'btn btn-ghost', type: 'button', style: 'display: none;' }, 'Re-record');
       const controls = el('div', { class: 'quiz-controls' }, [btnEnable, btnRecord, btnRetake]);
 
-      const nextBtn = el('button', { class: 'btn btn-primary', type: 'button' }, 'Next');
-      if (!state.videoBlob) nextBtn.setAttribute('disabled', 'disabled');
-      const backBtn = el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => { state.step = q.num - 1; renderScreen(); } }, 'Back');
+      const isLast = q.num === QUESTIONS.length;
+      const nextBtn = el('button', { class: 'btn btn-primary', type: 'button' }, isLast ? 'Finish & Review' : 'Next');
+      if (!state.videoBlobs[q.num]) nextBtn.setAttribute('disabled', 'disabled');
+      const backBtn = q.num > 1
+        ? el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => { state.step = q.num - 1; renderScreen(); } }, 'Back')
+        : null;
 
-      if (state.videoBlob) {
-        playbackVideo.src = URL.createObjectURL(state.videoBlob);
+      if (state.videoBlobs[q.num]) {
+        playbackVideo.src = URL.createObjectURL(state.videoBlobs[q.num]);
         playbackVideo.style.display = 'block';
         placeholder.style.display = 'none';
         btnEnable.style.display = 'none';
@@ -391,8 +459,8 @@ export function renderTraining(container) {
           mediaRecorder = new MediaRecorder(stream, { mimeType });
           mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
           mediaRecorder.onstop = () => {
-            state.videoBlob = new Blob(recordedChunks, { type: mimeType });
-            playbackVideo.src = URL.createObjectURL(state.videoBlob);
+            state.videoBlobs[q.num] = new Blob(recordedChunks, { type: mimeType });
+            playbackVideo.src = URL.createObjectURL(state.videoBlobs[q.num]);
             playbackVideo.style.display = 'block';
             liveVideo.style.display = 'none';
             btnRetake.style.display = 'inline-flex';
@@ -400,14 +468,14 @@ export function renderTraining(container) {
           };
           mediaRecorder.start();
           recording = true;
-          state.recSeconds = 0;
+          state.videoSeconds[q.num] = 0;
           recIndicator.classList.add('on');
           recClock.style.display = 'block';
           btnRecord.textContent = 'Stop recording';
           recInterval = setInterval(() => {
-            state.recSeconds++;
-            recClock.textContent = fmt(state.recSeconds);
-            if (state.recSeconds >= MAX_REC_SECONDS) btnRecord.click();
+            state.videoSeconds[q.num] = (state.videoSeconds[q.num] || 0) + 1;
+            recClock.textContent = fmt(state.videoSeconds[q.num]);
+            if (state.videoSeconds[q.num] >= MAX_REC_SECONDS) btnRecord.click();
           }, 1000);
         } else {
           mediaRecorder.stop();
@@ -420,7 +488,7 @@ export function renderTraining(container) {
       });
 
       btnRetake.addEventListener('click', () => {
-        state.videoBlob = null;
+        state.videoBlobs[q.num] = null;
         playbackVideo.style.display = 'none';
         liveVideo.style.display = 'block';
         btnRetake.style.display = 'none';
@@ -429,11 +497,11 @@ export function renderTraining(container) {
         nextBtn.setAttribute('disabled', 'disabled');
       });
 
-      nextBtn.addEventListener('click', () => { state.step = q.num + 1; renderScreen(); });
+      nextBtn.addEventListener('click', () => { if (isLast) goToSummary(false); else { state.step = q.num + 1; renderScreen(); } });
 
       return el('div', {}, [
         el('p', { class: 'quiz-question' }, q.label),
-        el('p', { class: 'quiz-hint' }, q.hint),
+        q.hint ? el('p', { class: 'quiz-hint' }, q.hint) : null,
         stage,
         controls,
         el('div', { class: 'navrow', style: 'margin-top: 0.5rem; display: flex; gap: 0.6rem;' }, [backBtn, nextBtn]),
@@ -448,7 +516,8 @@ export function renderTraining(container) {
       QUESTIONS.forEach((q) => {
         const block = el('div', { class: 'quiz-summary-block' }, [el('div', { class: 'field-label' }, `Question ${q.num} — ${q.label}`)]);
         if (q.video) {
-          block.appendChild(el('p', { style: 'margin: 0.4rem 0 0;' }, state.videoBlob ? `✓ Video recorded (${state.recSeconds}s)` : 'No video recorded'));
+          const seconds = state.videoSeconds[q.num] || 0;
+          block.appendChild(el('p', { style: 'margin: 0.4rem 0 0;' }, state.videoBlobs[q.num] ? `✓ Video recorded (${seconds}s)` : 'No video recorded'));
         } else {
           const val = (state.answers[q.key] || '').trim();
           block.appendChild(el('p', { style: 'white-space: pre-wrap; margin: 0.4rem 0 0;' }, val || 'No answer provided'));
@@ -466,25 +535,29 @@ export function renderTraining(container) {
       submitBtn.setAttribute('disabled', 'disabled');
       submitBtn.textContent = 'Submitting…';
       try {
-        let videoUrl = null;
-        if (state.videoBlob) {
-          const fileName = `q3_${Date.now()}_${employee.id}.webm`;
-          const { error: uploadError } = await supabase.storage.from('trainee-videos').upload(fileName, state.videoBlob, { contentType: state.videoBlob.type });
-          if (uploadError) throw new Error(`Could not upload your video (${uploadError.message}).`);
-          const { data: publicUrlData } = supabase.storage.from('trainee-videos').getPublicUrl(fileName);
-          videoUrl = publicUrlData.publicUrl;
+        const answers = { ...state.answers };
+        const videoQuestions = QUESTIONS.filter((q) => q.video);
+        for (const q of videoQuestions) {
+          const blob = state.videoBlobs[q.num];
+          if (blob) {
+            const fileName = `q${q.num}_${Date.now()}_${employee.id}.webm`;
+            // eslint-disable-next-line no-await-in-loop
+            const { error: uploadError } = await supabase.storage.from('trainee-videos').upload(fileName, blob, { contentType: blob.type });
+            if (uploadError) throw new Error(`Could not upload your video for Question ${q.num} (${uploadError.message}).`);
+            const { data: publicUrlData } = supabase.storage.from('trainee-videos').getPublicUrl(fileName);
+            answers[q.key] = { videoUrl: publicUrlData.publicUrl, durationSeconds: state.videoSeconds[q.num] || 0 };
+          } else {
+            answers[q.key] = { videoUrl: null, durationSeconds: 0 };
+          }
         }
         await store.add('trainingSubmissions', {
           employeeId: employee.id,
           name: employee.name,
           submittedAt: new Date().toISOString(),
           timedOut: !!state.timedOut,
-          videoRecorded: !!state.videoBlob,
-          videoDurationSeconds: state.recSeconds,
-          videoUrl,
           tabSwitchCount: state.tabSwitchCount,
           tabAwaySeconds: state.tabAwaySeconds,
-          answers: { ...state.answers },
+          answers,
         });
         showToast('Knowledge check submitted.', 'good');
         showList();
