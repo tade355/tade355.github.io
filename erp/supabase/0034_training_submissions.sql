@@ -10,9 +10,14 @@
 -- that up first — safe to run whether or not that earlier version was
 -- ever applied to this database.
 
-drop policy if exists submissions_anon_insert on submissions;
-drop policy if exists submissions_anon_select on submissions;
-drop table if exists submissions;
+do $$
+begin
+  if to_regclass('public.submissions') is not null then
+    execute 'drop policy if exists submissions_anon_insert on submissions';
+    execute 'drop policy if exists submissions_anon_select on submissions';
+    execute 'drop table submissions';
+  end if;
+end $$;
 
 drop policy if exists trainee_videos_anon_insert on storage.objects;
 drop policy if exists trainee_videos_anon_select on storage.objects;
