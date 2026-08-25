@@ -18,6 +18,14 @@ const QUESTIONS = [
   { num: 5, key: 'a5', label: 'How long is your initial training period, and what happens at the end of it?' },
   { num: 6, key: 'a6', label: 'Give one example of something you should always get approval for before acting, and one example of something you can take initiative on yourself.' },
   { num: 7, key: 'a7', label: "What's one thing from yesterday's reading you found unclear or would like explained further?" },
+  { num: 8, key: 'a8', label: 'In your own words, what does Emagrims Company Limited do, and what industry is it in?' },
+  { num: 9, key: 'a9', label: "What is the Company's core service, and what does its dozer fleet get used for?" },
+  { num: 10, key: 'a10', label: "Who is the Company's Chief Executive Officer?" },
+  { num: 11, key: 'a11', label: "Who is the Company's Executive Director?" },
+  { num: 12, key: 'a12', label: "Where can you find the Company's official page online?" },
+  { num: 13, key: 'a13', label: 'What system does the Company use to run its daily operations, fleet, sales, purchasing, accounting, and HR?' },
+  { num: 14, key: 'a14', label: "Where is the Company's registered office located?" },
+  { num: 15, key: 'a15', label: 'Name one other functional area under the COO\'s Office you might get exposure to during training, besides your immediate desk.' },
 ];
 
 const TOTAL_SECONDS = 20 * 60;
@@ -40,6 +48,9 @@ function viewSubmission(record) {
     build: (modalContainer) => {
       const when = record.submittedAt ? new Date(record.submittedAt).toLocaleString('en-GB') : '—';
       modalContainer.appendChild(el('p', { class: 'section-subtitle' }, `Submitted ${when}${record.timedOut ? ' · timed out before finishing' : ''}`));
+      if (record.tabSwitchCount) {
+        modalContainer.appendChild(el('p', { class: 'section-subtitle', style: 'color: var(--warning);' }, `⚠ Left the tab ${record.tabSwitchCount} time${record.tabSwitchCount === 1 ? '' : 's'} during the check (${record.tabAwaySeconds || 0}s away total). Not proof of anything on its own — worth a look alongside the answers.`));
+      }
       const answers = record.answers || {};
       QUESTIONS.forEach((q) => {
         const block = el('div', { class: 'quiz-summary-block' }, [el('div', { class: 'field-label' }, `Question ${q.num} — ${q.label}`)]);
@@ -143,6 +154,7 @@ export function renderTraining(container) {
         { key: 'submittedAt', label: 'Submitted', render: (r) => (r.submittedAt ? new Date(r.submittedAt).toLocaleString('en-GB') : '—') },
         { key: 'timedOut', label: 'Status', render: (r) => statusPill(r.timedOut ? 'Timed Out' : 'Completed') },
         { key: 'videoRecorded', label: 'Video (Q3)', render: (r) => statusPill(r.videoRecorded ? 'Recorded' : 'Not Recorded') },
+        { key: 'tabSwitchCount', label: 'Left Tab', render: (r) => (r.tabSwitchCount ? `⚠ ${r.tabSwitchCount}×` : '—') },
         {
           key: 'actions',
           label: '',
@@ -187,24 +199,47 @@ export function renderTraining(container) {
     let recording = false;
     let timerInterval = null;
     let recInterval = null;
+    let awayStartTime = null;
 
     const state = {
       step: 'intro',
-      answers: { a1: '', a2: '', a4: '', a5: '', a6: '', a7: '' },
+      answers: { a1: '', a2: '', a4: '', a5: '', a6: '', a7: '', a8: '', a9: '', a10: '', a11: '', a12: '', a13: '', a14: '', a15: '' },
       videoBlob: null,
       recSeconds: 0,
       totalSeconds: TOTAL_SECONDS,
       timedOut: false,
+      tabSwitchCount: 0,
+      tabAwaySeconds: 0,
     };
 
     function stopMediaStream() {
       if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
     }
 
+    // Logged for review, not enforced — this app has no way to lock down
+    // another tab/device or detect AI use. Leaving the tab is a real
+    // (if imperfect) signal a reviewer can weigh alongside the answers
+    // themselves, particularly the unscripted video answer for Q3.
+    function onVisibilityChange() {
+      if (document.visibilityState === 'hidden') {
+        state.tabSwitchCount++;
+        awayStartTime = Date.now();
+      } else if (document.visibilityState === 'visible' && awayStartTime) {
+        state.tabAwaySeconds += Math.round((Date.now() - awayStartTime) / 1000);
+        awayStartTime = null;
+      }
+    }
+
+    function stopTabTracking() {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      awayStartTime = null;
+    }
+
     function cleanup() {
       if (timerInterval) clearInterval(timerInterval);
       if (recInterval) clearInterval(recInterval);
       stopMediaStream();
+      stopTabTracking();
     }
 
     actionSlot.innerHTML = '';
@@ -219,7 +254,7 @@ export function renderTraining(container) {
     function updateTop() {
       top.innerHTML = '';
       if (state.step === 'intro' || state.step === 'summary') return;
-      top.appendChild(el('span', { class: 'quiz-progress' }, `Question ${state.step} of 7`));
+      top.appendChild(el('span', { class: 'quiz-progress' }, `Question ${state.step} of ${QUESTIONS.length}`));
       top.appendChild(el('span', { class: `quiz-timer${state.totalSeconds <= 180 ? ' warn' : ''}` }, fmt(state.totalSeconds)));
     }
 
@@ -243,6 +278,7 @@ export function renderTraining(container) {
       if (recInterval) clearInterval(recInterval);
       const finalize = () => {
         stopMediaStream();
+        stopTabTracking();
         state.timedOut = !!timedOut;
         state.step = 'summary';
         renderScreen();
@@ -271,13 +307,13 @@ export function renderTraining(container) {
       return el('div', {}, [
         el('p', { class: 'section-subtitle' }, `Signed in as ${employee.name}`),
         el('h3', { class: 'subsection-title', style: 'margin-top: 0.75rem;' }, "Let's see what stuck from Day 1."),
-        el('p', {}, 'Seven short questions on the Manual and your Training Plan. One of them asks for a short recorded answer instead of typed text. Answer in your own words — this isn’t about perfect phrasing, it’s about whether it makes sense to you.'),
+        el('p', {}, `${QUESTIONS.length} short questions on the Company, the Manual, and your Training Plan. One of them asks for a short recorded answer instead of typed text. Answer in your own words — this isn’t about perfect phrasing, it’s about whether it makes sense to you.`),
         el('ul', { class: 'quiz-notice' }, [
           el('li', {}, [el('strong', {}, '20 minutes'), ', once you start. The clock keeps running even if you switch tabs.']),
           el('li', {}, [el('strong', {}, 'Question 3'), ' needs your camera and microphone — you’ll be asked for permission when you reach it.']),
           el('li', {}, 'Everything saves automatically when you finish — your written answers and your video.'),
         ]),
-        el('button', { class: 'btn btn-primary', type: 'button', onClick: () => { state.step = 1; startTimer(); renderScreen(); } }, 'Begin'),
+        el('button', { class: 'btn btn-primary', type: 'button', onClick: () => { state.step = 1; startTimer(); document.addEventListener('visibilitychange', onVisibilityChange); renderScreen(); } }, 'Begin'),
       ]);
     }
 
@@ -286,7 +322,7 @@ export function renderTraining(container) {
       textarea.value = state.answers[q.key] || '';
       textarea.addEventListener('input', () => { state.answers[q.key] = textarea.value; });
 
-      const isLast = q.num === 7;
+      const isLast = q.num === QUESTIONS.length;
       const nextBtn = el('button', {
         class: 'btn btn-primary',
         type: 'button',
@@ -446,6 +482,8 @@ export function renderTraining(container) {
           videoRecorded: !!state.videoBlob,
           videoDurationSeconds: state.recSeconds,
           videoUrl,
+          tabSwitchCount: state.tabSwitchCount,
+          tabAwaySeconds: state.tabAwaySeconds,
           answers: { ...state.answers },
         });
         showToast('Knowledge check submitted.', 'good');
