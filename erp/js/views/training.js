@@ -9,7 +9,7 @@ const QUESTIONS = [
     num: 1,
     key: 'a1',
     video: true,
-    label: "Where does the COO's Office sit in Emagrims' structure, and who does the COO report to?",
+    label: 'Describe Emagrims Company Limited\'s overall structure — who leads the Company, and how is it organized?',
   },
   {
     num: 2,
@@ -35,12 +35,12 @@ const QUESTIONS = [
   { num: 7, key: 'a7', label: "What's one thing from yesterday's reading you found unclear or would like explained further?" },
   { num: 8, key: 'a8', label: 'In your own words, what does Emagrims Company Limited do, and what industry is it in?' },
   { num: 9, key: 'a9', label: "What is the Company's core service, and what does its dozer fleet get used for?" },
-  { num: 10, key: 'a10', label: "Who is the Company's Chief Executive Officer?" },
+  { num: 10, key: 'a10', label: "Who is the Company's Chief Executive Officer, and what is the CEO's role in the Company?" },
   { num: 11, key: 'a11', label: "Who is the Company's Executive Director?" },
   { num: 12, key: 'a12', label: "Where can you find the Company's official page online?" },
   { num: 13, key: 'a13', label: 'What system does the Company use to run its daily operations, fleet, sales, purchasing, accounting, and HR?' },
   { num: 14, key: 'a14', label: "Where is the Company's registered office located?" },
-  { num: 15, key: 'a15', label: "Name one other functional area under the COO's Office you might get exposure to during training, besides your immediate desk." },
+  { num: 15, key: 'a15', label: 'Name one other functional area within the Company you might get exposure to during training, besides your immediate desk.' },
 ];
 
 const TOTAL_SECONDS = 20 * 60;
