@@ -12,10 +12,11 @@ import { ICONS } from './icons.js';
 //
 // Approvals lives inside Fund Requests, Fuel Credit inside Purchasing &
 // Suppliers, Dozer Economics inside Fleet Management, Weekly Report and
-// Profitability inside Projects, Payroll / Operator Allowance inside HR &
-// Employees, and Diesel Management / Bulldozer Parts & Supplies / Dozer
-// Rent Payments / Lubricants & Consumables inside Resource Management —
-// all as tabs, not routes. See each view file's own tab bar for those.
+// Profitability inside Projects, Payroll / Operator Allowance / Day 1
+// Knowledge Check inside HR & Employees, and Diesel Management / Bulldozer
+// Parts & Supplies / Dozer Rent Payments / Lubricants & Consumables inside
+// Resource Management — all as tabs, not routes. See each view file's own
+// tab bar for those.
 export const ROUTES = [
   // Overview
   { path: 'dashboard', label: 'Dashboard', icon: ICONS.dashboard, load: () => import('./views/dashboard.js').then((m) => m.renderDashboard), tiers: ['Admin', 'Accounts'] },

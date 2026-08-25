@@ -6,6 +6,7 @@ import { printStaffMemo } from '../print.js';
 import { getCurrentUserId } from '../session.js';
 import { renderPayroll } from './payroll.js';
 import { renderDozerPayroll } from './dozerPayroll.js';
+import { renderKnowledgeCheck } from './knowledgeCheck.js';
 
 const MEMO_TYPES = ['Memo', 'Notice', 'Warning Letter', 'Query Letter', 'Commendation Letter', 'Confirmation Letter', 'Other'];
 
@@ -125,15 +126,17 @@ export function renderHR(container) {
   const assetsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('assets') }, 'Assets Tracker');
   const payrollTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('payroll') }, 'Payroll');
   const operatorAllowanceTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('operatorAllowance') }, 'Operator Allowance');
+  const knowledgeCheckTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('knowledgeCheck') }, 'Day 1 Knowledge Check');
   tabBar.appendChild(employeesTabBtn);
   tabBar.appendChild(memosTabBtn);
   tabBar.appendChild(queryCommendTabBtn);
   tabBar.appendChild(assetsTabBtn);
   tabBar.appendChild(payrollTabBtn);
   tabBar.appendChild(operatorAllowanceTabBtn);
+  tabBar.appendChild(knowledgeCheckTabBtn);
 
   const actionSlot = el('div');
-  container.appendChild(sectionHeader('HR & Employees', 'Staff records, roles, memos/notices, payroll, and operator allowance', actionSlot));
+  container.appendChild(sectionHeader('HR & Employees', 'Staff records, roles, memos/notices, payroll, operator allowance, and the Day 1 onboarding quiz', actionSlot));
   container.appendChild(tabBar);
 
   const body = el('div');
@@ -147,12 +150,14 @@ export function renderHR(container) {
     assetsTabBtn.classList.toggle('active', tab === 'assets');
     payrollTabBtn.classList.toggle('active', tab === 'payroll');
     operatorAllowanceTabBtn.classList.toggle('active', tab === 'operatorAllowance');
+    knowledgeCheckTabBtn.classList.toggle('active', tab === 'knowledgeCheck');
     if (tab === 'employees') renderEmployeesTab();
     else if (tab === 'memos') renderMemosTab();
     else if (tab === 'queryCommend') renderQueryCommendTab();
     else if (tab === 'assets') renderAssetsTab();
     else if (tab === 'payroll') renderPayrollTab();
-    else renderOperatorAllowanceTab();
+    else if (tab === 'operatorAllowance') renderOperatorAllowanceTab();
+    else renderKnowledgeCheckTab();
   }
 
   function renderPayrollTab() {
@@ -165,6 +170,12 @@ export function renderHR(container) {
     actionSlot.innerHTML = '';
     body.innerHTML = '';
     renderDozerPayroll(body);
+  }
+
+  function renderKnowledgeCheckTab() {
+    actionSlot.innerHTML = '';
+    body.innerHTML = '';
+    renderKnowledgeCheck(body);
   }
 
   function renderEmployeesTab() {
