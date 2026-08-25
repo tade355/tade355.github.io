@@ -41,6 +41,14 @@ const CONFIG = {
   invoicePayments: { table: 'invoice_payments', prefix: 'IVP' },
   loans: { table: 'loans', prefix: 'LN' },
   loanRepayments: { table: 'loan_repayments', prefix: 'LNR' },
+  // video_url only ever holds a Supabase Storage link (see training.js) —
+  // the recording itself lives in the trainee-videos bucket, not this row,
+  // so refreshAll()'s eager select('*') stays cheap like every other
+  // collection instead of pulling megabytes of video through the app.
+  trainingSubmissions: { table: 'training_submissions', prefix: 'TRN' },
+  // manual_url/plan_url/syllabus_url are training-materials Storage links,
+  // same reasoning as video_url above.
+  trainingPrograms: { table: 'training_programs', prefix: 'PRG' },
 };
 
 const COLLECTIONS = Object.keys(CONFIG);

@@ -6,11 +6,16 @@ import { printStaffMemo } from '../print.js';
 import { getCurrentUserId } from '../session.js';
 import { renderPayroll } from './payroll.js';
 import { renderDozerPayroll } from './dozerPayroll.js';
+import { renderTrainingPrograms } from './trainingPrograms.js';
 
 const MEMO_TYPES = ['Memo', 'Notice', 'Warning Letter', 'Query Letter', 'Commendation Letter', 'Confirmation Letter', 'Other'];
 
 function projectOptions() {
   return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
+}
+
+function trainingProgramOptions() {
+  return store.get('trainingPrograms').map((p) => ({ value: p.id, label: p.name }));
 }
 
 function employeeOptions() {
@@ -47,6 +52,10 @@ function fields() {
     { name: 'assignedProject', label: 'Assigned Project (Supervisors only — restricts what they see)', type: 'select', options: [
       { value: '', label: '— All projects —' },
       ...projectOptions(),
+    ] },
+    { name: 'trainingProgramId', label: 'Training Currently Administered — what shows on their Training tab', type: 'select', options: [
+      { value: '', label: '— None —' },
+      ...trainingProgramOptions(),
     ] },
   ];
 }
@@ -125,15 +134,17 @@ export function renderHR(container) {
   const assetsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('assets') }, 'Assets Tracker');
   const payrollTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('payroll') }, 'Payroll');
   const operatorAllowanceTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('operatorAllowance') }, 'Operator Allowance');
+  const trainingProgramsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('trainingPrograms') }, 'Training Programs');
   tabBar.appendChild(employeesTabBtn);
   tabBar.appendChild(memosTabBtn);
   tabBar.appendChild(queryCommendTabBtn);
   tabBar.appendChild(assetsTabBtn);
   tabBar.appendChild(payrollTabBtn);
   tabBar.appendChild(operatorAllowanceTabBtn);
+  tabBar.appendChild(trainingProgramsTabBtn);
 
   const actionSlot = el('div');
-  container.appendChild(sectionHeader('HR & Employees', 'Staff records, roles, memos/notices, payroll, and operator allowance', actionSlot));
+  container.appendChild(sectionHeader('HR & Employees', 'Staff records, roles, memos/notices, payroll, operator allowance, and training programs', actionSlot));
   container.appendChild(tabBar);
 
   const body = el('div');
@@ -147,18 +158,26 @@ export function renderHR(container) {
     assetsTabBtn.classList.toggle('active', tab === 'assets');
     payrollTabBtn.classList.toggle('active', tab === 'payroll');
     operatorAllowanceTabBtn.classList.toggle('active', tab === 'operatorAllowance');
+    trainingProgramsTabBtn.classList.toggle('active', tab === 'trainingPrograms');
     if (tab === 'employees') renderEmployeesTab();
     else if (tab === 'memos') renderMemosTab();
     else if (tab === 'queryCommend') renderQueryCommendTab();
     else if (tab === 'assets') renderAssetsTab();
     else if (tab === 'payroll') renderPayrollTab();
-    else renderOperatorAllowanceTab();
+    else if (tab === 'operatorAllowance') renderOperatorAllowanceTab();
+    else renderTrainingProgramsTab();
   }
 
   function renderPayrollTab() {
     actionSlot.innerHTML = '';
     body.innerHTML = '';
     renderPayroll(body);
+  }
+
+  function renderTrainingProgramsTab() {
+    actionSlot.innerHTML = '';
+    body.innerHTML = '';
+    renderTrainingPrograms(body);
   }
 
   function renderOperatorAllowanceTab() {

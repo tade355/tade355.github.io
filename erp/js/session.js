@@ -73,3 +73,18 @@ export function filterLeaveRequests(rows) {
   const userId = getCurrentUserId();
   return rows.filter((r) => r.employeeId === userId);
 }
+
+// Training submissions: same visibility rule as leave requests — Admin/Accounts
+// see everyone, a Supervisor sees their project's staff, Staff see only their own.
+export function filterTrainingSubmissions(rows) {
+  const tier = getCurrentTier();
+  if (tier === 'Admin' || tier === 'Accounts') return rows;
+  if (tier === 'Supervisor') {
+    const project = getAssignedProject();
+    if (!project) return rows;
+    const employees = store.get('employees');
+    return rows.filter((r) => employees.find((e) => e.id === r.employeeId)?.assignedProject === project);
+  }
+  const userId = getCurrentUserId();
+  return rows.filter((r) => r.employeeId === userId);
+}
