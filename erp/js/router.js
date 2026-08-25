@@ -12,11 +12,10 @@ import { ICONS } from './icons.js';
 //
 // Approvals lives inside Fund Requests, Fuel Credit inside Purchasing &
 // Suppliers, Dozer Economics inside Fleet Management, Weekly Report and
-// Profitability inside Projects, Payroll / Operator Allowance / Day 1
-// Knowledge Check inside HR & Employees, and Diesel Management / Bulldozer
-// Parts & Supplies / Dozer Rent Payments / Lubricants & Consumables inside
-// Resource Management — all as tabs, not routes. See each view file's own
-// tab bar for those.
+// Profitability inside Projects, Payroll / Operator Allowance inside HR &
+// Employees, and Diesel Management / Bulldozer Parts & Supplies / Dozer
+// Rent Payments / Lubricants & Consumables inside Resource Management —
+// all as tabs, not routes. See each view file's own tab bar for those.
 export const ROUTES = [
   // Overview
   { path: 'dashboard', label: 'Dashboard', icon: ICONS.dashboard, load: () => import('./views/dashboard.js').then((m) => m.renderDashboard), tiers: ['Admin', 'Accounts'] },
@@ -36,6 +35,7 @@ export const ROUTES = [
   { path: 'hr', label: 'HR & Employees', icon: ICONS.users, load: () => import('./views/hr.js').then((m) => m.renderHR), tiers: ['Admin'] },
   { path: 'leave', label: 'Leave & Attendance', icon: ICONS.clock, load: () => import('./views/leaveAttendance.js').then((m) => m.renderLeaveAttendance), tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   { path: 'mySalary', label: 'My Salary', icon: ICONS.banknote, load: () => import('./views/mySalary.js').then((m) => m.renderMySalary), tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
+  { path: 'training', label: 'Day 1 Knowledge Check', icon: ICONS.checkCircle, load: () => import('./views/training.js').then((m) => m.renderTraining), tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   // System
   { path: 'backup', label: 'Backup & Data', icon: ICONS.database, load: () => import('./views/backup.js').then((m) => m.renderBackup), tiers: ['Admin'] },
 ];

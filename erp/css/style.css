@@ -1141,4 +1141,40 @@ button { font-family: inherit; }
   text-decoration: none;
   color: var(--text-primary);
 }
+
+/* Training — Day 1 Knowledge Check question flow */
+.quiz-top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
+.quiz-progress { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.quiz-timer { font-size: 1.3rem; font-weight: 300; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+.quiz-timer.warn { color: var(--critical); font-weight: 700; }
+.quiz-question { font-size: 1.2rem; margin: 0 0 0.6rem; }
+.quiz-hint { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem; line-height: 1.5; }
+.quiz-notice { margin: 1.25rem 0; padding: 1rem 1.2rem; background: var(--page-plane); border-left: 3px solid var(--brand); border-radius: var(--radius-md); }
+.quiz-notice li { margin-bottom: 0.4rem; font-size: 0.9rem; }
+.quiz-notice li:last-child { margin-bottom: 0; }
+.quiz-video-stage {
+  background: var(--brand-dark); border-radius: var(--radius-md);
+  aspect-ratio: 4 / 3; max-height: 340px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden; margin-bottom: 1rem;
+}
+.quiz-video-stage video { width: 100%; height: 100%; object-fit: cover; }
+.quiz-video-placeholder { color: rgba(255, 255, 255, 0.6); font-size: 0.8rem; text-align: center; padding: 1.5rem; }
+.quiz-rec-indicator {
+  position: absolute; top: 0.85rem; left: 0.85rem;
+  display: none; align-items: center; gap: 0.4rem;
+  background: rgba(0, 0, 0, 0.55); padding: 0.35rem 0.7rem 0.35rem 0.5rem; border-radius: 20px;
+  color: #fff; font-size: 0.75rem; letter-spacing: 0.04em;
+}
+.quiz-rec-indicator.on { display: flex; }
+.quiz-rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--critical); animation: quiz-pulse 1.2s infinite; }
+@keyframes quiz-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.quiz-rec-clock {
+  position: absolute; top: 0.85rem; right: 0.85rem;
+  color: #fff; font-size: 0.78rem; background: rgba(0, 0, 0, 0.55);
+  padding: 0.35rem 0.6rem; border-radius: 20px; font-variant-numeric: tabular-nums;
+}
+.quiz-controls { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.quiz-summary-block { margin-bottom: 1.3rem; padding-bottom: 1.1rem; border-bottom: 1px solid var(--border); }
+.quiz-summary-block:last-child { border-bottom: none; }
 .notice-attachment-file:hover { background: var(--page-plane); }
