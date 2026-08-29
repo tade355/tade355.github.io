@@ -956,6 +956,46 @@ export function printProfitabilityReport(stats, { from, to, projectLabel } = {})
   render(html);
 }
 
+// Day-by-day fuel credit statement for one station: a single Brought
+// Forward line (every collection/payment before the period, netted to one
+// opening balance), then one row per day with activity in the period —
+// Diesel/PMS litres collected, amount collected, amount paid, and the
+// running balance after that day — ending in the Outstanding Balance.
+// A day whose only "collection" is a ledger adjustment (opening-balance or
+// gap-fill entry, not a real fuel pickup) shows as "Balance Adjustment"
+// rather than a nonsensical "1 L".
+export function printFuelCreditStatement(station, { broughtForward, rows, closingBalance }, { from, to }) {
+  const periodLabel = `${formatDate(from)} – ${formatDate(to)}`;
+  const html = `
+    ${letterhead('FUEL CREDIT STATEMENT', station)}
+    <div class="print-meta-grid">
+      <div><strong>Station:</strong> ${station}</div>
+      <div><strong>Period:</strong> ${periodLabel}</div>
+    </div>
+    <table class="print-table">
+      <thead><tr><th>Date</th><th>Diesel</th><th>PMS</th><th>Collected</th><th>Paid</th><th>Balance</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Brought Forward</strong></td><td>—</td><td>—</td><td>—</td><td>—</td><td><strong>${formatCurrency(broughtForward)}</strong></td></tr>
+        ${rows.length ? rows.map((r) => `
+          <tr>
+            <td>${formatDate(r.date)}</td>
+            <td>${r.isAdjustment ? '—' : (r.dieselLitres ? `${r.dieselLitres.toLocaleString()} L` : '—')}</td>
+            <td>${r.isAdjustment ? '—' : (r.pmsLitres ? `${r.pmsLitres.toLocaleString()} L` : '—')}</td>
+            <td>${r.isAdjustment ? `${formatCurrency(r.collectedAmount)} (Balance Adjustment)` : (r.collectedAmount ? formatCurrency(r.collectedAmount) : '—')}</td>
+            <td>${r.paidAmount ? formatCurrency(r.paidAmount) : '—'}</td>
+            <td>${formatCurrency(r.runningBalance)}</td>
+          </tr>
+        `).join('') : '<tr><td colspan="6">No collections or payments in this period.</td></tr>'}
+      </tbody>
+      <tfoot><tr><td colspan="5">Outstanding Balance</td><td>${formatCurrency(closingBalance)}</td></tr></tfoot>
+    </table>
+    <div class="print-block">
+      <p>Brought Forward is every collection and payment on record for this station dated before the period, netted to one opening balance. Balance is a running total (collected minus paid), carried forward day by day.</p>
+    </div>
+  `;
+  render(html);
+}
+
 export function printStaffMemo(memo, { employeeName, issuedByName }) {
   const html = `
     ${letterhead(memo.type.toUpperCase(), memo.id)}
