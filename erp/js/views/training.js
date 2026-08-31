@@ -4,7 +4,7 @@ import { el } from '../utils.js';
 import { renderTable, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, showToast } from '../ui.js';
 import { getCurrentUser, getCurrentUserId, getCurrentTier, filterTrainingSubmissions } from '../session.js';
 
-const QUESTIONS = [
+const DAY1_QUESTIONS = [
   {
     num: 1,
     key: 'a1',
@@ -43,6 +43,68 @@ const QUESTIONS = [
   { num: 15, key: 'a15', label: 'Name one other functional area within the Company you might get exposure to during training, besides your immediate desk.' },
 ];
 
+// Built from the Session 1 lesson deck ("Foundations of Executive &
+// Management Support") delivered Saturday — same question count and
+// video/text mix as the Day 1 check for consistency.
+const SESSION1_QUESTIONS = [
+  {
+    num: 1,
+    key: 'a1',
+    video: true,
+    label: 'In your own words, what is the core purpose of your role as covered in this session — what is it meant to do for the executive?',
+  },
+  { num: 2, key: 'a2', label: 'Name the three core functions of the role from Part One, and briefly describe one of them.' },
+  {
+    num: 3,
+    key: 'a3',
+    video: true,
+    label: 'What is "the mindset shift" the session describes, and how should it change the way you handle a task compared to just waiting to be told?',
+  },
+  { num: 4, key: 'a4', label: 'The session used a meeting-conflict example to illustrate the mindset shift. Describe it — what\'s the less useful response, and what\'s the better one?' },
+  {
+    num: 5,
+    key: 'a5',
+    video: true,
+    label: 'The session calls one attribute "the single most important trait in this role." Which one, and why?',
+  },
+  { num: 6, key: 'a6', label: 'Besides that trait, name the other two of "The Big Three" attributes.' },
+  { num: 7, key: 'a7', label: 'Name the "Two More That Matter" attributes covered after The Big Three.' },
+  { num: 8, key: 'a8', label: 'What is the difference between being busy and being useful, according to this session?' },
+  { num: 9, key: 'a9', label: 'Give the example the session used to show "bringing the solution" instead of just flagging a problem.' },
+  {
+    num: 10,
+    key: 'a10',
+    video: true,
+    label: 'Explain "Ownership, Not Compliance" — what\'s the difference between "I did what I was told" and taking real ownership?',
+  },
+  { num: 11, key: 'a11', label: 'What does "Confidentiality as Identity" mean, as opposed to just following a policy?' },
+  { num: 12, key: 'a12', label: 'Name at least three of the five Soft Skills to Build from this session.' },
+  { num: 13, key: 'a13', label: 'Name at least three of the five Hard Skills to Build from this session.' },
+  { num: 14, key: 'a14', label: 'Why does the session say early mistakes are expected? What actually matters instead?' },
+  { num: 15, key: 'a15', label: "What's the closing message of the session — what should you try to be?" },
+];
+
+const QUIZZES = [
+  {
+    id: 'day1',
+    name: 'Day 1 Knowledge Check',
+    intro: "Let's see what stuck from Day 1.",
+    description: 'On the Company, the Manual, and your Training Plan.',
+    questions: DAY1_QUESTIONS,
+  },
+  {
+    id: 'session1',
+    name: 'Session 1: Foundations of Executive & Management Support',
+    intro: "Let's see what stuck from Saturday's session.",
+    description: 'On the role, attributes, and skills covered in the Session 1 lesson.',
+    questions: SESSION1_QUESTIONS,
+  },
+];
+
+function quizById(id) {
+  return QUIZZES.find((q) => q.id === id) || QUIZZES[0];
+}
+
 const TOTAL_SECONDS = 20 * 60;
 const MAX_REC_SECONDS = 180;
 
@@ -56,21 +118,23 @@ function employeeName(id) {
   return store.get('employees').find((e) => e.id === id)?.name || 'Unknown';
 }
 
-function recordedVideoCount(record) {
+function recordedVideoCount(record, questions) {
   const answers = record.answers || {};
-  return QUESTIONS.filter((q) => q.video && answers[q.key]?.videoUrl).length;
+  return questions.filter((q) => q.video && answers[q.key]?.videoUrl).length;
 }
 
 function viewSubmission(record, refresh) {
-  const videoQuestionCount = QUESTIONS.filter((q) => q.video).length;
+  const quiz = quizById(record.quizId);
+  const questions = quiz.questions;
+  const videoQuestionCount = questions.filter((q) => q.video).length;
   const tier = getCurrentTier();
   const canGrade = tier === 'Admin' || tier === 'Accounts' || tier === 'Supervisor';
   openCustomModal({
-    title: employeeName(record.employeeId),
+    title: `${employeeName(record.employeeId)} — ${quiz.name}`,
     wide: true,
     build: (modalContainer) => {
       const when = record.submittedAt ? new Date(record.submittedAt).toLocaleString('en-GB') : '—';
-      modalContainer.appendChild(el('p', { class: 'section-subtitle' }, `Submitted ${when}${record.timedOut ? ' · timed out before finishing' : ''} · ${recordedVideoCount(record)}/${videoQuestionCount} video answers recorded`));
+      modalContainer.appendChild(el('p', { class: 'section-subtitle' }, `Submitted ${when}${record.timedOut ? ' · timed out before finishing' : ''} · ${recordedVideoCount(record, questions)}/${videoQuestionCount} video answers recorded`));
       if (record.tabSwitchCount) {
         modalContainer.appendChild(el('p', { class: 'section-subtitle', style: 'color: var(--warning);' }, `⚠ Left the tab ${record.tabSwitchCount} time${record.tabSwitchCount === 1 ? '' : 's'} during the check (${record.tabAwaySeconds || 0}s away total). Not proof of anything on its own — worth a look alongside the answers.`));
       }
@@ -78,13 +142,13 @@ function viewSubmission(record, refresh) {
         modalContainer.appendChild(el('div', { class: 'quiz-summary-block' }, [
           el('div', { class: 'field-label' }, 'Score'),
           el('div', { style: 'margin-top: 0.4rem; display: flex; align-items: center; gap: 0.5rem;' }, [
-            record.score != null ? el('strong', {}, `${record.score}/${QUESTIONS.length}`) : null,
+            record.score != null ? el('strong', {}, `${record.score}/${questions.length}`) : null,
             record.outcome ? statusPill(record.outcome) : null,
           ]),
         ]));
       }
       const answers = record.answers || {};
-      QUESTIONS.forEach((q) => {
+      questions.forEach((q) => {
         const block = el('div', { class: 'quiz-summary-block' }, [el('div', { class: 'field-label' }, `Question ${q.num} — ${q.label}`)]);
         if (q.video) {
           const videoUrl = answers[q.key]?.videoUrl;
@@ -108,7 +172,7 @@ function viewSubmission(record, refresh) {
         modalContainer.appendChild(el('p', { class: 'section-subtitle' }, `Last graded ${new Date(record.gradedAt).toLocaleString('en-GB')}${record.gradedBy ? ` by ${employeeName(record.gradedBy)}` : ''}`));
       }
 
-      const scoreInput = el('input', { type: 'number', min: '0', max: String(QUESTIONS.length), style: 'width: 6rem;' });
+      const scoreInput = el('input', { type: 'number', min: '0', max: String(questions.length), style: 'width: 6rem;' });
       scoreInput.value = record.score ?? '';
       const outcomeSelect = el('select', {}, [
         el('option', { value: '' }, '— Not set —'),
@@ -143,7 +207,7 @@ function viewSubmission(record, refresh) {
       });
 
       modalContainer.appendChild(el('div', { class: 'form-grid-2', style: 'margin-top: 0.5rem;' }, [
-        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, `Score (out of ${QUESTIONS.length})`), scoreInput]),
+        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, `Score (out of ${questions.length})`), scoreInput]),
         el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Outcome'), outcomeSelect]),
       ]));
       modalContainer.appendChild(el('label', { class: 'field', style: 'margin-top: 0.5rem;' }, [el('span', { class: 'field-label' }, 'Notes'), notesTextarea]));
@@ -158,7 +222,7 @@ export function renderTraining(container) {
   const actionSlot = el('div');
   container.appendChild(sectionHeader(
     'Training',
-    'Your assigned training program\'s materials, and its Day 1 Knowledge Check.',
+    'Your assigned training program\'s materials, and its knowledge checks.',
     actionSlot,
   ));
 
@@ -199,14 +263,25 @@ export function renderTraining(container) {
     programPanel.appendChild(docBlock('Manual', program.manual));
     programPanel.appendChild(docBlock('Training Plan', program.plan));
     programPanel.appendChild(docBlock('Training Syllabus', program.syllabus));
+
+    programPanel.appendChild(el('h3', { class: 'subsection-title' }, 'Knowledge Checks'));
+    QUIZZES.forEach((quiz) => {
+      programPanel.appendChild(el('div', {
+        class: 'quiz-summary-block',
+        style: 'display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;',
+      }, [
+        el('div', {}, [
+          el('div', { class: 'field-label' }, quiz.name),
+          quiz.description ? el('p', { style: 'margin: 0.3rem 0 0; color: var(--text-secondary); font-size: 0.85rem;' }, quiz.description) : null,
+        ]),
+        el('button', { class: 'btn btn-primary', type: 'button', onClick: () => showQuiz(quiz.id) }, 'Take the Check'),
+      ]));
+    });
   }
 
   function showList() {
     renderProgramPanel();
     actionSlot.innerHTML = '';
-    if (currentProgram()) {
-      actionSlot.appendChild(el('button', { class: 'btn btn-primary', type: 'button', onClick: () => showQuiz() }, '+ Take the Check'));
-    }
     renderListBody();
   }
 
@@ -230,20 +305,22 @@ export function renderTraining(container) {
     body.appendChild(tableContainer);
     const tier = getCurrentTier();
     const canGrade = tier === 'Admin' || tier === 'Accounts' || tier === 'Supervisor';
-    const videoQuestionCount = QUESTIONS.filter((q) => q.video).length;
     renderTable(tableContainer, {
       columns: [
         { key: 'employeeId', label: 'Employee', render: (r) => employeeName(r.employeeId) },
+        { key: 'quizId', label: 'Quiz', render: (r) => quizById(r.quizId).name },
         { key: 'submittedAt', label: 'Submitted', render: (r) => (r.submittedAt ? new Date(r.submittedAt).toLocaleString('en-GB') : '—') },
         { key: 'timedOut', label: 'Status', render: (r) => statusPill(r.timedOut ? 'Timed Out' : 'Completed') },
         {
           key: 'videos',
           label: 'Videos',
           render: (r) => {
-            const n = recordedVideoCount(r);
-            if (n === videoQuestionCount) return statusPill('Recorded');
+            const questions = quizById(r.quizId).questions;
+            const total = questions.filter((q) => q.video).length;
+            const n = recordedVideoCount(r, questions);
+            if (n === total) return statusPill('Recorded');
             if (n === 0) return statusPill('Not Recorded');
-            return statusPill(`${n}/${videoQuestionCount}`);
+            return statusPill(`${n}/${total}`);
           },
         },
         { key: 'tabSwitchCount', label: 'Left Tab', render: (r) => (r.tabSwitchCount ? `⚠ ${r.tabSwitchCount}×` : '—') },
@@ -251,7 +328,7 @@ export function renderTraining(container) {
           key: 'score',
           label: 'Score',
           render: (r) => (r.score == null && !r.outcome ? '—' : el('span', { style: 'display: inline-flex; align-items: center; gap: 0.4rem;' }, [
-            r.score != null ? `${r.score}/${QUESTIONS.length}` : null,
+            r.score != null ? `${r.score}/${quizById(r.quizId).questions.length}` : null,
             r.outcome ? statusPill(r.outcome) : null,
           ])),
         },
@@ -276,17 +353,19 @@ export function renderTraining(container) {
             }, '🗑'),
           ]),
         },
-      ].filter(Boolean),
+      ],
       rows,
       emptyText: canGrade
         ? 'No submissions yet.'
-        : (currentProgram() ? 'You haven’t taken the check yet — click "Take the Check" above to begin.' : 'Nothing to show yet.'),
+        : (currentProgram() ? 'You haven’t taken a check yet — pick one above to begin.' : 'Nothing to show yet.'),
     });
   }
 
   // ---------------- Quiz-taking flow ----------------
 
-  function showQuiz() {
+  function showQuiz(quizId) {
+    const quiz = quizById(quizId);
+    const questions = quiz.questions;
     const employee = getCurrentUser();
     if (!employee) {
       window.alert('No employee record is linked to this login. Contact an admin before taking the check.');
@@ -303,7 +382,7 @@ export function renderTraining(container) {
 
     const state = {
       step: 'intro',
-      answers: Object.fromEntries(QUESTIONS.filter((q) => !q.video).map((q) => [q.key, ''])),
+      answers: Object.fromEntries(questions.filter((q) => !q.video).map((q) => [q.key, ''])),
       videoBlobs: {},
       videoSeconds: {},
       totalSeconds: TOTAL_SECONDS,
@@ -354,7 +433,7 @@ export function renderTraining(container) {
     function updateTop() {
       top.innerHTML = '';
       if (state.step === 'intro' || state.step === 'summary') return;
-      top.appendChild(el('span', { class: 'quiz-progress' }, `Question ${state.step} of ${QUESTIONS.length}`));
+      top.appendChild(el('span', { class: 'quiz-progress' }, `Question ${state.step} of ${questions.length}`));
       top.appendChild(el('span', { class: `quiz-timer${state.totalSeconds <= 180 ? ' warn' : ''}` }, fmt(state.totalSeconds)));
     }
 
@@ -398,14 +477,14 @@ export function renderTraining(container) {
       if (state.step === 'intro') screen.appendChild(renderIntro());
       else if (state.step === 'summary') screen.appendChild(renderSummary());
       else {
-        const q = QUESTIONS.find((qq) => qq.num === state.step);
+        const q = questions.find((qq) => qq.num === state.step);
         screen.appendChild(q.video ? renderVideoQuestion(q) : renderTextQuestion(q));
       }
     }
 
     function renderIntro() {
-      const videoCount = QUESTIONS.filter((q) => q.video).length;
-      const textCount = QUESTIONS.length - videoCount;
+      const videoCount = questions.filter((q) => q.video).length;
+      const textCount = questions.length - videoCount;
 
       const agreeCheckbox = el('input', { type: 'checkbox', id: 'quiz-agree' });
       const beginBtn = el('button', { class: 'btn btn-primary', type: 'button', disabled: 'disabled' }, 'Begin');
@@ -422,8 +501,8 @@ export function renderTraining(container) {
 
       return el('div', {}, [
         el('p', { class: 'section-subtitle' }, `Signed in as ${employee.name}`),
-        el('h3', { class: 'subsection-title', style: 'margin-top: 0.75rem;' }, "Let's see what stuck from Day 1."),
-        el('p', {}, `${QUESTIONS.length} short questions on the Company, the Manual, and your Training Plan — ${textCount} written, ${videoCount} recorded on camera.`),
+        el('h3', { class: 'subsection-title', style: 'margin-top: 0.75rem;' }, quiz.intro),
+        el('p', {}, `${questions.length} short questions${quiz.description ? ` — ${quiz.description}` : ''} — ${textCount} written, ${videoCount} recorded on camera.`),
 
         el('h4', { style: 'margin: 1.25rem 0 0.4rem; font-size: 0.95rem;' }, 'Format'),
         el('ul', { class: 'quiz-notice' }, [
@@ -455,7 +534,7 @@ export function renderTraining(container) {
       textarea.value = state.answers[q.key] || '';
       textarea.addEventListener('input', () => { state.answers[q.key] = textarea.value; });
 
-      const isLast = q.num === QUESTIONS.length;
+      const isLast = q.num === questions.length;
       const nextBtn = el('button', {
         class: 'btn btn-primary',
         type: 'button',
@@ -485,7 +564,7 @@ export function renderTraining(container) {
       const btnRetake = el('button', { class: 'btn btn-ghost', type: 'button', style: 'display: none;' }, 'Re-record');
       const controls = el('div', { class: 'quiz-controls' }, [btnEnable, btnRecord, btnRetake]);
 
-      const isLast = q.num === QUESTIONS.length;
+      const isLast = q.num === questions.length;
       const nextBtn = el('button', { class: 'btn btn-primary', type: 'button' }, isLast ? 'Finish & Review' : 'Next');
       if (!state.videoBlobs[q.num]) nextBtn.setAttribute('disabled', 'disabled');
       const backBtn = q.num > 1
@@ -581,7 +660,7 @@ export function renderTraining(container) {
       if (state.timedOut) {
         wrap.appendChild(el('div', { class: 'quiz-notice', style: 'border-left-color: var(--critical);' }, 'Time ran out — this is what was captured before the clock hit zero.'));
       }
-      QUESTIONS.forEach((q) => {
+      questions.forEach((q) => {
         const block = el('div', { class: 'quiz-summary-block' }, [el('div', { class: 'field-label' }, `Question ${q.num} — ${q.label}`)]);
         if (q.video) {
           const seconds = state.videoSeconds[q.num] || 0;
@@ -604,11 +683,11 @@ export function renderTraining(container) {
       submitBtn.textContent = 'Submitting…';
       try {
         const answers = { ...state.answers };
-        const videoQuestions = QUESTIONS.filter((q) => q.video);
+        const videoQuestions = questions.filter((q) => q.video);
         for (const q of videoQuestions) {
           const blob = state.videoBlobs[q.num];
           if (blob) {
-            const fileName = `q${q.num}_${Date.now()}_${employee.id}.webm`;
+            const fileName = `${quiz.id}_q${q.num}_${Date.now()}_${employee.id}.webm`;
             // eslint-disable-next-line no-await-in-loop
             const { error: uploadError } = await supabase.storage.from('trainee-videos').upload(fileName, blob, { contentType: blob.type });
             if (uploadError) throw new Error(`Could not upload your video for Question ${q.num} (${uploadError.message}).`);
@@ -621,6 +700,7 @@ export function renderTraining(container) {
         await store.add('trainingSubmissions', {
           employeeId: employee.id,
           name: employee.name,
+          quizId: quiz.id,
           submittedAt: new Date().toISOString(),
           timedOut: !!state.timedOut,
           tabSwitchCount: state.tabSwitchCount,
