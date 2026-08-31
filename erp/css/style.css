@@ -1142,7 +1142,7 @@ button { font-family: inherit; }
   color: var(--text-primary);
 }
 
-/* Training — Day 1 Knowledge Check question flow */
+/* Training — quiz question flow */
 .quiz-top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
 .quiz-progress { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
 .quiz-timer { font-size: 1.3rem; font-weight: 300; font-variant-numeric: tabular-nums; color: var(--text-primary); }

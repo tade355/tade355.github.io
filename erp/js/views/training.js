@@ -45,7 +45,7 @@ const DAY1_QUESTIONS = [
 
 // Built from the Session 1 lesson deck ("Foundations of Executive &
 // Management Support") delivered Saturday — same question count and
-// video/text mix as the Day 1 check for consistency.
+// video/text mix as Quiz 1 for consistency.
 const SESSION1_QUESTIONS = [
   {
     num: 1,
@@ -87,14 +87,14 @@ const SESSION1_QUESTIONS = [
 const QUIZZES = [
   {
     id: 'day1',
-    name: 'Day 1 Knowledge Check',
+    name: 'Quiz 1: Day 1 Knowledge Check',
     intro: "Let's see what stuck from Day 1.",
     description: 'On the Company, the Manual, and your Training Plan.',
     questions: DAY1_QUESTIONS,
   },
   {
     id: 'session1',
-    name: 'Session 1: Foundations of Executive & Management Support',
+    name: 'Quiz 2: Session 1 — Foundations of Executive & Management Support',
     intro: "Let's see what stuck from Saturday's session.",
     description: 'On the role, attributes, and skills covered in the Session 1 lesson.',
     questions: SESSION1_QUESTIONS,
@@ -136,7 +136,7 @@ function viewSubmission(record, refresh) {
       const when = record.submittedAt ? new Date(record.submittedAt).toLocaleString('en-GB') : '—';
       modalContainer.appendChild(el('p', { class: 'section-subtitle' }, `Submitted ${when}${record.timedOut ? ' · timed out before finishing' : ''} · ${recordedVideoCount(record, questions)}/${videoQuestionCount} video answers recorded`));
       if (record.tabSwitchCount) {
-        modalContainer.appendChild(el('p', { class: 'section-subtitle', style: 'color: var(--warning);' }, `⚠ Left the tab ${record.tabSwitchCount} time${record.tabSwitchCount === 1 ? '' : 's'} during the check (${record.tabAwaySeconds || 0}s away total). Not proof of anything on its own — worth a look alongside the answers.`));
+        modalContainer.appendChild(el('p', { class: 'section-subtitle', style: 'color: var(--warning);' }, `⚠ Left the tab ${record.tabSwitchCount} time${record.tabSwitchCount === 1 ? '' : 's'} during the quiz (${record.tabAwaySeconds || 0}s away total). Not proof of anything on its own — worth a look alongside the answers.`));
       }
       if (record.score != null || record.outcome) {
         modalContainer.appendChild(el('div', { class: 'quiz-summary-block' }, [
@@ -222,7 +222,7 @@ export function renderTraining(container) {
   const actionSlot = el('div');
   container.appendChild(sectionHeader(
     'Training',
-    'Your assigned training program\'s materials, and its knowledge checks.',
+    'Your assigned training program\'s materials, and its quizzes.',
     actionSlot,
   ));
 
@@ -264,7 +264,7 @@ export function renderTraining(container) {
     programPanel.appendChild(docBlock('Training Plan', program.plan));
     programPanel.appendChild(docBlock('Training Syllabus', program.syllabus));
 
-    programPanel.appendChild(el('h3', { class: 'subsection-title' }, 'Knowledge Checks'));
+    programPanel.appendChild(el('h3', { class: 'subsection-title' }, 'Quizzes'));
     QUIZZES.forEach((quiz) => {
       programPanel.appendChild(el('div', {
         class: 'quiz-summary-block',
@@ -274,7 +274,7 @@ export function renderTraining(container) {
           el('div', { class: 'field-label' }, quiz.name),
           quiz.description ? el('p', { style: 'margin: 0.3rem 0 0; color: var(--text-secondary); font-size: 0.85rem;' }, quiz.description) : null,
         ]),
-        el('button', { class: 'btn btn-primary', type: 'button', onClick: () => showQuiz(quiz.id) }, 'Take the Check'),
+        el('button', { class: 'btn btn-primary', type: 'button', onClick: () => showQuiz(quiz.id) }, 'Take the Quiz'),
       ]));
     });
   }
@@ -357,7 +357,7 @@ export function renderTraining(container) {
       rows,
       emptyText: canGrade
         ? 'No submissions yet.'
-        : (currentProgram() ? 'You haven’t taken a check yet — pick one above to begin.' : 'Nothing to show yet.'),
+        : (currentProgram() ? 'You haven’t taken a quiz yet — pick one above to begin.' : 'Nothing to show yet.'),
     });
   }
 
@@ -368,7 +368,7 @@ export function renderTraining(container) {
     const questions = quiz.questions;
     const employee = getCurrentUser();
     if (!employee) {
-      window.alert('No employee record is linked to this login. Contact an admin before taking the check.');
+      window.alert('No employee record is linked to this login. Contact an admin before taking the quiz.');
       return;
     }
 
@@ -516,7 +516,7 @@ export function renderTraining(container) {
         el('ul', { class: 'quiz-notice', style: 'border-left-color: var(--critical);' }, [
           el('li', {}, 'Answer in your own words. This is checking whether what you read actually made sense to you, not how well you can search for it or ask someone else.'),
           el('li', {}, 'For the recorded questions, speak naturally — don\'t read from a script or from the Manual on another screen.'),
-          el('li', {}, 'Leaving this browser tab during the check is logged — how many times, and for how long — and is visible to whoever reviews your answers.'),
+          el('li', {}, 'Leaving this browser tab during the quiz is logged — how many times, and for how long — and is visible to whoever reviews your answers.'),
           el('li', {}, 'If you\'re not sure about something, say so honestly. A partial answer told straight is worth more than a confident one copied from somewhere.'),
         ]),
 
@@ -707,7 +707,7 @@ export function renderTraining(container) {
           tabAwaySeconds: state.tabAwaySeconds,
           answers,
         });
-        showToast('Knowledge check submitted.', 'good');
+        showToast('Quiz submitted.', 'good');
         showList();
       } catch (err) {
         window.alert(err.message || 'Could not save your submission. Please try again.');
