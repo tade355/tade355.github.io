@@ -87,14 +87,14 @@ const SESSION1_QUESTIONS = [
 const QUIZZES = [
   {
     id: 'day1',
-    name: 'Quiz 1: Day 1 Knowledge Check',
+    name: 'Quiz 1',
     intro: "Let's see what stuck from Day 1.",
     description: 'On the Company, the Manual, and your Training Plan.',
     questions: DAY1_QUESTIONS,
   },
   {
     id: 'session1',
-    name: 'Quiz 2: Session 1 — Foundations of Executive & Management Support',
+    name: 'Quiz 2',
     intro: "Let's see what stuck from Saturday's session.",
     description: 'On the role, attributes, and skills covered in the Session 1 lesson.',
     questions: SESSION1_QUESTIONS,
