@@ -272,6 +272,15 @@ export function renderDashboard(container) {
   // the current month, plus the most recently logged reports, so the
   // dashboard reads as a live pulse rather than only historical totals.
   const employeeName = (id) => employees.find((e) => e.id === id)?.name || 'Unknown';
+  // D8K Collins (a Rented dozer) has no staff employee record for its
+  // operator — his real name matches the equipment's own name (Collins),
+  // so operations logged with no operatorId fall back to that instead of
+  // a generic "Unknown", the same name already used in those records' notes.
+  const operatorDisplayName = (o) => {
+    if (o.operatorId) return employeeName(o.operatorId);
+    if (o.equipment === 'D8K Collins') return 'Collins';
+    return 'Unknown';
+  };
   const opsThisMonth = operations.filter((o) => monthKey(o.date) === currentMonthKey);
 
   const areaBySiteThisMonth = {};
@@ -285,12 +294,13 @@ export function renderDashboard(container) {
 
   const hoursByOperatorThisMonth = {};
   opsThisMonth.forEach((o) => {
-    hoursByOperatorThisMonth[o.operatorId] = (hoursByOperatorThisMonth[o.operatorId] || 0) + (o.hoursWorked || 0);
+    const name = operatorDisplayName(o);
+    hoursByOperatorThisMonth[name] = (hoursByOperatorThisMonth[name] || 0) + (o.hoursWorked || 0);
   });
   const topOperators = Object.entries(hoursByOperatorThisMonth)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
-    .map(([id, value]) => ({ name: employeeName(id), value: `${value.toFixed(1)} h` }));
+    .map(([name, value]) => ({ name, value: `${value.toFixed(1)} h` }));
 
   // Utilization (hours), not profit — a per-machine "profit" can't fully
   // attribute Logistics/Other cost below project level (see Profitability's
@@ -308,7 +318,7 @@ export function renderDashboard(container) {
   const recentReports = operations.slice()
     .sort((a, b) => (a.date < b.date ? 1 : -1))
     .slice(0, 5)
-    .map((r) => ({ name: r.siteName, meta: employeeName(r.operatorId), value: formatDate(r.date) }));
+    .map((r) => ({ name: r.siteName, meta: operatorDisplayName(r), value: formatDate(r.date) }));
 
   container.appendChild(el('h3', { class: 'subsection-title' }, 'This Month at a Glance'));
   container.appendChild(el('div', { class: 'leaderboard-grid' }, [
