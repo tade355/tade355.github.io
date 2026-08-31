@@ -400,7 +400,7 @@ export function printWeeklyPerformanceReport(project, data) {
       <tbody>
         <tr><td>Rental Cost</td><td>Partnership/Rented: days × Rental Rate/Day. Company: hours × Hourly Rate.</td><td>${formatCurrency(data.costData.rentalCost)}</td></tr>
         <tr><td>Diesel Cost</td><td>Fuel Used × the diesel rate in effect that day</td><td>${formatCurrency(data.costData.dieselCost)}</td></tr>
-        <tr><td>Site Logistics</td><td>₦12,800 × ${data.costData.workingDays} working day(s)</td><td>${formatCurrency(data.costData.siteLogistics)}</td></tr>
+        <tr><td>Site Logistics</td><td>₦12,300 × ${data.costData.workingDays} working day(s)</td><td>${formatCurrency(data.costData.siteLogistics)}</td></tr>
         <tr><td>Diesel Logistics</td><td>₦1,500 per 30L × ${data.costData.totalDieselLitres.toLocaleString()}L</td><td>${formatCurrency(data.costData.dieselLogistics)}</td></tr>
         <tr><td>Operator Cost</td><td>₦30,000 per 8 hrs worked (Company &amp; Partnership only)</td><td>${formatCurrency(data.costData.operatorCost)}</td></tr>
         <tr><td><strong>Tentative Cost</strong></td><td></td><td><strong>${formatCurrency(data.costData.total)}</strong></td></tr>
