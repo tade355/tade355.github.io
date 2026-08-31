@@ -1,7 +1,8 @@
 import { store } from '../store.js';
-import { formatCurrency, formatDate, el } from '../utils.js';
+import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
 import { sectionHeader, statCard, statusPill, renderTable, actionButtons, openModal, confirmDelete } from '../ui.js';
 import { FUEL_STATIONS, FUEL_TYPES } from '../constants.js';
+import { printFuelCreditStatement } from '../print.js';
 
 function collectionFields() {
   return [
@@ -52,6 +53,52 @@ export function stationBalances() {
   }).sort((a, b) => b.balance - a.balance);
 }
 
+// A running-balance statement for one station: a single Brought Forward
+// figure (every collection/payment dated before `from`, netted down to one
+// opening number — same "derive, don't persist" balance as stationBalances)
+// followed by one row per day inside [from, to] that actually had activity,
+// each carrying the balance forward. A day where the only "collection" is a
+// litres=1 placeholder (an opening-balance/gap-fill adjustment entered
+// directly against the ledger, not a real fuel pickup — see Fuel Credit
+// Tracking's notes on those) is flagged isAdjustment so the printout can
+// show it as a plain balance adjustment instead of a nonsensical "1 L".
+export function stationStatement(station, from, to) {
+  const collections = store.get('fuelCreditCollections').filter((c) => c.station === station);
+  const payments = store.get('fuelCreditPayments').filter((p) => p.station === station);
+  const before = (iso) => iso < from;
+
+  const broughtForward = collections.filter((c) => before(c.date)).reduce((sum, c) => sum + collectionAmount(c), 0)
+    - payments.filter((p) => before(p.date)).reduce((sum, p) => sum + p.amount, 0);
+
+  const inRange = (iso) => dateInRange(iso, from, to);
+  const dates = [...new Set([
+    ...collections.filter((c) => inRange(c.date)).map((c) => c.date),
+    ...payments.filter((p) => inRange(p.date)).map((p) => p.date),
+  ])].sort();
+
+  let running = broughtForward;
+  const rows = dates.map((date) => {
+    const dayCollections = collections.filter((c) => c.date === date);
+    const dayPayments = payments.filter((p) => p.date === date);
+    const dieselLitres = dayCollections.filter((c) => c.fuelType === 'Diesel').reduce((sum, c) => sum + c.litres, 0);
+    const pmsLitres = dayCollections.filter((c) => c.fuelType === 'PMS').reduce((sum, c) => sum + c.litres, 0);
+    const collectedAmount = dayCollections.reduce((sum, c) => sum + collectionAmount(c), 0);
+    const paidAmount = dayPayments.reduce((sum, p) => sum + p.amount, 0);
+    running += collectedAmount - paidAmount;
+    return {
+      date,
+      dieselLitres,
+      pmsLitres,
+      collectedAmount,
+      paidAmount,
+      runningBalance: running,
+      isAdjustment: dayCollections.length > 0 && dayCollections.every((c) => c.litres === 1),
+    };
+  });
+
+  return { broughtForward, rows, closingBalance: running };
+}
+
 export function renderFuelCredit(container) {
   container.innerHTML = '';
 
@@ -69,7 +116,22 @@ export function renderFuelCredit(container) {
     el('option', { value: '' }, 'All Stations'),
     ...FUEL_STATIONS.map((s) => el('option', { value: s }, s)),
   ]);
+  const today = new Date().toISOString().slice(0, 10);
+  const statementFrom = el('input', { type: 'date', value: `${today.slice(0, 7)}-01` });
+  const statementTo = el('input', { type: 'date', value: today });
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Station'), stationSelect]));
+  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Statement From'), statementFrom]));
+  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Statement To'), statementTo]));
+  const printStatementBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '🖨 Print Statement');
+  printStatementBtn.addEventListener('click', () => {
+    if (!stationSelect.value) {
+      window.alert('Choose a specific station first — a statement (with a Brought Forward balance) only makes sense for one station at a time.');
+      return;
+    }
+    const statement = stationStatement(stationSelect.value, statementFrom.value, statementTo.value);
+    printFuelCreditStatement(stationSelect.value, statement, { from: statementFrom.value, to: statementTo.value });
+  });
+  filterBar.appendChild(printStatementBtn);
   container.appendChild(filterBar);
 
   const summarySlot = el('div');
