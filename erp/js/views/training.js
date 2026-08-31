@@ -1,8 +1,8 @@
 import { store } from '../store.js';
 import { supabase } from '../supabaseClient.js';
 import { el } from '../utils.js';
-import { renderTable, statusPill, sectionHeader, openCustomModal, confirmDelete, showToast } from '../ui.js';
-import { getCurrentUser, getCurrentTier, filterTrainingSubmissions } from '../session.js';
+import { renderTable, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, showToast } from '../ui.js';
+import { getCurrentUser, getCurrentUserId, getCurrentTier, filterTrainingSubmissions } from '../session.js';
 
 const QUESTIONS = [
   {
@@ -61,8 +61,10 @@ function recordedVideoCount(record) {
   return QUESTIONS.filter((q) => q.video && answers[q.key]?.videoUrl).length;
 }
 
-function viewSubmission(record) {
+function viewSubmission(record, refresh) {
   const videoQuestionCount = QUESTIONS.filter((q) => q.video).length;
+  const tier = getCurrentTier();
+  const canGrade = tier === 'Admin' || tier === 'Accounts' || tier === 'Supervisor';
   openCustomModal({
     title: employeeName(record.employeeId),
     wide: true,
@@ -89,6 +91,54 @@ function viewSubmission(record) {
         }
         modalContainer.appendChild(block);
       });
+
+      if (!canGrade) return;
+
+      modalContainer.appendChild(el('h3', { class: 'subsection-title' }, 'Grade this submission'));
+      if (record.gradedAt) {
+        modalContainer.appendChild(el('p', { class: 'section-subtitle' }, `Last graded ${new Date(record.gradedAt).toLocaleString('en-GB')}${record.gradedBy ? ` by ${employeeName(record.gradedBy)}` : ''}`));
+      }
+
+      const scoreInput = el('input', { type: 'number', min: '0', max: String(QUESTIONS.length), style: 'width: 6rem;' });
+      scoreInput.value = record.score ?? '';
+      const outcomeSelect = el('select', {}, [
+        el('option', { value: '' }, '— Not set —'),
+        el('option', { value: 'Pass' }, 'Pass'),
+        el('option', { value: 'Needs Review' }, 'Needs Review'),
+        el('option', { value: 'Fail' }, 'Fail'),
+      ]);
+      outcomeSelect.value = record.outcome || '';
+      const notesTextarea = el('textarea', { rows: '3', placeholder: 'Optional notes…' });
+      notesTextarea.value = record.graderNotes || '';
+
+      const saveBtn = el('button', { class: 'btn btn-primary', type: 'button' }, 'Save Grade');
+      saveBtn.addEventListener('click', async () => {
+        saveBtn.setAttribute('disabled', 'disabled');
+        saveBtn.textContent = 'Saving…';
+        try {
+          await store.update('trainingSubmissions', record.id, {
+            score: scoreInput.value === '' ? null : Number(scoreInput.value),
+            outcome: outcomeSelect.value || null,
+            graderNotes: notesTextarea.value,
+            gradedAt: new Date().toISOString(),
+            gradedBy: getCurrentUserId(),
+          });
+          showToast('Grade saved.', 'good');
+          closeModal();
+          if (refresh) refresh();
+        } catch (err) {
+          window.alert(err.message || 'Could not save the grade.');
+          saveBtn.removeAttribute('disabled');
+          saveBtn.textContent = 'Save Grade';
+        }
+      });
+
+      modalContainer.appendChild(el('div', { class: 'form-grid-2', style: 'margin-top: 0.5rem;' }, [
+        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, `Score (out of ${QUESTIONS.length})`), scoreInput]),
+        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Outcome'), outcomeSelect]),
+      ]));
+      modalContainer.appendChild(el('label', { class: 'field', style: 'margin-top: 0.5rem;' }, [el('span', { class: 'field-label' }, 'Notes'), notesTextarea]));
+      modalContainer.appendChild(el('div', { style: 'margin-top: 0.75rem;' }, [saveBtn]));
     },
   });
 }
@@ -170,6 +220,7 @@ export function renderTraining(container) {
     const tableContainer = el('div');
     body.appendChild(tableContainer);
     const tier = getCurrentTier();
+    const canGrade = tier === 'Admin' || tier === 'Accounts' || tier === 'Supervisor';
     const videoQuestionCount = QUESTIONS.filter((q) => q.video).length;
     renderTable(tableContainer, {
       columns: [
@@ -187,11 +238,19 @@ export function renderTraining(container) {
           },
         },
         { key: 'tabSwitchCount', label: 'Left Tab', render: (r) => (r.tabSwitchCount ? `⚠ ${r.tabSwitchCount}×` : '—') },
+        canGrade ? {
+          key: 'score',
+          label: 'Score',
+          render: (r) => (r.score == null && !r.outcome ? '—' : el('span', { style: 'display: inline-flex; align-items: center; gap: 0.4rem;' }, [
+            r.score != null ? `${r.score}/${QUESTIONS.length}` : null,
+            r.outcome ? statusPill(r.outcome) : null,
+          ])),
+        } : null,
         {
           key: 'actions',
           label: '',
           render: (r) => el('div', { class: 'row-actions' }, [
-            el('button', { class: 'icon-btn', type: 'button', title: 'View answers', onClick: () => viewSubmission(r) }, '👁'),
+            el('button', { class: 'icon-btn', type: 'button', title: 'View answers', onClick: () => viewSubmission(r, renderListBody) }, '👁'),
             el('button', {
               class: 'icon-btn icon-btn-danger',
               type: 'button',
@@ -208,9 +267,9 @@ export function renderTraining(container) {
             }, '🗑'),
           ]),
         },
-      ],
+      ].filter(Boolean),
       rows,
-      emptyText: (tier === 'Admin' || tier === 'Accounts' || tier === 'Supervisor')
+      emptyText: canGrade
         ? 'No submissions yet.'
         : (currentProgram() ? 'You haven’t taken the check yet — click "Take the Check" above to begin.' : 'Nothing to show yet.'),
     });

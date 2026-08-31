@@ -66,6 +66,7 @@ export function statusPillClass(status) {
     'Partially Paid': 'pill-warning', 'No Invoice Yet': 'pill-neutral',
     Repaid: 'pill-good', 'Partially Repaid': 'pill-warning', Restructured: 'pill-warning', Defaulted: 'pill-critical', 'Written Off': 'pill-neutral',
     'Timed Out': 'pill-critical', Recorded: 'pill-good', 'Not Recorded': 'pill-neutral',
+    Pass: 'pill-good', 'Needs Review': 'pill-warning', Fail: 'pill-critical',
   };
   return map[status] || 'pill-neutral';
 }
