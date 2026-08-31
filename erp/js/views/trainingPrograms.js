@@ -20,7 +20,7 @@ export function renderTrainingPrograms(container) {
   container.innerHTML = '';
   container.appendChild(sectionHeader(
     'Training Programs',
-    'Each program\'s Manual, Plan, and Syllabus, plus its Day 1 Knowledge Check. Assign a program to a staff member from their record on the Employees tab — that determines what shows on their own Training tab.',
+    'Each program\'s Manual, Plan, and Syllabus, plus its quizzes. Assign a program to a staff member from their record on the Employees tab — that determines what shows on their own Training tab.',
   ));
 
   const actionSlot = el('div', { style: 'margin-bottom: 1rem;' });
