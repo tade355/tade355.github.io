@@ -192,9 +192,11 @@ function computeExpectedRevenue(periodOps) {
 //   always produces a real figure instead of depending on an optional
 //   Rental Rate/Day that a Company dozer may never have had set.
 // - Diesel Cost: Fuel Used x the diesel rate in effect that day.
-// - Site Logistics: a flat ₦12,800 per working day (any day this period
-//   with at least one roster dozer active) — a standard daily site-support
-//   rate, not derived from logged Logistics expenses.
+// - Site Logistics: a flat ₦12,300 per working day (any day this period
+//   with at least one roster dozer active) — 2 bikes x 5L PMS x the current
+//   PMS price (₦1,230/L as of 22 Aug 2026), a standard daily site-support
+//   rate, not derived from logged Logistics expenses. A flat figure, not
+//   date-varying — if PMS price moves again, update this constant.
 // - Diesel Logistics: a flat ₦1,500 per 30 litres of diesel used this
 //   period — a standard delivery/handling rate, not a logged expense.
 // - Operator Cost: ₦30,000 per 8 hours worked, for Company and Partnership
@@ -229,7 +231,7 @@ function computeTentativeCost(periodOps, rosterNames) {
   const rentalCost = rentalBreakdown.reduce((sum, r) => sum + r.cost, 0);
 
   const workingDays = new Set(periodOps.map((o) => o.date)).size;
-  const siteLogistics = workingDays * 12800;
+  const siteLogistics = workingDays * 12300;
   const dieselLogistics = (totalDieselLitres / 30) * 1500;
 
   const rosterByName = new Map(roster.map((i) => [i.name, i]));
@@ -428,7 +430,7 @@ function renderWeeklyPerformanceTab(container) {
       el('tbody', {}, [
         el('tr', {}, [el('td', {}, 'Rental Cost'), el('td', {}, 'Partnership/Rented: days × Rental Rate/Day. Company: hours × Hourly Rate.'), el('td', {}, formatCurrency(costData.rentalCost))]),
         el('tr', {}, [el('td', {}, 'Diesel Cost'), el('td', {}, 'Fuel Used × the diesel rate in effect that day'), el('td', {}, formatCurrency(costData.dieselCost))]),
-        el('tr', {}, [el('td', {}, 'Site Logistics'), el('td', {}, `₦12,800 × ${costData.workingDays} working day(s)`), el('td', {}, formatCurrency(costData.siteLogistics))]),
+        el('tr', {}, [el('td', {}, 'Site Logistics'), el('td', {}, `₦12,300 × ${costData.workingDays} working day(s)`), el('td', {}, formatCurrency(costData.siteLogistics))]),
         el('tr', {}, [el('td', {}, 'Diesel Logistics'), el('td', {}, `₦1,500 per 30L × ${costData.totalDieselLitres.toLocaleString()}L`), el('td', {}, formatCurrency(costData.dieselLogistics))]),
         el('tr', {}, [el('td', {}, 'Operator Cost'), el('td', {}, '₦30,000 per 8 hrs worked (Company & Partnership only)'), el('td', {}, formatCurrency(costData.operatorCost))]),
         el('tr', { class: 'row-cumulative' }, [el('td', {}, el('strong', {}, 'Tentative Cost')), el('td', {}, ''), el('td', {}, el('strong', {}, formatCurrency(tentativeTotal)))]),
