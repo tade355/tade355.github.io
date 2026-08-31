@@ -154,6 +154,17 @@ button.active{border-color:var(--good);color:var(--good);}
 .mini-v{font-size:.78rem;color:var(--text);font-weight:600;}
 .mini-v.active{color:var(--accent);}
 
+.eclipse-align{margin-top:.75rem;display:flex;gap:.75rem;align-items:center;}
+.eclipse-align canvas{width:90px;height:90px;flex:0 0 auto;background:#05060a;border-radius:.5rem;border:1px solid var(--line);}
+.eclipse-align p{margin:0;font-size:.74rem;color:var(--text-dim);line-height:1.5;}
+
+#daylenCanvas{background:#05060a;}
+#analemmaCanvas{width:160px;height:200px;}
+.cmp-table{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:.6rem;overflow:hidden;font-size:.78rem;}
+.cmp-table > div{background:var(--panel-2);padding:.45rem .6rem;}
+.cmp-table .cmp-head{font-weight:700;color:var(--accent-2);background:var(--panel);font-size:.7rem;text-transform:uppercase;letter-spacing:.03em;}
+.cmp-table .cmp-label{color:var(--text-dim);font-size:.72rem;}
+
 .layout2{
   display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;
   margin-top:1.25rem;
@@ -332,6 +343,10 @@ footer{
           <div class="mini-stat"><span class="mini-k">Tides</span><span class="mini-v" id="mTide">–</span></div>
           <div class="mini-stat" style="grid-column:1/-1;"><span class="mini-k">Eclipse watch</span><span class="mini-v" id="mEclipse">–</span></div>
         </div>
+        <div class="eclipse-align">
+          <canvas id="eclipseCanvas" width="90" height="90" role="img" aria-label="Sun-Moon alignment diagram"></canvas>
+          <p>Sun-Moon alignment as seen from Earth. When the Moon's disc (dark) drifts far from the Sun/shadow (gold), Earth, Sun and Moon aren't lined up — which is most months. An eclipse needs them to line up almost exactly, as shown here.</p>
+        </div>
       </section>
     </div>
   </div>
@@ -341,13 +356,19 @@ footer{
       <h2 id="sky-h"><svg class="h-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="3" y="9" width="10" height="3.2" rx="1.4" fill="#6fd3ff" transform="rotate(-20 3 9)"/><circle cx="14.5" cy="6.2" r="1.9" fill="none" stroke="#6fd3ff" stroke-width="1.3"/><path d="M6.5 14.5L4 18M9 15.5l-1.2 3" stroke="rgba(255,255,255,.5)" stroke-width="1.2" stroke-linecap="round"/></svg> Moon in the sky from your location</h2>
       <p class="sub">Horizon view for <span id="skyLatLabel">40&deg; N</span> (choose a location or drag the latitude slider in the Day &amp; Night panel), at the selected day &amp; time.</p>
       <canvas id="skyCanvas" width="480" height="220" role="img" aria-label="Horizon view showing whether the Moon is above or below the horizon"></canvas>
+      <div class="controls-row" style="margin-top:.6rem;">
+        <label style="display:flex;align-items:center;gap:.35rem;font-size:.78rem;color:var(--text-dim);"><input type="checkbox" id="togglePlanets" checked> Planets</label>
+        <label style="display:flex;align-items:center;gap:.35rem;font-size:.78rem;color:var(--text-dim);"><input type="checkbox" id="toggleConstellations" checked> Constellations</label>
+      </div>
       <div class="readouts">
         <div class="readout"><div class="k">Moon altitude</div><div class="v" id="rMoonAlt">–</div></div>
         <div class="readout"><div class="k">Visibility</div><div class="v" id="rMoonVis">–</div></div>
         <div class="readout"><div class="k">Moonrise</div><div class="v" id="rMoonrise">–</div></div>
         <div class="readout"><div class="k">Moonset</div><div class="v" id="rMoonset">–</div></div>
       </div>
-      <p class="disclaimer">Simplified: treats the Moon's orbit as lying in Earth's orbital plane (its real ~5&deg; tilt and slow drift are ignored), and ignores atmospheric refraction.</p>
+      <p class="k" style="margin:.75rem 0 .25rem;font-size:.68rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em;">Visible planets</p>
+      <p id="rPlanets" style="margin:0;font-size:.8rem;color:var(--text);line-height:1.6;">–</p>
+      <p class="disclaimer">Simplified: treats the Moon's orbit as lying in Earth's orbital plane (its real ~5&deg; tilt and slow drift are ignored), ignores atmospheric refraction. Planets use simplified circular orbits and constellation stars use approximate coordinates — illustrative, not survey-grade.</p>
     </section>
 
     <section class="card" aria-labelledby="climate-h">
@@ -360,6 +381,52 @@ footer{
         <div class="readout"><div class="k">Season here</div><div class="v" id="rSeasonHere">–</div></div>
       </div>
       <p class="disclaimer">Modeled from latitude-based climate bands, orbital seasonal phase, and diurnal temperature swing. Real weather also depends on elevation, ocean currents, and local geography.</p>
+    </section>
+  </div>
+
+  <div class="layout2">
+    <section class="card" aria-labelledby="year-h">
+      <h2 id="year-h"><svg class="h-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M2 15 L7 8 L11 11 L18 3" fill="none" stroke="#6fd3ff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Year at a glance</h2>
+      <p class="sub">Day length across the whole year at <span id="yearLatLabel">40&deg; N</span>, and the Sun's analemma &mdash; the figure-8 it traces at a fixed clock time, caused by Earth's tilt and elliptical orbit.</p>
+      <canvas id="daylenCanvas" width="480" height="180" role="img" aria-label="Day length across the year"></canvas>
+      <div style="display:flex;gap:1rem;align-items:flex-start;margin-top:.75rem;flex-wrap:wrap;">
+        <canvas id="analemmaCanvas" width="160" height="200" role="img" aria-label="The Sun's analemma, a figure-eight shape" style="flex:0 0 auto;background:#05060a;border-radius:.5rem;border:1px solid var(--line);"></canvas>
+        <p class="disclaimer" style="flex:1;min-width:180px;margin-top:0;">The analemma uses the standard equation-of-time approximation (not used elsewhere on this page, which otherwise ignores it). It's why a sundial and a clock slowly drift apart and back over a year.</p>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="almanac-h">
+      <h2 id="almanac-h"><svg class="h-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M10 2l1.8 5.6L17.5 8l-4.5 3.5 1.7 5.7L10 13.8 5.3 17.2 7 11.5 2.5 8l5.7-.4z" fill="#ffcf5c"/></svg> Sky almanac</h2>
+      <div class="readouts">
+        <div class="readout"><div class="k">Meteor shower</div><div class="v" id="rMeteor">–</div></div>
+        <div class="readout"><div class="k">Next cardinal point</div><div class="v" id="rCountdown">–</div></div>
+      </div>
+      <p class="k" style="margin:.9rem 0 .35rem;font-size:.68rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em;">What was the Moon phase on a date?</p>
+      <div class="controls-row" style="margin:0;">
+        <input type="date" id="lookupDate" aria-label="Pick a date to jump to">
+        <button id="lookupBtn" type="button">Go to this date</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="layout2">
+    <section class="card" aria-labelledby="compare-h">
+      <h2 id="compare-h"><svg class="h-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="6.5" cy="10" r="5.5" fill="none" stroke="#6fd3ff" stroke-width="1.3"/><circle cx="13.5" cy="10" r="5.5" fill="none" stroke="#ffcf5c" stroke-width="1.3"/></svg> Compare two locations</h2>
+      <p class="sub">Same moment, different sky. Pick a second location to compare against the one set in the Day &amp; Night panel.</p>
+      <div class="controls-row" style="margin:0 0 .75rem;">
+        <select id="compareSelect" aria-label="Second location to compare"></select>
+      </div>
+      <div class="cmp-table" id="cmpTable">
+        <div></div><div class="cmp-head">Here</div><div class="cmp-head">There</div>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="planets-h">
+      <h2 id="planets-h"><svg class="h-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="10" cy="10" r="4" fill="#e07a5f"/><ellipse cx="10" cy="10" rx="9" ry="2.6" fill="none" stroke="#9aa1c9" stroke-width="1.1"/></svg> Compare the planets</h2>
+      <p class="sub">Earth's numbers aren't the only option. What makes each planet's day, year, and seasons different.</p>
+      <div class="cmp-table" id="planetTable" style="grid-template-columns:1fr 1fr 1fr 1fr;">
+        <div class="cmp-head">Planet</div><div class="cmp-head">Axial tilt</div><div class="cmp-head">Day length</div><div class="cmp-head">Year length</div>
+      </div>
     </section>
   </div>
 
@@ -525,6 +592,156 @@ footer{
   }
   function fmtTemp(c){ return state.unit==="f" ? Math.round(c*9/5+32)+"°F" : Math.round(c)+"°C"; }
   function fmtWind(kmh){ return state.unit==="f" ? Math.round(kmh/1.60934)+" mph" : Math.round(kmh)+" km/h"; }
+
+  // ================================================================
+  // Extended sky model: planets, stars, meteor showers, equation of time.
+  // Shared machinery: any body's sky position reduces to (ecliptic-longitude-like value, declination),
+  // fed through one hour-angle formula and one altitude formula — the same pattern already proven for
+  // the Sun and Moon above, generalized rather than duplicated.
+  // ================================================================
+  function altitudeFromLatDecH(latDeg, decDeg, Hdeg){
+    var lat=deg2rad(latDeg), dec=deg2rad(decDeg), H=deg2rad(Hdeg);
+    return rad2deg(Math.asin(Math.sin(lat)*Math.sin(dec)+Math.cos(lat)*Math.cos(dec)*Math.cos(H)));
+  }
+  function hourAngleFromLon(t, bodyLonDeg, sunLonDeg){
+    var Hsun = 360*timeOfDayFrac(t) - 180;
+    var elongUnsigned = norm360(bodyLonDeg - sunLonDeg);
+    return norm360(Hsun - elongUnsigned + 180) - 180;
+  }
+
+  // ---- Planets: simplified circular, coplanar heliocentric orbits (illustrative toy model, not
+  // JPL-precision — real orbits are slightly elliptical and inclined). Independent of the Sun/Moon's
+  // own season-phase-shifted reference frame; internally self-consistent via sunLonHelio().
+  var PLANETS = {
+    venus:   { a:0.7233, period:224.70,   L0:181.98, name:"Venus",   color:"#f5e6c8" },
+    mars:    { a:1.5237, period:686.98,   L0:355.45, name:"Mars",    color:"#e07a5f" },
+    jupiter: { a:5.2044, period:4332.59,  L0:34.35,  name:"Jupiter", color:"#e8d5b7" },
+    saturn:  { a:9.5826, period:10759.22, L0:50.08,  name:"Saturn",  color:"#f0e2b6" }
+  };
+  var EARTH_HELIO = { period:365.256, L0:100.46 };
+  function heliocentricLonDeg(t, period, L0){ return norm360(L0 + (t/period)*360); }
+  function sunLonHelio(t){ return norm360(heliocentricLonDeg(t, EARTH_HELIO.period, EARTH_HELIO.L0) + 180); }
+  function planetGeocentric(t, key){
+    var p = PLANETS[key];
+    var Le = deg2rad(heliocentricLonDeg(t, EARTH_HELIO.period, EARTH_HELIO.L0));
+    var ex = Math.cos(Le), ey = Math.sin(Le);
+    var Lp = deg2rad(heliocentricLonDeg(t, p.period, p.L0));
+    var px = p.a*Math.cos(Lp), py = p.a*Math.sin(Lp);
+    var dx = px-ex, dy = py-ey;
+    var geoLon = norm360(rad2deg(Math.atan2(dy,dx)));
+    var sunLon = sunLonHelio(t);
+    var elongUnsigned = norm360(geoLon - sunLon);
+    var elongSigned = elongUnsigned>180 ? elongUnsigned-360 : elongUnsigned;
+    return { geoLon:geoLon, sunLon:sunLon, distAU:Math.sqrt(dx*dx+dy*dy), elongSigned:elongSigned, elongAbs:Math.abs(elongSigned) };
+  }
+  function planetLocalGeometry(t, latDeg, key){
+    var g = planetGeocentric(t, key);
+    var dec = declinationOf(g.geoLon);
+    var H = hourAngleFromLon(t, g.geoLon, g.sunLon);
+    var alt = altitudeFromLatDecH(latDeg, dec, H);
+    return { alt:alt, H:H, dec:dec, distAU:g.distAU, elongSigned:g.elongSigned, elongAbs:g.elongAbs };
+  }
+  function planetVisibilityLabel(key, geo){
+    if(geo.elongAbs < 12) return "Too close to the Sun to see";
+    if(key==="venus") return geo.elongSigned>0 ? "Evening star — visible after sunset" : "Morning star — visible before sunrise";
+    if(geo.alt < -2) return "Below horizon now";
+    if(geo.elongAbs > 150) return "Near opposition — up all night";
+    return geo.elongSigned>0 ? "Visible in the evening sky" : "Visible in the early morning sky";
+  }
+
+  // ---- A few bright, recognizable constellations (approximate real J2000 RA/Dec — illustrative, not survey-grade) ----
+  var CONSTELLATIONS = {
+    orion:      { name:"Orion", stars:[
+      {n:"Betelgeuse",ra:88.79,dec:7.41},{n:"Bellatrix",ra:81.28,dec:6.35},{n:"Mintaka",ra:83.00,dec:-0.30},
+      {n:"Alnilam",ra:84.05,dec:-1.20},{n:"Alnitak",ra:85.19,dec:-1.94},{n:"Saiph",ra:86.94,dec:-9.67},{n:"Rigel",ra:78.63,dec:-8.20}
+    ], lines:[[0,1],[1,2],[2,3],[3,4],[0,4],[4,5],[2,6]] },
+    ursaMajor:  { name:"Big Dipper", stars:[
+      {n:"Dubhe",ra:165.93,dec:61.75},{n:"Merak",ra:165.46,dec:56.38},{n:"Phecda",ra:178.46,dec:53.69},
+      {n:"Megrez",ra:183.86,dec:57.03},{n:"Alioth",ra:193.51,dec:55.96},{n:"Mizar",ra:200.98,dec:54.93},{n:"Alkaid",ra:206.89,dec:49.31}
+    ], lines:[[0,1],[1,2],[2,3],[3,0],[3,4],[4,5],[5,6]] },
+    crux:       { name:"Southern Cross", stars:[
+      {n:"Acrux",ra:186.65,dec:-63.10},{n:"Gacrux",ra:187.79,dec:-57.11},{n:"Imai",ra:191.93,dec:-58.75},{n:"Mimosa",ra:191.46,dec:-59.69}
+    ], lines:[[1,0],[2,3]] },
+    cassiopeia: { name:"Cassiopeia", stars:[
+      {n:"Segin",ra:2.29,dec:63.67},{n:"Ruchbah",ra:9.85,dec:60.24},{n:"Gamma Cas",ra:14.18,dec:60.72},
+      {n:"Schedar",ra:10.13,dec:56.54},{n:"Caph",ra:2.29,dec:59.15}
+    ], lines:[[4,3],[3,2],[2,1],[1,0]] }
+  };
+
+  // ---- Meteor showers: real annual peak dates (day-of-year, non-leap approximation) and typical rates ----
+  var METEOR_SHOWERS = [
+    {name:"Quadrantids",    peak:3,   start:361, end:11,  rate:"~110/hr", note:"best in the Northern Hemisphere"},
+    {name:"Lyrids",         peak:112, start:106, end:120, rate:"~18/hr",  note:"Northern Hemisphere favored"},
+    {name:"Eta Aquariids",  peak:126, start:106, end:154, rate:"~50/hr",  note:"best in the tropics & Southern Hemisphere"},
+    {name:"Perseids",       peak:224, start:198, end:236, rate:"~100/hr", note:"Northern Hemisphere favored"},
+    {name:"Orionids",       peak:294, start:277, end:306, rate:"~20/hr",  note:"visible from both hemispheres"},
+    {name:"Leonids",        peak:321, start:311, end:328, rate:"~15/hr",  note:"visible from both hemispheres"},
+    {name:"Geminids",       peak:348, start:333, end:359, rate:"~120/hr", note:"the year's most reliable shower"},
+    {name:"Ursids",         peak:356, start:349, end:361, rate:"~10/hr",  note:"Northern Hemisphere only"}
+  ];
+  function meteorStatus(t){
+    var d = Math.floor(dayOfYear(t));
+    for(var i=0;i<METEOR_SHOWERS.length;i++){
+      var m = METEOR_SHOWERS[i];
+      var inWindow = m.start<=m.end ? (d>=m.start && d<=m.end) : (d>=m.start || d<=m.end);
+      if(inWindow){
+        var diff = m.peak-d; if(diff<-180) diff+=365; if(diff>180) diff-=365;
+        var phase = diff===0 ? "peaking today!" : diff>0 ? ("peaks in "+diff+" day"+(diff===1?"":"s")) : ("peaked "+(-diff)+" day"+(diff===-1?"":"s")+" ago");
+        return {active:true, name:m.name, rate:m.rate, note:m.note, phase:phase};
+      }
+    }
+    var best=null, bestDiff=9999;
+    for(var j=0;j<METEOR_SHOWERS.length;j++){
+      var diff2 = METEOR_SHOWERS[j].peak-d; if(diff2<0) diff2+=365;
+      if(diff2<bestDiff){ bestDiff=diff2; best=METEOR_SHOWERS[j]; }
+    }
+    return {active:false, name:best.name, daysUntil:bestDiff};
+  }
+
+  // ---- Equation of time (standard approximate formula, ~1min accuracy) — used only for the analemma plot ----
+  function equationOfTimeMin(t){
+    var d = dayOfYear(t);
+    var B = deg2rad((360/365)*(d-81));
+    return 9.87*Math.sin(2*B) - 7.53*Math.cos(B) - 1.5*Math.sin(B);
+  }
+
+  // ---- Golden/blue hour & twilight banding, from the Sun's own altitude ----
+  function lightBand(alt){
+    if(alt>=6) return {label:"☀ Daylight", cls:"day"};
+    if(alt>=-4) return {label:"🌇 Golden hour", cls:"day"};
+    if(alt>=-6) return {label:"🔵 Blue hour", cls:"night"};
+    if(alt>=-12) return {label:"🌆 Civil twilight", cls:"night"};
+    if(alt>=-18) return {label:"🌃 Astronomical twilight", cls:"night"};
+    return {label:"🌙 Night", cls:"night"};
+  }
+
+  // ---- Days until the next equinox/solstice ----
+  var CARDINAL_POINTS = [{d:79,name:"March equinox"},{d:172,name:"June solstice"},{d:265,name:"September equinox"},{d:355,name:"December solstice"}];
+  function nextCardinalPoint(t){
+    var d = dayOfYear(t);
+    for(var i=0;i<CARDINAL_POINTS.length;i++){
+      if(CARDINAL_POINTS[i].d > d) return {name:CARDINAL_POINTS[i].name, days:Math.ceil(CARDINAL_POINTS[i].d-d)};
+    }
+    return {name:CARDINAL_POINTS[0].name, days:Math.ceil(365-d+CARDINAL_POINTS[0].d)};
+  }
+
+  // ---- Day length across a full year at a given latitude (366 samples), for the "Year at a Glance" chart ----
+  function dayLengthSeries(latDeg){
+    var out = [];
+    for(var d=0; d<=365; d++){
+      var st = sunTimes(latDeg, declinationDeg(d));
+      out.push(st.polar==="day" ? 24 : st.polar==="night" ? 0 : st.daylen);
+    }
+    return out;
+  }
+  // ---- Analemma: the Sun's (equation-of-time, declination) trace across a year, at a fixed clock hour ----
+  function analemmaSeries(){
+    var out = [];
+    for(var d=0; d<365; d+=2){
+      out.push({ eot: equationOfTimeMin(d), dec: declinationDeg(d) });
+    }
+    return out;
+  }
 
   function bandInterp(x, stops){
     if(x<=stops[0][0]) return stops[0][1];
@@ -903,6 +1120,14 @@ footer{
     return {top:SKY_STOPS[0].top, bot:SKY_STOPS[0].bot};
   }
 
+  function horizonXY(w, h, horizonY, flip, Hdeg, altDeg){
+    var xNorm = clamp((Hdeg/130)*flip, -1, 1);
+    var altNorm = clamp(altDeg/85, -0.28, 1);
+    return { x: w/2 + xNorm*(w*0.46), y: horizonY - altNorm*(horizonY*0.92) };
+  }
+
+  var showPlanets = true, showConstellations = true;
+
   function drawSky(){
     var w=skyCv.width, h=skyCv.height;
     if(!skyStars) buildSkyStars(w,h);
@@ -910,6 +1135,7 @@ footer{
     var sunAlt = sunAltitudeDeg(t, lat);
     var geo = moonLocalGeometry(t, lat);
     var horizonY = h*0.72;
+    var flip = lat<0 ? -1 : 1; // southern-hemisphere observers face north, mirroring east/west on screen
 
     var colors = skyColorsFor(sunAlt);
     var g = skyctx.createLinearGradient(0,0,0,horizonY);
@@ -924,7 +1150,42 @@ footer{
         skyctx.beginPath(); skyctx.arc(s.x,s.y,s.r,0,Math.PI*2);
         skyctx.fillStyle="#fff"; skyctx.fill();
       }
+
+      if(showConstellations){
+        var sunLon = sunLonHelio(t);
+        for(var ck in CONSTELLATIONS){
+          var c = CONSTELLATIONS[ck];
+          var pts = c.stars.map(function(s){
+            var H = hourAngleFromLon(t, s.ra, sunLon);
+            var alt = altitudeFromLatDecH(lat, s.dec, H);
+            return alt>-8 ? horizonXY(w,h,horizonY,flip,H,alt) : null;
+          });
+          skyctx.strokeStyle="rgba(180,200,255,.55)"; skyctx.lineWidth=0.8;
+          c.lines.forEach(function(pair){
+            var p1=pts[pair[0]], p2=pts[pair[1]];
+            if(p1 && p2){ skyctx.beginPath(); skyctx.moveTo(p1.x,p1.y); skyctx.lineTo(p2.x,p2.y); skyctx.stroke(); }
+          });
+          pts.forEach(function(p){
+            if(p){ skyctx.beginPath(); skyctx.arc(p.x,p.y,1.6,0,Math.PI*2); skyctx.fillStyle="#e8ecff"; skyctx.fill(); }
+          });
+        }
+      }
       skyctx.restore();
+    }
+
+    if(showPlanets){
+      for(var key in PLANETS){
+        var pg = planetLocalGeometry(t, lat, key);
+        if(pg.alt < -6) continue;
+        var pp = horizonXY(w,h,horizonY,flip,pg.H,pg.alt);
+        skyctx.save();
+        if(pg.alt<0) skyctx.globalAlpha=0.4;
+        skyctx.beginPath(); skyctx.arc(pp.x,pp.y,3.4,0,Math.PI*2);
+        skyctx.fillStyle=PLANETS[key].color; skyctx.fill();
+        skyctx.font="9px Inter, sans-serif"; skyctx.fillStyle="rgba(255,255,255,.7)"; skyctx.textAlign="center";
+        skyctx.fillText(PLANETS[key].name, pp.x, pp.y-7);
+        skyctx.restore();
+      }
     }
 
     skyctx.fillStyle="#0d1f14";
@@ -932,21 +1193,106 @@ footer{
     skyctx.beginPath(); skyctx.moveTo(0,horizonY); skyctx.lineTo(w,horizonY);
     skyctx.strokeStyle="rgba(255,255,255,.35)"; skyctx.lineWidth=1.5; skyctx.stroke();
 
-    var flip = lat<0 ? -1 : 1; // southern-hemisphere observers face north, mirroring east/west on screen
-    var xNorm = clamp((geo.Hmoon/130)*flip, -1, 1);
-    var mx = w/2 + xNorm*(w*0.46);
-    var altNorm = clamp(geo.alt/85, -0.28, 1);
-    var my = horizonY - altNorm*(horizonY*0.92);
-
+    var mp = horizonXY(w,h,horizonY,flip,geo.Hmoon,geo.alt);
     skyctx.save();
     if(geo.alt<0) skyctx.globalAlpha=0.45;
-    renderMoonDisc(skyctx, mx, my, 16, elongationDeg(t));
+    renderMoonDisc(skyctx, mp.x, mp.y, 16, elongationDeg(t));
     skyctx.restore();
 
     skyctx.fillStyle="rgba(255,255,255,.55)"; skyctx.font="10px Inter, sans-serif";
     skyctx.textAlign="center";
     skyctx.fillText(flip>0?"E":"W", w*0.08, horizonY+14);
     skyctx.fillText(flip>0?"W":"E", w*0.92, horizonY+14);
+  }
+
+  // ================= Canvas: eclipse alignment =================
+  var eclipseCv = document.getElementById("eclipseCanvas");
+  var ectx = eclipseCv.getContext("2d");
+  function drawEclipseAlign(t){
+    var w=eclipseCv.width, h=eclipseCv.height, cx=w/2, cy=h/2;
+    ectx.clearRect(0,0,w,h);
+    var elong = elongationDeg(t);
+    var eclLat = moonEclipticLat(t);
+    var devFromNew = elong<=180 ? elong : elong-360;     // signed, 0 at new moon
+    var devFromFull = elong-180;                          // signed, 0 at full moon
+    var nearerIsNew = Math.abs(devFromNew) <= Math.abs(devFromFull);
+    var devDeg = nearerIsNew ? devFromNew : devFromFull;
+    var scale = 3.2; // px per degree of deviation, clamped to stay on-canvas
+    var dx = clamp(devDeg*scale, -34, 34);
+    var dy = clamp(eclLat*scale, -34, 34);
+    ectx.beginPath(); ectx.arc(cx,cy,20,0,Math.PI*2);
+    ectx.fillStyle = nearerIsNew ? "#ffcf5c" : "#1a2140";
+    ectx.strokeStyle = "rgba(255,255,255,.25)"; ectx.lineWidth=1;
+    ectx.fill(); if(!nearerIsNew) ectx.stroke();
+    ectx.beginPath(); ectx.arc(cx+dx,cy+dy,13,0,Math.PI*2);
+    ectx.fillStyle = "#2b2b33"; ectx.strokeStyle="rgba(255,255,255,.5)"; ectx.lineWidth=1;
+    ectx.fill(); ectx.stroke();
+  }
+
+  // ================= Canvas: day length across the year =================
+  var daylenCv = document.getElementById("daylenCanvas");
+  var dctx = daylenCv.getContext("2d");
+  var dayLenCache = {lat:null, series:null};
+  function drawDayLengthChart(latDeg){
+    var w=daylenCv.width, h=daylenCv.height;
+    dctx.clearRect(0,0,w,h);
+    var padL=28, padB=16, padT=8, padR=8;
+    var plotW=w-padL-padR, plotH=h-padT-padB;
+    if(dayLenCache.lat!==latDeg){ dayLenCache.lat=latDeg; dayLenCache.series=dayLengthSeries(latDeg); }
+    var series = dayLenCache.series;
+
+    dctx.strokeStyle="rgba(255,255,255,.12)"; dctx.fillStyle="rgba(255,255,255,.4)";
+    dctx.font="8px Inter, sans-serif"; dctx.textAlign="right"; dctx.textBaseline="middle";
+    [0,6,12,18,24].forEach(function(hv){
+      var y = padT + plotH*(1-hv/24);
+      dctx.beginPath(); dctx.moveTo(padL,y); dctx.lineTo(w-padR,y); dctx.stroke();
+      dctx.fillText(hv+"h", padL-4, y);
+    });
+    CARDINAL_POINTS.forEach(function(c){
+      var x = padL + plotW*(c.d/365);
+      dctx.beginPath(); dctx.moveTo(x,padT); dctx.lineTo(x,h-padB); dctx.strokeStyle="rgba(255,255,255,.08)"; dctx.stroke();
+    });
+
+    dctx.beginPath();
+    series.forEach(function(hrs,i){
+      var x = padL + plotW*(i/365);
+      var y = padT + plotH*(1-hrs/24);
+      if(i===0) dctx.moveTo(x,y); else dctx.lineTo(x,y);
+    });
+    dctx.strokeStyle="#6fd3ff"; dctx.lineWidth=1.8; dctx.stroke();
+
+    var d = Math.floor(dayOfYear(state.t));
+    var curHrs = series[Math.min(d,365)];
+    var cx = padL + plotW*(d/365), cy = padT + plotH*(1-curHrs/24);
+    dctx.beginPath(); dctx.arc(cx,cy,3.5,0,Math.PI*2); dctx.fillStyle="#ffcf5c"; dctx.fill();
+  }
+
+  // ================= Canvas: analemma =================
+  var analemmaCv = document.getElementById("analemmaCanvas");
+  var actx = analemmaCv.getContext("2d");
+  var analemmaData = null;
+  function drawAnalemma(){
+    if(!analemmaData) analemmaData = analemmaSeries();
+    var w=analemmaCv.width, h=analemmaCv.height, cx=w/2, cy=h/2;
+    actx.clearRect(0,0,w,h);
+    actx.strokeStyle="rgba(255,255,255,.12)";
+    actx.beginPath(); actx.moveTo(0,cy); actx.lineTo(w,cy); actx.moveTo(cx,0); actx.lineTo(cx,h); actx.stroke();
+    var sx=3.2, sy=3.2;
+    actx.beginPath();
+    analemmaData.forEach(function(p,i){
+      var x = cx + p.eot*sx, y = cy - p.dec*sy;
+      if(i===0) actx.moveTo(x,y); else actx.lineTo(x,y);
+    });
+    actx.closePath();
+    actx.strokeStyle="#ffcf5c"; actx.lineWidth=1.6; actx.stroke();
+
+    var eotNow = equationOfTimeMin(state.t);
+    var decNow = declinationDeg(state.t);
+    var nx = cx+eotNow*sx, ny = cy-decNow*sy;
+    actx.beginPath(); actx.arc(nx,ny,3.2,0,Math.PI*2); actx.fillStyle="#6fd3ff"; actx.fill();
+
+    actx.fillStyle="rgba(255,255,255,.4)"; actx.font="8px Inter, sans-serif"; actx.textAlign="center";
+    actx.fillText("slow", cx-24, h-4); actx.fillText("fast", cx+24, h-4);
   }
 
   // ================= UI wiring =================
@@ -989,7 +1335,18 @@ footer{
     unitBtn: document.getElementById("unitBtn"),
     snapshotBtn: document.getElementById("snapshotBtn"),
     tourBtn: document.getElementById("tourBtn"),
-    realtimeBtn: document.getElementById("realtimeBtn")
+    realtimeBtn: document.getElementById("realtimeBtn"),
+    rPlanets: document.getElementById("rPlanets"),
+    togglePlanets: document.getElementById("togglePlanets"),
+    toggleConstellations: document.getElementById("toggleConstellations"),
+    yearLatLabel: document.getElementById("yearLatLabel"),
+    rMeteor: document.getElementById("rMeteor"),
+    rCountdown: document.getElementById("rCountdown"),
+    lookupDate: document.getElementById("lookupDate"),
+    lookupBtn: document.getElementById("lookupBtn"),
+    compareSelect: document.getElementById("compareSelect"),
+    cmpTable: document.getElementById("cmpTable"),
+    planetTable: document.getElementById("planetTable")
   };
 
   function syncSlidersFromState(){
@@ -1006,16 +1363,9 @@ footer{
     var localHours = timeOfDayFrac(t)*24;
     els.rLocalTime.textContent = fmtHM(localHours);
 
-    var isDay;
-    if(st.polar==="day"){ isDay=true; }
-    else if(st.polar==="night"){ isDay=false; }
-    else {
-      var afterRise = ((localHours - st.sunrise)+24)%24;
-      var window = ((st.sunset-st.sunrise)+24)%24;
-      isDay = afterRise <= window;
-    }
-    els.rStatus.textContent = isDay ? "☀ Daylight" : "🌙 Night";
-    els.rStatus.className = "v " + (isDay?"day":"night");
+    var band = lightBand(sunAltitudeDeg(t, state.lat));
+    els.rStatus.textContent = band.label;
+    els.rStatus.className = "v " + band.cls;
 
     if(st.polar==="day"){ els.rSunrise.textContent="—"; els.rSunset.textContent="—"; els.rDaylen.textContent="24h (polar day)"; }
     else if(st.polar==="night"){ els.rSunrise.textContent="—"; els.rSunset.textContent="—"; els.rDaylen.textContent="0h (polar night)"; }
@@ -1081,13 +1431,32 @@ footer{
     els.rWind.textContent = fmtWind(clim.windKmh);
     els.rRain.textContent = Math.round(clim.rainPct)+"% ("+clim.rainLabel+")";
     els.rSeasonHere.textContent = state.lat>=0 ? seas.n : seas.s;
+
+    var planetBits = [];
+    for(var pk in PLANETS){
+      var pgeo = planetLocalGeometry(t, state.lat, pk);
+      planetBits.push(PLANETS[pk].name+": "+planetVisibilityLabel(pk, pgeo));
+    }
+    els.rPlanets.textContent = planetBits.join(" · ");
+
+    var ms = meteorStatus(t);
+    els.rMeteor.textContent = ms.active ? (ms.name+" — "+ms.phase+" ("+ms.rate+", "+ms.note+")") : (ms.name+" in "+ms.daysUntil+" day"+(ms.daysUntil===1?"":"s"));
+
+    var cardinal = nextCardinalPoint(t);
+    els.rCountdown.textContent = cardinal.days+" day"+(cardinal.days===1?"":"s")+" to the "+cardinal.name;
+
+    els.yearLatLabel.innerHTML = Math.abs(state.lat).toFixed(state.locationName?1:0)+"&deg; "+(state.lat>=0?"N":"S");
   }
 
   function render(){
     drawOrbit();
     drawGlobe();
     drawSky();
+    drawEclipseAlign(state.t);
+    drawDayLengthChart(state.lat);
+    drawAnalemma();
     updateReadouts();
+    updateCompareTable();
   }
 
   var REALTIME_SPEED = 1/86400; // 1 simulated day per 86400 real seconds = actual wall-clock speed
@@ -1400,6 +1769,9 @@ footer{
     {sel:"#moon-h", title:"Moon phase", text:"Computed live from the real Sun-Earth-Moon angle — plus distance (supermoons), eclipse potential, and tide strength."},
     {sel:"#sky-h", title:"Moon in the sky", text:"A horizon view showing exactly when the Moon rises, sets, and how high it climbs from your chosen spot."},
     {sel:"#climate-h", title:"Simulated climate", text:"An illustrative estimate of temperature, wind, and rain chance for that location and season — not a real forecast."},
+    {sel:"#year-h", title:"Year at a glance", text:"See day length swing across the whole year at your latitude, and the Sun's analemma — the figure-8 it traces at a fixed clock time."},
+    {sel:"#almanac-h", title:"Sky almanac", text:"Active meteor showers, a countdown to the next equinox or solstice, and a date lookup — see what the Moon looked like on any date, past or future."},
+    {sel:"#compare-h", title:"Compare locations", text:"Put two places side by side at the same moment — same sky, very different experience of it."},
     {sel:".quiz-card", title:"Quiz yourself", text:"Test what you've learned with random scenarios — phases, seasons, and day/night calls."}
   ];
   var tourIdx=0, tourLastHighlighted=null;
@@ -1464,6 +1836,89 @@ footer{
     els.latitude.value = state.lat;
     els.latVal.innerHTML = Math.abs(state.lat).toFixed(state.locationName?1:0)+"&deg; "+(state.lat>=0?"N":"S");
     els.unitBtn.textContent = state.unit==="f" ? "°F · mph" : "°C · km/h";
+  })();
+
+  // ---- Planet/constellation visibility toggles ----
+  els.togglePlanets.addEventListener("change", function(){ showPlanets = this.checked; render(); });
+  els.toggleConstellations.addEventListener("change", function(){ showConstellations = this.checked; render(); });
+
+  // ---- Date lookup ("what was the Moon phase on...") ----
+  (function initLookupDate(){
+    var now = new Date();
+    var mm = String(now.getMonth()+1).padStart(2,"0"), dd = String(now.getDate()).padStart(2,"0");
+    els.lookupDate.value = now.getFullYear()+"-"+mm+"-"+dd;
+  })();
+  els.lookupBtn.addEventListener("click", function(){
+    var val = els.lookupDate.value;
+    if(!val) return;
+    var parts = val.split("-");
+    var picked = new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, parseInt(parts[2],10));
+    var days = Math.round((picked - EPOCH)/86400000);
+    state.t = days + timeOfDayFrac(state.t);
+    syncSlidersFromState();
+    render();
+  });
+
+  // ---- Compare two locations ----
+  els.compareSelect.innerHTML = els.locationPreset.innerHTML;
+  var cmpCustomOpt = els.compareSelect.querySelector('option[value=""]');
+  if(cmpCustomOpt) cmpCustomOpt.remove();
+  els.compareSelect.selectedIndex = 0;
+  els.compareSelect.addEventListener("change", render);
+  function updateCompareTable(){
+    var sel = els.compareSelect;
+    if(!sel.value) return;
+    var compareLat = parseFloat(sel.value);
+    var compareLocName = sel.options[sel.selectedIndex].text.replace(/\s*\([^)]*\)\s*$/, "");
+    var t = state.t;
+    function statsFor(lat, locName){
+      var dec = declinationDeg(t);
+      var st = sunTimes(lat, dec);
+      var moon = moonLocalGeometry(t, lat);
+      var clim = simulateClimate(t, lat, locName);
+      var seas = seasonName(t);
+      return {
+        sunrise: st.polar==="day" ? "Always up" : st.polar==="night" ? "Doesn't rise" : fmtHM(st.sunrise),
+        sunset: st.polar==="day" ? "—" : st.polar==="night" ? "—" : fmtHM(st.sunset),
+        daylen: st.polar==="day" ? "24h" : st.polar==="night" ? "0h" : Math.floor(st.daylen)+"h "+Math.round((st.daylen%1)*60)+"m",
+        moon: moon.polar==="up" ? "Always up" : moon.polar==="down" ? "Not up" : (moon.alt>=0 ? moon.alt.toFixed(0)+"° up" : "Below horizon"),
+        temp: fmtTemp(clim.tempC),
+        season: lat>=0 ? seas.n : seas.s
+      };
+    }
+    var here = statsFor(state.lat, state.locationName);
+    var there = statsFor(compareLat, compareLocName);
+    var hereLabel = state.locationName || (Math.abs(state.lat).toFixed(0)+"°"+(state.lat>=0?"N":"S"));
+    var rows = [
+      ["Sunrise", here.sunrise, there.sunrise],
+      ["Sunset", here.sunset, there.sunset],
+      ["Day length", here.daylen, there.daylen],
+      ["Moon", here.moon, there.moon],
+      ["Temperature", here.temp, there.temp],
+      ["Season", here.season, there.season]
+    ];
+    var html = '<div></div><div class="cmp-head">'+hereLabel+'</div><div class="cmp-head">'+compareLocName+'</div>';
+    rows.forEach(function(r){ html += '<div class="cmp-label">'+r[0]+'</div><div>'+r[1]+'</div><div>'+r[2]+'</div>'; });
+    els.cmpTable.innerHTML = html;
+  }
+
+  // ---- Static planetary comparison table ----
+  var PLANET_FACTS = [
+    ["Mercury","0.03°","~176 Earth days","88 Earth days"],
+    ["Venus","177° (retrograde)","~117 Earth days","225 Earth days"],
+    ["Earth","23.4°","24 hours","365.25 days"],
+    ["Mars","25.2°","24h 37m","687 days (1.9 yr)"],
+    ["Jupiter","3.1°","9h 56m","11.9 years"],
+    ["Saturn","26.7°","10h 33m","29.5 years"],
+    ["Uranus","97.8° (tipped on its side)","17h 14m","84 years"],
+    ["Neptune","28.3°","16h 6m","165 years"]
+  ];
+  (function initPlanetTable(){
+    var html = '<div class="cmp-head">Planet</div><div class="cmp-head">Axial tilt</div><div class="cmp-head">Day length</div><div class="cmp-head">Year length</div>';
+    PLANET_FACTS.forEach(function(row){
+      html += '<div class="cmp-label">'+row[0]+'</div><div>'+row[1]+'</div><div>'+row[2]+'</div><div>'+row[3]+'</div>';
+    });
+    els.planetTable.innerHTML = html;
   })();
 
   syncSlidersFromState();
