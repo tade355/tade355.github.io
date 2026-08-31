@@ -74,6 +74,15 @@ function viewSubmission(record, refresh) {
       if (record.tabSwitchCount) {
         modalContainer.appendChild(el('p', { class: 'section-subtitle', style: 'color: var(--warning);' }, `⚠ Left the tab ${record.tabSwitchCount} time${record.tabSwitchCount === 1 ? '' : 's'} during the check (${record.tabAwaySeconds || 0}s away total). Not proof of anything on its own — worth a look alongside the answers.`));
       }
+      if (record.score != null || record.outcome) {
+        modalContainer.appendChild(el('div', { class: 'quiz-summary-block' }, [
+          el('div', { class: 'field-label' }, 'Score'),
+          el('div', { style: 'margin-top: 0.4rem; display: flex; align-items: center; gap: 0.5rem;' }, [
+            record.score != null ? el('strong', {}, `${record.score}/${QUESTIONS.length}`) : null,
+            record.outcome ? statusPill(record.outcome) : null,
+          ]),
+        ]));
+      }
       const answers = record.answers || {};
       QUESTIONS.forEach((q) => {
         const block = el('div', { class: 'quiz-summary-block' }, [el('div', { class: 'field-label' }, `Question ${q.num} — ${q.label}`)]);
@@ -238,14 +247,14 @@ export function renderTraining(container) {
           },
         },
         { key: 'tabSwitchCount', label: 'Left Tab', render: (r) => (r.tabSwitchCount ? `⚠ ${r.tabSwitchCount}×` : '—') },
-        canGrade ? {
+        {
           key: 'score',
           label: 'Score',
           render: (r) => (r.score == null && !r.outcome ? '—' : el('span', { style: 'display: inline-flex; align-items: center; gap: 0.4rem;' }, [
             r.score != null ? `${r.score}/${QUESTIONS.length}` : null,
             r.outcome ? statusPill(r.outcome) : null,
           ])),
-        } : null,
+        },
         {
           key: 'actions',
           label: '',
