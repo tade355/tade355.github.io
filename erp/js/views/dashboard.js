@@ -11,21 +11,29 @@ import { ownerSettlementBalances } from './dozerRentPayments.js';
 import { projectNames, computeProjectStats, companyWideStats } from './profitability.js';
 import { getCurrentUser } from '../session.js';
 
-function lastNMonthKeys(n) {
+function todayISOString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// Both anchored on `anchorISO` (defaults to real today) instead of always
+// `Date.now()`/`new Date()`, so the whole dashboard can be re-pointed at a
+// past date via the date-nav bar below without touching every call site.
+function lastNMonthKeys(n, anchorISO = todayISOString()) {
   const keys = [];
-  const d = new Date();
-  d.setDate(1);
+  const anchor = new Date(`${anchorISO}T00:00:00`);
+  anchor.setDate(1);
   for (let i = n - 1; i >= 0; i -= 1) {
-    const dt = new Date(d.getFullYear(), d.getMonth() - i, 1);
+    const dt = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1);
     keys.push(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`);
   }
   return keys;
 }
 
-function lastNDayKeys(n) {
+function lastNDayKeys(n, anchorISO = todayISOString()) {
   const keys = [];
+  const anchorMs = new Date(`${anchorISO}T00:00:00`).getTime();
   for (let i = n - 1; i >= 0; i -= 1) {
-    keys.push(new Date(Date.now() - i * 86400000).toISOString().slice(0, 10));
+    keys.push(new Date(anchorMs - i * 86400000).toISOString().slice(0, 10));
   }
   return keys;
 }
@@ -70,23 +78,23 @@ function leaderboardCard(title, subtitle, rows, emptyText) {
   return card;
 }
 
-// Today's real events, ordered by actual time-of-day where one exists
-// (Daily Operations' Time Resumed/Time Closed), with date-only records
-// (diesel receipts, maintenance logs — no time-of-day field) listed after,
-// rather than inventing a false timestamp for them.
-function buildTodayTimeline(todayISO, todaysOps) {
+// The viewed day's real events, ordered by actual time-of-day where one
+// exists (Daily Operations' Time Resumed/Time Closed), with date-only
+// records (diesel receipts, maintenance logs — no time-of-day field)
+// listed after, rather than inventing a false timestamp for them.
+function buildDayTimeline(dayISO, daysOps) {
   const timed = [];
   const untimed = [];
 
-  todaysOps.forEach((o) => {
+  daysOps.forEach((o) => {
     if (o.timeResumed) timed.push({ time: o.timeResumed, icon: '▶️', text: `Machine Started — ${o.equipment}`, meta: o.siteName });
     if (o.timeClosed) timed.push({ time: o.timeClosed, icon: '⏹️', text: `Work Closed — ${o.equipment}`, meta: o.siteName });
     if (!o.timeResumed && !o.timeClosed) untimed.push({ icon: '📝', text: `Report Submitted — ${o.equipment}`, meta: o.siteName });
   });
-  store.get('dieselReceipts').filter((r) => r.date === todayISO).forEach((r) => {
+  store.get('dieselReceipts').filter((r) => r.date === dayISO).forEach((r) => {
     untimed.push({ icon: '⛽', text: `Diesel Delivered — ${(r.litres || 0).toLocaleString()} L`, meta: r.station || r.project || 'Company-wide' });
   });
-  store.get('maintenanceLogs').filter((m) => m.date === todayISO).forEach((m) => {
+  store.get('maintenanceLogs').filter((m) => m.date === dayISO).forEach((m) => {
     untimed.push({ icon: '🔧', text: `${m.type} — ${m.equipment}`, meta: m.status });
   });
 
@@ -96,320 +104,375 @@ function buildTodayTimeline(todayISO, todaysOps) {
 
 export function renderDashboard(container) {
   container.innerHTML = '';
-  const employees = store.get('employees');
-  const inventory = store.get('inventory');
-  const invoices = store.get('invoices');
-  const expenses = store.get('expenses');
-  const operations = store.get('operations');
 
-  const months = lastNMonthKeys(6);
-  const currentMonthKey = months[5];
-  const prevMonthKey = months[4];
+  const realTodayISO = todayISOString();
 
-  const lowStock = inventory.filter((i) => i.quantity <= i.reorderLevel);
-  const outOfStock = inventory.filter((i) => i.quantity <= 0);
-  // status !== 'Paid' (not just === 'Unpaid') so Partially Paid invoices
-  // still count as outstanding; unpaidTotal sums what's still owed on each
-  // (amountOutstanding), not the full original invoice value, so a
-  // partially paid invoice isn't counted as if nothing had been received.
-  const unpaid = invoices.filter((i) => i.status !== 'Paid');
-  const unpaidTotal = unpaid.reduce((sum, i) => sum + amountOutstanding(i), 0);
+  // Date-nav bar — lets the whole dashboard be re-pointed at any past day
+  // ("yesterday", "the day before", etc.) instead of always showing today.
+  const navBar = el('div', { class: 'filter-bar' });
+  const dateInput = el('input', { type: 'date', max: realTodayISO });
+  const prevBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '◀ Prev Day');
+  const nextBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Next Day ▶');
+  const todayBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Today');
+  navBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Viewing'), dateInput]));
+  navBar.appendChild(prevBtn);
+  navBar.appendChild(nextBtn);
+  navBar.appendChild(todayBtn);
+  container.appendChild(navBar);
 
-  const overdueLoans = store.get('loans').filter((l) => loanAgingDays(l) !== null);
-  const overdueLoansTotal = overdueLoans.reduce((sum, l) => sum + loanAmountOutstanding(l), 0);
+  const body = el('div');
+  container.appendChild(body);
 
-  const areaForMonth = (key) => operations.filter((o) => monthKey(o.date) === key && isHaOperationType(o.operationType)).reduce((sum, o) => sum + o.quantity, 0);
-  const revenueForMonth = (key) => invoices.filter((inv) => monthKey(inv.date) === key).reduce((sum, inv) => sum + invoiceTotal(inv), 0);
+  function shiftDay(iso, delta) {
+    const d = new Date(`${iso}T00:00:00`);
+    d.setDate(d.getDate() + delta);
+    return d.toISOString().slice(0, 10);
+  }
 
-  // Revenue vs Cost vs Profit — company-wide, all projects, reusing the
-  // exact same per-project cost/revenue logic as Operation Profitability
-  // so this never drifts out of sync with that page's numbers.
-  const projects = projectNames();
-  const monthlyStats = months.map((key) => {
-    const { from, to } = monthBounds(key);
-    const perProject = projects.map((p) => computeProjectStats(p, from, to));
-    return {
-      key,
-      label: monthLabel(key),
-      revenue: perProject.reduce((sum, s) => sum + s.revenue, 0),
-      cost: perProject.reduce((sum, s) => sum + s.totalCost, 0),
-      profit: perProject.reduce((sum, s) => sum + s.profit, 0),
-    };
-  });
-  // Today vs the last 7 days — the Executive Command Centre's headline
-  // numbers, all same-day and all real (companyWideStats already exists,
-  // built for the Loan Portfolio's company-wide interest calc, reused
-  // here at a one-day window instead of a month/period one).
-  const last7Days = lastNDayKeys(7);
-  const todayISO = last7Days[6];
-  const yesterdayISO = last7Days[5];
-  const dailyStats = last7Days.map((day) => ({ day, ...companyWideStats(day, day) }));
-  const todayStats = dailyStats[6];
-  const yesterdayStats = dailyStats[5];
-  const todaysOps = operations.filter((o) => o.date === todayISO);
-  const dailyDiesel = last7Days.map((day) => operations.filter((o) => o.date === day).reduce((sum, o) => sum + (o.fuelUsed || 0), 0));
-  const dailyHectares = last7Days.map((day) => operations.filter((o) => o.date === day && isHaOperationType(o.operationType)).reduce((sum, o) => sum + o.quantity, 0));
-  const todaysDiesel = dailyDiesel[6];
-  const todaysHectares = dailyHectares[6];
-  // ROI here means Tentative Profit ÷ Cost for the day — a return-on-
-  // operating-spend proxy, not the finance-textbook return-on-capital-
-  // employed (capital expenditure per machine isn't tracked in this system).
-  const todayROI = todayStats.totalCost ? (todayStats.tentativeProfit / todayStats.totalCost) * 100 : null;
-  const yesterdayROI = yesterdayStats.totalCost ? (yesterdayStats.tentativeProfit / yesterdayStats.totalCost) * 100 : null;
+  prevBtn.addEventListener('click', () => refresh(shiftDay(dateInput.value || realTodayISO, -1)));
+  nextBtn.addEventListener('click', () => refresh(shiftDay(dateInput.value || realTodayISO, 1)));
+  todayBtn.addEventListener('click', () => refresh(realTodayISO));
+  dateInput.addEventListener('change', () => refresh(dateInput.value || realTodayISO));
 
-  // Fleet health — feeds both the KPI row and the Executive Alert Center.
-  const dozers = fleetItems();
-  const activeFleetCount = dozers.filter((d) => (d.fleetStatus || 'Active') === 'Active').length;
-  const downFleetCount = dozers.filter((d) => d.fleetStatus === 'Down' || d.fleetStatus === 'Under Maintenance').length;
-  const machineAvailability = dozers.length ? (activeFleetCount / dozers.length) * 100 : null;
-  const serviceStatuses = dozers.map((d) => serviceStatusFor(d).status);
-  const overdueServiceCount = serviceStatuses.filter((s) => s === 'Overdue').length;
-  const dueSoonServiceCount = serviceStatuses.filter((s) => s === 'Due Soon').length;
+  function refresh(viewDateISO) {
+    dateInput.value = viewDateISO;
+    nextBtn.disabled = viewDateISO >= realTodayISO;
+    const isToday = viewDateISO === realTodayISO;
+    const dayLabel = isToday ? 'Today' : formatDate(viewDateISO);
 
-  // Approvals + money-owed signals — feed both the Outstanding Approvals
-  // KPI and the Executive Alert Center below.
-  const fuelCreditOwed = stationBalances().reduce((sum, s) => sum + Math.max(0, s.balance), 0);
-  const ownerSettlementsOwed = ownerSettlementBalances().reduce((sum, s) => sum + Math.max(0, s.balance), 0);
-  const pendingFundRequests = store.get('fundRequests').filter((r) => r.status === 'Pending').length;
-  const pendingLeave = store.get('leaveRequests').filter((r) => r.status === 'Pending').length;
-  const pendingVouchers = store.get('fuelingVouchers').filter((r) => r.status === 'Pending Approval').length;
-  const outstandingApprovals = pendingFundRequests + pendingLeave + pendingVouchers;
-  const lastBackup = store.getLastBackupAt();
-  const daysSinceBackup = lastBackup ? Math.floor((Date.now() - new Date(lastBackup).getTime()) / 86400000) : null;
+    body.innerHTML = '';
 
-  // Greeting — a small personal touch so this reads as a live briefing
-  // rather than a static report.
-  const user = getCurrentUser();
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  const todayLabel = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  const firstName = (user?.name || '').split(' ')[0];
-  container.appendChild(sectionHeader('Dashboard', `${greeting}${firstName ? ', ' + firstName : ''} — here's how Emagrims Ltd is doing today, ${todayLabel}.`));
+    const employees = store.get('employees');
+    const inventory = store.get('inventory');
+    const invoices = store.get('invoices');
+    const expenses = store.get('expenses');
+    const operations = store.get('operations');
 
-  // KPI row — the Executive Command Centre's headline numbers, same-day
-  // where a same-day figure exists, each with a 7-day sparkline where a
-  // real daily history is meaningful. No weather/GPS cards — this system
-  // has no weather API or GPS telemetry configured, and a fake number
-  // would be worse than no number.
-  const kpiGrid = el('div', { class: 'kpi-grid' }, [
-    statCard({
-      icon: '🚜', label: 'Machine Availability', value: machineAvailability === null ? '—' : `${machineAvailability.toFixed(0)}%`,
-      hint: `${dozers.length} in fleet`, target: 'Target: 85%', tone: machineAvailability !== null && machineAvailability < 85 ? 'warning' : 'good', href: '#/fleet',
-    }),
-    statCard({ icon: '✅', label: 'Active Machines', value: String(activeFleetCount), tone: 'good', href: '#/fleet' }),
-    statCard({ icon: '🔧', label: 'Machines Under Repair', value: String(downFleetCount), tone: downFleetCount ? 'warning' : 'good', href: '#/fleet' }),
-    statCard({
-      icon: '💰', label: "Today's Revenue (Tentative)", value: formatCurrency(todayStats.provisionalRevenue), href: '#/projects',
-      hint: "Today's submitted reports x contract rate — not yet invoiced",
-      trend: trendFor(todayStats.provisionalRevenue, yesterdayStats.provisionalRevenue, { periodLabel: 'yesterday' }),
-      sparkline: dailyStats.map((d) => d.provisionalRevenue),
-    }),
-    statCard({
-      icon: '💸', label: "Today's Cost", value: formatCurrency(todayStats.totalCost), href: '#/accounting',
-      trend: trendFor(todayStats.totalCost, yesterdayStats.totalCost, { invert: true, periodLabel: 'yesterday' }),
-      sparkline: dailyStats.map((d) => d.totalCost),
-    }),
-    statCard({
-      icon: '📈', label: "Today's Profit (Tentative)", value: formatCurrency(todayStats.tentativeProfit), href: '#/projects',
-      hint: 'Tentative Revenue minus Cost, today',
-      trend: trendFor(todayStats.tentativeProfit, yesterdayStats.tentativeProfit, { periodLabel: 'yesterday' }),
-      sparkline: dailyStats.map((d) => d.tentativeProfit),
-    }),
-    statCard({
-      icon: '📊', label: 'ROI', value: todayROI === null ? '—' : `${todayROI.toFixed(0)}%`, hint: 'Tentative Profit ÷ Cost, today',
-      trend: todayROI !== null && yesterdayROI !== null ? trendFor(todayROI, yesterdayROI, { periodLabel: 'yesterday' }) : undefined,
-      href: '#/accounting',
-    }),
-    statCard({ icon: '⛽', label: "Today's Diesel", value: `${todaysDiesel.toLocaleString()} L`, href: '#/resourceManagement', sparkline: dailyDiesel }),
-    statCard({ icon: '🌾', label: "Today's Hectares", value: `${todaysHectares.toFixed(1)} ha`, href: '#/operations', sparkline: dailyHectares }),
-    statCard({ icon: '👥', label: 'Active Staff', value: String(employees.filter((e) => e.status === 'Active').length), hint: `${employees.length} total`, href: '#/hr' }),
-    statCard({ icon: '📋', label: 'Outstanding Approvals', value: String(outstandingApprovals), tone: outstandingApprovals ? 'warning' : 'good', href: '#/fundRequests' }),
-  ]);
-  container.appendChild(kpiGrid);
+    const months = lastNMonthKeys(6, viewDateISO);
+    const currentMonthKey = months[5];
 
-  // Executive Alert Center — every "watch this" signal, grouped by real
-  // severity instead of one flat list, so the most urgent things are
-  // never buried under routine approvals.
-  const actionItems = [];
-  if (overdueServiceCount) actionItems.push({ tone: 'critical', icon: '🔧', text: `${overdueServiceCount} dozer${overdueServiceCount > 1 ? 's' : ''} overdue for service`, href: '#/fleet' });
-  if (unpaid.length) actionItems.push({ tone: 'critical', icon: '🧾', text: `${unpaid.length} unpaid invoice${unpaid.length > 1 ? 's' : ''} — ${formatCurrency(unpaidTotal)} outstanding`, href: '#/sales' });
-  if (overdueLoans.length) actionItems.push({ tone: 'critical', icon: '🏦', text: `${overdueLoans.length} loan repayment${overdueLoans.length > 1 ? 's' : ''} overdue — ${formatCurrency(overdueLoansTotal)} outstanding`, href: '#/accounting' });
-  if (outOfStock.length) actionItems.push({ tone: 'critical', icon: '📦', text: `${outOfStock.length} item${outOfStock.length > 1 ? 's' : ''} out of stock`, href: '#/fleet' });
-  if (lowStock.length - outOfStock.length > 0) actionItems.push({ tone: 'warning', icon: '📦', text: `${lowStock.length - outOfStock.length} item${lowStock.length - outOfStock.length > 1 ? 's' : ''} at or below reorder level`, href: '#/fleet' });
-  if (downFleetCount) actionItems.push({ tone: 'warning', icon: '🚧', text: `${downFleetCount} dozer${downFleetCount > 1 ? 's' : ''} down or under maintenance`, href: '#/fleet' });
-  if (dueSoonServiceCount) actionItems.push({ tone: 'warning', icon: '🔧', text: `${dueSoonServiceCount} dozer${dueSoonServiceCount > 1 ? 's' : ''} due soon for service`, href: '#/fleet' });
-  if (fuelCreditOwed) actionItems.push({ tone: 'warning', icon: '⛽', text: `${formatCurrency(fuelCreditOwed)} fuel credit owed to stations`, href: '#/purchasing' });
-  if (ownerSettlementsOwed) actionItems.push({ tone: 'warning', icon: '🤝', text: `${formatCurrency(ownerSettlementsOwed)} owed to dozer owners`, href: '#/resourceManagement' });
-  if (pendingFundRequests) actionItems.push({ tone: 'warning', icon: '📋', text: `${pendingFundRequests} fund request${pendingFundRequests > 1 ? 's' : ''} awaiting approval`, href: '#/fundRequests' });
-  if (pendingLeave) actionItems.push({ tone: 'warning', icon: '📋', text: `${pendingLeave} leave request${pendingLeave > 1 ? 's' : ''} awaiting approval`, href: '#/leave' });
-  if (pendingVouchers) actionItems.push({ tone: 'warning', icon: '📋', text: `${pendingVouchers} fueling voucher${pendingVouchers > 1 ? 's' : ''} awaiting approval`, href: '#/resourceManagement' });
-  if (!lastBackup) actionItems.push({ tone: 'warning', icon: '💾', text: "You've never backed up this data — everything lives only in this browser", href: '#/backup' });
-  else if (daysSinceBackup > 7) actionItems.push({ tone: 'warning', icon: '💾', text: `It's been ${daysSinceBackup} days since your last backup`, href: '#/backup' });
-  if (todaysOps.length) actionItems.push({ tone: 'info', icon: '📝', text: `${todaysOps.length} daily report${todaysOps.length > 1 ? 's' : ''} submitted today`, href: '#/operations' });
+    const lowStock = inventory.filter((i) => i.quantity <= i.reorderLevel);
+    const outOfStock = inventory.filter((i) => i.quantity <= 0);
+    // status !== 'Paid' (not just === 'Unpaid') so Partially Paid invoices
+    // still count as outstanding; unpaidTotal sums what's still owed on each
+    // (amountOutstanding), not the full original invoice value, so a
+    // partially paid invoice isn't counted as if nothing had been received.
+    const unpaid = invoices.filter((i) => i.status !== 'Paid');
+    const unpaidTotal = unpaid.reduce((sum, i) => sum + amountOutstanding(i), 0);
 
-  container.appendChild(el('h3', { class: 'subsection-title' }, 'Executive Alert Center'));
-  const tierMeta = { critical: { label: '🔴 Critical' }, warning: { label: '🟠 Important' }, info: { label: '🟢 Info' } };
-  const grouped = { critical: [], warning: [], info: [] };
-  actionItems.forEach((item) => grouped[item.tone].push(item));
+    const overdueLoans = store.get('loans').filter((l) => loanAgingDays(l) !== null);
+    const overdueLoansTotal = overdueLoans.reduce((sum, l) => sum + loanAmountOutstanding(l), 0);
 
-  if (actionItems.length) {
-    ['critical', 'warning', 'info'].forEach((tier) => {
-      if (!grouped[tier].length) return;
-      container.appendChild(el('div', { class: 'alert-tier' }, [
-        el('p', { class: 'alert-tier-label' }, tierMeta[tier].label),
-        el('div', { class: 'action-feed' }, grouped[tier].map((item) => el('a', { class: `action-item action-item-${tier}`, href: item.href }, [
-          el('span', { class: 'action-icon' }, item.icon),
-          el('span', { class: 'action-text' }, item.text),
-          el('span', { class: 'action-chevron' }, '→'),
-        ]))),
-      ]));
+    const areaForMonth = (key) => operations.filter((o) => monthKey(o.date) === key && isHaOperationType(o.operationType)).reduce((sum, o) => sum + o.quantity, 0);
+    const revenueForMonth = (key) => invoices.filter((inv) => monthKey(inv.date) === key).reduce((sum, inv) => sum + invoiceTotal(inv), 0);
+
+    // Revenue vs Cost vs Profit — company-wide, all projects, reusing the
+    // exact same per-project cost/revenue logic as Operation Profitability
+    // so this never drifts out of sync with that page's numbers.
+    const projects = projectNames();
+    const monthlyStats = months.map((key) => {
+      const { from, to } = monthBounds(key);
+      const perProject = projects.map((p) => computeProjectStats(p, from, to));
+      return {
+        key,
+        label: monthLabel(key),
+        revenue: perProject.reduce((sum, s) => sum + s.revenue, 0),
+        cost: perProject.reduce((sum, s) => sum + s.totalCost, 0),
+        profit: perProject.reduce((sum, s) => sum + s.profit, 0),
+      };
     });
-  } else {
-    container.appendChild(el('div', { class: 'action-feed-empty' }, '✅ All caught up — nothing needs attention right now.'));
+    // The viewed day vs the 7 days before it — the Executive Command
+    // Centre's headline numbers, all same-day and all real (companyWideStats
+    // already exists, built for the Loan Portfolio's company-wide interest
+    // calc, reused here at a one-day window instead of a month/period one).
+    const last7Days = lastNDayKeys(7, viewDateISO);
+    const viewISO = last7Days[6];
+    const dailyStats = last7Days.map((day) => ({ day, ...companyWideStats(day, day) }));
+    const viewStats = dailyStats[6];
+    const prevDayStats = dailyStats[5];
+    const daysOps = operations.filter((o) => o.date === viewISO);
+    const dailyDiesel = last7Days.map((day) => operations.filter((o) => o.date === day).reduce((sum, o) => sum + (o.fuelUsed || 0), 0));
+    const dailyHectares = last7Days.map((day) => operations.filter((o) => o.date === day && isHaOperationType(o.operationType)).reduce((sum, o) => sum + o.quantity, 0));
+    const viewDiesel = dailyDiesel[6];
+    const viewHectares = dailyHectares[6];
+    // ROI here means Tentative Profit ÷ Cost for the day — a return-on-
+    // operating-spend proxy, not the finance-textbook return-on-capital-
+    // employed (capital expenditure per machine isn't tracked in this system).
+    const viewROI = viewStats.totalCost ? (viewStats.tentativeProfit / viewStats.totalCost) * 100 : null;
+    const prevDayROI = prevDayStats.totalCost ? (prevDayStats.tentativeProfit / prevDayStats.totalCost) * 100 : null;
+
+    // Fleet health — feeds both the KPI row and the Executive Alert Center.
+    // Fleet status is a live/current snapshot (the data model has no
+    // historical fleet-status log), so this stays "as of now" even when
+    // viewing a past day rather than pretending to reconstruct history.
+    const dozers = fleetItems();
+    const activeFleetCount = dozers.filter((d) => (d.fleetStatus || 'Active') === 'Active').length;
+    const downFleetCount = dozers.filter((d) => d.fleetStatus === 'Down' || d.fleetStatus === 'Under Maintenance').length;
+    const machineAvailability = dozers.length ? (activeFleetCount / dozers.length) * 100 : null;
+    const serviceStatuses = dozers.map((d) => serviceStatusFor(d).status);
+    const overdueServiceCount = serviceStatuses.filter((s) => s === 'Overdue').length;
+    const dueSoonServiceCount = serviceStatuses.filter((s) => s === 'Due Soon').length;
+
+    // Approvals + money-owed signals — feed both the Outstanding Approvals
+    // KPI and the Executive Alert Center below. Also a live/current
+    // snapshot, same reasoning as fleet health above.
+    const fuelCreditOwed = stationBalances().reduce((sum, s) => sum + Math.max(0, s.balance), 0);
+    const ownerSettlementsOwed = ownerSettlementBalances().reduce((sum, s) => sum + Math.max(0, s.balance), 0);
+    const pendingFundRequests = store.get('fundRequests').filter((r) => r.status === 'Pending').length;
+    const pendingLeave = store.get('leaveRequests').filter((r) => r.status === 'Pending').length;
+    const pendingVouchers = store.get('fuelingVouchers').filter((r) => r.status === 'Pending Approval').length;
+    const outstandingApprovals = pendingFundRequests + pendingLeave + pendingVouchers;
+    const lastBackup = store.getLastBackupAt();
+    const daysSinceBackup = lastBackup ? Math.floor((Date.now() - new Date(lastBackup).getTime()) / 86400000) : null;
+
+    // Greeting — a personal, time-of-day touch only makes sense when the
+    // viewed day is actually today; a past day gets a plain "Viewing"
+    // header instead of a fabricated "Good morning" for a day already over.
+    const user = getCurrentUser();
+    const firstName = (user?.name || '').split(' ')[0];
+    const dateLabel = new Date(`${viewISO}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    let headerSubtitle;
+    if (isToday) {
+      const hour = new Date().getHours();
+      const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+      headerSubtitle = `${greeting}${firstName ? ', ' + firstName : ''} — here's how Emagrims Ltd is doing today, ${dateLabel}.`;
+    } else {
+      headerSubtitle = `Viewing how Emagrims Ltd was doing on ${dateLabel}.`;
+    }
+    body.appendChild(sectionHeader('Dashboard', headerSubtitle));
+
+    // KPI row — the Executive Command Centre's headline numbers, same-day
+    // where a same-day figure exists, each with a 7-day sparkline (the
+    // 7 days up to and including the viewed day) where a real daily
+    // history is meaningful. No weather/GPS cards — this system has no
+    // weather API or GPS telemetry configured, and a fake number would be
+    // worse than no number.
+    const kpiGrid = el('div', { class: 'kpi-grid' }, [
+      statCard({
+        icon: '🚜', label: 'Machine Availability', value: machineAvailability === null ? '—' : `${machineAvailability.toFixed(0)}%`,
+        hint: `${dozers.length} in fleet`, target: 'Target: 85%', tone: machineAvailability !== null && machineAvailability < 85 ? 'warning' : 'good', href: '#/fleet',
+      }),
+      statCard({ icon: '✅', label: 'Active Machines', value: String(activeFleetCount), tone: 'good', href: '#/fleet' }),
+      statCard({ icon: '🔧', label: 'Machines Under Repair', value: String(downFleetCount), tone: downFleetCount ? 'warning' : 'good', href: '#/fleet' }),
+      statCard({
+        icon: '💰', label: `${dayLabel}'s Revenue (Tentative)`, value: formatCurrency(viewStats.provisionalRevenue), href: '#/projects',
+        hint: `${dayLabel}'s submitted reports x contract rate — not yet invoiced`,
+        trend: trendFor(viewStats.provisionalRevenue, prevDayStats.provisionalRevenue, { periodLabel: 'previous day' }),
+        sparkline: dailyStats.map((d) => d.provisionalRevenue),
+      }),
+      statCard({
+        icon: '💸', label: `${dayLabel}'s Cost`, value: formatCurrency(viewStats.totalCost), href: '#/accounting',
+        trend: trendFor(viewStats.totalCost, prevDayStats.totalCost, { invert: true, periodLabel: 'previous day' }),
+        sparkline: dailyStats.map((d) => d.totalCost),
+      }),
+      statCard({
+        icon: '📈', label: `${dayLabel}'s Profit (Tentative)`, value: formatCurrency(viewStats.tentativeProfit), href: '#/projects',
+        hint: `Tentative Revenue minus Cost, ${isToday ? 'today' : dayLabel}`,
+        trend: trendFor(viewStats.tentativeProfit, prevDayStats.tentativeProfit, { periodLabel: 'previous day' }),
+        sparkline: dailyStats.map((d) => d.tentativeProfit),
+      }),
+      statCard({
+        icon: '📊', label: 'ROI', value: viewROI === null ? '—' : `${viewROI.toFixed(0)}%`, hint: `Tentative Profit ÷ Cost, ${isToday ? 'today' : dayLabel}`,
+        trend: viewROI !== null && prevDayROI !== null ? trendFor(viewROI, prevDayROI, { periodLabel: 'previous day' }) : undefined,
+        href: '#/accounting',
+      }),
+      statCard({ icon: '⛽', label: `${dayLabel}'s Diesel`, value: `${viewDiesel.toLocaleString()} L`, href: '#/resourceManagement', sparkline: dailyDiesel }),
+      statCard({ icon: '🌾', label: `${dayLabel}'s Hectares`, value: `${viewHectares.toFixed(1)} ha`, href: '#/operations', sparkline: dailyHectares }),
+      statCard({ icon: '👥', label: 'Active Staff', value: String(employees.filter((e) => e.status === 'Active').length), hint: `${employees.length} total`, href: '#/hr' }),
+      statCard({ icon: '📋', label: 'Outstanding Approvals', value: String(outstandingApprovals), tone: outstandingApprovals ? 'warning' : 'good', href: '#/fundRequests' }),
+    ]);
+    body.appendChild(kpiGrid);
+
+    // Executive Alert Center — every "watch this" signal, grouped by real
+    // severity instead of one flat list, so the most urgent things are
+    // never buried under routine approvals. These are all live/current
+    // signals (fleet status, approvals, balances), so they stay "as of
+    // now" regardless of which day is being viewed — only the "reports
+    // submitted" info item below is scoped to the viewed day.
+    const actionItems = [];
+    if (overdueServiceCount) actionItems.push({ tone: 'critical', icon: '🔧', text: `${overdueServiceCount} dozer${overdueServiceCount > 1 ? 's' : ''} overdue for service`, href: '#/fleet' });
+    if (unpaid.length) actionItems.push({ tone: 'critical', icon: '🧾', text: `${unpaid.length} unpaid invoice${unpaid.length > 1 ? 's' : ''} — ${formatCurrency(unpaidTotal)} outstanding`, href: '#/sales' });
+    if (overdueLoans.length) actionItems.push({ tone: 'critical', icon: '🏦', text: `${overdueLoans.length} loan repayment${overdueLoans.length > 1 ? 's' : ''} overdue — ${formatCurrency(overdueLoansTotal)} outstanding`, href: '#/accounting' });
+    if (outOfStock.length) actionItems.push({ tone: 'critical', icon: '📦', text: `${outOfStock.length} item${outOfStock.length > 1 ? 's' : ''} out of stock`, href: '#/fleet' });
+    if (lowStock.length - outOfStock.length > 0) actionItems.push({ tone: 'warning', icon: '📦', text: `${lowStock.length - outOfStock.length} item${lowStock.length - outOfStock.length > 1 ? 's' : ''} at or below reorder level`, href: '#/fleet' });
+    if (downFleetCount) actionItems.push({ tone: 'warning', icon: '🚧', text: `${downFleetCount} dozer${downFleetCount > 1 ? 's' : ''} down or under maintenance`, href: '#/fleet' });
+    if (dueSoonServiceCount) actionItems.push({ tone: 'warning', icon: '🔧', text: `${dueSoonServiceCount} dozer${dueSoonServiceCount > 1 ? 's' : ''} due soon for service`, href: '#/fleet' });
+    if (fuelCreditOwed) actionItems.push({ tone: 'warning', icon: '⛽', text: `${formatCurrency(fuelCreditOwed)} fuel credit owed to stations`, href: '#/purchasing' });
+    if (ownerSettlementsOwed) actionItems.push({ tone: 'warning', icon: '🤝', text: `${formatCurrency(ownerSettlementsOwed)} owed to dozer owners`, href: '#/resourceManagement' });
+    if (pendingFundRequests) actionItems.push({ tone: 'warning', icon: '📋', text: `${pendingFundRequests} fund request${pendingFundRequests > 1 ? 's' : ''} awaiting approval`, href: '#/fundRequests' });
+    if (pendingLeave) actionItems.push({ tone: 'warning', icon: '📋', text: `${pendingLeave} leave request${pendingLeave > 1 ? 's' : ''} awaiting approval`, href: '#/leave' });
+    if (pendingVouchers) actionItems.push({ tone: 'warning', icon: '📋', text: `${pendingVouchers} fueling voucher${pendingVouchers > 1 ? 's' : ''} awaiting approval`, href: '#/resourceManagement' });
+    if (!lastBackup) actionItems.push({ tone: 'warning', icon: '💾', text: "You've never backed up this data — everything lives only in this browser", href: '#/backup' });
+    else if (daysSinceBackup > 7) actionItems.push({ tone: 'warning', icon: '💾', text: `It's been ${daysSinceBackup} days since your last backup`, href: '#/backup' });
+    if (daysOps.length) actionItems.push({ tone: 'info', icon: '📝', text: `${daysOps.length} daily report${daysOps.length > 1 ? 's' : ''} submitted ${isToday ? 'today' : `on ${dayLabel}`}`, href: '#/operations' });
+
+    body.appendChild(el('h3', { class: 'subsection-title' }, 'Executive Alert Center'));
+    const tierMeta = { critical: { label: '🔴 Critical' }, warning: { label: '🟠 Important' }, info: { label: '🟢 Info' } };
+    const grouped = { critical: [], warning: [], info: [] };
+    actionItems.forEach((item) => grouped[item.tone].push(item));
+
+    if (actionItems.length) {
+      ['critical', 'warning', 'info'].forEach((tier) => {
+        if (!grouped[tier].length) return;
+        body.appendChild(el('div', { class: 'alert-tier' }, [
+          el('p', { class: 'alert-tier-label' }, tierMeta[tier].label),
+          el('div', { class: 'action-feed' }, grouped[tier].map((item) => el('a', { class: `action-item action-item-${tier}`, href: item.href }, [
+            el('span', { class: 'action-icon' }, item.icon),
+            el('span', { class: 'action-text' }, item.text),
+            el('span', { class: 'action-chevron' }, '→'),
+          ]))),
+        ]));
+      });
+    } else {
+      body.appendChild(el('div', { class: 'action-feed-empty' }, '✅ All caught up — nothing needs attention right now.'));
+    }
+
+    // Leaderboards / live activity — top sites, operators, and machines for
+    // the month containing the viewed day, plus the most recently logged
+    // reports as of the viewed day, so the dashboard reads as a live pulse
+    // for that point in time rather than only historical totals.
+    const employeeName = (id) => employees.find((e) => e.id === id)?.name || 'Unknown';
+    // D8K Collins (a Rented dozer) has no staff employee record for its
+    // operator — his real name matches the equipment's own name (Collins),
+    // so operations logged with no operatorId fall back to that instead of
+    // a generic "Unknown", the same name already used in those records' notes.
+    const operatorDisplayName = (o) => {
+      if (o.operatorId) return employeeName(o.operatorId);
+      if (o.equipment === 'D8K Collins') return 'Collins';
+      return 'Unknown';
+    };
+    const opsThisMonth = operations.filter((o) => monthKey(o.date) === currentMonthKey);
+
+    const areaBySiteThisMonth = {};
+    opsThisMonth.filter((o) => isHaOperationType(o.operationType)).forEach((o) => {
+      areaBySiteThisMonth[o.siteName] = (areaBySiteThisMonth[o.siteName] || 0) + o.quantity;
+    });
+    const topSites = Object.entries(areaBySiteThisMonth)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, value]) => ({ name, value: `${value.toFixed(1)} ha` }));
+
+    const hoursByOperatorThisMonth = {};
+    opsThisMonth.forEach((o) => {
+      const name = operatorDisplayName(o);
+      hoursByOperatorThisMonth[name] = (hoursByOperatorThisMonth[name] || 0) + (o.hoursWorked || 0);
+    });
+    const topOperators = Object.entries(hoursByOperatorThisMonth)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, value]) => ({ name, value: `${value.toFixed(1)} h` }));
+
+    // Utilization (hours), not profit — a per-machine "profit" can't fully
+    // attribute Logistics/Other cost below project level (see Profitability's
+    // documented Fixed Constraint), so this stays to a metric that's fully
+    // and honestly computable per machine.
+    const hoursByMachineThisMonth = {};
+    opsThisMonth.forEach((o) => {
+      hoursByMachineThisMonth[o.equipment] = (hoursByMachineThisMonth[o.equipment] || 0) + (o.hoursWorked || 0);
+    });
+    const topMachines = Object.entries(hoursByMachineThisMonth)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, value]) => ({ name, value: `${value.toFixed(1)} h` }));
+
+    const recentReports = operations.filter((o) => o.date <= viewISO)
+      .slice()
+      .sort((a, b) => (a.date < b.date ? 1 : -1))
+      .slice(0, 5)
+      .map((r) => ({ name: r.siteName, meta: operatorDisplayName(r), value: formatDate(r.date) }));
+
+    body.appendChild(el('h3', { class: 'subsection-title' }, `${monthLabel(currentMonthKey)} at a Glance`));
+    body.appendChild(el('div', { class: 'leaderboard-grid' }, [
+      leaderboardCard('Top Sites by Hectares', monthLabel(currentMonthKey), topSites, 'No hectares logged this month yet.'),
+      leaderboardCard('Top Operators by Hours', monthLabel(currentMonthKey), topOperators, 'No hours logged this month yet.'),
+      leaderboardCard('Top Machines by Utilization', 'Hours worked this month', topMachines, 'No hours logged this month yet.'),
+      leaderboardCard('Recently Logged', `Most recent Daily Operations reports as of ${dayLabel}`, recentReports, 'No reports logged yet.'),
+    ]));
+
+    // Activity Timeline — real events only, for the viewed day; date-only
+    // records (diesel receipts, maintenance logs) are listed without a
+    // fabricated time-of-day, after the events that do have a real timestamp.
+    body.appendChild(el('h3', { class: 'subsection-title' }, `Activity Timeline — ${dayLabel}`));
+    const timelineEvents = buildDayTimeline(viewISO, daysOps);
+    if (timelineEvents.length) {
+      body.appendChild(el('div', { class: 'timeline' }, timelineEvents.map((ev) => el('div', { class: 'timeline-row' }, [
+        el('span', { class: 'timeline-time' }, ev.time || '—'),
+        el('span', { class: 'timeline-icon' }, ev.icon),
+        el('span', { class: 'timeline-body' }, [
+          ev.text,
+          ev.meta ? el('span', { class: 'timeline-meta' }, ` · ${ev.meta}`) : null,
+        ]),
+      ]))));
+    } else {
+      body.appendChild(el('div', { class: 'action-feed-empty' }, `No activity logged for ${isToday ? 'today' : dayLabel} yet.`));
+    }
+
+    const chartsGrid = el('div', { class: 'charts-grid' });
+    body.appendChild(chartsGrid);
+
+    const profitCol = el('div');
+    chartsGrid.appendChild(profitCol);
+    renderMultiLineChart(profitCol, {
+      title: 'Revenue vs Cost vs Profit',
+      subtitle: `Company-wide, all projects, 6 months to ${monthLabel(currentMonthKey)}`,
+      categories: monthlyStats.map((m) => m.label),
+      series: [
+        { name: 'Revenue', colorVar: CATEGORICAL_COLORS[0], values: monthlyStats.map((m) => m.revenue) },
+        { name: 'Cost', colorVar: CATEGORICAL_COLORS[1], values: monthlyStats.map((m) => m.cost) },
+        { name: 'Profit', colorVar: CATEGORICAL_COLORS[2], values: monthlyStats.map((m) => m.profit) },
+      ],
+      formatValue: formatCurrency,
+    });
+
+    const salesCol = el('div');
+    chartsGrid.appendChild(salesCol);
+    const salesByMonth = months.map((key) => ({ label: monthLabel(key), value: revenueForMonth(key) }));
+    renderLineChart(salesCol, {
+      title: 'Sales Trend',
+      subtitle: `Total invoiced amount, 6 months to ${monthLabel(currentMonthKey)}`,
+      points: salesByMonth,
+      formatValue: formatCurrency,
+    });
+
+    const landCol = el('div');
+    chartsGrid.appendChild(landCol);
+    const areaByMonth = months.map((key) => ({ label: monthLabel(key), value: areaForMonth(key) }));
+    renderLineChart(landCol, {
+      title: 'Land Cleared Trend',
+      subtitle: `Hectares (Ha-unit operation types), 6 months to ${monthLabel(currentMonthKey)}`,
+      points: areaByMonth,
+      formatValue: (v) => `${v.toFixed(1)} ha`,
+    });
+
+    const expenseCol = el('div');
+    chartsGrid.appendChild(expenseCol);
+    const categories = [...new Set(expenses.map((e) => e.category))];
+    const expenseBars = categories.map((cat, i) => ({
+      label: cat,
+      value: expenses.filter((e) => e.category === cat).reduce((sum, e) => sum + e.amount, 0),
+      colorVar: CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length],
+    }));
+    renderBarChart(expenseCol, {
+      title: 'Expenses by Category',
+      subtitle: 'All-time total',
+      bars: expenseBars,
+      formatValue: formatCurrency,
+    });
+
+    const opsCol = el('div');
+    chartsGrid.appendChild(opsCol);
+    const areaBySite = {};
+    operations.filter((o) => isHaOperationType(o.operationType)).forEach((o) => {
+      areaBySite[o.siteName] = (areaBySite[o.siteName] || 0) + o.quantity;
+    });
+    const siteBars = Object.entries(areaBySite).map(([label, value]) => ({ label, value }));
+    renderBarChart(opsCol, {
+      title: 'Land Cleared by Site',
+      subtitle: 'Hectares (Felling, Stacking, Direct Stacking, Root Picking, Bonding), all-time',
+      bars: siteBars,
+      formatValue: (v) => `${v.toFixed(1)} ha`,
+    });
   }
 
-  // Leaderboards / live activity — top sites, operators, and machines for
-  // the current month, plus the most recently logged reports, so the
-  // dashboard reads as a live pulse rather than only historical totals.
-  const employeeName = (id) => employees.find((e) => e.id === id)?.name || 'Unknown';
-  // D8K Collins (a Rented dozer) has no staff employee record for its
-  // operator — his real name matches the equipment's own name (Collins),
-  // so operations logged with no operatorId fall back to that instead of
-  // a generic "Unknown", the same name already used in those records' notes.
-  const operatorDisplayName = (o) => {
-    if (o.operatorId) return employeeName(o.operatorId);
-    if (o.equipment === 'D8K Collins') return 'Collins';
-    return 'Unknown';
-  };
-  const opsThisMonth = operations.filter((o) => monthKey(o.date) === currentMonthKey);
-
-  const areaBySiteThisMonth = {};
-  opsThisMonth.filter((o) => isHaOperationType(o.operationType)).forEach((o) => {
-    areaBySiteThisMonth[o.siteName] = (areaBySiteThisMonth[o.siteName] || 0) + o.quantity;
-  });
-  const topSites = Object.entries(areaBySiteThisMonth)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([name, value]) => ({ name, value: `${value.toFixed(1)} ha` }));
-
-  const hoursByOperatorThisMonth = {};
-  opsThisMonth.forEach((o) => {
-    const name = operatorDisplayName(o);
-    hoursByOperatorThisMonth[name] = (hoursByOperatorThisMonth[name] || 0) + (o.hoursWorked || 0);
-  });
-  const topOperators = Object.entries(hoursByOperatorThisMonth)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([name, value]) => ({ name, value: `${value.toFixed(1)} h` }));
-
-  // Utilization (hours), not profit — a per-machine "profit" can't fully
-  // attribute Logistics/Other cost below project level (see Profitability's
-  // documented Fixed Constraint), so this stays to a metric that's fully
-  // and honestly computable per machine.
-  const hoursByMachineThisMonth = {};
-  opsThisMonth.forEach((o) => {
-    hoursByMachineThisMonth[o.equipment] = (hoursByMachineThisMonth[o.equipment] || 0) + (o.hoursWorked || 0);
-  });
-  const topMachines = Object.entries(hoursByMachineThisMonth)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([name, value]) => ({ name, value: `${value.toFixed(1)} h` }));
-
-  const recentReports = operations.slice()
-    .sort((a, b) => (a.date < b.date ? 1 : -1))
-    .slice(0, 5)
-    .map((r) => ({ name: r.siteName, meta: operatorDisplayName(r), value: formatDate(r.date) }));
-
-  container.appendChild(el('h3', { class: 'subsection-title' }, 'This Month at a Glance'));
-  container.appendChild(el('div', { class: 'leaderboard-grid' }, [
-    leaderboardCard('Top Sites by Hectares', 'This month', topSites, 'No hectares logged this month yet.'),
-    leaderboardCard('Top Operators by Hours', 'This month', topOperators, 'No hours logged this month yet.'),
-    leaderboardCard('Top Machines by Utilization', 'Hours worked this month', topMachines, 'No hours logged this month yet.'),
-    leaderboardCard('Recently Logged', 'Most recent Daily Operations reports', recentReports, 'No reports logged yet.'),
-  ]));
-
-  // Today's Activity Timeline — real events only; date-only records
-  // (diesel receipts, maintenance logs) are listed without a fabricated
-  // time-of-day, after the events that do have a real timestamp.
-  container.appendChild(el('h3', { class: 'subsection-title' }, "Today's Activity Timeline" ));
-  const timelineEvents = buildTodayTimeline(todayISO, todaysOps);
-  if (timelineEvents.length) {
-    container.appendChild(el('div', { class: 'timeline' }, timelineEvents.map((ev) => el('div', { class: 'timeline-row' }, [
-      el('span', { class: 'timeline-time' }, ev.time || '—'),
-      el('span', { class: 'timeline-icon' }, ev.icon),
-      el('span', { class: 'timeline-body' }, [
-        ev.text,
-        ev.meta ? el('span', { class: 'timeline-meta' }, ` · ${ev.meta}`) : null,
-      ]),
-    ]))));
-  } else {
-    container.appendChild(el('div', { class: 'action-feed-empty' }, 'No activity logged yet today.'));
-  }
-
-  const chartsGrid = el('div', { class: 'charts-grid' });
-  container.appendChild(chartsGrid);
-
-  const profitCol = el('div');
-  chartsGrid.appendChild(profitCol);
-  renderMultiLineChart(profitCol, {
-    title: 'Revenue vs Cost vs Profit',
-    subtitle: 'Company-wide, all projects, last 6 months',
-    categories: monthlyStats.map((m) => m.label),
-    series: [
-      { name: 'Revenue', colorVar: CATEGORICAL_COLORS[0], values: monthlyStats.map((m) => m.revenue) },
-      { name: 'Cost', colorVar: CATEGORICAL_COLORS[1], values: monthlyStats.map((m) => m.cost) },
-      { name: 'Profit', colorVar: CATEGORICAL_COLORS[2], values: monthlyStats.map((m) => m.profit) },
-    ],
-    formatValue: formatCurrency,
-  });
-
-  const salesCol = el('div');
-  chartsGrid.appendChild(salesCol);
-  const salesByMonth = months.map((key) => ({ label: monthLabel(key), value: revenueForMonth(key) }));
-  renderLineChart(salesCol, {
-    title: 'Sales Trend',
-    subtitle: 'Total invoiced amount, last 6 months',
-    points: salesByMonth,
-    formatValue: formatCurrency,
-  });
-
-  const landCol = el('div');
-  chartsGrid.appendChild(landCol);
-  const areaByMonth = months.map((key) => ({ label: monthLabel(key), value: areaForMonth(key) }));
-  renderLineChart(landCol, {
-    title: 'Land Cleared Trend',
-    subtitle: 'Hectares (Ha-unit operation types), last 6 months',
-    points: areaByMonth,
-    formatValue: (v) => `${v.toFixed(1)} ha`,
-  });
-
-  const expenseCol = el('div');
-  chartsGrid.appendChild(expenseCol);
-  const categories = [...new Set(expenses.map((e) => e.category))];
-  const expenseBars = categories.map((cat, i) => ({
-    label: cat,
-    value: expenses.filter((e) => e.category === cat).reduce((sum, e) => sum + e.amount, 0),
-    colorVar: CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length],
-  }));
-  renderBarChart(expenseCol, {
-    title: 'Expenses by Category',
-    subtitle: 'All-time total',
-    bars: expenseBars,
-    formatValue: formatCurrency,
-  });
-
-  const opsCol = el('div');
-  chartsGrid.appendChild(opsCol);
-  const areaBySite = {};
-  operations.filter((o) => isHaOperationType(o.operationType)).forEach((o) => {
-    areaBySite[o.siteName] = (areaBySite[o.siteName] || 0) + o.quantity;
-  });
-  const siteBars = Object.entries(areaBySite).map(([label, value]) => ({ label, value }));
-  renderBarChart(opsCol, {
-    title: 'Land Cleared by Site',
-    subtitle: 'Hectares (Felling, Stacking, Direct Stacking, Root Picking, Bonding), all-time',
-    bars: siteBars,
-    formatValue: (v) => `${v.toFixed(1)} ha`,
-  });
-
+  refresh(realTodayISO);
 }
