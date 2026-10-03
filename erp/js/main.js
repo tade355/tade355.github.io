@@ -6,6 +6,7 @@ import { getCurrentUser, getCurrentTier, canAccess } from './session.js';
 import { showLoginForm } from './userGate.js';
 import { restoreSession, logout, changePassword } from './auth.js';
 import { initThemeSwitch } from './theme.js';
+import { openGlobalSearch, initGlobalSearchShortcut } from './globalSearch.js';
 
 const sidebarNav = document.getElementById('sidebarNav');
 const viewContainer = document.getElementById('view');
@@ -13,6 +14,7 @@ const sidebar = document.getElementById('sidebar');
 const menuToggle = document.getElementById('menuToggle');
 const refreshBtn = document.getElementById('refreshDataBtn');
 const userBadge = document.getElementById('userBadge');
+const globalSearchBtn = document.getElementById('globalSearchBtn');
 const loadingScreen = document.getElementById('loadingScreen');
 const loadingMessage = document.getElementById('loadingMessage');
 
@@ -84,6 +86,8 @@ function renderUserBadge() {
 
 function initApp() {
   renderUserBadge();
+  globalSearchBtn.addEventListener('click', openGlobalSearch);
+  initGlobalSearchShortcut();
 
   const navLinks = {};
   ROUTES.forEach((route) => {
