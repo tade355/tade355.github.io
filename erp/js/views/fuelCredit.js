@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
 import { sectionHeader, statCard, statusPill, renderTable, actionButtons, openModal, confirmDelete } from '../ui.js';
 import { FUEL_STATIONS, FUEL_TYPES } from '../constants.js';
@@ -116,7 +117,7 @@ export function renderFuelCredit(container) {
     el('option', { value: '' }, 'All Stations'),
     ...FUEL_STATIONS.map((s) => el('option', { value: s }, s)),
   ]);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISOString();
   const statementFrom = el('input', { type: 'date', value: `${today.slice(0, 7)}-01` });
   const statementTo = el('input', { type: 'date', value: today });
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Station'), stationSelect]));
@@ -241,7 +242,7 @@ export function renderFuelCredit(container) {
     openModal({
       title: record ? 'Edit Collection' : 'Log Collection',
       fields: collectionFields(),
-      initial: record || { date: new Date().toISOString().slice(0, 10), fuelType: 'Diesel' },
+      initial: record || { date: todayISOString(), fuelType: 'Diesel' },
       submitLabel: record ? 'Save Changes' : 'Log Collection',
       onSubmit: async (data) => {
         if (record) await store.update('fuelCreditCollections', record.id, data);
@@ -255,7 +256,7 @@ export function renderFuelCredit(container) {
     openModal({
       title: record ? 'Edit Payment' : 'Log Payment',
       fields: paymentFields(),
-      initial: record || { date: new Date().toISOString().slice(0, 10) },
+      initial: record || { date: todayISOString() },
       submitLabel: record ? 'Save Changes' : 'Log Payment',
       onSubmit: async (data) => {
         if (record) await store.update('fuelCreditPayments', record.id, data);

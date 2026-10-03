@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
 import { printFundRequest } from '../print.js';
@@ -68,7 +69,7 @@ function openRequestForm(record, onSaved) {
     title: record ? 'Edit Fund Request' : 'Submit Fund Request',
     wide: true,
     build: (container) => {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayISOString();
       const dateField = textField('date', 'Date', 'date', record?.date || today, true);
       const projectField = selectField('project', 'Project', [
         { value: '', label: '— Not specified —' },

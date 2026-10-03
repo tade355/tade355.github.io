@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { renderOperationsMap } from './operationsMap.js';
@@ -198,7 +199,7 @@ export function renderProjects(container) {
           { name: 'rateUnit', label: 'Rate Unit (e.g. per Ha, per KM)' },
           { name: 'notes', label: 'Notes', type: 'textarea' },
         ],
-        initial: record || { effectiveDate: new Date().toISOString().slice(0, 10) },
+        initial: record || { effectiveDate: todayISOString() },
         submitLabel: record ? 'Save Changes' : 'Log Rate Change',
         onSubmit: async (data) => {
           if (record) await store.update('projectRateHistory', record.id, data);
@@ -278,7 +279,7 @@ export function renderProjects(container) {
           if (rateChanged && data.rate) {
             await store.add('projectRateHistory', {
               project: data.name,
-              effectiveDate: new Date().toISOString().slice(0, 10),
+              effectiveDate: todayISOString(),
               rate: data.rate || 0,
               rateUnit: data.rateUnit || '',
               notes: record ? 'Auto-logged from Project edit' : 'Initial rate on project creation',

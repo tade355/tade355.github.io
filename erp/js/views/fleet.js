@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, monthKey, statusPillClass } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { OWNERSHIP_CATEGORIES, isHaOperationType, DEFAULT_DIESEL_RATES } from '../constants.js';
@@ -294,7 +295,7 @@ export function renderFleet(container) {
           { name: 'managementFeePerDay', label: 'Management Fee/Day (₦)', type: 'number', min: 0 },
           { name: 'notes', label: 'Notes', type: 'textarea' },
         ],
-        initial: record || { effectiveDate: new Date().toISOString().slice(0, 10) },
+        initial: record || { effectiveDate: todayISOString() },
         submitLabel: record ? 'Save Changes' : 'Log Rate Change',
         onSubmit: async (data) => {
           if (record) await store.update('dozerRateHistory', record.id, data);
@@ -400,7 +401,7 @@ export function renderFleet(container) {
           if (ratesChanged) {
             await store.add('dozerRateHistory', {
               equipment: data.name,
-              effectiveDate: new Date().toISOString().slice(0, 10),
+              effectiveDate: todayISOString(),
               hourlyRate: data.hourlyRate || 0,
               rentalRatePerDay: data.rentalRatePerDay || 0,
               managementFeePerDay: data.managementFeePerDay || 0,
@@ -423,7 +424,7 @@ export function renderFleet(container) {
       const employees = store.get('employees');
       const logs = store.get('maintenanceLogs');
       const totalSpend = logs.reduce((sum, m) => sum + m.cost, 0);
-      const thisMonthSpend = logs.filter((m) => monthKey(m.date) === monthKey(new Date().toISOString().slice(0, 10))).reduce((sum, m) => sum + m.cost, 0);
+      const thisMonthSpend = logs.filter((m) => monthKey(m.date) === monthKey(todayISOString())).reduce((sum, m) => sum + m.cost, 0);
       const scheduledCount = logs.filter((m) => m.status === 'Scheduled' || m.status === 'In Progress').length;
 
       summarySlot.innerHTML = '';
@@ -476,7 +477,7 @@ export function renderFleet(container) {
       openModal({
         title: record ? 'Edit Maintenance Entry' : 'Log Maintenance',
         fields: maintenanceFields(),
-        initial: record || { date: new Date().toISOString().slice(0, 10), status: 'Completed' },
+        initial: record || { date: todayISOString(), status: 'Completed' },
         submitLabel: record ? 'Save Changes' : 'Log Maintenance',
         onSubmit: async (data) => {
           // "Cost" is kept as a derived total (rather than dropped) so every

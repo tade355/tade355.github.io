@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { FUEL_STATIONS } from '../constants.js';
@@ -119,7 +120,7 @@ export function renderFuelingVouchers(container) {
     openModal({
       title: record ? 'Edit Fueling Voucher' : 'New Fueling Voucher',
       fields: voucherFields(),
-      initial: record || { date: new Date().toISOString().slice(0, 10), status: 'Pending Approval' },
+      initial: record || { date: todayISOString(), status: 'Pending Approval' },
       submitLabel: record ? 'Save Changes' : 'Submit Voucher',
       onSubmit: async (data) => {
         if (record) await store.update('fuelingVouchers', record.id, data);

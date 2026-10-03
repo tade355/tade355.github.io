@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, statusPillClass, dateInRange } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { FUEL_STATIONS } from '../constants.js';
@@ -370,7 +371,7 @@ export function renderDieselTracking(container) {
     openModal({
       title: record ? 'Edit Diesel Receipt' : 'Log Diesel Receipt',
       fields: receiptFields(),
-      initial: record || { date: new Date().toISOString().slice(0, 10) },
+      initial: record || { date: todayISOString() },
       submitLabel: record ? 'Save Changes' : 'Log Receipt',
       onSubmit: async (data) => {
         if (record) await store.update('dieselReceipts', record.id, data);
@@ -384,7 +385,7 @@ export function renderDieselTracking(container) {
     openModal({
       title: record ? 'Edit Stock Count' : 'Log Stock Count',
       fields: countFields(),
-      initial: record || { date: new Date().toISOString().slice(0, 10) },
+      initial: record || { date: todayISOString() },
       submitLabel: record ? 'Save Changes' : 'Log Count',
       onSubmit: async (data) => {
         if (record) await store.update('dieselStockCounts', record.id, data);

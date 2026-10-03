@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
 import { OPERATION_TYPES, unitForOperationType, isHaOperationType, dieselUsedFor, DEFAULT_DIESEL_RATES } from '../constants.js';
@@ -101,7 +102,7 @@ function openForm(record, refresh) {
     title: record ? 'Edit Daily Report' : 'Log Daily Report',
     wide: true,
     build: (container) => {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayISOString();
       const isNew = !record;
       const seedSite = record?.siteName ?? getAssignedProject();
 

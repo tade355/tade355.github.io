@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete } from '../ui.js';
 import { ACCESS_TIERS, ACCESS_TIER_LABELS } from '../constants.js';
@@ -299,7 +300,7 @@ export function renderHR(container) {
       openModal({
         title: record ? 'Edit Query / Commendation' : 'Issue Query / Commendation',
         fields: queryCommendFields(),
-        initial: record || { date: new Date().toISOString().slice(0, 10), type: 'Query Letter', issuedBy: getCurrentUserId() || '' },
+        initial: record || { date: todayISOString(), type: 'Query Letter', issuedBy: getCurrentUserId() || '' },
         submitLabel: record ? 'Save Changes' : 'Issue',
         onSubmit: async (data) => {
           if (record) await store.update('staffMemos', record.id, data);
@@ -362,7 +363,7 @@ export function renderHR(container) {
       openModal({
         title: record ? 'Edit Asset' : 'Add Asset',
         fields: assetFields(),
-        initial: record || { assignedType: 'Unassigned', status: 'Deployed', dateAssigned: new Date().toISOString().slice(0, 10) },
+        initial: record || { assignedType: 'Unassigned', status: 'Deployed', dateAssigned: todayISOString() },
         submitLabel: record ? 'Save Changes' : 'Add Asset',
         onSubmit: async (data) => {
           if (record) await store.update('assets', record.id, data);
@@ -422,7 +423,7 @@ export function renderHR(container) {
       openModal({
         title: record ? 'Edit Memo / Notice' : 'New Memo / Notice',
         fields: memoFields(),
-        initial: record || { date: new Date().toISOString().slice(0, 10), type: 'Memo', issuedBy: getCurrentUserId() || '' },
+        initial: record || { date: todayISOString(), type: 'Memo', issuedBy: getCurrentUserId() || '' },
         submitLabel: record ? 'Save Changes' : 'Save',
         onSubmit: async (data) => {
           if (record) await store.update('staffMemos', record.id, data);

@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, invoiceTotal, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, openCustomModal, closeModal, confirmDelete, showToast } from '../ui.js';
 import { printInvoice } from '../print.js';
@@ -95,7 +96,7 @@ function openInvoiceForm(record, onSaved) {
     title: record ? 'Edit Invoice' : 'New Invoice',
     wide: true,
     build: (container) => {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayISOString();
       const customerField = selectField('customerId', 'Customer', customerOptions(), record?.customerId);
       const projectField = selectField('project', 'Project', [
         { value: '', label: '— Not linked to a project —' },
@@ -236,7 +237,7 @@ function openPaymentsModal(invoice, onSaved) {
       const summary = el('p', { class: 'section-subtitle' });
       const tableContainer = el('div');
 
-      const dateField = textField('date', 'Date', 'date', new Date().toISOString().slice(0, 10), true);
+      const dateField = textField('date', 'Date', 'date', todayISOString(), true);
       const amountField = textField('amount', 'Amount (₦)', 'number', '', true);
       const methodField = selectField('method', 'Method', [
         { value: '', label: '— Select —' },
@@ -259,7 +260,7 @@ function openPaymentsModal(invoice, onSaved) {
 
       function resetForm() {
         editingId = null;
-        dateField.querySelector('input').value = new Date().toISOString().slice(0, 10);
+        dateField.querySelector('input').value = todayISOString();
         amountField.querySelector('input').value = '';
         methodField.querySelector('select').value = '';
         referenceField.querySelector('input').value = '';
@@ -410,7 +411,7 @@ export function renderSales(container) {
         ],
         rows,
         emptyText: 'No invoices yet.',
-        rowClass: (r) => (r.status !== 'Paid' && r.dueDate < new Date().toISOString().slice(0, 10) ? 'row-critical' : undefined),
+        rowClass: (r) => (r.status !== 'Paid' && r.dueDate < todayISOString() ? 'row-critical' : undefined),
       });
     }
 

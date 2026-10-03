@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard, showToast } from '../ui.js';
 import { LOAN_CATEGORIES } from '../constants.js';
@@ -37,7 +38,7 @@ function openLoanForm(record, onSaved) {
     title: record ? 'Edit Loan' : 'Add Loan',
     wide: true,
     build: (container) => {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayISOString();
       const categoryField = selectField('category', 'Category', LOAN_CATEGORIES.map((c) => ({ value: c, label: c })), record?.category);
       const lenderField = textField('lender', 'Lender / Source', 'text', record?.lender, true);
       const dateTakenField = textField('dateTaken', 'Date Taken', 'date', record?.dateTaken || today, true);
@@ -181,7 +182,7 @@ function openRepaymentsModal(loan, onSaved) {
       const summary = el('p', { class: 'section-subtitle' });
       const tableContainer = el('div');
 
-      const dateField = textField('date', 'Date', 'date', new Date().toISOString().slice(0, 10), true);
+      const dateField = textField('date', 'Date', 'date', todayISOString(), true);
       const amountField = textField('amount', 'Amount (₦)', 'number', '', true);
       const methodField = selectField('method', 'Method', [
         { value: '', label: '— Select —' },
@@ -200,7 +201,7 @@ function openRepaymentsModal(loan, onSaved) {
 
       function resetForm() {
         editingId = null;
-        dateField.querySelector('input').value = new Date().toISOString().slice(0, 10);
+        dateField.querySelector('input').value = todayISOString();
         amountField.querySelector('input').value = '';
         methodField.querySelector('select').value = '';
         referenceField.querySelector('input').value = '';

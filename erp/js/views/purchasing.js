@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, poTotal, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete } from '../ui.js';
 import { printPurchaseOrder } from '../print.js';
@@ -137,7 +138,7 @@ export function renderPurchasing(container) {
       }
       const initial = record
         ? { ...record, description: record.items[0]?.description, qty: record.items[0]?.qty, price: record.items[0]?.price }
-        : { date: new Date().toISOString().slice(0, 10), status: 'Pending' };
+        : { date: todayISOString(), status: 'Pending' };
       openModal({
         title: record ? 'Edit Purchase Order' : 'New Purchase Order',
         fields: poFields(),

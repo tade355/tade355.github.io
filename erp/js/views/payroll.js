@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatMonthLong, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
 import { printPayslip, printPayrollRegister, printSalaryStatement } from '../print.js';
@@ -205,7 +206,7 @@ function openRunForm(record, onSaved) {
           if (newStatus === 'Paid' && !savedRun.expenseId) {
             const total = lines.reduce((sum, l) => sum + l.baseSalary + l.bonus - l.deductions, 0);
             const expense = await store.add('expenses', {
-              date: new Date().toISOString().slice(0, 10),
+              date: todayISOString(),
               category: 'Payroll',
               description: `Payroll — ${formatMonthLong(savedRun.month)}`,
               amount: total,

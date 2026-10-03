@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, invoiceTotal, el } from '../utils.js';
 import { renderTable, actionButtons, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
@@ -166,7 +167,7 @@ export function renderAccounting(container) {
       openModal({
         title: record ? 'Edit Expense' : 'Add Expense',
         fields: fields(),
-        initial: record || { date: new Date().toISOString().slice(0, 10) },
+        initial: record || { date: todayISOString() },
         submitLabel: record ? 'Save Changes' : 'Add Expense',
         onSubmit: async (data) => {
           if (record) await store.update('expenses', record.id, data);

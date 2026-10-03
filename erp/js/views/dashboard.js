@@ -1,5 +1,6 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, invoiceTotal, monthKey, monthLabel, el } from '../utils.js';
+import { todayISOString, addDays, lastNDayKeys, lastNMonthKeys, monthBounds } from '../dateUtils.js';
 import { amountOutstanding } from '../invoicePayments.js';
 import { amountOutstanding as loanAmountOutstanding, agingDays as loanAgingDays } from '../loanPayments.js';
 import { statCard, sectionHeader } from '../ui.js';
@@ -10,48 +11,6 @@ import { stationBalances } from './fuelCredit.js';
 import { ownerSettlementBalances } from './dozerRentPayments.js';
 import { projectNames, computeProjectStats, companyWideStats } from './profitability.js';
 import { getCurrentUser } from '../session.js';
-
-// Formats a Date using its LOCAL calendar fields, never `.toISOString()`.
-// For any timezone ahead of UTC (e.g. WAT, UTC+1), round-tripping a local
-// midnight Date through `.toISOString().slice(0, 10)` lands on UTC's
-// previous day — e.g. "2026-10-02T00:00:00" local is "2026-10-01T23:00Z",
-// which `.toISOString()` reads back as 1 Oct, not 2 Oct. That one-day-back
-// mismatch is what made the dashboard's date label lag the date-nav field.
-function localISODate(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function todayISOString() {
-  return localISODate(new Date());
-}
-
-// Both anchored on `anchorISO` (defaults to real today) instead of always
-// `Date.now()`/`new Date()`, so the whole dashboard can be re-pointed at a
-// past date via the date-nav bar below without touching every call site.
-function lastNMonthKeys(n, anchorISO = todayISOString()) {
-  const keys = [];
-  const anchor = new Date(`${anchorISO}T00:00:00`);
-  anchor.setDate(1);
-  for (let i = n - 1; i >= 0; i -= 1) {
-    const dt = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1);
-    keys.push(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`);
-  }
-  return keys;
-}
-
-function lastNDayKeys(n, anchorISO = todayISOString()) {
-  const keys = [];
-  const anchor = new Date(`${anchorISO}T00:00:00`);
-  for (let i = n - 1; i >= 0; i -= 1) {
-    keys.push(localISODate(new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - i)));
-  }
-  return keys;
-}
-
-function monthBounds(key) {
-  const [y, m] = key.split('-').map(Number);
-  return { from: `${key}-01`, to: localISODate(new Date(y, m, 0)) };
-}
 
 // `invert` flips which direction counts as "good" — e.g. Expenses rising
 // is bad, so invert: true there, while Revenue rising is good by default.
@@ -133,14 +92,8 @@ export function renderDashboard(container) {
   const body = el('div');
   container.appendChild(body);
 
-  function shiftDay(iso, delta) {
-    const d = new Date(`${iso}T00:00:00`);
-    d.setDate(d.getDate() + delta);
-    return localISODate(d);
-  }
-
-  prevBtn.addEventListener('click', () => refresh(shiftDay(dateInput.value || realTodayISO, -1)));
-  nextBtn.addEventListener('click', () => refresh(shiftDay(dateInput.value || realTodayISO, 1)));
+  prevBtn.addEventListener('click', () => refresh(addDays(dateInput.value || realTodayISO, -1)));
+  nextBtn.addEventListener('click', () => refresh(addDays(dateInput.value || realTodayISO, 1)));
   todayBtn.addEventListener('click', () => refresh(realTodayISO));
   dateInput.addEventListener('change', () => refresh(dateInput.value || realTodayISO));
 

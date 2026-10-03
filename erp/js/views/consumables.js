@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 
@@ -165,7 +166,7 @@ export function renderConsumables(container) {
     openModal({
       title: record ? 'Edit Withdrawal' : 'Log Withdrawal',
       fields: withdrawalFields(items),
-      initial: record || { date: new Date().toISOString().slice(0, 10) },
+      initial: record || { date: todayISOString() },
       submitLabel: record ? 'Save Changes' : 'Log Withdrawal',
       onSubmit: async (data) => {
         const qty = Number(data.quantity) || 0;

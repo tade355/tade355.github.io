@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatDate, el } from '../utils.js';
 import { sectionHeader, openModal, openCustomModal, actionButtons, confirmDelete } from '../ui.js';
 import { getCurrentTier, getCurrentUserId } from '../session.js';
@@ -97,7 +98,7 @@ function openNoticeForm(record, refresh) {
     fields: fields(record),
     initial: record
       ? { ...record, pinned: record.pinned ? 'true' : 'false' }
-      : { date: new Date().toISOString().slice(0, 10), category: 'Announcement', pinned: 'false' },
+      : { date: todayISOString(), category: 'Announcement', pinned: 'false' },
     submitLabel: record ? 'Save Changes' : 'Post Notice',
     onSubmit: async (data) => {
       const payload = { ...data, pinned: data.pinned === 'true' };
