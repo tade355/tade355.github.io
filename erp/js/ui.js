@@ -1,6 +1,7 @@
 import { el, statusPillClass } from './utils.js';
 import { createAttachmentPicker } from './attachments.js';
 import { renderSparkline } from './charts.js';
+import { todayISOString, addDays, mondayOf } from './dateUtils.js';
 
 let modalRoot = null;
 
@@ -214,4 +215,50 @@ export function sectionHeader(title, subtitle, actionButton) {
 
 export function confirmDelete(label) {
   return window.confirm(`Delete "${label}"? This cannot be undone.`);
+}
+
+// A From/To date-range pair for a filter bar — the same two inputs were
+// being hand-built, identically, in roughly a dozen views (diesel tracking
+// & management, dozer economics, operations gallery & map, income &
+// expenditure, profitability, revenue reconciliation, fuel credit
+// statements...). Callers drop `fromField`/`toField` into their own
+// filter-bar alongside whatever other selects they already have (project,
+// station, site...); `fromInput`/`toInput` are the raw <input> elements for
+// reading `.value`. `onChange` fires on either input changing AND on every
+// preset click, so callers only need to wire refresh logic once.
+//
+// `presets`, on by default, adds a row of quick-pick buttons: before this,
+// every one of these started blank, requiring the user to manually pick
+// both dates just to see anything. `todayISOString`/`mondayOf`/`addDays`
+// come from dateUtils.js, the same shared date logic used everywhere else,
+// so a preset's idea of "today" can never drift from any other page's.
+export function dateRangeFields({ from = '', to = '', onChange, presets = true, fromLabel = 'From', toLabel = 'To' } = {}) {
+  const fromInput = el('input', { type: 'date', value: from || undefined });
+  const toInput = el('input', { type: 'date', value: to || undefined });
+  if (onChange) {
+    fromInput.addEventListener('change', onChange);
+    toInput.addEventListener('change', onChange);
+  }
+  const fromField = el('label', { class: 'filter-field' }, [el('span', {}, fromLabel), fromInput]);
+  const toField = el('label', { class: 'filter-field' }, [el('span', {}, toLabel), toInput]);
+
+  const elements = [fromField, toField];
+  let presetBar = null;
+  if (presets) {
+    const setRange = (f, t) => {
+      fromInput.value = f;
+      toInput.value = t;
+      if (onChange) onChange();
+    };
+    const today = todayISOString();
+    presetBar = el('div', { class: 'filter-presets' }, [
+      el('button', { type: 'button', class: 'btn btn-ghost btn-sm', onClick: () => setRange(mondayOf(today), today) }, 'This Week'),
+      el('button', { type: 'button', class: 'btn btn-ghost btn-sm', onClick: () => setRange(`${today.slice(0, 7)}-01`, today) }, 'This Month'),
+      el('button', { type: 'button', class: 'btn btn-ghost btn-sm', onClick: () => setRange(addDays(today, -29), today) }, 'Last 30 Days'),
+      el('button', { type: 'button', class: 'btn btn-ghost btn-sm', onClick: () => setRange('', '') }, 'All Time'),
+    ]);
+    elements.push(presetBar);
+  }
+
+  return { fromInput, toInput, fromField, toField, presetBar, elements };
 }

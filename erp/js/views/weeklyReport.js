@@ -1,7 +1,7 @@
 import { store } from '../store.js';
 import { todayISOString, mondayOf, addDays } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
-import { sectionHeader, renderTable, statCard } from '../ui.js';
+import { sectionHeader, renderTable, statCard, dateRangeFields } from '../ui.js';
 import { OPERATION_TYPES, isHaOperationType } from '../constants.js';
 import { printWeeklyPerformanceReport, printMilestoneTracker } from '../print.js';
 import { provisionalRevenueForRows } from './profitability.js';
@@ -308,14 +308,12 @@ function renderWeeklyPerformanceTab(container) {
   const filterBar = el('div', { class: 'filter-bar' });
   const projectSelect = el('select', {}, projectOptions().map((p) => el('option', { value: p }, p)));
   const today = todayISOString();
-  const startInput = el('input', { type: 'date' });
-  startInput.value = mondayOf(today);
-  const endInput = el('input', { type: 'date' });
-  endInput.value = addDays(startInput.value, 6);
+  const { fromInput: startInput, toInput: endInput, elements } = dateRangeFields({
+    from: mondayOf(today), to: addDays(mondayOf(today), 6), onChange: () => refresh(),
+  });
   const printBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '🖨 Print Report');
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Project'), projectSelect]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'From'), startInput]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), endInput]));
+  elements.forEach((e) => filterBar.appendChild(e));
   filterBar.appendChild(printBtn);
   container.appendChild(filterBar);
   container.appendChild(el('p', { class: 'section-subtitle' }, 'Rows are every dozer with at least one working day on this project in the selected period (currently-assigned-but-idle dozers are left off). Only Ha-unit operation types count toward the daily grid.'));
@@ -491,7 +489,7 @@ function renderWeeklyPerformanceTab(container) {
     printBtn.onclick = () => printWeeklyPerformanceReport(project, { ...data, revenueData, costData, actualData });
   }
 
-  [projectSelect, startInput, endInput].forEach((input) => input.addEventListener('change', refresh));
+  projectSelect.addEventListener('change', refresh);
   refresh();
 }
 

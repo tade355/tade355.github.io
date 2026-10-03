@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el, invoiceTotal } from '../utils.js';
-import { sectionHeader, statCard, renderTable, statusPill } from '../ui.js';
+import { sectionHeader, statCard, renderTable, statusPill, dateRangeFields } from '../ui.js';
 import { OPERATION_TYPES, unitForOperationType } from '../constants.js';
 import { reportedForSlice, invoicedForSlice, unclassifiedInvoicedForSlice, varianceStatus } from '../revenueReconciliation.js';
 import { amountReceived, amountOutstanding, agingDays } from '../invoicePayments.js';
@@ -17,11 +17,9 @@ export function renderRevenueReconciliation(container) {
     el('option', { value: 'all' }, 'All Projects'),
     ...store.get('projects').map((p) => el('option', { value: p.name }, p.name)),
   ]);
-  const fromInput = el('input', { type: 'date' });
-  const toInput = el('input', { type: 'date' });
+  const { fromInput, toInput, elements } = dateRangeFields({ onChange: () => refresh() });
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Project'), projectSelect]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'From'), fromInput]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), toInput]));
+  elements.forEach((e) => filterBar.appendChild(e));
   container.appendChild(filterBar);
 
   container.appendChild(el('h3', { class: 'subsection-title' }, 'Revenue Reconciliation'));
@@ -135,6 +133,6 @@ export function renderRevenueReconciliation(container) {
     refreshPayments();
   }
 
-  [projectSelect, fromInput, toInput].forEach((input) => input.addEventListener('change', refresh));
+  projectSelect.addEventListener('change', refresh);
   refresh();
 }

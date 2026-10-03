@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
-import { sectionHeader, statCard, renderTable, statusPill } from '../ui.js';
+import { sectionHeader, statCard, renderTable, statusPill, dateRangeFields } from '../ui.js';
 import { getCurrentTier } from '../session.js';
 import { hourlyRateAsOf } from '../rateHistory.js';
 
@@ -71,11 +71,9 @@ function renderInternalLedger(container) {
     el('option', { value: '' }, 'Select a dozer —'),
     ...dozers.map((d) => el('option', { value: d.name }, d.name)),
   ]);
-  const fromInput = el('input', { type: 'date' });
-  const toInput = el('input', { type: 'date' });
+  const { fromInput, toInput, elements } = dateRangeFields({ onChange: () => refresh() });
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Dozer'), equipmentSelect]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'From'), fromInput]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), toInput]));
+  elements.forEach((e) => filterBar.appendChild(e));
   container.appendChild(filterBar);
 
   const summarySlot = el('div');
@@ -118,7 +116,7 @@ function renderInternalLedger(container) {
     });
   }
 
-  [equipmentSelect, fromInput, toInput].forEach((input) => input.addEventListener('change', refresh));
+  equipmentSelect.addEventListener('change', refresh);
   refresh();
 }
 
@@ -130,10 +128,8 @@ export function renderDozerEconomics(container) {
   container.appendChild(sectionHeader('Dozer Economics', 'Company-owned dozer performance and revenue analysis'));
 
   const filterBar = el('div', { class: 'filter-bar' });
-  const fromInput = el('input', { type: 'date' });
-  const toInput = el('input', { type: 'date' });
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'From'), fromInput]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), toInput]));
+  const { fromInput, toInput, elements } = dateRangeFields({ onChange: () => refreshCompany() });
+  elements.forEach((e) => filterBar.appendChild(e));
   container.appendChild(filterBar);
 
   const companySection = el('div');
@@ -144,7 +140,6 @@ export function renderDozerEconomics(container) {
     renderCompanyPerformance(companySection, fromInput.value, toInput.value);
   }
 
-  [fromInput, toInput].forEach((input) => input.addEventListener('change', refreshCompany));
   refreshCompany();
 
   if (isAdmin) {

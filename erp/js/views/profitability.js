@@ -1,7 +1,7 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el, dateInRange, invoiceTotal } from '../utils.js';
 import { weekOf } from '../dateUtils.js';
-import { sectionHeader, statCard, renderTable } from '../ui.js';
+import { sectionHeader, statCard, renderTable, dateRangeFields } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { isHaOperationType } from '../constants.js';
 import { hourlyRateAsOf, dieselRateAsOf, projectRateAsOf } from '../rateHistory.js';
@@ -217,8 +217,7 @@ export function renderProfitability(container) {
     el('option', { value: 'all' }, 'All Projects'),
     ...projectNames().map((p) => el('option', { value: p }, p)),
   ]);
-  const fromInput = el('input', { type: 'date', name: 'from' });
-  const toInput = el('input', { type: 'date', name: 'to' });
+  const { fromInput, toInput, elements } = dateRangeFields({ onChange: () => refresh() });
   const groupBySelect = el('select', { name: 'groupBy' }, [
     el('option', { value: 'project' }, 'Project'),
     el('option', { value: 'equipment' }, 'Dozer'),
@@ -228,8 +227,7 @@ export function renderProfitability(container) {
     el('option', { value: 'block' }, 'Block'),
   ]);
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Project'), projectSelect]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'From'), fromInput]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), toInput]));
+  elements.forEach((e) => filterBar.appendChild(e));
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Group By'), groupBySelect]));
   const printBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '🖨 Print Report');
   filterBar.appendChild(printBtn);
@@ -254,7 +252,7 @@ export function renderProfitability(container) {
     }
   }
 
-  [projectSelect, fromInput, toInput, groupBySelect].forEach((input) => input.addEventListener('change', refresh));
+  [projectSelect, groupBySelect].forEach((input) => input.addEventListener('change', refresh));
 
   // Always a project-level report — the Provisional/Verified Revenue and
   // full cost breakdown only exist at project granularity (see the Fixed

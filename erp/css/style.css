@@ -306,6 +306,12 @@ button { font-family: inherit; }
   font-family: inherit;
   font-weight: 500;
 }
+.filter-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
 
 .text-good { color: var(--good); }
 .text-critical { color: var(--critical); }
