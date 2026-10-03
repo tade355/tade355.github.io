@@ -1,7 +1,7 @@
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, statusPillClass, dateInRange } from '../utils.js';
-import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
+import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard, dateRangeFields } from '../ui.js';
 import { FUEL_STATIONS } from '../constants.js';
 import { printDieselReplenishmentRequest, printDieselStationReport } from '../print.js';
 import { fleetItems } from './fleet.js';
@@ -141,11 +141,9 @@ export function renderDieselTracking(container) {
       el('option', { value: '' }, 'All Stations'),
       ...FUEL_STATIONS.map((s) => el('option', { value: s }, s)),
     ]);
-    const receiptsFrom = el('input', { type: 'date' });
-    const receiptsTo = el('input', { type: 'date' });
+    const { fromInput: receiptsFrom, toInput: receiptsTo, elements: receiptsRangeElements } = dateRangeFields({ onChange: () => refreshReceiptsTable() });
     receiptsFilterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Station'), receiptsStationSelect]));
-    receiptsFilterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'From'), receiptsFrom]));
-    receiptsFilterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), receiptsTo]));
+    receiptsRangeElements.forEach((e) => receiptsFilterBar.appendChild(e));
     const printReceiptsBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '🖨 Print Report');
     receiptsFilterBar.appendChild(printReceiptsBtn);
     body.appendChild(receiptsFilterBar);
@@ -163,7 +161,7 @@ export function renderDieselTracking(container) {
     printReceiptsBtn.addEventListener('click', () => {
       printDieselStationReport(receiptsStationSelect.value, receiptsFrom.value, receiptsTo.value, filteredReceipts());
     });
-    [receiptsStationSelect, receiptsFrom, receiptsTo].forEach((input) => input.addEventListener('change', refreshReceiptsTable));
+    receiptsStationSelect.addEventListener('change', refreshReceiptsTable);
 
     function refreshReceiptsTable() {
       renderTable(receiptsContainer, {
@@ -242,10 +240,8 @@ export function renderDieselTracking(container) {
     body.appendChild(el('h3', { class: 'subsection-title' }, 'Diesel Ledger by Asset'));
     body.appendChild(el('p', { class: 'section-subtitle' }, "Per-dozer running balance — New comes from Fulfilled fueling vouchers issued to that asset, Used comes from its daily operation reports. Opening is derived from everything before the selected start date, so nothing here is entered by hand."));
     const ledgerFilterBar = el('div', { class: 'filter-bar' });
-    const ledgerFrom = el('input', { type: 'date' });
-    const ledgerTo = el('input', { type: 'date' });
-    ledgerFilterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'From'), ledgerFrom]));
-    ledgerFilterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), ledgerTo]));
+    const { fromInput: ledgerFrom, toInput: ledgerTo, elements: ledgerRangeElements } = dateRangeFields({ onChange: () => refreshLedger() });
+    ledgerRangeElements.forEach((e) => ledgerFilterBar.appendChild(e));
     body.appendChild(ledgerFilterBar);
     const ledgerContainer = el('div');
     body.appendChild(ledgerContainer);
@@ -275,7 +271,6 @@ export function renderDieselTracking(container) {
         emptyText: 'No fleet assets yet.',
       });
     }
-    [ledgerFrom, ledgerTo].forEach((input) => input.addEventListener('change', refreshLedger));
     refreshLedger();
 
     const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);

@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { formatDate, el, dateInRange } from '../utils.js';
-import { openCustomModal } from '../ui.js';
+import { openCustomModal, dateRangeFields } from '../ui.js';
 import { filterByProject } from '../session.js';
 
 function isImageAttachment(att) {
@@ -48,11 +48,9 @@ export function renderOperationsGallery(container) {
     el('option', { value: '' }, 'All Sites'),
     ...siteOptions(baseRows).map((s) => el('option', { value: s }, s)),
   ]);
-  const fromInput = el('input', { type: 'date' });
-  const toInput = el('input', { type: 'date' });
+  const { fromInput, toInput, elements } = dateRangeFields({ onChange: () => refresh() });
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Site'), siteSelect]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'From'), fromInput]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), toInput]));
+  elements.forEach((e) => filterBar.appendChild(e));
   container.appendChild(filterBar);
 
   const grid = el('div', { class: 'photo-grid' });
@@ -90,6 +88,6 @@ export function renderOperationsGallery(container) {
     });
   }
 
-  [siteSelect, fromInput, toInput].forEach((input) => input.addEventListener('change', refresh));
+  siteSelect.addEventListener('change', refresh);
   refresh();
 }

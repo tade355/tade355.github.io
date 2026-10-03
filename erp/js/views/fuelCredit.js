@@ -1,7 +1,7 @@
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
-import { sectionHeader, statCard, statusPill, renderTable, actionButtons, openModal, confirmDelete } from '../ui.js';
+import { sectionHeader, statCard, statusPill, renderTable, actionButtons, openModal, confirmDelete, dateRangeFields } from '../ui.js';
 import { FUEL_STATIONS, FUEL_TYPES } from '../constants.js';
 import { printFuelCreditStatement } from '../print.js';
 
@@ -118,11 +118,11 @@ export function renderFuelCredit(container) {
     ...FUEL_STATIONS.map((s) => el('option', { value: s }, s)),
   ]);
   const today = todayISOString();
-  const statementFrom = el('input', { type: 'date', value: `${today.slice(0, 7)}-01` });
-  const statementTo = el('input', { type: 'date', value: today });
+  const { fromInput: statementFrom, toInput: statementTo, elements: statementRangeElements } = dateRangeFields({
+    from: `${today.slice(0, 7)}-01`, to: today, fromLabel: 'Statement From', toLabel: 'Statement To', presets: false,
+  });
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Station'), stationSelect]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Statement From'), statementFrom]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Statement To'), statementTo]));
+  statementRangeElements.forEach((e) => filterBar.appendChild(e));
   const printStatementBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '🖨 Print Statement');
   printStatementBtn.addEventListener('click', () => {
     if (!stationSelect.value) {

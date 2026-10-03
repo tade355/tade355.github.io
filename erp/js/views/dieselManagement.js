@@ -1,7 +1,7 @@
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
-import { sectionHeader, statCard, statusPill, renderTable, actionButtons, openModal, confirmDelete } from '../ui.js';
+import { sectionHeader, statCard, statusPill, renderTable, actionButtons, openModal, confirmDelete, dateRangeFields } from '../ui.js';
 import { FUEL_STATIONS } from '../constants.js';
 import { fleetItems } from './fleet.js';
 import { renderDieselTracking } from './dieselTracking.js';
@@ -211,10 +211,8 @@ function renderSiteDistributionTab(container) {
   actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openDistributionForm() }, '+ Log Distribution'));
 
   const filterBar = el('div', { class: 'filter-bar' });
-  const fromInput = el('input', { type: 'date' });
-  const toInput = el('input', { type: 'date' });
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'From'), fromInput]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), toInput]));
+  const { fromInput, toInput, elements } = dateRangeFields({ onChange: () => refresh() });
+  elements.forEach((e) => filterBar.appendChild(e));
   container.appendChild(filterBar);
 
   const ledgerContainer = el('div');
@@ -285,7 +283,6 @@ function renderSiteDistributionTab(container) {
     });
   }
 
-  [fromInput, toInput].forEach((input) => input.addEventListener('change', refresh));
   refresh();
 }
 
@@ -329,14 +326,12 @@ function renderDiscrepancyReportTab(container) {
   ));
 
   const filterBar = el('div', { class: 'filter-bar' });
-  const fromInput = el('input', { type: 'date' });
-  const toInput = el('input', { type: 'date' });
+  const { fromInput, toInput, elements } = dateRangeFields({ onChange: () => refresh() });
   const equipmentSelect = el('select', {}, [
     el('option', { value: '' }, 'All Dozers'),
     ...fleetItems().map((d) => el('option', { value: d.name }, d.name)),
   ]);
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'From'), fromInput]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), toInput]));
+  elements.forEach((e) => filterBar.appendChild(e));
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Dozer'), equipmentSelect]));
   container.appendChild(filterBar);
 
@@ -370,7 +365,7 @@ function renderDiscrepancyReportTab(container) {
     });
   }
 
-  [fromInput, toInput, equipmentSelect].forEach((input) => input.addEventListener('change', refresh));
+  equipmentSelect.addEventListener('change', refresh);
   refresh();
 }
 

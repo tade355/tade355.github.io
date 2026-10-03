@@ -1,5 +1,6 @@
 import { store } from '../store.js';
 import { formatDate, el, dateInRange } from '../utils.js';
+import { dateRangeFields } from '../ui.js';
 import { colorForOperationType, unitForOperationType } from '../constants.js';
 import { filterByProject } from '../session.js';
 import { loadLeaflet } from '../maplib.js';
@@ -65,11 +66,9 @@ export function renderOperationsMap(container) {
     el('option', { value: '' }, 'All Sites'),
     ...siteOptions(baseRows).map((s) => el('option', { value: s }, s)),
   ]);
-  const fromInput = el('input', { type: 'date' });
-  const toInput = el('input', { type: 'date' });
+  const { fromInput, toInput, elements } = dateRangeFields({ onChange: () => { if (map) draw(); } });
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Site'), siteSelect]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'From'), fromInput]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), toInput]));
+  elements.forEach((e) => filterBar.appendChild(e));
   const printBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '🖨 Print Map (PDF)');
   filterBar.appendChild(printBtn);
   container.appendChild(filterBar);
@@ -170,7 +169,7 @@ export function renderOperationsMap(container) {
     status.textContent = err.message;
   });
 
-  [siteSelect, fromInput, toInput].forEach((input) => input.addEventListener('change', () => { if (map) draw(); }));
+  siteSelect.addEventListener('change', () => { if (map) draw(); });
 
   printBtn.addEventListener('click', async () => {
     const entries = geoEntriesFor(filteredRows(), employees);

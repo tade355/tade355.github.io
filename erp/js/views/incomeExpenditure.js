@@ -1,7 +1,7 @@
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
-import { sectionHeader, statCard, statusPill, renderTable, actionButtons, openModal, confirmDelete } from '../ui.js';
+import { sectionHeader, statCard, statusPill, renderTable, actionButtons, openModal, confirmDelete, dateRangeFields } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../constants.js';
 import { amountReceived } from '../invoicePayments.js';
@@ -97,13 +97,11 @@ export function renderIncomeExpenditure(container) {
     el('option', { value: '' }, 'All Cost Heads'),
     ...costHeadOptions().map((c) => el('option', { value: c }, c)),
   ]);
-  const fromInput = el('input', { type: 'date', name: 'from' });
-  const toInput = el('input', { type: 'date', name: 'to' });
+  const { fromInput, toInput, elements } = dateRangeFields({ onChange: () => refresh() });
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Project'), projectSelect]));
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Type'), typeSelect]));
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Cost Head'), costHeadSelect]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'From'), fromInput]));
-  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'To'), toInput]));
+  elements.forEach((e) => filterBar.appendChild(e));
   container.appendChild(filterBar);
 
   const summaryGrid = el('div', { class: 'stats-grid' });
@@ -209,7 +207,7 @@ export function renderIncomeExpenditure(container) {
     });
   }
 
-  [projectSelect, typeSelect, costHeadSelect, fromInput, toInput].forEach((input) => input.addEventListener('change', refresh));
+  [projectSelect, typeSelect, costHeadSelect].forEach((input) => input.addEventListener('change', refresh));
 
   refresh();
 }
