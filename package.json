@@ -1,0 +1,9 @@
+{
+  "name": "emagrims-erp",
+  "private": true,
+  "type": "module",
+  "description": "Static site (GitHub Pages) — this file exists only to run the ERP's test suite locally/in CI; it has no effect on the deployed site, which has no build step.",
+  "scripts": {
+    "test": "node --test erp/js/*.test.js"
+  }
+}
