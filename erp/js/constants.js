@@ -130,8 +130,14 @@ export const LEAVE_TYPES = [
 // renamed to "Bull Dozer Rentals" to match the real term; nothing reads
 // it by name, and expenses.category has no DB constraint, so this is
 // purely a dropdown-label change — no migration needed.
+// "PMS" (bikes/Tacoma fuel) is deliberately its own category, not folded
+// into "Fuel" — Profitability excludes "Fuel"-category expenses from Other
+// Cost because diesel is already counted via the Daily Operations fuel-used
+// calc; PMS has no equivalent computed figure, so tagging it "Fuel" would
+// silently drop it from cost entirely instead of landing in Other Cost.
 export const EXPENSE_CATEGORIES = [
   'Fuel',
+  'PMS',
   'Maintenance',
   'Payroll',
   'Logistics',

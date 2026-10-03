@@ -4,11 +4,37 @@ import { weekOf } from '../dateUtils.js';
 import { sectionHeader, statCard, renderTable, dateRangeFields } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { isHaOperationType } from '../constants.js';
-import { hourlyRateAsOf, dieselRateAsOf, projectRateAsOf } from '../rateHistory.js';
+import { hourlyRateAsOf, dozerRatesAsOf, dieselRateAsOf, projectRateAsOf } from '../rateHistory.js';
 import { printProfitabilityReport } from '../print.js';
 
 export function projectNames() {
   return store.get('projects').map((p) => p.name);
+}
+
+// Partnership/Rented dozers are billed at their real day-rate rental (what's
+// actually owed to the 3rd-party owner, per Dozer Rent Payments) instead of
+// the internal hourlyRateAsOf used for Company-owned dozers — rental is a
+// flat amount per working day regardless of hours, counted once per distinct
+// date even if the dozer has more than one report that day. Business-work
+// days are excluded, same as Dozer Rent Payments excludes them (that's the
+// operator's side arrangement, not a cost billable to the project).
+function dozerCostForRows(rows) {
+  const byEquipment = {};
+  rows.forEach((o) => {
+    if (!byEquipment[o.equipment]) byEquipment[o.equipment] = [];
+    byEquipment[o.equipment].push(o);
+  });
+  let total = 0;
+  Object.entries(byEquipment).forEach(([equipment, equipmentRows]) => {
+    const ownership = store.get('inventory').find((i) => i.name === equipment)?.ownership;
+    if (ownership === 'Partnership' || ownership === 'Rented') {
+      const days = new Set(equipmentRows.filter((o) => o.workType !== 'Business').map((o) => o.date));
+      days.forEach((date) => { total += dozerRatesAsOf(equipment, date).rentalRatePerDay || 0; });
+    } else {
+      total += equipmentRows.reduce((sum, o) => sum + (o.hoursWorked || 0) * hourlyRateAsOf(equipment, o.date), 0);
+    }
+  });
+  return total;
 }
 
 export function computeProjectStats(project, from, to) {
@@ -24,7 +50,7 @@ export function computeProjectStats(project, from, to) {
   // Computed per-day rather than as a single total x current rate, so a
   // rate change partway through the selected period is reflected correctly
   // instead of applying today's rate retroactively to the whole range.
-  const dozerCost = operations.reduce((sum, o) => sum + (o.hoursWorked || 0) * hourlyRateAsOf(o.equipment, o.date), 0);
+  const dozerCost = dozerCostForRows(operations);
   const dieselCost = operations.reduce((sum, o) => sum + (o.fuelUsed || 0) * dieselRateAsOf(o.date), 0);
 
   const logisticsCost = expenses.filter((e) => e.category === 'Logistics').reduce((sum, e) => sum + e.amount, 0);
@@ -163,7 +189,7 @@ export function computeGroupedStats({ groupBy, from, to, project }) {
     const rows = opsInRange.filter((o) => keyFn(o) === key);
     const areaCleared = rows.filter((o) => isHaOperationType(o.operationType)).reduce((sum, o) => sum + o.quantity, 0);
     const fuelUsed = rows.reduce((sum, o) => sum + o.fuelUsed, 0);
-    const dozerCost = rows.reduce((sum, o) => sum + (o.hoursWorked || 0) * hourlyRateAsOf(o.equipment, o.date), 0);
+    const dozerCost = dozerCostForRows(rows);
     const dieselCost = rows.reduce((sum, o) => sum + (o.fuelUsed || 0) * dieselRateAsOf(o.date), 0);
     const revenue = provisionalRevenueForRows(rows);
     return {
