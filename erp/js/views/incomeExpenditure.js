@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
 import { sectionHeader, statCard, statusPill, renderTable, actionButtons, openModal, confirmDelete } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
@@ -198,7 +199,7 @@ export function renderIncomeExpenditure(container) {
     openModal({
       title: record ? 'Edit Manual Entry' : 'Add Manual Entry',
       fields: manualEntryFields(),
-      initial: record || { date: new Date().toISOString().slice(0, 10), type: 'Expenditure' },
+      initial: record || { date: todayISOString(), type: 'Expenditure' },
       submitLabel: record ? 'Save Changes' : 'Add Entry',
       onSubmit: async (data) => {
         if (record) await store.update('financialEntries', record.id, data);

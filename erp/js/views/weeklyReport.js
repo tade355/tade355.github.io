@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString, mondayOf, addDays } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
 import { sectionHeader, renderTable, statCard } from '../ui.js';
 import { OPERATION_TYPES, isHaOperationType } from '../constants.js';
@@ -36,26 +37,6 @@ function rosterForProject(project, ops) {
     .map((name) => inventoryByName.get(name) || { name });
 
   return [...assigned, ...extra];
-}
-
-// UTC-based date math throughout — a local-time Date (new Date(iso+'T00:00:00')
-// then setDate/toISOString) can fail to advance a calendar day right at a
-// local DST transition, which would make datesInRange's while-loop below
-// spin forever on the right timezone/date combination. UTC has no DST, so
-// this is deterministic regardless of the browser's timezone.
-function mondayOf(iso) {
-  const [y, m, day] = iso.split('-').map(Number);
-  const d = new Date(Date.UTC(y, m - 1, day));
-  const diff = d.getUTCDay() === 0 ? 6 : d.getUTCDay() - 1;
-  d.setUTCDate(d.getUTCDate() - diff);
-  return d.toISOString().slice(0, 10);
-}
-
-function addDays(iso, n) {
-  const [y, m, day] = iso.split('-').map(Number);
-  const d = new Date(Date.UTC(y, m - 1, day));
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
 }
 
 // Hard cap on the period length: a mis-picked or far-future end date
@@ -326,7 +307,7 @@ function computeActualWeeklySummary(project, periodStart, periodEnd, dates, peri
 function renderWeeklyPerformanceTab(container) {
   const filterBar = el('div', { class: 'filter-bar' });
   const projectSelect = el('select', {}, projectOptions().map((p) => el('option', { value: p }, p)));
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISOString();
   const startInput = el('input', { type: 'date' });
   startInput.value = mondayOf(today);
   const endInput = el('input', { type: 'date' });
@@ -522,7 +503,7 @@ function computeMilestoneTracker(project) {
   const allOps = store.get('operations').filter((o) => o.siteName === project);
   const grandCumulative = allOps.filter((o) => isHaOperationType(o.operationType)).reduce((sum, o) => sum + o.quantity, 0);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISOString();
   const daysOnProject = p?.startDate ? Math.floor((new Date(today) - new Date(p.startDate)) / 86400000) + 1 : null;
   const speedPerDay = daysOnProject ? grandCumulative / daysOnProject : null;
   const remaining = (p?.totalAreaHa || p?.totalAreaHa === 0) ? p.totalAreaHa - grandCumulative : null;

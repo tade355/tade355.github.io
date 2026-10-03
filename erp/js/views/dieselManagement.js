@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
 import { sectionHeader, statCard, statusPill, renderTable, actionButtons, openModal, confirmDelete } from '../ui.js';
 import { FUEL_STATIONS } from '../constants.js';
@@ -147,7 +148,7 @@ function renderStationLedgerTab(container) {
     openModal({
       title: record ? 'Edit Prepayment' : 'Log Prepayment',
       fields: prepaymentFields(),
-      initial: record || { date: new Date().toISOString().slice(0, 10) },
+      initial: record || { date: todayISOString() },
       submitLabel: record ? 'Save Changes' : 'Log Prepayment',
       onSubmit: async (data) => {
         if (record) await store.update('dieselStationPrepayments', record.id, data);
@@ -274,7 +275,7 @@ function renderSiteDistributionTab(container) {
     openModal({
       title: record ? 'Edit Distribution' : 'Log Distribution',
       fields: distributionFields(),
-      initial: record || { date: new Date().toISOString().slice(0, 10) },
+      initial: record || { date: todayISOString() },
       submitLabel: record ? 'Save Changes' : 'Log Distribution',
       onSubmit: async (data) => {
         if (record) await store.update('dieselSiteDistributions', record.id, data);

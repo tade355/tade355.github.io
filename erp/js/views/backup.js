@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { el, formatDate } from '../utils.js';
 import { sectionHeader, statCard } from '../ui.js';
 
@@ -57,7 +58,7 @@ export function renderBackup(container) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `emagrims-erp-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `emagrims-erp-backup-${todayISOString()}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();

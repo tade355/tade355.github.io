@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { LEAVE_TYPES } from '../constants.js';
@@ -80,7 +81,7 @@ function mapLink(lat, lng) {
 }
 
 function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+  return todayISOString();
 }
 
 function nowTime() {

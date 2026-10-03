@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
 import { DOZER_OVERTIME_RATE_DEFAULT } from '../constants.js';
@@ -156,11 +157,11 @@ function openRunForm(record, onSaved) {
     wide: true,
     build: (container) => {
       const startInput = el('input', { type: 'date', name: 'periodStart' });
-      startInput.value = record?.periodStart || new Date().toISOString().slice(0, 10);
+      startInput.value = record?.periodStart || todayISOString();
       const startField = el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Period Start *'), startInput]);
 
       const endInput = el('input', { type: 'date', name: 'periodEnd' });
-      endInput.value = record?.periodEnd || new Date().toISOString().slice(0, 10);
+      endInput.value = record?.periodEnd || todayISOString();
       const endField = el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Period End *'), endInput]);
 
       const overtimeRateInput = el('input', { type: 'number', min: 0 });
@@ -282,7 +283,7 @@ function openRunForm(record, onSaved) {
           if (newStatus === 'Paid' && !savedRun.expenseId) {
             const total = lines.reduce((sum, l) => sum + netPay(l), 0);
             const expense = await store.add('expenses', {
-              date: new Date().toISOString().slice(0, 10),
+              date: todayISOString(),
               category: 'Payroll',
               description: `Dozer Operator Day-Rate Payroll — ${formatDate(savedRun.periodStart)} to ${formatDate(savedRun.periodEnd)}`,
               amount: total,

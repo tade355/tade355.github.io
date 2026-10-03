@@ -1,5 +1,6 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el, dateInRange, invoiceTotal } from '../utils.js';
+import { weekOf } from '../dateUtils.js';
 import { sectionHeader, statCard, renderTable } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { isHaOperationType } from '../constants.js';
@@ -85,19 +86,6 @@ export function companyWideStats(from, to) {
 
 function formatMaybe(value, suffix = '') {
   return value === null || value === undefined ? '—' : `${formatCurrency(value)}${suffix}`;
-}
-
-// Monday-start week containing `iso`, as a stable sort/group key (the
-// Monday's date) plus a human-readable "Mon – Sun" label.
-function weekOf(iso) {
-  const d = new Date(`${iso}T00:00:00`);
-  const diffToMonday = d.getDay() === 0 ? 6 : d.getDay() - 1;
-  const monday = new Date(d);
-  monday.setDate(d.getDate() - diffToMonday);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  const key = monday.toISOString().slice(0, 10);
-  return { key, label: `${formatDate(key)} – ${formatDate(sunday.toISOString().slice(0, 10))}` };
 }
 
 // Weekly actual Ha cleared vs. the project's Expected Rate/Day x 7 target —

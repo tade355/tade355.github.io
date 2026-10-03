@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
 import { sectionHeader, statCard, renderTable, actionButtons, openCustomModal, closeModal, confirmDelete } from '../ui.js';
 import { printDozerSettlement } from '../print.js';
@@ -102,7 +103,7 @@ function openSettlementForm(record, refresh) {
       function fillDefaultRates() {
         const equipment = equipmentField.querySelector('select').value;
         if (!equipment || record) return;
-        const asOf = periodStartField.querySelector('input').value || new Date().toISOString().slice(0, 10);
+        const asOf = periodStartField.querySelector('input').value || todayISOString();
         const rates = dozerRatesAsOf(equipment, asOf);
         rentalField.querySelector('input').value = rates.rentalRatePerDay ?? 0;
         feeField.querySelector('input').value = rates.managementFeePerDay ?? 0;
