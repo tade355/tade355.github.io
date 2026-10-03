@@ -11,8 +11,18 @@ import { ownerSettlementBalances } from './dozerRentPayments.js';
 import { projectNames, computeProjectStats, companyWideStats } from './profitability.js';
 import { getCurrentUser } from '../session.js';
 
+// Formats a Date using its LOCAL calendar fields, never `.toISOString()`.
+// For any timezone ahead of UTC (e.g. WAT, UTC+1), round-tripping a local
+// midnight Date through `.toISOString().slice(0, 10)` lands on UTC's
+// previous day — e.g. "2026-10-02T00:00:00" local is "2026-10-01T23:00Z",
+// which `.toISOString()` reads back as 1 Oct, not 2 Oct. That one-day-back
+// mismatch is what made the dashboard's date label lag the date-nav field.
+function localISODate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function todayISOString() {
-  return new Date().toISOString().slice(0, 10);
+  return localISODate(new Date());
 }
 
 // Both anchored on `anchorISO` (defaults to real today) instead of always
@@ -31,16 +41,16 @@ function lastNMonthKeys(n, anchorISO = todayISOString()) {
 
 function lastNDayKeys(n, anchorISO = todayISOString()) {
   const keys = [];
-  const anchorMs = new Date(`${anchorISO}T00:00:00`).getTime();
+  const anchor = new Date(`${anchorISO}T00:00:00`);
   for (let i = n - 1; i >= 0; i -= 1) {
-    keys.push(new Date(anchorMs - i * 86400000).toISOString().slice(0, 10));
+    keys.push(localISODate(new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - i)));
   }
   return keys;
 }
 
 function monthBounds(key) {
   const [y, m] = key.split('-').map(Number);
-  return { from: `${key}-01`, to: new Date(y, m, 0).toISOString().slice(0, 10) };
+  return { from: `${key}-01`, to: localISODate(new Date(y, m, 0)) };
 }
 
 // `invert` flips which direction counts as "good" — e.g. Expenses rising
@@ -126,7 +136,7 @@ export function renderDashboard(container) {
   function shiftDay(iso, delta) {
     const d = new Date(`${iso}T00:00:00`);
     d.setDate(d.getDate() + delta);
-    return d.toISOString().slice(0, 10);
+    return localISODate(d);
   }
 
   prevBtn.addEventListener('click', () => refresh(shiftDay(dateInput.value || realTodayISO, -1)));
