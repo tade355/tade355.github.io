@@ -37,10 +37,26 @@ function dozerCostForRows(rows) {
   return total;
 }
 
+// Fund Requests, once Approved or Paid, are committed project spend the same
+// way the Income & Expenditure report already treats them (it merges
+// Expenses and Approved/Paid Fund Requests into one ledger) — Profitability
+// was only reading Expenses, so any cost that only ever went through a Fund
+// Request (never re-entered as its own Expense row) was invisible here even
+// though it already counted as real expenditure everywhere else in the app.
+function fundRequestTotal(request) {
+  return (request.items || []).reduce((sum, it) => sum + (it.amount || 0), 0);
+}
+
+function committedFundRequestsFor(project, from, to) {
+  return store.get('fundRequests').filter((r) =>
+    r.project === project && dateInRange(r.date, from, to) && (r.status === 'Approved' || r.status === 'Paid'));
+}
+
 export function computeProjectStats(project, from, to) {
   const operations = store.get('operations').filter((o) => o.siteName === project && dateInRange(o.date, from, to));
   const invoices = store.get('invoices').filter((i) => i.project === project && dateInRange(i.date, from, to));
   const expenses = store.get('expenses').filter((e) => e.project === project && dateInRange(e.date, from, to));
+  const fundRequests = committedFundRequestsFor(project, from, to);
 
   // Only Ha-unit operation types count as "area cleared" — Road (KM) and
   // Trekking (hrs) use different units and would corrupt this total if summed in.
@@ -53,11 +69,13 @@ export function computeProjectStats(project, from, to) {
   const dozerCost = dozerCostForRows(operations);
   const dieselCost = operations.reduce((sum, o) => sum + (o.fuelUsed || 0) * dieselRateAsOf(o.date), 0);
 
-  const logisticsCost = expenses.filter((e) => e.category === 'Logistics').reduce((sum, e) => sum + e.amount, 0);
-  // Fuel-category expenses are excluded here since Diesel Cost above is already derived
-  // from actual litres consumed (Daily Operations) x the diesel unit price - counting the
-  // fuel purchase expense too would double-count the same fuel spend.
-  const otherCost = expenses.filter((e) => e.category !== 'Logistics' && e.category !== 'Fuel').reduce((sum, e) => sum + e.amount, 0);
+  const logisticsCost = expenses.filter((e) => e.category === 'Logistics').reduce((sum, e) => sum + e.amount, 0)
+    + fundRequests.filter((r) => r.costHead === 'Logistics').reduce((sum, r) => sum + fundRequestTotal(r), 0);
+  // Fuel-category expenses/fund requests are excluded here since Diesel Cost above is already
+  // derived from actual litres consumed (Daily Operations) x the diesel unit price - counting
+  // the fuel purchase too would double-count the same fuel spend.
+  const otherCost = expenses.filter((e) => e.category !== 'Logistics' && e.category !== 'Fuel').reduce((sum, e) => sum + e.amount, 0)
+    + fundRequests.filter((r) => r.costHead !== 'Logistics' && r.costHead !== 'Fuel').reduce((sum, r) => sum + fundRequestTotal(r), 0);
   const totalCost = dozerCost + dieselCost + logisticsCost + otherCost;
 
   const revenue = invoices.reduce((sum, i) => sum + invoiceTotal(i), 0);
@@ -330,7 +348,7 @@ function renderAllProjects(body, from, to) {
     emptyText: 'No projects to show.',
   });
 
-  body.appendChild(el('p', { class: 'section-subtitle', html: 'Provisional Revenue is quantity x the contract rate in effect that day, straight from Daily Operations reports — a same-day figure, whether or not it has been invoiced yet. Verified Revenue and Logistics/Other costs only include invoices and expenses explicitly tagged to a project on the Sales and Accounting pages (Profit/Margin are based on Verified Revenue only). Dozer and Diesel costs are computed automatically from Daily Operations logs using the rate/diesel price that was in effect on each day (Fleet Management Rate History, and diesel receipts) — Fuel-category expenses are excluded from "Other" to avoid double-counting diesel spend.' }));
+  body.appendChild(el('p', { class: 'section-subtitle', html: 'Provisional Revenue is quantity x the contract rate in effect that day, straight from Daily Operations reports — a same-day figure, whether or not it has been invoiced yet. Verified Revenue and Logistics/Other costs only include invoices, expenses, and Approved/Paid Fund Requests explicitly tagged to a project (Profit/Margin are based on Verified Revenue only). Dozer and Diesel costs are computed automatically from Daily Operations logs using the rate/diesel price that was in effect on each day (Fleet Management Rate History, and diesel receipts) — Fuel-category expenses are excluded from "Other" to avoid double-counting diesel spend.' }));
 }
 
 function renderSingleProject(body, project, from, to) {
@@ -363,7 +381,7 @@ function renderSingleProject(body, project, from, to) {
     formatValue: formatCurrency,
   });
 
-  body.appendChild(el('p', { class: 'section-subtitle', html: 'Provisional Revenue is quantity x the contract rate in effect that day, straight from Daily Operations reports — a same-day figure, whether or not it has been invoiced yet. Verified Revenue and Logistics/Other costs only include invoices and expenses explicitly tagged to this project on the Sales and Accounting pages (Profit/Margin are based on Verified Revenue only). Dozer and Diesel costs are computed automatically from Daily Operations logs using the rate/diesel price that was in effect on each day (Fleet Management Rate History, and diesel receipts) — Fuel-category expenses are excluded from "Other" to avoid double-counting diesel spend.' }));
+  body.appendChild(el('p', { class: 'section-subtitle', html: 'Provisional Revenue is quantity x the contract rate in effect that day, straight from Daily Operations reports — a same-day figure, whether or not it has been invoiced yet. Verified Revenue and Logistics/Other costs only include invoices, expenses, and Approved/Paid Fund Requests explicitly tagged to this project (Profit/Margin are based on Verified Revenue only). Dozer and Diesel costs are computed automatically from Daily Operations logs using the rate/diesel price that was in effect on each day (Fleet Management Rate History, and diesel receipts) — Fuel-category expenses are excluded from "Other" to avoid double-counting diesel spend.' }));
 
   body.appendChild(el('h3', { class: 'subsection-title' }, 'Weekly Productivity'));
   const { target, rows: weeklyRows } = computeWeeklyProductivity(project, from, to);
