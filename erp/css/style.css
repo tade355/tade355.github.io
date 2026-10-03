@@ -312,6 +312,11 @@ button { font-family: inherit; }
   gap: 0.5rem;
   align-items: flex-end;
 }
+.table-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+}
 
 .text-good { color: var(--good); }
 .text-critical { color: var(--critical); }

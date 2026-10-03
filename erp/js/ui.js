@@ -2,6 +2,7 @@ import { el, statusPillClass } from './utils.js';
 import { createAttachmentPicker } from './attachments.js';
 import { renderSparkline } from './charts.js';
 import { todayISOString, addDays, mondayOf } from './dateUtils.js';
+import { downloadCSV } from './csv.js';
 
 let modalRoot = null;
 
@@ -148,12 +149,24 @@ export function statusPill(status) {
   return el('span', { class: `pill ${statusPillClass(status)}` }, status);
 }
 
-export function renderTable(container, { columns, rows, emptyText = 'No records yet.', rowClass }) {
+// `exportFilename` is optional — every table gets an Export CSV button
+// regardless, so this doesn't need to be threaded through the ~60 call
+// sites across the app individually; it just gets a nicer filename than
+// the generic timestamped default where the caller has one to give.
+export function renderTable(container, { columns, rows, emptyText = 'No records yet.', rowClass, exportFilename }) {
   container.innerHTML = '';
   if (!rows.length) {
     container.appendChild(el('p', { class: 'table-empty' }, emptyText));
     return;
   }
+  const exportBtn = el('button', {
+    type: 'button',
+    class: 'btn btn-ghost btn-sm table-export-btn',
+    title: 'Download this table as a CSV file (opens in Excel)',
+    onClick: () => downloadCSV(exportFilename || `emagrims-export-${todayISOString()}`, columns, rows),
+  }, '⬇ Export CSV');
+  container.appendChild(el('div', { class: 'table-toolbar' }, [exportBtn]));
+
   const table = el('table', { class: 'data-table' });
   const thead = el('thead', {}, [
     el('tr', {}, columns.map((c) => el('th', {}, c.label))),
