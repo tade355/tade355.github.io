@@ -2,12 +2,12 @@ import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard, showToast } from '../ui.js';
+import { openPaymentLedgerModal } from '../paymentLedger.js';
 import { LOAN_CATEGORIES } from '../constants.js';
 import { computeLoanInterest, totalOwed } from '../loanInterest.js';
 import { paymentsForLoan, amountRepaid, amountOutstanding, agingDays } from '../loanPayments.js';
 import { printLoanStatement } from '../print.js';
 
-const PAYMENT_METHODS = ['Cash', 'Transfer', 'Cheque', 'Other'];
 const LOAN_STATUSES = ['Active', 'Partially Repaid', 'Repaid', 'Restructured', 'Defaulted', 'Written Off'];
 
 function projectOptions() {
@@ -175,115 +175,23 @@ function openLoanForm(record, onSaved) {
 }
 
 function openRepaymentsModal(loan, onSaved) {
-  openCustomModal({
+  function currentLoan() {
+    return store.get('loans').find((l) => l.id === loan.id) || loan;
+  }
+  openPaymentLedgerModal({
     title: `Repayments — ${loan.lender}`,
-    wide: true,
-    build: (container) => {
-      const summary = el('p', { class: 'section-subtitle' });
-      const tableContainer = el('div');
-
-      const dateField = textField('date', 'Date', 'date', todayISOString(), true);
-      const amountField = textField('amount', 'Amount (₦)', 'number', '', true);
-      const methodField = selectField('method', 'Method', [
-        { value: '', label: '— Select —' },
-        ...PAYMENT_METHODS.map((m) => ({ value: m, label: m })),
-      ], '');
-      const referenceField = textField('reference', 'Reference', 'text', '');
-      const notesField = textField('notes', 'Notes', 'text', '');
-      const formGrid = el('div', { class: 'form-grid-2' }, [dateField, amountField, methodField, referenceField]);
-
-      const addBtn = el('button', { type: 'button', class: 'btn btn-primary' }, '+ Log Repayment');
-      let editingId = null;
-
-      function currentLoan() {
-        return store.get('loans').find((l) => l.id === loan.id) || loan;
-      }
-
-      function resetForm() {
-        editingId = null;
-        dateField.querySelector('input').value = todayISOString();
-        amountField.querySelector('input').value = '';
-        methodField.querySelector('select').value = '';
-        referenceField.querySelector('input').value = '';
-        notesField.querySelector('input').value = '';
-        addBtn.textContent = '+ Log Repayment';
-      }
-
-      function loadForEdit(payment) {
-        editingId = payment.id;
-        dateField.querySelector('input').value = payment.date;
-        amountField.querySelector('input').value = payment.amount;
-        methodField.querySelector('select').value = payment.method || '';
-        referenceField.querySelector('input').value = payment.reference || '';
-        notesField.querySelector('input').value = payment.notes || '';
-        addBtn.textContent = 'Save Repayment';
-      }
-
-      function refresh() {
-        const l = currentLoan();
-        const total = totalOwed(l);
-        const repaid = amountRepaid(l);
-        summary.textContent = `Total Owed ${formatCurrency(total)} · Repaid ${formatCurrency(repaid)} · Outstanding ${formatCurrency(total - repaid)}`;
-
-        renderTable(tableContainer, {
-          columns: [
-            { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
-            { key: 'amount', label: 'Amount', render: (r) => formatCurrency(r.amount) },
-            { key: 'method', label: 'Method', render: (r) => r.method || '—' },
-            { key: 'reference', label: 'Reference', render: (r) => r.reference || '—' },
-            { key: 'notes', label: 'Notes', render: (r) => r.notes || '—' },
-            {
-              key: 'actions',
-              label: '',
-              render: (r) => actionButtons({
-                onEdit: () => loadForEdit(r),
-                onDelete: async () => {
-                  if (!confirmDelete(`this repayment of ${formatCurrency(r.amount)}`)) return;
-                  await store.remove('loanRepayments', r.id);
-                  refresh();
-                  onSaved();
-                },
-              }),
-            },
-          ],
-          rows: paymentsForLoan(loan.id).slice().sort((a, b) => (a.date < b.date ? 1 : -1)),
-          emptyText: 'No repayments logged yet.',
-        });
-      }
-
-      addBtn.addEventListener('click', async () => {
-        const data = {
-          date: dateField.querySelector('input').value,
-          amount: Number(amountField.querySelector('input').value) || 0,
-          method: methodField.querySelector('select').value,
-          reference: referenceField.querySelector('input').value,
-          notes: notesField.querySelector('input').value,
-        };
-        if (!data.date || !data.amount) { window.alert('Date and Amount are required.'); return; }
-        try {
-          const wasEditing = Boolean(editingId);
-          if (editingId) await store.update('loanRepayments', editingId, data);
-          else await store.add('loanRepayments', { loanId: loan.id, ...data });
-          resetForm();
-          refresh();
-          onSaved();
-          showToast(wasEditing ? 'Repayment updated.' : 'Repayment logged.');
-        } catch (err) {
-          window.alert(err.message || 'Could not save this repayment. Please try again.');
-        }
-      });
-
-      const closeBtn = el('button', { type: 'button', class: 'btn btn-ghost', onClick: closeModal }, 'Close');
-
-      container.appendChild(summary);
-      container.appendChild(tableContainer);
-      container.appendChild(el('h3', { class: 'subsection-title' }, 'Log a Repayment'));
-      container.appendChild(formGrid);
-      container.appendChild(notesField);
-      container.appendChild(el('div', { class: 'modal-actions' }, [closeBtn, addBtn]));
-
-      refresh();
+    entryNoun: 'Repayment',
+    collection: 'loanRepayments',
+    parentIdField: 'loanId',
+    parentId: loan.id,
+    rowsFor: () => paymentsForLoan(loan.id),
+    summaryText: () => {
+      const l = currentLoan();
+      const total = totalOwed(l);
+      const repaid = amountRepaid(l);
+      return `Total Owed ${formatCurrency(total)} · Repaid ${formatCurrency(repaid)} · Outstanding ${formatCurrency(total - repaid)}`;
     },
+    onSaved,
   });
 }
 

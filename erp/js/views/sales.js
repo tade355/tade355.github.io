@@ -2,6 +2,7 @@ import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, invoiceTotal, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, openCustomModal, closeModal, confirmDelete, showToast } from '../ui.js';
+import { openPaymentLedgerModal } from '../paymentLedger.js';
 import { printInvoice } from '../print.js';
 import { OPERATION_TYPES } from '../constants.js';
 import { paymentsForInvoice, amountReceived, computeInvoiceStatus } from '../invoicePayments.js';
@@ -14,8 +15,6 @@ const CUSTOMER_FIELDS = [
   { name: 'email', label: 'Email', type: 'email' },
   { name: 'address', label: 'Address' },
 ];
-
-const PAYMENT_METHODS = ['Cash', 'Transfer', 'Cheque', 'Other'];
 
 function customerOptions() {
   return store.get('customers').map((c) => ({ value: c.id, label: c.name }));
@@ -230,121 +229,27 @@ function openInvoiceForm(record, onSaved) {
 }
 
 function openPaymentsModal(invoice, onSaved) {
-  openCustomModal({
+  function currentInvoice() {
+    return store.get('invoices').find((i) => i.id === invoice.id) || invoice;
+  }
+  async function recomputeStatus() {
+    await store.update('invoices', invoice.id, { status: computeInvoiceStatus(currentInvoice()) });
+  }
+  openPaymentLedgerModal({
     title: `Payments — Invoice ${invoice.id}`,
-    wide: true,
-    build: (container) => {
-      const summary = el('p', { class: 'section-subtitle' });
-      const tableContainer = el('div');
-
-      const dateField = textField('date', 'Date', 'date', todayISOString(), true);
-      const amountField = textField('amount', 'Amount (₦)', 'number', '', true);
-      const methodField = selectField('method', 'Method', [
-        { value: '', label: '— Select —' },
-        ...PAYMENT_METHODS.map((m) => ({ value: m, label: m })),
-      ], '');
-      const referenceField = textField('reference', 'Reference', 'text', '');
-      const notesField = textField('notes', 'Notes', 'text', '');
-      const formGrid = el('div', { class: 'form-grid-2' }, [dateField, amountField, methodField, referenceField]);
-
-      const addBtn = el('button', { type: 'button', class: 'btn btn-primary' }, '+ Log Payment');
-      let editingId = null;
-
-      function currentInvoice() {
-        return store.get('invoices').find((i) => i.id === invoice.id) || invoice;
-      }
-
-      async function recomputeStatus() {
-        await store.update('invoices', invoice.id, { status: computeInvoiceStatus(currentInvoice()) });
-      }
-
-      function resetForm() {
-        editingId = null;
-        dateField.querySelector('input').value = todayISOString();
-        amountField.querySelector('input').value = '';
-        methodField.querySelector('select').value = '';
-        referenceField.querySelector('input').value = '';
-        notesField.querySelector('input').value = '';
-        addBtn.textContent = '+ Log Payment';
-      }
-
-      function loadForEdit(payment) {
-        editingId = payment.id;
-        dateField.querySelector('input').value = payment.date;
-        amountField.querySelector('input').value = payment.amount;
-        methodField.querySelector('select').value = payment.method || '';
-        referenceField.querySelector('input').value = payment.reference || '';
-        notesField.querySelector('input').value = payment.notes || '';
-        addBtn.textContent = 'Save Payment';
-      }
-
-      function refresh() {
-        const inv = currentInvoice();
-        const total = invoiceTotal(inv);
-        const received = amountReceived(inv);
-        summary.textContent = `Invoiced ${formatCurrency(total)} · Received ${formatCurrency(received)} · Outstanding ${formatCurrency(total - received)} · Status: ${computeInvoiceStatus(inv)}`;
-
-        renderTable(tableContainer, {
-          columns: [
-            { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
-            { key: 'amount', label: 'Amount', render: (r) => formatCurrency(r.amount) },
-            { key: 'method', label: 'Method', render: (r) => r.method || '—' },
-            { key: 'reference', label: 'Reference', render: (r) => r.reference || '—' },
-            { key: 'notes', label: 'Notes', render: (r) => r.notes || '—' },
-            {
-              key: 'actions',
-              label: '',
-              render: (r) => actionButtons({
-                onEdit: () => loadForEdit(r),
-                onDelete: async () => {
-                  if (!confirmDelete(`this payment of ${formatCurrency(r.amount)}`)) return;
-                  await store.remove('invoicePayments', r.id);
-                  await recomputeStatus();
-                  refresh();
-                  onSaved();
-                },
-              }),
-            },
-          ],
-          rows: paymentsForInvoice(invoice.id).slice().sort((a, b) => (a.date < b.date ? 1 : -1)),
-          emptyText: 'No payments logged yet.',
-        });
-      }
-
-      addBtn.addEventListener('click', async () => {
-        const data = {
-          date: dateField.querySelector('input').value,
-          amount: Number(amountField.querySelector('input').value) || 0,
-          method: methodField.querySelector('select').value,
-          reference: referenceField.querySelector('input').value,
-          notes: notesField.querySelector('input').value,
-        };
-        if (!data.date || !data.amount) { window.alert('Date and Amount are required.'); return; }
-        try {
-          const wasEditing = Boolean(editingId);
-          if (editingId) await store.update('invoicePayments', editingId, data);
-          else await store.add('invoicePayments', { invoiceId: invoice.id, ...data });
-          await recomputeStatus();
-          resetForm();
-          refresh();
-          onSaved();
-          showToast(wasEditing ? 'Payment updated.' : 'Payment logged.');
-        } catch (err) {
-          window.alert(err.message || 'Could not save this payment. Please try again.');
-        }
-      });
-
-      const closeBtn = el('button', { type: 'button', class: 'btn btn-ghost', onClick: closeModal }, 'Close');
-
-      container.appendChild(summary);
-      container.appendChild(tableContainer);
-      container.appendChild(el('h3', { class: 'subsection-title' }, 'Log a Payment'));
-      container.appendChild(formGrid);
-      container.appendChild(notesField);
-      container.appendChild(el('div', { class: 'modal-actions' }, [closeBtn, addBtn]));
-
-      refresh();
+    entryNoun: 'Payment',
+    collection: 'invoicePayments',
+    parentIdField: 'invoiceId',
+    parentId: invoice.id,
+    rowsFor: () => paymentsForInvoice(invoice.id),
+    summaryText: () => {
+      const inv = currentInvoice();
+      const total = invoiceTotal(inv);
+      const received = amountReceived(inv);
+      return `Invoiced ${formatCurrency(total)} · Received ${formatCurrency(received)} · Outstanding ${formatCurrency(total - received)} · Status: ${computeInvoiceStatus(inv)}`;
     },
+    onSaved,
+    afterSave: recomputeStatus,
   });
 }
 
