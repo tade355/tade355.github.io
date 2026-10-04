@@ -133,14 +133,25 @@ function tacomaLogisticsForRows(project, from, to, rows) {
   return total;
 }
 
+// Specific day(s) where a manually negotiated supervision allowance was
+// approved as its own Fund Request (Salary and Allowance cost head) to
+// REPLACE this formula's figure for that day, not stack on top of it — e.g.
+// 4 Oct 2026, Kangidi: Oki Christopher covered as senior manager and was
+// approved a one-off ₦20,000 (FR-54) instead of the ₦10,000 this formula
+// would otherwise compute for the single dozer active that Sunday.
+const MANAGER_SUNDAY_ALLOWANCE_OVERRIDE_DATES = new Set([
+  'REX Forestry Project - Kangidi|2026-10-04',
+]);
+
 // Manager Sunday Allowance — a flat bonus per Sunday a project has any
 // dozers active, tiered by how many distinct machines worked that day.
 // Folded into Other Cost (it's a fixed schedule computed straight from
 // Daily Operations, not a logged Expense).
-function managerSundayAllowanceForRows(rows) {
+function managerSundayAllowanceForRows(rows, project) {
   const equipmentBySundayDate = {};
   rows.forEach((o) => {
     if (!isSunday(o.date)) return;
+    if (MANAGER_SUNDAY_ALLOWANCE_OVERRIDE_DATES.has(`${project}|${o.date}`)) return;
     if (!equipmentBySundayDate[o.date]) equipmentBySundayDate[o.date] = new Set();
     equipmentBySundayDate[o.date].add(o.equipment);
   });
@@ -203,7 +214,7 @@ export function computeProjectStats(project, from, to) {
   // Allowance is folded in here too — it's a fixed schedule computed from Daily Operations, not a logged Expense.
   const otherCost = expenses.filter((e) => !NON_OPERATIONS_COST_CATEGORIES.has(e.category) && !isOwnedOperatorAllowancePayment(e.payee, e.category)).reduce((sum, e) => sum + e.amount, 0)
     + fundRequests.filter((r) => !NON_OPERATIONS_COST_CATEGORIES.has(r.costHead)).reduce((sum, r) => sum + fundRequestTotal(r), 0)
-    + managerSundayAllowanceForRows(operations);
+    + managerSundayAllowanceForRows(operations, project);
   const totalCost = dozerCost + dieselCost + operatorAllowanceCost + logisticsCost + otherCost;
 
   const revenue = invoices.reduce((sum, i) => sum + invoiceTotal(i), 0);
