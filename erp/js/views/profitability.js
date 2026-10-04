@@ -26,6 +26,19 @@ function dozerCostForRows(rows) {
   return total;
 }
 
+// The slice of Rental/Dozer Cost that's for Company-owned equipment only —
+// money the company is, in effect, paying itself for using its own
+// machines. Used for the Grand Profit view (see companyWideStats): this
+// isn't new external cash, but counting it back as internal revenue shows
+// management the full economic picture of owned-fleet utilization,
+// separate from reported project profit.
+function ownedDozerRentalForRows(rows) {
+  return dozerCostForRows(rows.filter((o) => {
+    const ownership = store.get('inventory').find((i) => i.name === o.equipment)?.ownership;
+    return ownership === 'Company' || !ownership;
+  }));
+}
+
 // Owned dozers eligible for Operator Allowance (day-rate pay computed
 // directly from Daily Operations, independent of whatever's later entered
 // in Dozer Payroll) — Partnership/Rented dozer operators are paid by their
@@ -42,10 +55,10 @@ const ALLOWANCE_EXTRA_HOUR_RATE = 10000;
 // Operator Allowance — only for the owned EMG fleet, counting hours worked
 // *or* trekked (unlike Rental Cost, trekking isn't exempt here — the
 // operator is on the clock either way). Grouped by operator+date first since
-// an operator can have more than one report the same day. A Sunday is a
-// flat ₦50,000 regardless of hours; any other day prorates a day rate
-// (₦30,000, or ₦25,000 for Jessie) by hours/8 for the first 8 hours, plus a
-// flat ₦10,000 for every hour beyond 8.
+// an operator can have more than one report the same day. Prorates a day
+// rate (₦30,000, or ₦25,000 for Jessie — ₦50,000 for everyone on a Sunday,
+// overriding the Jessie discount) by hours/8 for the first 8 hours, plus a
+// flat ₦10,000 for every hour beyond 8, Sunday included.
 function operatorAllowanceForRows(rows) {
   const hoursByOperatorDate = {};
   rows.forEach((o) => {
@@ -56,11 +69,9 @@ function operatorAllowanceForRows(rows) {
   let total = 0;
   Object.entries(hoursByOperatorDate).forEach(([key, hours]) => {
     const [operatorId, date] = key.split('|');
-    if (isSunday(date)) {
-      total += ALLOWANCE_SUNDAY_FLAT_RATE;
-      return;
-    }
-    const dayRate = operatorId === ALLOWANCE_JESSIE_EMPLOYEE_ID ? ALLOWANCE_DAY_RATE_JESSIE : ALLOWANCE_DAY_RATE_DEFAULT;
+    const dayRate = isSunday(date)
+      ? ALLOWANCE_SUNDAY_FLAT_RATE
+      : (operatorId === ALLOWANCE_JESSIE_EMPLOYEE_ID ? ALLOWANCE_DAY_RATE_JESSIE : ALLOWANCE_DAY_RATE_DEFAULT);
     const first8 = Math.min(hours, 8);
     const extra = Math.max(0, hours - 8);
     total += (first8 / 8) * dayRate + extra * ALLOWANCE_EXTRA_HOUR_RATE;
@@ -145,6 +156,7 @@ export function computeProjectStats(project, from, to) {
   // rate change partway through the selected period is reflected correctly
   // instead of applying today's rate retroactively to the whole range.
   const dozerCost = dozerCostForRows(operations);
+  const ownedDozerRental = ownedDozerRentalForRows(operations);
   const dieselCost = operations.reduce((sum, o) => sum + (o.fuelUsed || 0) * dieselRateAsOf(o.date), 0);
   const operatorAllowanceCost = operatorAllowanceForRows(operations);
 
@@ -180,6 +192,7 @@ export function computeProjectStats(project, from, to) {
     areaCleared,
     fuelUsed,
     dozerCost,
+    ownedDozerRental,
     dieselCost,
     operatorAllowanceCost,
     logisticsCost,
@@ -202,6 +215,12 @@ export function computeProjectStats(project, from, to) {
 // used for "today" figures (Dashboard), since verified revenue lags real
 // invoicing and reads as ₦0 for almost any single day even when real work
 // went in.
+// Grand Profit is a separate economic/management view, not additional
+// external cash: owned-dozer Rental Cost is money the company pays itself,
+// so it's already subtracted once in totalCost/profit like any other cost,
+// then added back here as "internal rental revenue" to show the full
+// picture of owned-fleet utilization alongside the externally-reported
+// project profit.
 export function companyWideStats(from, to) {
   const stats = projectNames().map((p) => computeProjectStats(p, from, to));
   const totals = stats.reduce((acc, s) => ({
@@ -209,8 +228,15 @@ export function companyWideStats(from, to) {
     profit: acc.profit + s.profit,
     totalCost: acc.totalCost + s.totalCost,
     provisionalRevenue: acc.provisionalRevenue + s.provisionalRevenue,
-  }), { revenue: 0, profit: 0, totalCost: 0, provisionalRevenue: 0 });
-  return { ...totals, tentativeProfit: totals.provisionalRevenue - totals.totalCost };
+    ownedDozerRental: acc.ownedDozerRental + s.ownedDozerRental,
+  }), { revenue: 0, profit: 0, totalCost: 0, provisionalRevenue: 0, ownedDozerRental: 0 });
+  const tentativeProfit = totals.provisionalRevenue - totals.totalCost;
+  return {
+    ...totals,
+    tentativeProfit,
+    grandProfit: totals.profit + totals.ownedDozerRental,
+    grandTentativeProfit: tentativeProfit + totals.ownedDozerRental,
+  };
 }
 
 function formatMaybe(value, suffix = '') {
@@ -405,6 +431,15 @@ export function renderProfitability(container) {
 
 function renderAllProjects(body, from, to) {
   const stats = projectNames().map((p) => computeProjectStats(p, from, to));
+  const company = companyWideStats(from, to);
+
+  const grandStatsGrid = el('div', { class: 'stats-grid' }, [
+    statCard({ label: 'Reported Profit', value: formatCurrency(company.profit), tone: company.profit >= 0 ? 'good' : 'critical' }),
+    statCard({ label: 'Owned-Dozer Internal Rental', value: formatCurrency(company.ownedDozerRental), hint: 'Not external cash — money the company pays itself for owned-fleet use' }),
+    statCard({ label: 'Grand Profit', value: formatCurrency(company.grandProfit), tone: company.grandProfit >= 0 ? 'good' : 'critical', hint: 'Reported Profit + Owned-Dozer Internal Rental' }),
+  ]);
+  body.appendChild(grandStatsGrid);
+  body.appendChild(el('p', { class: 'section-subtitle' }, 'Grand Profit adds owned-dozer Rental Cost back as internal rental revenue — it\'s not new external cash, just a way to see the full economic picture of owned-fleet utilization alongside reported project profit (which already has that rental cost subtracted once, like any other cost).'));
 
   const chartContainer = el('div', { class: 'charts-grid charts-grid-1' });
   body.appendChild(chartContainer);
