@@ -895,11 +895,12 @@ export function printProfitabilityReport(stats, { from, to, projectLabel } = {})
     revenue: acc.revenue + s.revenue,
     dozerCost: acc.dozerCost + s.dozerCost,
     dieselCost: acc.dieselCost + s.dieselCost,
+    operatorAllowanceCost: acc.operatorAllowanceCost + s.operatorAllowanceCost,
     logisticsCost: acc.logisticsCost + s.logisticsCost,
     otherCost: acc.otherCost + s.otherCost,
     totalCost: acc.totalCost + s.totalCost,
     profit: acc.profit + s.profit,
-  }), { areaCleared: 0, provisionalRevenue: 0, revenue: 0, dozerCost: 0, dieselCost: 0, logisticsCost: 0, otherCost: 0, totalCost: 0, profit: 0 });
+  }), { areaCleared: 0, provisionalRevenue: 0, revenue: 0, dozerCost: 0, dieselCost: 0, operatorAllowanceCost: 0, logisticsCost: 0, otherCost: 0, totalCost: 0, profit: 0 });
   const totalMargin = totals.revenue ? (totals.profit / totals.revenue) * 100 : null;
 
   const html = `
@@ -912,7 +913,7 @@ export function printProfitabilityReport(stats, { from, to, projectLabel } = {})
       <thead>
         <tr>
           <th>Project</th><th>Area Cleared</th><th>Provisional Revenue</th><th>Verified Revenue</th>
-          <th>Dozer Cost</th><th>Diesel Cost</th><th>Logistics Cost</th><th>Other Cost</th>
+          <th>Dozer Cost</th><th>Diesel Cost</th><th>Operator Allowance</th><th>Logistics Cost</th><th>Other Cost</th>
           <th>Total Cost</th><th>Profit</th><th>Margin</th>
         </tr>
       </thead>
@@ -925,13 +926,14 @@ export function printProfitabilityReport(stats, { from, to, projectLabel } = {})
             <td>${formatCurrency(s.revenue)}</td>
             <td>${formatCurrency(s.dozerCost)}</td>
             <td>${formatCurrency(s.dieselCost)}</td>
+            <td>${formatCurrency(s.operatorAllowanceCost)}</td>
             <td>${formatCurrency(s.logisticsCost)}</td>
             <td>${formatCurrency(s.otherCost)}</td>
             <td>${formatCurrency(s.totalCost)}</td>
             <td>${formatCurrency(s.profit)}</td>
             <td>${s.margin === null ? '—' : `${s.margin.toFixed(0)}%`}</td>
           </tr>
-        `).join('') : '<tr><td colspan="11">No projects to show.</td></tr>'}
+        `).join('') : '<tr><td colspan="12">No projects to show.</td></tr>'}
       </tbody>
       <tfoot>
         <tr>
@@ -941,6 +943,7 @@ export function printProfitabilityReport(stats, { from, to, projectLabel } = {})
           <td>${formatCurrency(totals.revenue)}</td>
           <td>${formatCurrency(totals.dozerCost)}</td>
           <td>${formatCurrency(totals.dieselCost)}</td>
+          <td>${formatCurrency(totals.operatorAllowanceCost)}</td>
           <td>${formatCurrency(totals.logisticsCost)}</td>
           <td>${formatCurrency(totals.otherCost)}</td>
           <td>${formatCurrency(totals.totalCost)}</td>

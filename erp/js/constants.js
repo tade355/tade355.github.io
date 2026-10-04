@@ -130,8 +130,14 @@ export const LEAVE_TYPES = [
 // renamed to "Bull Dozer Rentals" to match the real term; nothing reads
 // it by name, and expenses.category has no DB constraint, so this is
 // purely a dropdown-label change — no migration needed.
+// "PMS" (bikes/Tacoma fuel) is deliberately its own category, not folded
+// into "Fuel" — Profitability excludes "Fuel"-category expenses from Other
+// Cost because diesel is already counted via the Daily Operations fuel-used
+// calc; PMS has no equivalent computed figure, so tagging it "Fuel" would
+// silently drop it from cost entirely instead of landing in Other Cost.
 export const EXPENSE_CATEGORIES = [
   'Fuel',
+  'PMS',
   'Maintenance',
   'Payroll',
   'Logistics',
@@ -156,8 +162,10 @@ export const LOAN_CATEGORIES = [
 
 // Fleet ownership categories — see Fleet Management and Dozer Economics.
 // Company: company owns + maintains it, pays operators per day.
-// Partnership: a 2nd-party owner; company pays a day-rate rental, retains
-// a flat management fee, and still pays the operators directly.
+// Partnership: a 2nd-party owner; company pays a day-rate rental and
+// retains a flat management fee. Operators are paid directly by the
+// partner-owner (changed Oct 2026 — this used to be company-paid, same as
+// Company dozers; see payableEquipmentNames() in dozerPayroll.js).
 // Rented: a 3rd-party owner who pays their own operators; company just
 // pays a day rate.
 export const OWNERSHIP_CATEGORIES = ['Company', 'Partnership', 'Rented'];

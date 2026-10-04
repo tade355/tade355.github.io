@@ -34,6 +34,17 @@ export function dieselRateAsOf(date) {
   return store.get('inventory').find((i) => i.name === 'Diesel (AGO)')?.unitCost || 0;
 }
 
+// PMS price as of a date — derived from the most recent PMS collection
+// logged in Fuel Credit Tracking on or before that date (there's no PMS
+// equivalent of Diesel Receipts or an inventory PMS item to fall back to,
+// so this reads 0 if nothing's been logged yet for that date).
+export function pmsRateAsOf(date) {
+  const collections = store.get('fuelCreditCollections')
+    .filter((c) => c.fuelType === 'PMS' && c.date <= date)
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+  return collections.length ? collections[0].unitPrice || 0 : 0;
+}
+
 // The most recent project_rate_history entry for a project (and, usually,
 // a specific operation type) at or before `date`. Most contracts price
 // each operation type separately (Felling, Stacking, Bonding, ...), so an

@@ -14,19 +14,44 @@ function employeeNameOnly(id) {
   return store.get('employees').find((x) => x.id === id)?.name || 'Unknown';
 }
 
-// Operators paid per day only make sense for Company/Partnership dozers —
-// Rented dozer operators are paid directly by the owner, not the company.
+// Operators paid per day only make sense for Company dozers — Partnership
+// dozer operators are now paid directly by the partner-owner, the same
+// arrangement as Rented (changed Oct 2026; Partnership used to be paid
+// directly by the company, same as Company dozers, hence the dozerEconomics
+// view already groups Partnership with Rented while this used to lag behind).
 function payableEquipmentNames() {
-  return new Set(store.get('inventory').filter((i) => i.ownership === 'Company' || i.ownership === 'Partnership' || !i.ownership).map((i) => i.name));
+  return new Set(store.get('inventory').filter((i) => i.ownership === 'Company' || !i.ownership).map((i) => i.name));
+}
+
+// How one operator's payable-equipment hours in a period split across the
+// project(s) they were logged against — e.g. {EMG-006 Phase 1: 0.6, Kangidi
+// Phase 2: 0.4}. Used to prorate their day-rate pay across projects when
+// posting the payroll expense. Empty if they logged no payable-equipment
+// hours at all in the period (nothing to attribute to a project).
+function projectHoursSplit(employeeId, from, to) {
+  const equipmentNames = payableEquipmentNames();
+  const rows = store.get('operations').filter((o) =>
+    o.operatorId === employeeId && dateInRange(o.date, from, to) && equipmentNames.has(o.equipment));
+  const hoursByProject = {};
+  let total = 0;
+  rows.forEach((o) => {
+    const hrs = o.hoursWorked || 0;
+    hoursByProject[o.siteName] = (hoursByProject[o.siteName] || 0) + hrs;
+    total += hrs;
+  });
+  if (!total) return {};
+  const split = {};
+  Object.entries(hoursByProject).forEach(([project, hrs]) => { split[project] = hrs / total; });
+  return split;
 }
 
 function operatorStatsFor(employeeId, from, to) {
   const equipmentNames = payableEquipmentNames();
   const allRows = store.get('operations').filter((o) => o.operatorId === employeeId && dateInRange(o.date, from, to));
-  // Normal day-rate pay (days + overtime) only comes from Company/Partnership
-  // dozers — a Rented dozer's normal days are paid by its owner, not the
-  // company. Business-day earnings are tracked regardless of dozer category,
-  // since that's the operator's side arrangement, not the normal wage.
+  // Normal day-rate pay (days + overtime) only comes from Company dozers —
+  // a Partnership or Rented dozer's normal days are paid by its owner, not
+  // the company. Business-day earnings are tracked regardless of dozer
+  // category, since that's the operator's side arrangement, not the normal wage.
   const payRows = allRows.filter((o) => equipmentNames.has(o.equipment));
 
   // Field logs report a fractional "Comb Work Day" (e.g. a half day), not a
@@ -281,16 +306,47 @@ function openRunForm(record, onSaved) {
           }
 
           if (newStatus === 'Paid' && !savedRun.expenseId) {
-            const total = lines.reduce((sum, l) => sum + netPay(l), 0);
-            const expense = await store.add('expenses', {
-              date: todayISOString(),
-              category: 'Payroll',
-              description: `Dozer Operator Day-Rate Payroll — ${formatDate(savedRun.periodStart)} to ${formatDate(savedRun.periodEnd)}`,
-              amount: total,
-              paidBy: 'Payroll',
-              project: '',
+            // Split each operator's pay across the project(s) they actually
+            // logged payable-equipment hours against this period (prorated
+            // by hours), so Operator Allowance cost lands in Profitability's
+            // Other Cost for the right project instead of vanishing into an
+            // untagged expense. A line with no payable-equipment hours in
+            // the period (e.g. business-only work) posts as "unattributed".
+            const projectTotals = {};
+            lines.forEach((l) => {
+              const amount = netPay(l);
+              if (!amount) return;
+              const split = projectHoursSplit(l.employeeId, savedRun.periodStart, savedRun.periodEnd);
+              const projects = Object.keys(split);
+              if (!projects.length) {
+                projectTotals[''] = (projectTotals[''] || 0) + amount;
+              } else {
+                projects.forEach((p) => {
+                  projectTotals[p] = (projectTotals[p] || 0) + amount * split[p];
+                });
+              }
             });
-            await store.update('dozerPayrollRuns', savedRun.id, { expenseId: expense.id });
+
+            let firstExpenseId = '';
+            for (const [project, amount] of Object.entries(projectTotals)) {
+              if (!amount) continue;
+              const label = project ? ` (${project})` : ' (unattributed — no payable-equipment hours logged)';
+              // eslint-disable-next-line no-await-in-loop
+              const expense = await store.add('expenses', {
+                date: todayISOString(),
+                category: 'Payroll',
+                description: `Dozer Operator Day-Rate Payroll — ${formatDate(savedRun.periodStart)} to ${formatDate(savedRun.periodEnd)}${label}`,
+                amount: Math.round(amount * 100) / 100,
+                paidBy: 'Payroll',
+                project,
+              });
+              if (!firstExpenseId) firstExpenseId = expense.id;
+            }
+            // The run only keeps a single expenseId (one FK column, not an
+            // array) — it's used purely as a "this run has already been
+            // posted" guard above, not as a complete record of every
+            // expense the run generated, so pointing it at the first one is enough.
+            if (firstExpenseId) await store.update('dozerPayrollRuns', savedRun.id, { expenseId: firstExpenseId });
           }
 
           closeModal();
