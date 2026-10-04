@@ -154,12 +154,33 @@ const TACOMA_REQUEST_BASIS_START_DATE = '2026-10-01';
 // mention "Tacoma"; before that date, no such record exists in the data at
 // all, so this falls back to the old any-Partnership-workday assumption as
 // the best available estimate for history.
-function tacomaLogisticsForRows(rows) {
+//
+// A Tacoma request can also land on a day with NO Daily Operations report
+// at all (operator came late, report never submitted, etc.) — the cost
+// still happened, so this isn't gated on finding a same-day operations row.
+// fuel_credit_collections has no project field of its own, so an orphan
+// request like that is attributed to a project only if it has genuinely had
+// Partnership-dozer work logged at some point (not just a Partnership
+// dozer currently assigned there — more than one project can have one
+// assigned while only one actually puts it to work).
+function projectHasEverHadPartnershipWork(project) {
+  return store.get('operations').some((o) => o.siteName === project
+    && store.get('inventory').find((i) => i.name === o.equipment)?.ownership === 'Partnership');
+}
+
+function tacomaLogisticsForRows(project, from, to, rows) {
   const partnershipDaysWithWork = new Set();
   rows.forEach((o) => {
     const ownership = store.get('inventory').find((i) => i.name === o.equipment)?.ownership;
     if (ownership === 'Partnership') partnershipDaysWithWork.add(o.date);
   });
+  if (projectHasEverHadPartnershipWork(project)) {
+    store.get('fuelCreditCollections').forEach((c) => {
+      if (c.fuelType !== 'PMS' || c.date < TACOMA_REQUEST_BASIS_START_DATE) return;
+      if (!dateInRange(c.date, from, to)) return;
+      if (/tacoma/i.test(`${c.notes || ''} ${c.reference || ''}`)) partnershipDaysWithWork.add(c.date);
+    });
+  }
   let total = 0;
   partnershipDaysWithWork.forEach((date) => {
     if (date >= TACOMA_REQUEST_BASIS_START_DATE) {
@@ -230,7 +251,7 @@ export function computeProjectStats(project, from, to) {
   const logisticsCost = expenses.filter((e) => e.category === 'Logistics').reduce((sum, e) => sum + e.amount, 0)
     + fundRequests.filter((r) => r.costHead === 'Logistics').reduce((sum, r) => sum + fundRequestTotal(r), 0)
     + commercialBikeLogisticsForRows(operations)
-    + tacomaLogisticsForRows(operations);
+    + tacomaLogisticsForRows(project, from, to, operations);
   // Fuel-category expenses/fund requests are excluded here since Diesel Cost above is already
   // derived from actual litres consumed (Daily Operations) x the diesel unit price - counting
   // the fuel purchase too would double-count the same fuel spend. Loan Repayment / Profit
