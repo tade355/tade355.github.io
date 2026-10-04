@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  todayISOString, addDays, lastNDayKeys, lastNMonthKeys, monthBounds, mondayOf, weekOf,
+  todayISOString, addDays, lastNDayKeys, lastNMonthKeys, monthBounds, mondayOf, weekOf, isSunday,
 } from './dateUtils.js';
 
 test('todayISOString returns a plain YYYY-MM-DD string matching the local date', () => {
@@ -94,4 +94,11 @@ test('weekOf returns the Monday as the key and a formatted Mon–Sun label', () 
   const { key, label } = weekOf('2026-10-02');
   assert.equal(key, '2026-09-28');
   assert.equal(label, '28 Sept 2026 – 04 Oct 2026');
+});
+
+test('isSunday is true only for the Sunday in a known week', () => {
+  assert.equal(isSunday('2026-10-04'), true);
+  assert.equal(isSunday('2026-09-28'), false); // Monday
+  assert.equal(isSunday('2026-10-02'), false); // Friday
+  assert.equal(isSunday('2026-10-03'), false); // Saturday
 });

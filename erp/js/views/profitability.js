@@ -1,38 +1,90 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el, dateInRange, invoiceTotal } from '../utils.js';
-import { weekOf } from '../dateUtils.js';
+import { weekOf, isSunday } from '../dateUtils.js';
 import { sectionHeader, statCard, renderTable, dateRangeFields } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { isHaOperationType } from '../constants.js';
-import { hourlyRateAsOf, dozerRatesAsOf, dieselRateAsOf, projectRateAsOf } from '../rateHistory.js';
+import { hourlyRateAsOf, dieselRateAsOf, projectRateAsOf } from '../rateHistory.js';
 import { printProfitabilityReport } from '../print.js';
 
 export function projectNames() {
   return store.get('projects').map((p) => p.name);
 }
 
-// Partnership/Rented dozers are billed at their real day-rate rental (what's
-// actually owed to the 3rd-party owner, per Dozer Rent Payments) instead of
-// the internal hourlyRateAsOf used for Company-owned dozers — rental is a
-// flat amount per working day regardless of hours, counted once per distinct
-// date even if the dozer has more than one report that day. Business-work
-// days are excluded, same as Dozer Rent Payments excludes them (that's the
-// operator's side arrangement, not a cost billable to the project).
+// Rental Cost = hours worked/trekked x the dozer's hourly rate, for every
+// dozer regardless of ownership. The one exception: trekking time is free
+// (no rental cost) for Company and Partnership dozers, but a hired/Rented
+// dozer (e.g. Collins) still bills rental for trekking the same as working
+// time — the owner is paid by the hour however the machine is used.
 function dozerCostForRows(rows) {
-  const byEquipment = {};
+  let total = 0;
   rows.forEach((o) => {
-    if (!byEquipment[o.equipment]) byEquipment[o.equipment] = [];
-    byEquipment[o.equipment].push(o);
+    const ownership = store.get('inventory').find((i) => i.name === o.equipment)?.ownership;
+    if (o.operationType === 'Trekking' && ownership !== 'Rented') return;
+    total += (o.hoursWorked || 0) * hourlyRateAsOf(o.equipment, o.date);
+  });
+  return total;
+}
+
+// Owned dozers eligible for Operator Allowance (day-rate pay computed
+// directly from Daily Operations, independent of whatever's later entered
+// in Dozer Payroll) — Partnership/Rented dozer operators are paid by their
+// own side arrangement, not this one.
+const ALLOWANCE_EQUIPMENT = new Set(['EMG-004', 'EMG-006', 'EMG-007', 'EMG-008']);
+// Jessie (Jessie Daniel Jenom, EMP-20, EMG-006) is paid a lower day rate
+// than every other operator.
+const ALLOWANCE_JESSIE_EMPLOYEE_ID = 'EMP-20';
+const ALLOWANCE_DAY_RATE_DEFAULT = 30000;
+const ALLOWANCE_DAY_RATE_JESSIE = 25000;
+const ALLOWANCE_SUNDAY_FLAT_RATE = 50000;
+const ALLOWANCE_EXTRA_HOUR_RATE = 10000;
+
+// Operator Allowance — only for the owned EMG fleet, counting hours worked
+// *or* trekked (unlike Rental Cost, trekking isn't exempt here — the
+// operator is on the clock either way). Grouped by operator+date first since
+// an operator can have more than one report the same day. A Sunday is a
+// flat ₦50,000 regardless of hours; any other day prorates a day rate
+// (₦30,000, or ₦25,000 for Jessie) by hours/8 for the first 8 hours, plus a
+// flat ₦10,000 for every hour beyond 8.
+function operatorAllowanceForRows(rows) {
+  const hoursByOperatorDate = {};
+  rows.forEach((o) => {
+    if (!ALLOWANCE_EQUIPMENT.has(o.equipment) || !o.operatorId) return;
+    const key = `${o.operatorId}|${o.date}`;
+    hoursByOperatorDate[key] = (hoursByOperatorDate[key] || 0) + (o.hoursWorked || 0);
   });
   let total = 0;
-  Object.entries(byEquipment).forEach(([equipment, equipmentRows]) => {
-    const ownership = store.get('inventory').find((i) => i.name === equipment)?.ownership;
-    if (ownership === 'Partnership' || ownership === 'Rented') {
-      const days = new Set(equipmentRows.filter((o) => o.workType !== 'Business').map((o) => o.date));
-      days.forEach((date) => { total += dozerRatesAsOf(equipment, date).rentalRatePerDay || 0; });
-    } else {
-      total += equipmentRows.reduce((sum, o) => sum + (o.hoursWorked || 0) * hourlyRateAsOf(equipment, o.date), 0);
+  Object.entries(hoursByOperatorDate).forEach(([key, hours]) => {
+    const [operatorId, date] = key.split('|');
+    if (isSunday(date)) {
+      total += ALLOWANCE_SUNDAY_FLAT_RATE;
+      return;
     }
+    const dayRate = operatorId === ALLOWANCE_JESSIE_EMPLOYEE_ID ? ALLOWANCE_DAY_RATE_JESSIE : ALLOWANCE_DAY_RATE_DEFAULT;
+    const first8 = Math.min(hours, 8);
+    const extra = Math.max(0, hours - 8);
+    total += (first8 / 8) * dayRate + extra * ALLOWANCE_EXTRA_HOUR_RATE;
+  });
+  return total;
+}
+
+// Manager Sunday Allowance — a flat bonus per Sunday a project has any
+// dozers active, tiered by how many distinct machines worked that day.
+// Folded into Other Cost (it's a fixed schedule computed straight from
+// Daily Operations, not a logged Expense).
+function managerSundayAllowanceForRows(rows) {
+  const equipmentBySundayDate = {};
+  rows.forEach((o) => {
+    if (!isSunday(o.date)) return;
+    if (!equipmentBySundayDate[o.date]) equipmentBySundayDate[o.date] = new Set();
+    equipmentBySundayDate[o.date].add(o.equipment);
+  });
+  let total = 0;
+  Object.values(equipmentBySundayDate).forEach((equipmentSet) => {
+    const count = equipmentSet.size;
+    if (count >= 4) total += 20000;
+    else if (count === 3) total += 15000;
+    else if (count >= 1) total += 10000;
   });
   return total;
 }
@@ -68,15 +120,18 @@ export function computeProjectStats(project, from, to) {
   // instead of applying today's rate retroactively to the whole range.
   const dozerCost = dozerCostForRows(operations);
   const dieselCost = operations.reduce((sum, o) => sum + (o.fuelUsed || 0) * dieselRateAsOf(o.date), 0);
+  const operatorAllowanceCost = operatorAllowanceForRows(operations);
 
   const logisticsCost = expenses.filter((e) => e.category === 'Logistics').reduce((sum, e) => sum + e.amount, 0)
     + fundRequests.filter((r) => r.costHead === 'Logistics').reduce((sum, r) => sum + fundRequestTotal(r), 0);
   // Fuel-category expenses/fund requests are excluded here since Diesel Cost above is already
   // derived from actual litres consumed (Daily Operations) x the diesel unit price - counting
-  // the fuel purchase too would double-count the same fuel spend.
+  // the fuel purchase too would double-count the same fuel spend. Manager Sunday Allowance is
+  // folded in here too — it's a fixed schedule computed from Daily Operations, not a logged Expense.
   const otherCost = expenses.filter((e) => e.category !== 'Logistics' && e.category !== 'Fuel').reduce((sum, e) => sum + e.amount, 0)
-    + fundRequests.filter((r) => r.costHead !== 'Logistics' && r.costHead !== 'Fuel').reduce((sum, r) => sum + fundRequestTotal(r), 0);
-  const totalCost = dozerCost + dieselCost + logisticsCost + otherCost;
+    + fundRequests.filter((r) => r.costHead !== 'Logistics' && r.costHead !== 'Fuel').reduce((sum, r) => sum + fundRequestTotal(r), 0)
+    + managerSundayAllowanceForRows(operations);
+  const totalCost = dozerCost + dieselCost + operatorAllowanceCost + logisticsCost + otherCost;
 
   const revenue = invoices.reduce((sum, i) => sum + invoiceTotal(i), 0);
   const profit = revenue - totalCost;
@@ -97,6 +152,7 @@ export function computeProjectStats(project, from, to) {
     fuelUsed,
     dozerCost,
     dieselCost,
+    operatorAllowanceCost,
     logisticsCost,
     otherCost,
     totalCost,
@@ -209,6 +265,7 @@ export function computeGroupedStats({ groupBy, from, to, project }) {
     const fuelUsed = rows.reduce((sum, o) => sum + o.fuelUsed, 0);
     const dozerCost = dozerCostForRows(rows);
     const dieselCost = rows.reduce((sum, o) => sum + (o.fuelUsed || 0) * dieselRateAsOf(o.date), 0);
+    const operatorAllowanceCost = operatorAllowanceForRows(rows);
     const revenue = provisionalRevenueForRows(rows);
     return {
       key,
@@ -217,6 +274,7 @@ export function computeGroupedStats({ groupBy, from, to, project }) {
       fuelUsed,
       dozerCost,
       dieselCost,
+      operatorAllowanceCost,
       logisticsCost: null,
       otherCost: null,
       totalCost: null,
@@ -239,6 +297,7 @@ function renderGroupedTable(body, groupBy, from, to, project) {
       { key: 'revenue', label: 'Revenue (Provisional)', render: (r) => formatCurrency(r.revenue) },
       { key: 'dozerCost', label: 'Dozer Cost', render: (r) => formatCurrency(r.dozerCost) },
       { key: 'dieselCost', label: 'Diesel Cost', render: (r) => formatCurrency(r.dieselCost) },
+      { key: 'operatorAllowanceCost', label: 'Operator Allowance', render: (r) => formatCurrency(r.operatorAllowanceCost) },
       { key: 'logisticsCost', label: 'Logistics Cost', render: () => '—' },
       { key: 'otherCost', label: 'Other Cost', render: () => '—' },
       { key: 'totalCost', label: 'Total Cost', render: () => '—' },
@@ -337,6 +396,7 @@ function renderAllProjects(body, from, to) {
       { key: 'revenue', label: 'Verified Revenue', render: (r) => formatCurrency(r.revenue) },
       { key: 'dozerCost', label: 'Dozer Cost', render: (r) => formatCurrency(r.dozerCost) },
       { key: 'dieselCost', label: 'Diesel Cost', render: (r) => formatCurrency(r.dieselCost) },
+      { key: 'operatorAllowanceCost', label: 'Operator Allowance', render: (r) => formatCurrency(r.operatorAllowanceCost) },
       { key: 'logisticsCost', label: 'Logistics Cost', render: (r) => formatCurrency(r.logisticsCost) },
       { key: 'otherCost', label: 'Other Cost', render: (r) => formatCurrency(r.otherCost) },
       { key: 'totalCost', label: 'Total Cost', render: (r) => formatCurrency(r.totalCost) },
@@ -348,7 +408,7 @@ function renderAllProjects(body, from, to) {
     emptyText: 'No projects to show.',
   });
 
-  body.appendChild(el('p', { class: 'section-subtitle', html: 'Provisional Revenue is quantity x the contract rate in effect that day, straight from Daily Operations reports — a same-day figure, whether or not it has been invoiced yet. Verified Revenue and Logistics/Other costs only include invoices, expenses, and Approved/Paid Fund Requests explicitly tagged to a project (Profit/Margin are based on Verified Revenue only). Dozer and Diesel costs are computed automatically from Daily Operations logs using the rate/diesel price that was in effect on each day (Fleet Management Rate History, and diesel receipts) — Fuel-category expenses are excluded from "Other" to avoid double-counting diesel spend.' }));
+  body.appendChild(el('p', { class: 'section-subtitle', html: 'Provisional Revenue is quantity x the contract rate in effect that day, straight from Daily Operations reports — a same-day figure, whether or not it has been invoiced yet. Verified Revenue and Logistics/Other costs only include invoices, expenses, and Approved/Paid Fund Requests explicitly tagged to a project (Profit/Margin are based on Verified Revenue only). Dozer Cost, Diesel Cost, and Operator Allowance are computed automatically from Daily Operations logs (hours/litres x the rate in effect that day; Operator Allowance only for the owned EMG fleet) — Other Cost also includes a computed Manager Sunday Allowance, and Fuel-category expenses are excluded from it to avoid double-counting diesel spend.' }));
 }
 
 function renderSingleProject(body, project, from, to) {
@@ -364,6 +424,7 @@ function renderSingleProject(body, project, from, to) {
     statCard({ label: 'Verified Revenue / ha', value: formatMaybe(s.revenuePerHa) }),
     statCard({ label: 'Cost / ha', value: formatMaybe(s.costPerHa) }),
     statCard({ label: 'Diesel Used', value: `${s.fuelUsed.toLocaleString()} L` }),
+    statCard({ label: 'Operator Allowance', value: formatCurrency(s.operatorAllowanceCost) }),
   ]);
   body.appendChild(statsGrid);
 
@@ -375,13 +436,14 @@ function renderSingleProject(body, project, from, to) {
     bars: [
       { label: 'Dozer', value: s.dozerCost, colorVar: CATEGORICAL_COLORS[0] },
       { label: 'Diesel', value: s.dieselCost, colorVar: CATEGORICAL_COLORS[1] },
-      { label: 'Logistics', value: s.logisticsCost, colorVar: CATEGORICAL_COLORS[2] },
-      { label: 'Other', value: s.otherCost, colorVar: CATEGORICAL_COLORS[3] },
+      { label: 'Operator Allowance', value: s.operatorAllowanceCost, colorVar: CATEGORICAL_COLORS[2] },
+      { label: 'Logistics', value: s.logisticsCost, colorVar: CATEGORICAL_COLORS[3] },
+      { label: 'Other', value: s.otherCost, colorVar: CATEGORICAL_COLORS[4] },
     ],
     formatValue: formatCurrency,
   });
 
-  body.appendChild(el('p', { class: 'section-subtitle', html: 'Provisional Revenue is quantity x the contract rate in effect that day, straight from Daily Operations reports — a same-day figure, whether or not it has been invoiced yet. Verified Revenue and Logistics/Other costs only include invoices, expenses, and Approved/Paid Fund Requests explicitly tagged to this project (Profit/Margin are based on Verified Revenue only). Dozer and Diesel costs are computed automatically from Daily Operations logs using the rate/diesel price that was in effect on each day (Fleet Management Rate History, and diesel receipts) — Fuel-category expenses are excluded from "Other" to avoid double-counting diesel spend.' }));
+  body.appendChild(el('p', { class: 'section-subtitle', html: 'Provisional Revenue is quantity x the contract rate in effect that day, straight from Daily Operations reports — a same-day figure, whether or not it has been invoiced yet. Verified Revenue and Logistics/Other costs only include invoices, expenses, and Approved/Paid Fund Requests explicitly tagged to this project (Profit/Margin are based on Verified Revenue only). Dozer Cost, Diesel Cost, and Operator Allowance are computed automatically from Daily Operations logs (hours/litres x the rate in effect that day; Operator Allowance only for the owned EMG fleet) — Other Cost also includes a computed Manager Sunday Allowance, and Fuel-category expenses are excluded from it to avoid double-counting diesel spend.' }));
 
   body.appendChild(el('h3', { class: 'subsection-title' }, 'Weekly Productivity'));
   const { target, rows: weeklyRows } = computeWeeklyProductivity(project, from, to);

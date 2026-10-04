@@ -28,6 +28,10 @@ function toUTCDate(iso) {
   return new Date(Date.UTC(y, m - 1, d));
 }
 
+export function isSunday(iso) {
+  return toUTCDate(iso).getUTCDay() === 0;
+}
+
 function fromUTCDate(d) {
   return d.toISOString().slice(0, 10);
 }
