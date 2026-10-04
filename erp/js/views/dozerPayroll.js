@@ -4,6 +4,7 @@ import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
 import { DOZER_OVERTIME_RATE_DEFAULT } from '../constants.js';
 import { printDozerPayslip, printDozerPayrollRegister } from '../print.js';
+import { ALLOWANCE_EQUIPMENT, operatorAllowanceForRows, OWNED_OPERATOR_PAYEE_ALIASES_BY_EMPLOYEE } from '../ownedOperatorAllowance.js';
 
 function employeeLabel(id) {
   const e = store.get('employees').find((x) => x.id === id);
@@ -100,6 +101,47 @@ function balanceOwed(employeeId) {
     });
   });
   return earned - paid;
+}
+
+// The latest period_end among saved (non-Draft) runs that already include a
+// line for this operator — their day-rate/business-earnings/deductions for
+// that stretch are already recorded on those runs (and may include manual
+// corrections an accountant made), so the live top-up below only needs to
+// cover what's happened since, instead of re-deriving everything from
+// scratch and double-counting the part a run already settled.
+function lastCoveredDateFor(employeeId) {
+  let latest = null;
+  store.get('dozerPayrollRuns').filter((r) => r.status !== 'Draft').forEach((run) => {
+    if (run.lines.some((l) => l.employeeId === employeeId) && (!latest || run.periodEnd > latest)) {
+      latest = run.periodEnd;
+    }
+  });
+  return latest;
+}
+
+// Live balance = everything already recorded on saved runs, exactly as
+// approved, PLUS a live top-up for day-rate work logged in Daily Operations
+// since the last covered run (so new reports raise what's owed the moment
+// they're submitted, with no new payroll run needed just to see it) MINUS
+// any lump-sum payment to this operator recorded as an Expense (e.g. a bulk
+// transfer-record upload), which an accountant hasn't yet entered as this
+// operator's "Amount Paid" on a run. If the same payment is ever entered
+// both ways, it would be subtracted twice — in practice only one or the
+// other has been used for a given payment so far.
+export function liveBalanceOwed(employeeId) {
+  const recorded = balanceOwed(employeeId);
+
+  const lastCovered = lastCoveredDateFor(employeeId);
+  const gapOps = store.get('operations').filter((o) => o.operatorId === employeeId
+    && ALLOWANCE_EQUIPMENT.has(o.equipment) && (!lastCovered || o.date > lastCovered));
+  const liveTopUpEarned = operatorAllowanceForRows(gapOps);
+
+  const aliases = OWNED_OPERATOR_PAYEE_ALIASES_BY_EMPLOYEE[employeeId] || [];
+  const expensePaid = aliases.length
+    ? store.get('expenses').filter((e) => aliases.includes((e.payee || '').trim().toLowerCase())).reduce((sum, e) => sum + e.amount, 0)
+    : 0;
+
+  return recorded + liveTopUpEarned - expensePaid;
 }
 
 function buildLineRow(line, onChange, getPeriod, getOvertimeRate, getRunContext) {
@@ -383,6 +425,7 @@ export function renderDozerPayroll(container) {
   container.appendChild(el('h3', { class: 'subsection-title' }, 'Operator Balances'));
   const balancesContainer = el('div');
   container.appendChild(balancesContainer);
+  container.appendChild(el('p', { class: 'section-subtitle' }, 'Balance Owed updates automatically: it includes everything already recorded on Approved/Paid runs, plus day-rate pay for any Daily Operations hours logged since the operator\'s last covered run (no new run needed just to see it), minus any lump-sum payment recorded as an Expense under their name (e.g. a bulk transfer-record upload) that hasn\'t yet been entered as "Amount Paid" on a run.'));
 
   function refresh() {
     const rows = store.get('dozerPayrollRuns').slice().sort((a, b) => (a.periodStart < b.periodStart ? 1 : -1));
@@ -424,8 +467,15 @@ export function renderDozerPayroll(container) {
       emptyText: 'No day-rate runs yet.',
     });
 
-    const operatorIds = [...new Set(rows.flatMap((r) => r.lines.map((l) => l.employeeId)))];
-    const balances = operatorIds.map((id) => ({ id, balance: balanceOwed(id) })).filter((b) => b.balance !== 0);
+    // Every operator who's ever been on a saved run, plus every owned-EMG
+    // operator who's ever logged Daily Operations hours even if no run has
+    // been created for them yet — so a brand-new operator's live-computed
+    // balance shows up here without needing a run first.
+    const operatorIds = [...new Set([
+      ...rows.flatMap((r) => r.lines.map((l) => l.employeeId)),
+      ...store.get('operations').filter((o) => ALLOWANCE_EQUIPMENT.has(o.equipment) && o.operatorId).map((o) => o.operatorId),
+    ])];
+    const balances = operatorIds.map((id) => ({ id, balance: liveBalanceOwed(id) })).filter((b) => b.balance !== 0);
     renderTable(balancesContainer, {
       columns: [
         { key: 'employee', label: 'Operator', render: (r) => employeeLabel(r.id) },

@@ -6,6 +6,7 @@ import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { isHaOperationType } from '../constants.js';
 import { hourlyRateAsOf, dieselRateAsOf, pmsRateAsOf, projectRateAsOf } from '../rateHistory.js';
 import { printProfitabilityReport } from '../print.js';
+import { operatorAllowanceForRows, isOwnedOperatorAllowancePayment } from '../ownedOperatorAllowance.js';
 
 export function projectNames() {
   return store.get('projects').map((p) => p.name);
@@ -39,46 +40,6 @@ function ownedDozerRentalForRows(rows) {
   }));
 }
 
-// Owned dozers eligible for Operator Allowance (day-rate pay computed
-// directly from Daily Operations, independent of whatever's later entered
-// in Dozer Payroll) — Partnership/Rented dozer operators are paid by their
-// own side arrangement, not this one.
-const ALLOWANCE_EQUIPMENT = new Set(['EMG-004', 'EMG-006', 'EMG-007', 'EMG-008']);
-// Jessie (Jessie Daniel Jenom, EMP-20, EMG-006) is paid a lower day rate
-// than every other operator.
-const ALLOWANCE_JESSIE_EMPLOYEE_ID = 'EMP-20';
-const ALLOWANCE_DAY_RATE_DEFAULT = 30000;
-const ALLOWANCE_DAY_RATE_JESSIE = 25000;
-const ALLOWANCE_SUNDAY_FLAT_RATE = 50000;
-const ALLOWANCE_EXTRA_HOUR_RATE = 10000;
-
-// Operator Allowance — only for the owned EMG fleet, counting hours worked
-// *or* trekked (unlike Rental Cost, trekking isn't exempt here — the
-// operator is on the clock either way). Grouped by operator+date first since
-// an operator can have more than one report the same day. Prorates a day
-// rate (₦30,000, or ₦25,000 for Jessie — ₦50,000 for everyone on a Sunday,
-// overriding the Jessie discount) by hours/8 for the first 8 hours, plus a
-// flat ₦10,000 for every hour beyond 8, Sunday included.
-function operatorAllowanceForRows(rows) {
-  const hoursByOperatorDate = {};
-  rows.forEach((o) => {
-    if (!ALLOWANCE_EQUIPMENT.has(o.equipment) || !o.operatorId) return;
-    const key = `${o.operatorId}|${o.date}`;
-    hoursByOperatorDate[key] = (hoursByOperatorDate[key] || 0) + (o.hoursWorked || 0);
-  });
-  let total = 0;
-  Object.entries(hoursByOperatorDate).forEach(([key, hours]) => {
-    const [operatorId, date] = key.split('|');
-    const dayRate = isSunday(date)
-      ? ALLOWANCE_SUNDAY_FLAT_RATE
-      : (operatorId === ALLOWANCE_JESSIE_EMPLOYEE_ID ? ALLOWANCE_DAY_RATE_JESSIE : ALLOWANCE_DAY_RATE_DEFAULT);
-    const first8 = Math.min(hours, 8);
-    const extra = Math.max(0, hours - 8);
-    total += (first8 / 8) * dayRate + extra * ALLOWANCE_EXTRA_HOUR_RATE;
-  });
-  return total;
-}
-
 // Categories that never belong in Other Cost: Logistics is counted
 // separately above, Fuel is already covered by the computed Diesel Cost,
 // Loan Repayment / Profit Distribution is financing activity (money moving
@@ -86,27 +47,6 @@ function operatorAllowanceForRows(rows) {
 // to Machine Management Profitability (rental rate generated minus
 // maintenance cost, per dozer) — a separate report, not Daily Operations.
 const NON_OPERATIONS_COST_CATEGORIES = new Set(['Logistics', 'Fuel', 'Loan Repayment / Profit Distribution', 'Maintenance']);
-
-// Payee name variants seen in the data for the 4 owned-fleet operators
-// (Ephraim/EMG-004, Jessie/EMG-006, Paul Joshua/EMG-008, Tope/EMG-007),
-// matched case-insensitively against an Expense's payee. These operators'
-// pay is already fully captured by the live Operator Allowance formula on
-// the days they actually worked — the lump "Salary and Allowance" Expense
-// payments to them cover accumulated work from weeks earlier, paid out in
-// one transfer, so counting the lump payment too would double the same
-// cost. Excluded from Other Cost the same way Fuel/Maintenance/etc. are.
-const OWNED_OPERATOR_PAYEE_ALIASES = new Set([
-  'ephraim ogheneriye',
-  'jenom daniel jessie',
-  'paul joshua obokparo',
-  'joshua obokparo paul',
-  'temitope ezekiel adebayo',
-  'adebayo temitope ezekiel',
-]);
-
-function isOwnedOperatorAllowancePayment(payee) {
-  return !!payee && OWNED_OPERATOR_PAYEE_ALIASES.has(payee.trim().toLowerCase());
-}
 
 // Diesel Logistics (commercial bikes) switched from manually-logged Expense
 // records to this computed formula on this date — operations before it keep
