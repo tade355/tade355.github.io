@@ -118,12 +118,21 @@ function commercialBikeLogisticsForRows(rows) {
 }
 
 const TACOMA_DAILY_PMS_LITRES = 20;
+// From this date on, Fuel Credit Tracking started explicitly recording which
+// PMS collections were "for the Tacoma site vehicle" in their notes — before
+// it, nothing in the ERP distinguishes a Tacoma collection from an ordinary
+// site-logistics bike collection, so there's no reliable per-day signal for
+// those earlier dates.
+const TACOMA_REQUEST_BASIS_START_DATE = '2026-10-01';
 
 // Tacoma — the vehicle that hauls diesel to Chizon/Partnership dozers —
-// collects a flat 20L of PMS every day any Partnership dozer works, no
-// matter how many Partnership dozers were active that day or how much
-// diesel they actually used. Folded into Logistics Cost alongside the
-// commercial-bike diesel-transport cost above.
+// collects a flat 20L of PMS on a day a Tacoma request was actually
+// recorded, not automatically on every day a Partnership dozer works (it
+// doesn't run every such day). From TACOMA_REQUEST_BASIS_START_DATE, this
+// requires an explicit same-day PMS collection whose notes/reference
+// mention "Tacoma"; before that date, no such record exists in the data at
+// all, so this falls back to the old any-Partnership-workday assumption as
+// the best available estimate for history.
 function tacomaLogisticsForRows(rows) {
   const partnershipDaysWithWork = new Set();
   rows.forEach((o) => {
@@ -131,7 +140,14 @@ function tacomaLogisticsForRows(rows) {
     if (ownership === 'Partnership') partnershipDaysWithWork.add(o.date);
   });
   let total = 0;
-  partnershipDaysWithWork.forEach((date) => { total += TACOMA_DAILY_PMS_LITRES * pmsRateAsOf(date); });
+  partnershipDaysWithWork.forEach((date) => {
+    if (date >= TACOMA_REQUEST_BASIS_START_DATE) {
+      const hasTacomaRequest = store.get('fuelCreditCollections').some((c) =>
+        c.fuelType === 'PMS' && c.date === date && /tacoma/i.test(`${c.notes || ''} ${c.reference || ''}`));
+      if (!hasTacomaRequest) return;
+    }
+    total += TACOMA_DAILY_PMS_LITRES * pmsRateAsOf(date);
+  });
   return total;
 }
 
