@@ -4,7 +4,7 @@ import { weekOf, isSunday } from '../dateUtils.js';
 import { sectionHeader, statCard, renderTable, dateRangeFields } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { isHaOperationType } from '../constants.js';
-import { hourlyRateAsOf, dieselRateAsOf, projectRateAsOf } from '../rateHistory.js';
+import { hourlyRateAsOf, dieselRateAsOf, pmsRateAsOf, projectRateAsOf } from '../rateHistory.js';
 import { printProfitabilityReport } from '../print.js';
 
 export function projectNames() {
@@ -68,6 +68,24 @@ function operatorAllowanceForRows(rows) {
   return total;
 }
 
+const TACOMA_DAILY_PMS_LITRES = 20;
+
+// Tacoma — the vehicle that hauls diesel to Chizon/Partnership dozers —
+// collects a flat 20L of PMS every day any Partnership dozer works, no
+// matter how many Partnership dozers were active that day or how much
+// diesel they actually used. Folded into Logistics Cost alongside the
+// commercial-bike diesel-transport expenses already logged there.
+function tacomaLogisticsForRows(rows) {
+  const partnershipDaysWithWork = new Set();
+  rows.forEach((o) => {
+    const ownership = store.get('inventory').find((i) => i.name === o.equipment)?.ownership;
+    if (ownership === 'Partnership') partnershipDaysWithWork.add(o.date);
+  });
+  let total = 0;
+  partnershipDaysWithWork.forEach((date) => { total += TACOMA_DAILY_PMS_LITRES * pmsRateAsOf(date); });
+  return total;
+}
+
 // Manager Sunday Allowance — a flat bonus per Sunday a project has any
 // dozers active, tiered by how many distinct machines worked that day.
 // Folded into Other Cost (it's a fixed schedule computed straight from
@@ -123,7 +141,8 @@ export function computeProjectStats(project, from, to) {
   const operatorAllowanceCost = operatorAllowanceForRows(operations);
 
   const logisticsCost = expenses.filter((e) => e.category === 'Logistics').reduce((sum, e) => sum + e.amount, 0)
-    + fundRequests.filter((r) => r.costHead === 'Logistics').reduce((sum, r) => sum + fundRequestTotal(r), 0);
+    + fundRequests.filter((r) => r.costHead === 'Logistics').reduce((sum, r) => sum + fundRequestTotal(r), 0)
+    + tacomaLogisticsForRows(operations);
   // Fuel-category expenses/fund requests are excluded here since Diesel Cost above is already
   // derived from actual litres consumed (Daily Operations) x the diesel unit price - counting
   // the fuel purchase too would double-count the same fuel spend. Manager Sunday Allowance is
@@ -408,7 +427,7 @@ function renderAllProjects(body, from, to) {
     emptyText: 'No projects to show.',
   });
 
-  body.appendChild(el('p', { class: 'section-subtitle', html: 'Provisional Revenue is quantity x the contract rate in effect that day, straight from Daily Operations reports — a same-day figure, whether or not it has been invoiced yet. Verified Revenue and Logistics/Other costs only include invoices, expenses, and Approved/Paid Fund Requests explicitly tagged to a project (Profit/Margin are based on Verified Revenue only). Dozer Cost, Diesel Cost, and Operator Allowance are computed automatically from Daily Operations logs (hours/litres x the rate in effect that day; Operator Allowance only for the owned EMG fleet) — Other Cost also includes a computed Manager Sunday Allowance, and Fuel-category expenses are excluded from it to avoid double-counting diesel spend.' }));
+  body.appendChild(el('p', { class: 'section-subtitle', html: 'Provisional Revenue is quantity x the contract rate in effect that day, straight from Daily Operations reports — a same-day figure, whether or not it has been invoiced yet. Verified Revenue and Logistics/Other costs only include invoices, expenses, and Approved/Paid Fund Requests explicitly tagged to a project (Profit/Margin are based on Verified Revenue only). Dozer Cost, Diesel Cost, and Operator Allowance are computed automatically from Daily Operations logs (hours/litres x the rate in effect that day; Operator Allowance only for the owned EMG fleet) — Logistics Cost also includes a computed Tacoma PMS cost (flat 20L whenever a Partnership dozer works) alongside logged diesel-transport expenses; Other Cost includes a computed Manager Sunday Allowance; Fuel-category expenses are excluded from Other Cost to avoid double-counting diesel spend.' }));
 }
 
 function renderSingleProject(body, project, from, to) {
@@ -443,7 +462,7 @@ function renderSingleProject(body, project, from, to) {
     formatValue: formatCurrency,
   });
 
-  body.appendChild(el('p', { class: 'section-subtitle', html: 'Provisional Revenue is quantity x the contract rate in effect that day, straight from Daily Operations reports — a same-day figure, whether or not it has been invoiced yet. Verified Revenue and Logistics/Other costs only include invoices, expenses, and Approved/Paid Fund Requests explicitly tagged to this project (Profit/Margin are based on Verified Revenue only). Dozer Cost, Diesel Cost, and Operator Allowance are computed automatically from Daily Operations logs (hours/litres x the rate in effect that day; Operator Allowance only for the owned EMG fleet) — Other Cost also includes a computed Manager Sunday Allowance, and Fuel-category expenses are excluded from it to avoid double-counting diesel spend.' }));
+  body.appendChild(el('p', { class: 'section-subtitle', html: 'Provisional Revenue is quantity x the contract rate in effect that day, straight from Daily Operations reports — a same-day figure, whether or not it has been invoiced yet. Verified Revenue and Logistics/Other costs only include invoices, expenses, and Approved/Paid Fund Requests explicitly tagged to this project (Profit/Margin are based on Verified Revenue only). Dozer Cost, Diesel Cost, and Operator Allowance are computed automatically from Daily Operations logs (hours/litres x the rate in effect that day; Operator Allowance only for the owned EMG fleet) — Logistics Cost also includes a computed Tacoma PMS cost (flat 20L whenever a Partnership dozer works) alongside logged diesel-transport expenses; Other Cost includes a computed Manager Sunday Allowance; Fuel-category expenses are excluded from Other Cost to avoid double-counting diesel spend.' }));
 
   body.appendChild(el('h3', { class: 'subsection-title' }, 'Weekly Productivity'));
   const { target, rows: weeklyRows } = computeWeeklyProductivity(project, from, to);
