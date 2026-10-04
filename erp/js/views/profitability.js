@@ -201,7 +201,7 @@ export function computeProjectStats(project, from, to) {
   // full by Operator Allowance above on the days they actually worked, often weeks before the
   // lump payment date, so counting the payment too would double that same cost. Manager Sunday
   // Allowance is folded in here too — it's a fixed schedule computed from Daily Operations, not a logged Expense.
-  const otherCost = expenses.filter((e) => !NON_OPERATIONS_COST_CATEGORIES.has(e.category) && !isOwnedOperatorAllowancePayment(e.payee)).reduce((sum, e) => sum + e.amount, 0)
+  const otherCost = expenses.filter((e) => !NON_OPERATIONS_COST_CATEGORIES.has(e.category) && !isOwnedOperatorAllowancePayment(e.payee, e.category)).reduce((sum, e) => sum + e.amount, 0)
     + fundRequests.filter((r) => !NON_OPERATIONS_COST_CATEGORIES.has(r.costHead)).reduce((sum, r) => sum + fundRequestTotal(r), 0)
     + managerSundayAllowanceForRows(operations);
   const totalCost = dozerCost + dieselCost + operatorAllowanceCost + logisticsCost + otherCost;

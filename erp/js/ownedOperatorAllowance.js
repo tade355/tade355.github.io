@@ -50,6 +50,15 @@ export function operatorAllowanceForRows(rows) {
 // the formula above already counts, whether that work was captured by a
 // saved Dozer Payroll run or, for anything after the run's period, the live
 // top-up in liveBalanceOwed().
+//
+// Matching payee alone isn't enough — an operator can also be the payee on
+// an unrelated expense in their own name (e.g. Paul Joshua as the contact
+// for a towing-rope rental, Ephraim reimbursed for transport) that has
+// nothing to do with his day-rate allowance. Every genuine allowance
+// payment found in the data is tagged category "Salary and Allowance", so
+// both the payee alias and that category must match.
+const ALLOWANCE_EXPENSE_CATEGORY = 'Salary and Allowance';
+
 export const OWNED_OPERATOR_PAYEE_ALIASES_BY_EMPLOYEE = {
   'EMP-34': ['ephraim ogheneriye'],
   'EMP-20': ['jenom daniel jessie'],
@@ -59,6 +68,12 @@ export const OWNED_OPERATOR_PAYEE_ALIASES_BY_EMPLOYEE = {
 
 const ALL_OWNED_OPERATOR_ALIASES = new Set(Object.values(OWNED_OPERATOR_PAYEE_ALIASES_BY_EMPLOYEE).flat());
 
-export function isOwnedOperatorAllowancePayment(payee) {
-  return !!payee && ALL_OWNED_OPERATOR_ALIASES.has(payee.trim().toLowerCase());
+export function isOwnedOperatorAllowancePayment(payee, category) {
+  return !!payee && category === ALLOWANCE_EXPENSE_CATEGORY && ALL_OWNED_OPERATOR_ALIASES.has(payee.trim().toLowerCase());
+}
+
+export function isOwnedOperatorAllowancePaymentFor(employeeId, payee, category) {
+  if (!payee || category !== ALLOWANCE_EXPENSE_CATEGORY) return false;
+  const aliases = OWNED_OPERATOR_PAYEE_ALIASES_BY_EMPLOYEE[employeeId] || [];
+  return aliases.includes(payee.trim().toLowerCase());
 }

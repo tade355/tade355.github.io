@@ -4,7 +4,7 @@ import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
 import { DOZER_OVERTIME_RATE_DEFAULT } from '../constants.js';
 import { printDozerPayslip, printDozerPayrollRegister } from '../print.js';
-import { ALLOWANCE_EQUIPMENT, operatorAllowanceForRows, OWNED_OPERATOR_PAYEE_ALIASES_BY_EMPLOYEE } from '../ownedOperatorAllowance.js';
+import { ALLOWANCE_EQUIPMENT, operatorAllowanceForRows, isOwnedOperatorAllowancePaymentFor } from '../ownedOperatorAllowance.js';
 
 function employeeLabel(id) {
   const e = store.get('employees').find((x) => x.id === id);
@@ -136,10 +136,9 @@ export function liveBalanceOwed(employeeId) {
     && ALLOWANCE_EQUIPMENT.has(o.equipment) && (!lastCovered || o.date > lastCovered));
   const liveTopUpEarned = operatorAllowanceForRows(gapOps);
 
-  const aliases = OWNED_OPERATOR_PAYEE_ALIASES_BY_EMPLOYEE[employeeId] || [];
-  const expensePaid = aliases.length
-    ? store.get('expenses').filter((e) => aliases.includes((e.payee || '').trim().toLowerCase())).reduce((sum, e) => sum + e.amount, 0)
-    : 0;
+  const expensePaid = store.get('expenses')
+    .filter((e) => isOwnedOperatorAllowancePaymentFor(employeeId, e.payee, e.category))
+    .reduce((sum, e) => sum + e.amount, 0);
 
   return recorded + liveTopUpEarned - expensePaid;
 }
