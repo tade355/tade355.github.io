@@ -135,6 +135,13 @@ export const LEAVE_TYPES = [
 // Cost because diesel is already counted via the Daily Operations fuel-used
 // calc; PMS has no equivalent computed figure, so tagging it "Fuel" would
 // silently drop it from cost entirely instead of landing in Other Cost.
+// "Loan Repayment / Profit Distribution" is for money moving between the
+// company and its lenders/owners (loan repayments, ROI/profit-share
+// payouts, equity-related movements) — a financing activity, not
+// operations spend. Profitability excludes it from Other Cost the same way
+// it excludes Fuel; before this category existed, two such payments had
+// been bulk-imported under "Other" and were silently inflating Daily
+// Operations' apparent loss.
 export const EXPENSE_CATEGORIES = [
   'Fuel',
   'PMS',
@@ -149,6 +156,7 @@ export const EXPENSE_CATEGORIES = [
   'MSc',
   'M&E',
   'IMPREST',
+  'Loan Repayment / Profit Distribution',
   'Other',
 ];
 
