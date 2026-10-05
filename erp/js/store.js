@@ -142,8 +142,29 @@ export const store = {
   },
 
   async refreshAll() {
-    const entries = await Promise.all(COLLECTIONS.map(async (key) => [key, await fetchCollection(key)]));
-    state = Object.fromEntries(entries);
+    const results = await Promise.all(COLLECTIONS.map(async (key) => {
+      try {
+        return { key, data: await fetchCollection(key), error: null };
+      } catch (err) {
+        return { key, data: [], error: err };
+      }
+    }));
+    const failures = results.filter((r) => r.error);
+    // A handful of failures usually means a table from a recent migration
+    // hasn't been run in Supabase yet (see 5 Oct 2026: shipping the Daily
+    // Machine Status Report's migration file isn't the same as running it,
+    // and the gap between push and running it in the SQL editor took the
+    // whole app down for everyone instead of just that one new tab). Keep
+    // the app usable with those collections empty rather than blocking
+    // every page on one missing/pending table. If most or all collections
+    // failed, that's a real connectivity/auth problem, not a migration gap
+    // — surface it as before instead of silently showing an app with no
+    // data in it at all.
+    if (failures.length && failures.length >= COLLECTIONS.length / 2) {
+      throw failures[0].error;
+    }
+    failures.forEach((f) => console.error(`[store] ${f.key} failed to load, continuing without it: ${f.error.message}`));
+    state = Object.fromEntries(results.map((r) => [r.key, r.data]));
   },
 
   async refreshCollection(key) {
