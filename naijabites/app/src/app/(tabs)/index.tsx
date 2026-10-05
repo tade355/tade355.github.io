@@ -44,7 +44,7 @@ export default function MenuScreen() {
       </Pressable>
       <ErrorText>{err}</ErrorText>
       {sections.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ padding: 12 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ padding: 12, alignItems: "center" }}>
           {sections.map((sec, i) => (
             <Chip key={sec.title} label={sec.title} active={i === active}
               onPress={() => { setActive(i); list.current?.scrollToLocation({ sectionIndex: i, itemIndex: 0, viewOffset: 44, animated: true }); }} />
