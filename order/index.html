@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NaijaBites Go – Pre-order &amp; Pickup</title>
+<meta name="description" content="Pre-order Nigerian meals and pick them up with no queue.">
+<meta name="theme-color" content="#c2410c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">🍛 NaijaBites <span>Go</span></div>
+  <button id="ordersBtn" class="ghost">My orders</button>
+</header>
+
+<main>
+  <section class="pickup">
+    <label>Pickup point
+      <select id="pickupPoint"></select>
+    </label>
+    <label>Pickup time
+      <select id="pickupTime"></select>
+    </label>
+  </section>
+
+  <nav id="cats" class="cats" aria-label="Menu categories"></nav>
+  <section id="menu" class="menu"></section>
+</main>
+
+<button id="cartBar" class="cartbar" hidden>
+  <span id="cartCount">0 items</span><span>View cart · <b id="cartTotal">₦0</b></span>
+</button>
+
+<div id="sheet" class="sheet" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="phead"><h2 id="sheetTitle">Your cart</h2><button id="closeSheet" class="ghost" aria-label="Close">✕</button></div>
+    <div id="sheetBody"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>
