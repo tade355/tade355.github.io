@@ -1,0 +1,29 @@
+import { z } from "zod";
+
+export const BRAND = "NaijaBites Go";
+
+const schema = z.object({
+  DATABASE_URL: z.string().min(1),
+  JWT_ACCESS_SECRET: z.string().min(8).default("dev-access-secret"),
+  OTP_SECRET: z.string().min(8).default("dev-otp-secret"),
+  QR_SECRET: z.string().min(8).default("dev-qr-secret"),
+  PAYSTACK_SECRET_KEY: z.string().default("sk_test_dev"),
+  PUBLIC_API_URL: z.string().default("http://localhost:4000"),
+  APP_CALLBACK_URL: z.string().default("naijabites://payment-complete"),
+  SMS_PROVIDER: z.enum(["console", "termii"]).default("console"),
+  PORT: z.coerce.number().default(4000),
+  NODE_ENV: z.string().default("development"),
+});
+
+export const env = schema.parse(process.env);
+if (env.NODE_ENV === "production" && /^dev-/.test(env.JWT_ACCESS_SECRET + env.OTP_SECRET + env.QR_SECRET)) {
+  throw new Error("Set real JWT_ACCESS_SECRET / OTP_SECRET / QR_SECRET in production");
+}
+
+// Policy constants
+export const ACCESS_TTL_SEC = 15 * 60;
+export const REFRESH_TTL_DAYS = 30;
+export const REFRESH_REUSE_GRACE_SEC = 60;
+export const OTP_TTL_SEC = 5 * 60;
+export const OTP_MAX_ATTEMPTS = 5;
+export const PAYMENT_HOLD_MIN = 15;

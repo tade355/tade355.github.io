@@ -1,0 +1,249 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  STAFF
+  ADMIN
+}
+enum OrderStatus {
+  PENDING_PAYMENT
+  PLACED
+  PREPARING
+  READY
+  COLLECTED
+  CANCELLED
+}
+enum PaymentStatus {
+  INITIATED
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+enum ComplaintStatus {
+  OPEN
+  APPROVED
+  REJECTED
+}
+enum RefundStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model User {
+  id            String   @id @default(cuid())
+  phone         String   @unique
+  name          String?
+  role          Role     @default(CUSTOMER)
+  outletId      String?
+  outlet        Outlet?  @relation(fields: [outletId], references: [id])
+  expoPushToken String?
+  createdAt     DateTime @default(now())
+  orders        Order[]
+  complaints    Complaint[]
+  tokens        RefreshToken[]
+}
+
+model OtpCode {
+  id         String    @id @default(cuid())
+  phone      String
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+  @@index([phone, createdAt])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  familyId  String
+  expiresAt DateTime
+  rotatedAt DateTime?
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  @@index([userId])
+  @@index([familyId])
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  name      String
+  sortOrder Int        @default(0)
+  items     MenuItem[]
+}
+
+model MenuItem {
+  id          String  @id @default(cuid())
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+  name        String
+  description String  @default("")
+  imageUrl    String?
+  priceKobo   Int
+  isCombo     Boolean @default(false)
+  active      Boolean @default(true)
+  sortOrder   Int     @default(0)
+  components  ComboComponent[] @relation("combo")
+  usedIn      ComboComponent[] @relation("component")
+  orderItems  OrderItem[]
+  unavailable OutletItemAvailability[]
+}
+
+model ComboComponent {
+  id          String   @id @default(cuid())
+  comboId     String
+  combo       MenuItem @relation("combo", fields: [comboId], references: [id], onDelete: Cascade)
+  componentId String
+  component   MenuItem @relation("component", fields: [componentId], references: [id])
+  quantity    Int      @default(1)
+  @@unique([comboId, componentId])
+}
+
+model Outlet {
+  id           String  @id @default(cuid())
+  name         String
+  address      String
+  city         String  @default("")
+  lat          Float?
+  lng          Float?
+  active       Boolean @default(true)
+  prepMinutes  Int     @default(30)
+  slotMinutes  Int     @default(30)
+  slotCapacity Int     @default(10)
+  hours        OutletHours[]
+  staff        User[]
+  orders       Order[]
+  unavailable  OutletItemAvailability[]
+}
+
+// dayOfWeek 0=Sunday..6=Saturday, minutes since local midnight (Africa/Lagos, UTC+1, no DST)
+model OutletHours {
+  id        String @id @default(cuid())
+  outletId  String
+  outlet    Outlet @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  dayOfWeek Int
+  openMin   Int
+  closeMin  Int
+  @@unique([outletId, dayOfWeek])
+}
+
+model OutletItemAvailability {
+  outletId   String
+  menuItemId String
+  outlet     Outlet   @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  @@id([outletId, menuItemId])
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  code         String      @unique // short human code shown to staff, e.g. "K7M2QX"
+  userId       String
+  user         User        @relation(fields: [userId], references: [id])
+  outletId     String
+  outlet       Outlet      @relation(fields: [outletId], references: [id])
+  status       OrderStatus @default(PENDING_PAYMENT)
+  pickupAt     DateTime
+  note         String      @default("")
+  subtotalKobo Int
+  totalKobo    Int
+  paidAt       DateTime?
+  collectedAt  DateTime?
+  collectedById String?
+  expiresAt    DateTime?   // payment hold; slot released after this if unpaid
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  items        OrderItem[]
+  events       OrderEvent[]
+  payments     Payment[]
+  complaints   Complaint[]
+  @@index([userId, createdAt])
+  @@index([outletId, status, pickupAt])
+}
+
+model OrderItem {
+  id            String   @id @default(cuid())
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId    String
+  menuItem      MenuItem @relation(fields: [menuItemId], references: [id])
+  nameSnapshot  String
+  unitPriceKobo Int
+  quantity      Int
+}
+
+model OrderEvent {
+  id        String       @id @default(cuid())
+  orderId   String
+  order     Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus OrderStatus?
+  toStatus  OrderStatus
+  actorId   String?
+  createdAt DateTime     @default(now())
+}
+
+model Payment {
+  id           String        @id @default(cuid())
+  orderId      String
+  order        Order         @relation(fields: [orderId], references: [id])
+  reference    String        @unique
+  amountKobo   Int
+  currency     String        @default("NGN")
+  status       PaymentStatus @default(INITIATED)
+  channel      String?
+  authorizationUrl String?
+  paystackId   String?
+  paidAt       DateTime?
+  createdAt    DateTime      @default(now())
+  refunds      Refund[]
+}
+
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  eventKey    String    @unique // e.g. "charge.success:<reference>" — idempotency key
+  type        String
+  payload     Json
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model Complaint {
+  id          String          @id @default(cuid())
+  orderId     String
+  order       Order           @relation(fields: [orderId], references: [id])
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  reason      String
+  description String          @default("")
+  photoUrl    String?
+  status      ComplaintStatus @default(OPEN)
+  resolvedById String?
+  resolutionNote String?
+  createdAt   DateTime        @default(now())
+  refund      Refund?
+}
+
+model Refund {
+  id          String       @id @default(cuid())
+  complaintId String?      @unique
+  complaint   Complaint?   @relation(fields: [complaintId], references: [id])
+  reason      String       @default("")
+  paymentId   String
+  payment     Payment      @relation(fields: [paymentId], references: [id])
+  amountKobo  Int
+  status      RefundStatus @default(PENDING)
+  paystackRefundId String?
+  approvedById String
+  createdAt   DateTime     @default(now())
+}
