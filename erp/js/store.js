@@ -17,6 +17,7 @@ const CONFIG = {
   expenses: { table: 'expenses', prefix: 'EXP' },
   operations: { table: 'operations', prefix: 'OPS' },
   maintenanceLogs: { table: 'maintenance_logs', prefix: 'MNT' },
+  machineStatusReports: { table: 'machine_status_reports', prefix: 'MSR', child: { key: 'lines', table: 'machine_status_report_lines', fk: 'report_id' } },
   dieselReceipts: { table: 'diesel_receipts', prefix: 'DR' },
   dieselStockCounts: { table: 'diesel_stock_counts', prefix: 'SC' },
   leaveRequests: { table: 'leave_requests', prefix: 'LV' },

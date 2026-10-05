@@ -6,7 +6,7 @@ import { amountOutstanding as loanAmountOutstanding, agingDays as loanAgingDays 
 import { statCard, sectionHeader } from '../ui.js';
 import { renderBarChart, renderLineChart, renderMultiLineChart, CATEGORICAL_COLORS } from '../charts.js';
 import { isHaOperationType } from '../constants.js';
-import { fleetItems, serviceStatusFor, equipmentUnderRepair } from './fleet.js';
+import { fleetItems, serviceStatusFor, equipmentUnderRepair, reportedStatusAsOf } from './fleet.js';
 import { stationBalances } from './fuelCredit.js';
 import { ownerSettlementBalances } from './dozerRentPayments.js';
 import { projectNames, computeProjectStats, companyWideStats } from './profitability.js';
@@ -167,18 +167,20 @@ export function renderDashboard(container) {
     // Fleet health — feeds both the KPI row and the Executive Alert Center.
     // Driven by actual daily records instead of the Fleet Roster's
     // fleet_status field, which only changes when someone remembers to go
-    // edit it by hand and otherwise sits frozen. "Active" = logged an
-    // Operations/EOD entry for the viewed day (real, fresh daily data).
-    // "Under Repair" = has an open (non-Completed) Maintenance Log entry as
-    // of the viewed day — not a perfect historical reconstruction, since a
-    // log's status only holds its latest value and not a change history,
-    // but it moves as repairs are actually opened/closed instead of staying
-    // pinned forever.
+    // edit it by hand and otherwise sits frozen. First choice is the site
+    // manager's own Daily Machine Status Report for the viewed day (or the
+    // nearest one before it) — the direct, reported source of truth. Where
+    // a dozer has no such report yet, fall back to inferring: "Active" =
+    // logged an Operations/EOD entry for the viewed day; "Under Repair" =
+    // has an open (non-Completed) Maintenance Log entry as of that day.
     const dozers = fleetItems();
+    const reportedStatus = reportedStatusAsOf(viewISO);
     const underRepairEquipment = equipmentUnderRepair(viewISO);
     const workedTodayEquipment = new Set(daysOps.map((o) => o.equipment));
-    const activeFleetCount = dozers.filter((d) => workedTodayEquipment.has(d.name) && !underRepairEquipment.has(d.name)).length;
-    const downFleetCount = dozers.filter((d) => underRepairEquipment.has(d.name)).length;
+    const isUnderRepair = (name) => (reportedStatus[name] ? reportedStatus[name] === 'Breakdown' : underRepairEquipment.has(name));
+    const isActive = (name) => (reportedStatus[name] ? reportedStatus[name] === 'Active' : workedTodayEquipment.has(name) && !underRepairEquipment.has(name));
+    const activeFleetCount = dozers.filter((d) => isActive(d.name)).length;
+    const downFleetCount = dozers.filter((d) => isUnderRepair(d.name)).length;
     const machineAvailability = dozers.length ? ((dozers.length - downFleetCount) / dozers.length) * 100 : null;
     const serviceStatuses = dozers.map((d) => serviceStatusFor(d).status);
     const overdueServiceCount = serviceStatuses.filter((s) => s === 'Overdue').length;

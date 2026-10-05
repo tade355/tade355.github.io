@@ -5,6 +5,7 @@ import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confi
 import { OWNERSHIP_CATEGORIES, isHaOperationType, DEFAULT_DIESEL_RATES } from '../constants.js';
 import { renderInventory } from './inventory.js';
 import { renderDozerEconomics } from './dozerEconomics.js';
+import { renderMachineStatusReport } from './machineStatusReport.js';
 
 const OWNERSHIP_LABELS = {
   Company: 'Company Owned',
@@ -115,6 +116,27 @@ export function equipmentUnderRepair(asOfDate) {
   );
 }
 
+// Equipment name -> latest status ('Active' | 'Not Active' | 'Breakdown')
+// from the daily Machine Status Report nearest to (on or before) `asOfDate`
+// — the direct site-manager-reported signal, preferred by the Dashboard
+// over inferring status from Operations/Maintenance Logs whenever a report
+// actually covers that equipment by that date.
+export function reportedStatusAsOf(asOfDate) {
+  const statusByEquipment = {};
+  const dateByEquipment = {};
+  store.get('machineStatusReports')
+    .filter((r) => r.date <= asOfDate)
+    .forEach((r) => {
+      (r.lines || []).forEach((line) => {
+        if (!dateByEquipment[line.equipment] || r.date > dateByEquipment[line.equipment]) {
+          dateByEquipment[line.equipment] = r.date;
+          statusByEquipment[line.equipment] = line.status;
+        }
+      });
+    });
+  return statusByEquipment;
+}
+
 function lastMaintenanceFor(name) {
   const logs = store.get('maintenanceLogs')
     .filter((m) => m.equipment === name && m.status === 'Completed')
@@ -201,11 +223,13 @@ export function renderFleet(container) {
   const tabBar = el('div', { class: 'tab-bar' });
   const rosterTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('roster') }, 'Fleet Roster');
   const maintenanceTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('maintenance') }, 'Maintenance Log');
+  const statusReportTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('statusReport') }, 'Daily Status Report');
   const inventoryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('inventory') }, 'Inventory & Equipment');
   const rateHistoryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('rateHistory') }, 'Rate History');
   const dozerEconomicsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('dozerEconomics') }, 'Dozer Economics');
   tabBar.appendChild(rosterTabBtn);
   tabBar.appendChild(maintenanceTabBtn);
+  tabBar.appendChild(statusReportTabBtn);
   tabBar.appendChild(inventoryTabBtn);
   tabBar.appendChild(rateHistoryTabBtn);
   tabBar.appendChild(dozerEconomicsTabBtn);
@@ -223,15 +247,23 @@ export function renderFleet(container) {
     tab = next;
     rosterTabBtn.classList.toggle('active', tab === 'roster');
     maintenanceTabBtn.classList.toggle('active', tab === 'maintenance');
+    statusReportTabBtn.classList.toggle('active', tab === 'statusReport');
     inventoryTabBtn.classList.toggle('active', tab === 'inventory');
     rateHistoryTabBtn.classList.toggle('active', tab === 'rateHistory');
     dozerEconomicsTabBtn.classList.toggle('active', tab === 'dozerEconomics');
     summarySlot.innerHTML = '';
     if (tab === 'roster') renderRosterTab();
     else if (tab === 'maintenance') renderMaintenanceTab();
+    else if (tab === 'statusReport') renderStatusReportTab();
     else if (tab === 'rateHistory') renderRateHistoryTab();
     else if (tab === 'dozerEconomics') renderDozerEconomicsTab();
     else renderInventoryTab();
+  }
+
+  function renderStatusReportTab() {
+    actionSlot.innerHTML = '';
+    body.innerHTML = '';
+    renderMachineStatusReport(body);
   }
 
   function renderInventoryTab() {
