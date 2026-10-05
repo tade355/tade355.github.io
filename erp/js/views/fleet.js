@@ -102,6 +102,19 @@ function avgWorkRateFor(name) {
   };
 }
 
+// Equipment names with an open (not yet Completed) Maintenance Log entry
+// dated on or before `asOfDate` — the self-maintaining "under repair" signal
+// used by the Dashboard, in place of the fleet_status field's "Down"/"Under
+// Maintenance" value, which nothing updates automatically when a repair
+// starts or finishes (someone has to remember to go edit the Fleet Roster).
+export function equipmentUnderRepair(asOfDate) {
+  return new Set(
+    store.get('maintenanceLogs')
+      .filter((m) => m.status !== 'Completed' && m.date <= asOfDate)
+      .map((m) => m.equipment),
+  );
+}
+
 function lastMaintenanceFor(name) {
   const logs = store.get('maintenanceLogs')
     .filter((m) => m.equipment === name && m.status === 'Completed')

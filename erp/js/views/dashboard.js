@@ -6,7 +6,7 @@ import { amountOutstanding as loanAmountOutstanding, agingDays as loanAgingDays 
 import { statCard, sectionHeader } from '../ui.js';
 import { renderBarChart, renderLineChart, renderMultiLineChart, CATEGORICAL_COLORS } from '../charts.js';
 import { isHaOperationType } from '../constants.js';
-import { fleetItems, serviceStatusFor } from './fleet.js';
+import { fleetItems, serviceStatusFor, equipmentUnderRepair } from './fleet.js';
 import { stationBalances } from './fuelCredit.js';
 import { ownerSettlementBalances } from './dozerRentPayments.js';
 import { projectNames, computeProjectStats, companyWideStats } from './profitability.js';
@@ -165,13 +165,21 @@ export function renderDashboard(container) {
     const prevDayROI = prevDayStats.totalCost ? (prevDayStats.tentativeProfit / prevDayStats.totalCost) * 100 : null;
 
     // Fleet health — feeds both the KPI row and the Executive Alert Center.
-    // Fleet status is a live/current snapshot (the data model has no
-    // historical fleet-status log), so this stays "as of now" even when
-    // viewing a past day rather than pretending to reconstruct history.
+    // Driven by actual daily records instead of the Fleet Roster's
+    // fleet_status field, which only changes when someone remembers to go
+    // edit it by hand and otherwise sits frozen. "Active" = logged an
+    // Operations/EOD entry for the viewed day (real, fresh daily data).
+    // "Under Repair" = has an open (non-Completed) Maintenance Log entry as
+    // of the viewed day — not a perfect historical reconstruction, since a
+    // log's status only holds its latest value and not a change history,
+    // but it moves as repairs are actually opened/closed instead of staying
+    // pinned forever.
     const dozers = fleetItems();
-    const activeFleetCount = dozers.filter((d) => (d.fleetStatus || 'Active') === 'Active').length;
-    const downFleetCount = dozers.filter((d) => d.fleetStatus === 'Down' || d.fleetStatus === 'Under Maintenance').length;
-    const machineAvailability = dozers.length ? (activeFleetCount / dozers.length) * 100 : null;
+    const underRepairEquipment = equipmentUnderRepair(viewISO);
+    const workedTodayEquipment = new Set(daysOps.map((o) => o.equipment));
+    const activeFleetCount = dozers.filter((d) => workedTodayEquipment.has(d.name) && !underRepairEquipment.has(d.name)).length;
+    const downFleetCount = dozers.filter((d) => underRepairEquipment.has(d.name)).length;
+    const machineAvailability = dozers.length ? ((dozers.length - downFleetCount) / dozers.length) * 100 : null;
     const serviceStatuses = dozers.map((d) => serviceStatusFor(d).status);
     const overdueServiceCount = serviceStatuses.filter((s) => s === 'Overdue').length;
     const dueSoonServiceCount = serviceStatuses.filter((s) => s === 'Due Soon').length;
