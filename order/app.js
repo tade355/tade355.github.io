@@ -1,9 +1,9 @@
 // ---- Configure these for your business ----
 const CONFIG = {
-  whatsapp: "2340000000000",           // order inbox, international format, no "+"
+  whatsapp: "2340000000000",           // PLACEHOLDER: set to the real order inbox, international format, no "+"
   deliveryFee: 0,                      // pickup only by default
-  pickupPoints: ["Ikeja – Allen Avenue", "Victoria Island – Adeola Odeku", "Ibadan – Ring Road", "Ilorin – GRA"],
-  openHour: 9, closeHour: 21, slotMinutes: 30, prepMinutes: 30
+  pickupPoints: ["Wuse II, Abuja", "Garki, Abuja", "Jabi, Abuja"], // SAMPLE pickup points — replace with the real outlets
+  openHour: 8, closeHour: 22, slotMinutes: 30, prepMinutes: 30
 };
 const MENU = [
   {cat:"Rice", items:[

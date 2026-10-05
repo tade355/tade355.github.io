@@ -1,1 +1,1 @@
-export const BRAND = "VeeJay Foods";
+export const BRAND = "Veejay Foods";

@@ -1,4 +1,4 @@
-name: VeeJay Foods CI
+name: Veejay Foods CI
 
 on:
   push:

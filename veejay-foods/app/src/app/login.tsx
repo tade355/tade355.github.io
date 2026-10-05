@@ -30,7 +30,7 @@ export default function Login() {
       <ScrollView contentContainerStyle={s.wrap} keyboardShouldPersistTaps="handled">
         <Image source={require("../../assets/logo.png")} style={s.logo} accessibilityLabel={BRAND} />
         <Text style={s.tag}>Order ahead. Skip the queue.</Text>
-        <Text style={s.where}>Kogi Circle, Lokoja · Open 24 hours</Text>
+        <Text style={s.where}>Now serving Abuja Municipal (AMAC)</Text>
         <View style={s.card}>
           {step === "phone" ? (
             <>

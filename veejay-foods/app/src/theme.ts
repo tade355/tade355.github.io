@@ -1,5 +1,5 @@
-export const BRAND = "VeeJay Foods";
-// Palette sampled from the VeeJay Foods logo (red #F81A08, green #019947). `green` / `redText` are the
+export const BRAND = "Veejay Foods";
+// Palette sampled from the Veejay Foods logo (red #F81A08, green #019947). `green` / `redText` are the
 // darker, WCAG-AA-safe variants for text and button fills; the pure brand shades are for decoration.
 export const colors = {
   green: "#017A39", greenDark: "#00582A", greenBrand: "#019947", greenTint: "#E6F5EC",

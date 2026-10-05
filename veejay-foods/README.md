@@ -1,8 +1,8 @@
-# VeeJay Foods — order ahead, skip the queue
+# Veejay Foods — order ahead, skip the queue
 
-Mobile food **pre-order & pickup** for **VeeJay Foods**, Kogi Circle, along Ava Hotel, Ali Attah Road, Lokoja, Kogi State (open 24 hours). Customers pick a pickup time, pay with Paystack (card / bank transfer / USSD), track the order, and collect with a QR code.
+Mobile food **pre-order & pickup** for **Veejay Foods**. Launch area: **Abuja Municipal (AMAC) only**. Customers pick a pickup point and time, pay with Paystack (card / bank transfer / USSD), track the order, and collect with a QR code.
 
-> **Real vs sample data.** The outlet (address, 24-hour opening) is real. The **menu, prices and combo in `backend/src/seed.ts` are samples** — replace them from the dashboard's *Menu* tab before launch. Bundle IDs (`com.example.veejayfoods`) are placeholders until you pick your own.
+> **Sample data.** The three Abuja pickup points (Wuse II, Garki, Jabi), their 08:00–22:00 hours, and the **menu, prices and combo** in `backend/src/seed.ts` are examples — replace them from the dashboard (*Outlets* and *Menu* tabs) before launch. Bundle IDs (`com.example.veejayfoods`) are placeholders until you pick your own.
 
 | Part | Stack | Folder |
 |---|---|---|
@@ -10,9 +10,9 @@ Mobile food **pre-order & pickup** for **VeeJay Foods**, Kogi Circle, along Ava 
 | API | Node 22, Express, TypeScript, Prisma, PostgreSQL | `backend/` |
 | Staff/admin dashboard | Vite + React + TypeScript | `admin/` |
 
-**Design & delivery plan** (concept, features, real screenshots, architecture, roadmap): [`docs/design/VeeJay-Foods-Design.pdf`](docs/design/VeeJay-Foods-Design.pdf) · [HTML version](docs/design/VeeJay-Foods-Design.html).
+**Design & delivery plan** (concept, features, real screenshots, architecture, roadmap): [`docs/design/Veejay-Foods-Design.pdf`](docs/design/Veejay-Foods-Design.pdf) · [HTML version](docs/design/Veejay-Foods-Design.html).
 
-Brand: logo and palette (green `#019947`, red `#F81A08`) are taken from the VeeJay Foods logo. Brand name and colours live in `backend/src/env.ts`, `app/src/theme.ts`, `admin/src/brand.ts` + `admin/src/styles.css`.
+Brand: logo and palette (green `#019947`, red `#F81A08`) are taken from the Veejay Foods logo. Brand name and colours live in `backend/src/env.ts`, `app/src/theme.ts`, `admin/src/brand.ts` + `admin/src/styles.css`.
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the data model and design decisions.
 
@@ -21,7 +21,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the data model and design
 ```bash
 # 1. Backend
 cd backend && cp .env.example .env        # set DATABASE_URL + secrets
-npm install && npx prisma db push && npm run seed   # seeds the Kogi Circle outlet, a SAMPLE menu with a combo, and an admin
+npm install && npx prisma db push && npm run seed   # seeds 3 SAMPLE Abuja pickup points, a SAMPLE menu with a combo, and an admin
 ADMIN_PHONE=+2348012345678 npm run seed   # optional: pick your admin number
 npm run dev                               # http://localhost:4000 ; OTP codes print to the console (SMS_PROVIDER=console)
 

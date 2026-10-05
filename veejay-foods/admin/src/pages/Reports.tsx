@@ -22,7 +22,7 @@ export function Reports() {
       {err && <div className="err">{err}</div>}
       {r && (<>
         <div className="cols">
-          {[["Orders", String(r.orders)], ["Gross sales", naira(r.grossKobo)], ["Refunds", naira(r.refundedKobo)], ["Net", naira(r.netKobo)], ["Avg order", naira(r.avgOrderKobo)]].map(([k, v]) => <div className="card" key={k}><div className="mute">{k}</div><div className="code">{v}</div></div>)}
+          {[["Orders", String(r.orders)], ["Gross sales", naira(r.grossKobo)], ["Refunds", naira(r.refundedKobo)], ["Net", naira(r.netKobo)], ["Avg order", naira(Math.round(r.avgOrderKobo / 100) * 100)]].map(([k, v]) => <div className="card" key={k}><div className="mute">{k}</div><div className="code">{v}</div></div>)}
         </div>
         <div className="card"><h3 style={{ marginTop: 0 }}>By day</h3>
           {r.byDay.map((d) => <div key={d.date} className="row" style={{ margin: "4px 0", flexWrap: "nowrap" }}><span style={{ width: 90 }}>{d.date}</span><div style={{ flex: 1 }}><div className="bar" style={{ width: `${(d.grossKobo / max) * 100}%` }} /></div><span style={{ width: 150, textAlign: "right" }}>{naira(d.grossKobo)} · {d.orders}</span></div>)}

@@ -1,4 +1,4 @@
-:root{--bg:#fffaf5;--card:#fff;--ink:#1f1a17;--mute:#7a6f68;--brand:#c2410c;--brand2:#ea580c;--line:#eadfd6}
+:root{--bg:#fffaf5;--card:#fff;--ink:#1f1a17;--mute:#7a6f68;--brand:#017A39;--brand2:#019947;--line:#eadfd6}
 @media(prefers-color-scheme:dark){:root{--bg:#17120f;--card:#221b17;--ink:#f6efe9;--mute:#a89b92;--line:#3a2f28}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,sans-serif;padding-bottom:90px}

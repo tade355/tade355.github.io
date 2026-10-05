@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const BRAND = "VeeJay Foods";
+export const BRAND = "Veejay Foods";
 
 const schema = z.object({
   DATABASE_URL: z.string().min(1),

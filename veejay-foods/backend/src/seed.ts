@@ -1,9 +1,12 @@
 import { prisma } from "./db.js";
 
 /**
- * Starter data for VeeJay Foods. The OUTLET is real (Kogi Circle, Lokoja — open 24 hours).
- * The MENU, PRICES and combo below are SAMPLE data so the app has something to show —
- * replace them from the admin dashboard (Menu tab) before launch.
+ * Starter data for Veejay Foods. Launch area: ABUJA MUNICIPAL (AMAC) only.
+ *
+ * EVERYTHING BELOW IS SAMPLE DATA so the app has something to show:
+ *  - the three pickup points are example AMAC districts — replace them with the real outlets
+ *    (name, street address, opening hours) from the dashboard's Outlets tab;
+ *  - the menu, prices and combo are examples — replace them from the Menu tab.
  *
  * Run with: npm run seed   (ADMIN_PHONE=+234... to choose the first admin)
  */
@@ -11,12 +14,13 @@ async function main() {
   const adminPhone = process.env.ADMIN_PHONE ?? "+2348000000001";
   await prisma.user.upsert({ where: { phone: adminPhone }, update: { role: "ADMIN" }, create: { phone: adminPhone, role: "ADMIN", name: "Admin" } });
 
-  const allDay = [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dayOfWeek: d, openMin: 0, closeMin: 1440 })); // open 24 hours daily
-  const name = "VeeJay Foods – Kogi Circle";
-  if (!(await prisma.outlet.findFirst({ where: { name } }))) {
-    await prisma.outlet.create({
-      data: { name, address: "Kogi Circle, along Ava Hotel, Ali Attah Road", city: "Lokoja", hours: { create: allDay } },
-    });
+  const daily = [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dayOfWeek: d, openMin: 8 * 60, closeMin: 22 * 60 })); // sample hours: 08:00–22:00
+  for (const [name, address] of [
+    ["Veejay Foods – Wuse II", "Wuse II, Abuja"],
+    ["Veejay Foods – Garki", "Garki, Abuja"],
+    ["Veejay Foods – Jabi", "Jabi, Abuja"],
+  ] as const) {
+    if (!(await prisma.outlet.findFirst({ where: { name } }))) await prisma.outlet.create({ data: { name, address, city: "Abuja", hours: { create: daily } } });
   }
   if (await prisma.category.count()) return console.log("menu already seeded");
 
@@ -38,7 +42,7 @@ async function main() {
   await item(drinks.id, "Water", 200, "50cl");
   await prisma.menuItem.create({
     data: {
-      categoryId: combos.id, name: "VeeJay Meal Deal", description: "Jollof rice + grilled chicken + meat pie + zobo", priceKobo: 5500 * 100, isCombo: true,
+      categoryId: combos.id, name: "Veejay Meal Deal", description: "Jollof rice + grilled chicken + meat pie + zobo", priceKobo: 5500 * 100, isCombo: true,
       components: { create: [jollof, chicken, pie, zobo].map((c) => ({ componentId: c.id, quantity: 1 })) },
     },
   });

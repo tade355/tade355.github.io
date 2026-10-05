@@ -1,6 +1,6 @@
-# VeeJay Foods — architecture proposal
+# Veejay Foods — architecture proposal
 
-"VeeJay Foods" is a placeholder brand; change `BRAND` in `backend/src/env.ts`, `app/src/theme.ts`, `admin/src/brand.ts`.
+"Veejay Foods" is a placeholder brand; change `BRAND` in `backend/src/env.ts`, `app/src/theme.ts`, `admin/src/brand.ts`.
 
 ## Repo layout
 ```

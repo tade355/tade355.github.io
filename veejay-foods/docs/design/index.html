@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>VeeJay Foods — Product Design &amp; Delivery Plan</title>
+<title>Veejay Foods — Product Design &amp; Delivery Plan</title>
 <style>
   :root{
     --green:#017A39; --green-d:#00582A; --green-l:#E6F5EC; --brand-green:#019947; --brand-red:#F81A08; --red-d:#C8140A;
@@ -97,17 +97,17 @@
 
 <!-- ============ 1 COVER ============ -->
 <section class="page cover">
-  <img class="logo" src="shots/logo.png" alt="VeeJay Foods logo">
+  <img class="logo" src="shots/logo.png" alt="Veejay Foods logo">
   <div class="eyebrow">Product design &amp; delivery plan · v1.1</div>
-  <h1>VeeJay<span>Foods</span></h1>
-  <p class="lead">Order ahead. Skip the queue. A mobile pre-order and pickup app for VeeJay Foods, Lokoja — pay with card, bank transfer or USSD, track your order, and collect with a QR code.</p>
+  <h1>Veejay<span>Foods</span></h1>
+  <p class="lead">Order ahead. Skip the queue. A mobile pre-order and pickup app for Veejay Foods in Abuja — pay with card, bank transfer or USSD, track your order, and collect with a QR code.</p>
   <div class="phones">
     <figure class="phone"><img src="shots/app-03-menu.png" alt="Menu screen"></figure>
     <figure class="phone"><img src="shots/app-09-order-ready-qr.png" alt="Order ready with QR"></figure>
     <figure class="phone"><img src="shots/app-07-checkout.png" alt="Checkout"></figure>
   </div>
   <div class="meta">
-    Prepared 5 October 2026 · VeeJay Foods · Kogi Circle, along Ava Hotel, Ali Attah Road, Lokoja, Kogi State · Open 24 hours<br>
+    Prepared 5 October 2026 · Veejay Foods · Launch area: Abuja Municipal (AMAC) · Pickup points shown (Wuse II, Garki, Jabi) are samples<br>
     Customer app (Expo / React Native) · API (Node, Express, Prisma, PostgreSQL) · Staff &amp; admin dashboard (React)<br>
     All screenshots are captured from the real code running against the real API. Menu items, prices and customers shown are sample data.
   </div>
@@ -119,33 +119,34 @@
   <div class="grid g2" style="gap:14px">
     <div>
       <h3>The problem</h3>
-      <p>VeeJay Foods serves homemade African meals, pastries and local cuisine around the clock from Kogi Circle in Lokoja. Like any popular outlet it loses sales and goodwill at peak hours: long counter queues, orders shouted over a crowd, cash handling, and “where is my order?” with no answer. Customers abandon the queue; staff get overwhelmed in bursts and idle in between.</p>
+      <p>Veejay Foods serves homemade African meals, pastries and local cuisine. Like any popular outlet in a busy city it loses sales and goodwill at peak hours: long counter queues, orders shouted over a crowd, cash handling, and “where is my order?” with no answer. Customers abandon the queue; staff get overwhelmed in bursts and idle in between.</p>
       <h3 style="margin-top:10px">The idea</h3>
       <p>Let customers choose a <b>pickup point and a time slot</b>, <b>pay in advance</b>, and walk in to <b>scan a QR code</b>. The kitchen sees a live, time-ordered queue, so demand is spread across slots instead of arriving in a rush. Money is settled before food is made, and every order has an auditable trail.</p>
       <div class="card tint" style="margin-top:10px">
         <h4>One-line promise</h4>
         <div style="font-size:17px;font-weight:800;color:var(--green-d)">“Pick it, pay it, collect it — no queue.”</div>
       </div>
+      <div class="card" style="margin-top:10px"><h4>Launch area: Abuja Municipal (AMAC)</h4><p class="small" style="margin:0">Pickup points are limited to Abuja Municipal Area Council districts — for example Wuse, Garki, Maitama, Asokoro, Jabi, Utako and the Central Area. Other areas and cities are out of scope for now; the data model already supports adding more pickup points later without code changes.</p></div>
     </div>
     <div>
       <h3>Why it works for each side</h3>
       <div class="grid g2">
         <div class="card"><h4>Customer</h4><ul class="small"><li>No waiting in line</li><li>Choose the exact pickup time</li><li>Pay by card, transfer or USSD</li><li>Live status + push notifications</li><li>Wrong order? Report with a photo, get refunded</li></ul></div>
-        <div class="card"><h4>Kitchen / counter</h4><ul class="small"><li>Orders arrive already paid</li><li>Slot capacity caps the rush</li><li>Clear New → Preparing → Ready board</li><li>Scan-to-collect, no disputes</li><li>Works for day and night shifts</li></ul></div>
+        <div class="card"><h4>Kitchen / counter</h4><ul class="small"><li>Orders arrive already paid</li><li>Slot capacity caps the rush</li><li>Clear New → Preparing → Ready board</li><li>Scan-to-collect, no disputes</li><li>Works for lunch and evening peaks</li></ul></div>
         <div class="card"><h4>Owner</h4><ul class="small"><li>Sales by day, outlet and item</li><li>Sold-out toggles per outlet</li><li>Refund control, audit trail</li><li>Menu, prices and hours without a developer</li></ul></div>
         <div class="card warn"><h4>Proposed success metrics</h4><ul class="small"><li>Median counter wait at pickup &lt; 2 min</li><li>Cart → paid conversion</li><li>Refund rate &lt; 2% of orders</li><li>Repeat orders within 14 days</li></ul><div class="tiny mute" style="margin-top:3px">Targets to agree with the business — none measured yet.</div></div>
       </div>
     </div>
   </div>
-  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Concept</span></footer>
+  <footer class="pf"><span>Veejay Foods — Product design &amp; delivery plan</span><span>Concept</span></footer>
 </section>
 
 <!-- ============ 3 USERS & JOURNEY ============ -->
 <section class="page">
   <header><span class="eyebrow">02 · Users &amp; journey</span><h2>Three people, one order</h2><span class="num">3 / 19</span></header>
   <div class="grid g3">
-    <div class="card"><div style="font-size:26px">👩🏾‍💼</div><h3>Amina — the customer</h3><p class="small mute">27, works near Kogi Circle in Lokoja. Has 25 minutes for lunch, hates queues, pays by bank transfer or card on her phone. Patchy mobile data on the commute.</p><p class="small"><b>Needs:</b> fast reorder, certainty about pickup time, proof of payment, a way to fix mistakes.</p></div>
-    <div class="card"><div style="font-size:26px">👨🏿‍🍳</div><h3>Musa — counter staff</h3><p class="small mute">Runs the counter during the lunch rush, or on the night shift. Works on a shared tablet or phone, no time for menus.</p><p class="small"><b>Needs:</b> one screen showing what to cook next, big buttons, a scanner that just works, a fallback when a phone dies.</p></div>
+    <div class="card"><div style="font-size:26px">👩🏾‍💼</div><h3>Amina — the customer</h3><p class="small mute">27, works in Wuse II, Abuja. Has 25 minutes for lunch, hates queues, pays by bank transfer or card on her phone. Patchy mobile data on the commute.</p><p class="small"><b>Needs:</b> fast reorder, certainty about pickup time, proof of payment, a way to fix mistakes.</p></div>
+    <div class="card"><div style="font-size:26px">👨🏿‍🍳</div><h3>Musa — counter staff</h3><p class="small mute">Runs the counter during the lunch and evening rush. Works on a shared tablet or phone, no time for menus.</p><p class="small"><b>Needs:</b> one screen showing what to cook next, big buttons, a scanner that just works, a fallback when a phone dies.</p></div>
     <div class="card"><div style="font-size:26px">👩🏽‍💼</div><h3>The owner / admin</h3><p class="small mute">Wants to change prices, hide a sold-out dish, add a future branch, and see yesterday’s sales over breakfast.</p><p class="small"><b>Needs:</b> control without a developer, trustworthy numbers, safe refunds.</p></div>
   </div>
   <h3 style="margin-top:12px">The core journey (customer)</h3>
@@ -162,7 +163,7 @@
     <div class="card"><h4>If something goes wrong</h4><ul class="small"><li><b>Paid but screen didn’t update</b> — the app asks the server to re-check with Paystack; the webhook is the safety net.</li><li><b>Phone dies at the counter</b> — staff type the 6-character order code instead of scanning.</li><li><b>Wrong or cold food</b> — report in-app with a photo; admin approves and the refund goes back to the original payment method.</li></ul></div>
     <div class="card"><h4>Design rules that follow from the users</h4><ul class="small"><li>A user with a paid, uncollected order is <b>never signed out</b> — they always have their QR.</li><li>Every critical button is ≥ 50 px tall; the counter UI works one-handed.</li><li>Prices are integers in kobo end-to-end — no rounding surprises in ₦.</li><li>Network failures never look like “logged out” or “payment failed”.</li></ul></div>
   </div>
-  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Users &amp; journey</span></footer>
+  <footer class="pf"><span>Veejay Foods — Product design &amp; delivery plan</span><span>Users &amp; journey</span></footer>
 </section>
 
 <!-- ============ 4 FEATURES ============ -->
@@ -173,7 +174,7 @@
     <tbody>
       <tr><td>1</td><td><b>Phone + OTP sign-in</b></td><td>6-digit SMS code (hashed, 5-min expiry, 5 attempts, rate-limited). 15-min access token + rotating 30-day refresh token. Never ends a session while an order is active.</td><td><span class="pill">16 automated tests</span> incl. expiry, lock-out, replay, active-order rule</td></tr>
       <tr><td>2</td><td><b>Menu &amp; combos</b></td><td>Categories, items, combos / meal plans with components, images, prices in ₦, per-outlet “sold out” switches.</td><td>Browser-verified (app + dashboard)</td></tr>
-      <tr><td>3</td><td><b>Pickup points &amp; slots</b></td><td>Outlets with weekly hours (including “24 hours”), prep time, slot length and per-slot capacity; capacity enforced under concurrent bookings. Ready for more branches.</td><td><span class="pill">4 + 21 tests</span> slot maths, capacity race, hold expiry</td></tr>
+      <tr><td>3</td><td><b>Pickup points &amp; slots</b></td><td>Outlets with weekly hours (an optional “24 hours” setting exists), prep time, slot length and per-slot capacity; capacity enforced under concurrent bookings. Ready for more branches.</td><td><span class="pill">4 + 21 tests</span> slot maths, capacity race, hold expiry</td></tr>
       <tr><td>4</td><td><b>Cart &amp; checkout</b></td><td>Choose outlet, day and time; server recomputes the price; unpaid orders hold the slot for 15 minutes, then release it.</td><td>Tests + browser-verified</td></tr>
       <tr><td>5</td><td><b>Paystack payments</b></td><td>Hosted checkout (card, bank transfer, USSD) — card data never touches our code. Webhook verifies HMAC-SHA512, amount, currency, reference; idempotent. App can reconcile via server → Paystack verify.</td><td><span class="pill">14 webhook tests</span> <span class="pill s">live Paystack not yet exercised</span></td></tr>
       <tr><td>6</td><td><b>Order tracking + push</b></td><td>Placed → Preparing → Ready → Collected, polled in-app and pushed via Expo/FCM at every change.</td><td><span class="pill">5 state tests</span> <span class="pill s">push not yet on a device</span></td></tr>
@@ -183,7 +184,7 @@
     </tbody>
   </table>
   <p class="tiny mute" style="margin-top:8px">Orders are pickup-only at launch. Delivery, promo codes and loyalty are deliberately out of scope (see roadmap).</p>
-  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Features</span></footer>
+  <footer class="pf"><span>Veejay Foods — Product design &amp; delivery plan</span><span>Features</span></footer>
 </section>
 
 <!-- ============ 5 DESIGN SYSTEM ============ -->
@@ -191,11 +192,11 @@
   <header><span class="eyebrow">04 · Design language</span><h2>Warm, appetising, easy to tap</h2><span class="num">5 / 19</span></header>
   <div class="grid g2" style="gap:16px">
     <div>
-      <h3>Colour — taken from the VeeJay logo</h3>
+      <h3>Colour — taken from the Veejay logo</h3>
       <div class="grid g5" style="gap:8px">
-        <div><div class="sw" style="background:#019947"></div><div><b>VeeJay Green</b><br>#019947<br><span class="mute">Logo green · login, accents</span></div></div>
+        <div><div class="sw" style="background:#019947"></div><div><b>Veejay Green</b><br>#019947<br><span class="mute">Logo green · login, accents</span></div></div>
         <div><div class="sw" style="background:#017A39"></div><div><b>Deep Green</b><br>#017A39<br><span class="mute">Buttons &amp; text (AA contrast)</span></div></div>
-        <div><div class="sw" style="background:#F81A08"></div><div><b>VeeJay Red</b><br>#F81A08<br><span class="mute">Logo red · highlights</span></div></div>
+        <div><div class="sw" style="background:#F81A08"></div><div><b>Veejay Red</b><br>#F81A08<br><span class="mute">Logo red · highlights</span></div></div>
         <div><div class="sw" style="background:#C8140A"></div><div><b>Deep Red</b><br>#C8140A<br><span class="mute">Red text on white</span></div></div>
         <div><div class="sw" style="background:#FFFAF5"></div><div><b>Warm White</b><br>#FFFAF5<br><span class="mute">Canvas</span></div></div>
       </div>
@@ -216,7 +217,7 @@
         <div class="card" style="text-align:center"><div style="border:1.5px solid var(--green);color:var(--green);border-radius:14px;padding:12px;font-weight:800">Resend code in 24s</div><div class="tiny mute" style="margin-top:5px">Ghost button</div></div>
         <div class="card"><span style="display:inline-block;background:var(--green);color:#fff;border-radius:99px;padding:7px 15px;font-weight:700;margin-right:6px">Tomorrow</span><span style="display:inline-block;background:#fff;border:1px solid var(--line);border-radius:99px;padding:7px 15px;font-weight:700">14:00</span><div class="tiny mute" style="margin-top:5px">Chips for day / time / category</div></div>
         <div class="card"><span class="pill">Placed</span> <span class="pill">Preparing</span> <span class="pill" style="background:var(--ok)">Ready</span> <span class="pill" style="background:#7a7a70">Collected</span><div class="tiny mute" style="margin-top:5px">Status pills</div></div>
-        <div class="card" style="border:2px solid var(--brand-red)"><div class="tiny" style="color:var(--red-d);font-weight:800;letter-spacing:.1em">MEAL PLAN</div><b>VeeJay Meal Deal</b><div style="color:var(--green);font-weight:800">₦5,500</div><div class="tiny mute">Combo card · red border</div></div>
+        <div class="card" style="border:2px solid var(--brand-red)"><div class="tiny" style="color:var(--red-d);font-weight:800;letter-spacing:.1em">MEAL PLAN</div><b>Veejay Meal Deal</b><div style="color:var(--green);font-weight:800">₦5,500</div><div class="tiny mute">Combo card · red border</div></div>
         <div class="card"><div style="display:flex;gap:10px;align-items:center"><span style="width:20px;height:20px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;font-size:11px">✓</span><b>Preparing</b></div><div style="margin-left:9px;border-left:2px solid var(--green);height:12px"></div><div style="display:flex;gap:10px;align-items:center"><span style="width:20px;height:20px;border-radius:50%;border:3px solid var(--brand-red);background:var(--green);display:block"></span><b>Ready</b></div><div class="tiny mute" style="margin-top:5px">Timeline</div></div>
       </div>
       <h3 style="margin-top:12px">Type &amp; spacing</h3>
@@ -224,27 +225,27 @@
       <p class="small mute">Brand name, logo and palette live in one theme file per surface (app, dashboard, API), so a future rebrand is a small change.</p>
     </div>
   </div>
-  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Design language</span></footer>
+  <footer class="pf"><span>Veejay Foods — Product design &amp; delivery plan</span><span>Design language</span></footer>
 </section>
 
 <!-- ============ 6 SNAPSHOTS: ONBOARDING + BROWSE ============ -->
 <section class="page">
   <header><span class="eyebrow">05 · Snapshots · Browse</span><h2>From phone number to a full basket in four screens</h2><span class="num">6 / 19</span></header>
   <div class="phones" style="gap:12px">
-    <figure style="width:50mm"><div class="phone"><img src="shots/app-01-login.png" alt=""></div><figcaption><b>Sign in</b>Logo, the Kogi Circle address and “Open 24 hours”. Phone number only — no passwords to forget.</figcaption></figure>
+    <figure style="width:50mm"><div class="phone"><img src="shots/app-01-login.png" alt=""></div><figcaption><b>Sign in</b>Logo and “Now serving Abuja Municipal (AMAC)”. Phone number only — no passwords to forget.</figcaption></figure>
     <figure style="width:50mm"><div class="phone"><img src="shots/app-02-otp.png" alt=""></div><figcaption><b>Verify</b>6-digit SMS code with a resend timer.</figcaption></figure>
     <figure style="width:50mm"><div class="phone"><img src="shots/app-03-menu.png" alt=""></div><figcaption><b>Menu</b>Pickup point on top; category chips; the meal plan is highlighted with a red border.</figcaption></figure>
     <figure style="width:50mm"><div class="phone"><img src="shots/app-05-menu-cart-bar.png" alt=""></div><figcaption><b>Add to basket</b>Steppers replace “Add”; a floating bar shows count and total.</figcaption></figure>
     <figure style="width:50mm"><div class="phone"><img src="shots/app-06-cart.png" alt=""></div><figcaption><b>Cart</b>Edit quantities; one clear next step.</figcaption></figure>
   </div>
-  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Snapshots are from the real app code (web build) with sample data</span></footer>
+  <footer class="pf"><span>Veejay Foods — Product design &amp; delivery plan</span><span>Snapshots are from the real app code (web build) with sample data</span></footer>
 </section>
 
 <!-- ============ 7 SNAPSHOTS: CHECKOUT + PAYMENT ============ -->
 <section class="page">
   <header><span class="eyebrow">05 · Snapshots · Pay</span><h2>Pick a slot, pay securely, done</h2><span class="num">7 / 19</span></header>
   <div class="grid" style="grid-template-columns:62mm 1fr;gap:16px;align-items:start">
-    <figure><div class="phone"><img src="shots/app-07-checkout.png" alt=""></div><figcaption><b>Pickup &amp; pay</b>Outlet, day chips, 30-minute time slots across the 24-hour day (full or past slots are hidden), kitchen note, itemised total.</figcaption></figure>
+    <figure><div class="phone"><img src="shots/app-07-checkout.png" alt=""></div><figcaption><b>Pickup &amp; pay</b>Outlet, day chips, 30-minute time slots within the outlet’s opening hours (full or past slots are hidden), kitchen note, itemised total.</figcaption></figure>
     <div>
       <h3>What happens when “Pay” is tapped</h3>
       <div class="grid g2" style="gap:10px">
@@ -256,7 +257,7 @@
       <div class="card tint" style="margin-top:10px"><h4>Edge cases handled</h4><ul class="small"><li><b>Webhook arrives twice (or six times at once)</b> → applied once, one push notification.</li><li><b>Amount or currency differs</b> → order stays unpaid; payment flagged.</li><li><b>Payment lands after the hold expired</b> → automatically refunded, order stays cancelled.</li><li><b>Server error mid-webhook</b> → returns 500 so Paystack retries; nothing half-applied.</li><li><b>Closed browser / lost signal</b> → order screen keeps checking and offers “Pay now” until the hold lapses.</li></ul></div>
     </div>
   </div>
-  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Pickup &amp; pay</span></footer>
+  <footer class="pf"><span>Veejay Foods — Product design &amp; delivery plan</span><span>Pickup &amp; pay</span></footer>
 </section>
 
 <!-- ============ 8 SNAPSHOTS: TRACK + QR ============ -->
@@ -275,7 +276,7 @@
       <p class="small mute">Payload <code>nbg1.&lt;orderId&gt;.&lt;HMAC&gt;</code> — derived, not stored, so it can always be re-rendered and can’t be guessed.</p>
     </div>
   </div>
-  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Track &amp; collect</span></footer>
+  <footer class="pf"><span>Veejay Foods — Product design &amp; delivery plan</span><span>Track &amp; collect</span></footer>
 </section>
 
 <!-- ============ 9 SNAPSHOTS: AFTER SALES ============ -->
@@ -296,7 +297,7 @@
       <div class="card warn" style="margin-top:10px"><h4>Account safety</h4><p class="small" style="margin:0">Signing out is a deliberate choice only. Sessions end involuntarily only after 30 days of inactivity or a detected token-theft pattern — and never while an order is active.</p></div>
     </div>
   </div>
-  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>After-sales</span></footer>
+  <footer class="pf"><span>Veejay Foods — Product design &amp; delivery plan</span><span>After-sales</span></footer>
 </section>
 
 <!-- ============ 10 DASHBOARD: KITCHEN ============ -->
@@ -306,7 +307,7 @@
     <figure><div class="browser"><div class="bar"><i></i><i></i><i></i></div><img src="shots/admin-01-queue.png" alt=""></div><figcaption><b>Live orders</b>Columns New → Preparing → Ready, sorted by pickup time; customer notes highlighted; refreshes every 5 s with a chime on new paid orders. Staff only see their own outlet.</figcaption></figure>
     <figure><div class="browser"><div class="bar"><i></i><i></i><i></i></div><img src="shots/admin-02-scanner.png" alt=""></div><figcaption><b>Scan pickup QR</b>Uses the device camera; a green banner confirms the hand-over. Typing the order code is the fallback (shown here after a manual hand-over). Double scans and not-ready orders are rejected with a clear message.</figcaption></figure>
   </div>
-  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>The scanner’s live camera feed can’t run in a headless browser, so the code-entry path is pictured</span></footer>
+  <footer class="pf"><span>Veejay Foods — Product design &amp; delivery plan</span><span>The scanner’s live camera feed can’t run in a headless browser, so the code-entry path is pictured</span></footer>
 </section>
 
 <!-- ============ 11 DASHBOARD: INSIGHT ============ -->
@@ -316,7 +317,7 @@
     <figure><div class="browser"><div class="bar"><i></i><i></i><i></i></div><img src="shots/admin-06-sales.png" alt=""></div><figcaption><b>Sales</b>Date range and outlet filters; gross, refunds, net and average order; by-day bars; top items. Revenue counts paid orders only, minus successful refunds. (Sample data.)</figcaption></figure>
     <figure><div class="browser"><div class="bar"><i></i><i></i><i></i></div><img src="shots/admin-03-complaints.png" alt=""></div><figcaption><b>Complaints &amp; refunds</b>The customer’s photo and what they ordered side by side; approve in full, partially, or reject with a reason that’s kept on record. Approved refunds go back to the original payment method.</figcaption></figure>
   </div>
-  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Admin dashboard</span></footer>
+  <footer class="pf"><span>Veejay Foods — Product design &amp; delivery plan</span><span>Admin dashboard</span></footer>
 </section>
 
 <!-- ============ 11b DASHBOARD: CONTROL ============ -->
@@ -324,10 +325,10 @@
   <header><span class="eyebrow">06 · Dashboard · Control</span><h2>Run the menu and the outlet without calling a developer</h2><span class="num">12 / 19</span></header>
   <div class="grid g2" style="gap:14px">
     <figure><div class="browser"><div class="bar"><i></i><i></i><i></i></div><img src="shots/admin-04-menu.png" alt=""></div><figcaption><b>Menu</b>Categories, items, combos / meal plans, images, prices, and a per-outlet availability switch to mark a dish sold out the moment the kitchen runs out. Items are hidden, never deleted, so past orders stay intact.</figcaption></figure>
-    <figure><div class="browser"><div class="bar"><i></i><i></i><i></i></div><img src="shots/admin-05-outlets.png" alt=""></div><figcaption><b>Outlets</b>Per-day hours with a “24 hours” switch (Kogi Circle is open round the clock), prep time, slot length and orders-per-slot capacity. Add a new branch in one form when VeeJay Foods grows.</figcaption></figure>
+    <figure><div class="browser"><div class="bar"><i></i><i></i><i></i></div><img src="shots/admin-05-outlets.png" alt=""></div><figcaption><b>Outlets</b>Per-day opening hours (with an optional “24 hours” switch), prep time, slot length and orders-per-slot capacity for each pickup point. Add a new area in one form as Veejay Foods grows.</figcaption></figure>
   </div>
   <div class="card tint" style="margin-top:10px"><h4>Staff access</h4><p class="small" style="margin:0">A seventh tab, <b>Staff</b>, adds or removes team members by phone number, role (Staff or Admin) and outlet. They sign in with an SMS code like customers do, and removing access takes effect immediately — the server re-checks the role on every request.</p></div>
-  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Admin dashboard</span></footer>
+  <footer class="pf"><span>Veejay Foods — Product design &amp; delivery plan</span><span>Admin dashboard</span></footer>
 </section>
 
 <!-- ============ 12 ARCHITECTURE ============ -->
@@ -394,7 +395,7 @@
     <div class="card"><h4>Seams for change</h4><p class="small mute" style="margin:0">Paystack, SMS, push and storage are interfaces injected into services — swapped for fakes in tests and replaceable (e.g. Flutterwave, another SMS gateway, S3) without touching business logic.</p></div>
     <div class="card"><h4>Scale</h4><p class="small mute" style="margin:0">A single small Node instance and a managed Postgres comfortably serve a multi-outlet restaurant brand. The 60-second expiry job and 5-second polling are the only periodic load.</p></div>
   </div>
-  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Architecture</span></footer>
+  <footer class="pf"><span>Veejay Foods — Product design &amp; delivery plan</span><span>Architecture</span></footer>
 </section>
 
 <!-- ============ 13 PAYMENT FLOW + STATE MACHINE ============ -->
@@ -448,7 +449,7 @@
       <div class="card" style="margin-top:6px"><h4>Rules enforced in code</h4><ul class="small"><li>No skipping or going backwards; terminal states are final.</li><li>A paid order can never be cancelled — only refunded.</li><li>Each transition is a guarded <code>UPDATE … WHERE status = from</code>, so two simultaneous taps apply once.</li><li>Staff can set Preparing / Ready; <b>Collected</b> only via the QR scan (or the order-code fallback).</li></ul></div>
     </div>
   </div>
-  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Payment flow &amp; lifecycle</span></footer>
+  <footer class="pf"><span>Veejay Foods — Product design &amp; delivery plan</span><span>Payment flow &amp; lifecycle</span></footer>
 </section>
 
 <!-- ============ 14 DATA MODEL ============ -->
@@ -492,7 +493,7 @@
     <div class="card"><h4>Idempotency</h4><p class="small mute" style="margin:0"><code>WebhookEvent.eventKey</code> is unique, so a re-delivered webhook is detected at the database, even across concurrent requests.</p></div>
     <div class="card"><h4>Time zone</h4><p class="small mute" style="margin:0">All instants are UTC; opening hours and slots are computed in Africa/Lagos (UTC+1, no DST) in one module.</p></div>
   </div>
-  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Data model (simplified; full schema in backend/prisma/schema.prisma)</span></footer>
+  <footer class="pf"><span>Veejay Foods — Product design &amp; delivery plan</span><span>Data model (simplified; full schema in backend/prisma/schema.prisma)</span></footer>
 </section>
 
 <!-- ============ 15 SECURITY ============ -->
@@ -514,7 +515,7 @@
       <tr><td>Malicious uploads</td><td>Image-only MIME filter, 5 MB cap, random filenames.</td><td>Tests: HTML upload, 6 MB upload</td></tr>
     </tbody>
   </table>
-  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Security &amp; reliability</span></footer>
+  <footer class="pf"><span>Veejay Foods — Product design &amp; delivery plan</span><span>Security &amp; reliability</span></footer>
 </section>
 
 <!-- ============ 16 QUALITY ============ -->
@@ -543,9 +544,9 @@
     <div>
       <div class="card tint"><h4>Verified</h4><ul class="small">
         <li>Backend logic and money paths via automated tests (fakes for Paystack, SMS, push).</li>
-        <li>Customer app (re-checked after the VeeJay rebrand): type-checks, bundles for Android, and the full flow (sign-in → menu → cart → checkout → orders → QR → report) was driven in a phone-sized browser against the live API.</li>
+        <li>Customer app (re-checked after the Veejay rebrand): type-checks, bundles for Android, and the full flow (sign-in → menu → cart → checkout → orders → QR → report) was driven in a phone-sized browser against the live API.</li>
         <li>Dashboard: builds; staff and admin flows driven in a browser against the live API.</li>
-        <li>Real renders caught a bug that typecheck and the bundler missed (menu category chips collapsed) — fixed. Building the 24-hour outlet also exposed a hours-editor gap (24:00 can’t be typed) — fixed with a “24 hours” switch.</li>
+        <li>Real renders caught a bug that typecheck and the bundler missed (menu category chips collapsed) — fixed. Testing round-the-clock opening also exposed a hours-editor gap (24:00 can’t be typed) — fixed with a “24 hours” switch.</li>
       </ul></div>
       <div class="card warn" style="margin-top:10px"><h4>Not yet verified — must happen before launch</h4><ul class="small">
         <li><b>Real Paystack</b> test-mode payment, webhook delivery and refund end-to-end.</li>
@@ -558,7 +559,7 @@
       </ul></div>
     </div>
   </div>
-  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Quality status</span></footer>
+  <footer class="pf"><span>Veejay Foods — Product design &amp; delivery plan</span><span>Quality status</span></footer>
 </section>
 
 <!-- ============ 17 ROADMAP ============ -->
@@ -569,17 +570,17 @@
     <div class="gr"><div class="lab">0 · Build <span class="pill o">done</span></div><div class="gb" style="grid-column:2 / span 14"><div class="bar" style="background:#6b6b63;color:#fff">Backend · customer app · staff &amp; admin dashboard · tests · CI (this repository)</div></div></div>
     <div class="gr"><div class="lab">1 · Pilot readiness</div><div class="gb" style="grid-column:2 / span 3"><div class="bar" style="background:var(--green);color:#fff">Keys · SMS · builds · QA</div></div></div>
     <div class="gr"><div class="lab">2 · Soft launch</div><div class="gb" style="grid-column:5 / span 3"><div class="bar" style="background:var(--brand-red);color:#fff">Invite-only · training</div></div></div>
-    <div class="gr"><div class="lab">3 · Public launch</div><div class="gb" style="grid-column:8 / span 4"><div class="bar" style="background:var(--green-d);color:#fff">Kogi Circle · store release</div></div></div>
+    <div class="gr"><div class="lab">3 · Public launch</div><div class="gb" style="grid-column:8 / span 4"><div class="bar" style="background:var(--green-d);color:#fff">Abuja outlets · store release</div></div></div>
     <div class="gr"><div class="lab">4 · Growth</div><div class="gb" style="grid-column:12 / span 3"><div class="bar" style="background:var(--green);color:#fff">Iterate →</div></div></div>
   </div>
   <p class="tiny mute" style="margin:2px 0 8px">Indicative estimate assuming one full-stack developer plus part-time design and operations support. SMS sender-ID registration and App Store / Play review have external lead times and are the likeliest schedule risks.</p>
   <div class="grid g4" style="gap:8px">
     <div class="card"><h4>1 · Pilot readiness (≈3 wks)</h4><ul class="small"><li>Paystack live keys; webhook URL; test-mode drills</li><li>SMS provider + sender ID</li><li>EAS builds → TestFlight / Play internal testing</li><li>Object storage for images; Sentry; DB backups</li><li>Real menu, prices &amp; food photography; privacy policy / NDPA notice</li></ul></div>
-    <div class="card"><h4>2 · Soft launch (≈3 wks)</h4><ul class="small"><li>Kogi Circle only, invited customers</li><li>Counter device + scan test; day &amp; night staff training</li><li>Daily review of orders, refunds, support</li><li>Tune slot length / capacity / prep time</li></ul></div>
-    <div class="card"><h4>3 · Launch (≈4 wks)</h4><ul class="small"><li>Store listings, screenshots, review buffer</li><li>Launch offer + in-store QR posters</li><li>Share on Instagram / Facebook</li><li>Support playbook and on-call rota</li></ul></div>
+    <div class="card"><h4>2 · Soft launch (≈3 wks)</h4><ul class="small"><li>One or two Abuja pickup points, invited customers</li><li>Counter device + scan test; staff training</li><li>Daily review of orders, refunds, support</li><li>Tune slot length / capacity / prep time</li></ul></div>
+    <div class="card"><h4>3 · Launch (≈4 wks)</h4><ul class="small"><li>Store listings, screenshots, review buffer</li><li>Launch offer + in-store QR posters</li><li>Social-media launch campaign</li><li>Support playbook and on-call rota</li></ul></div>
     <div class="card"><h4>4 · Growth (after)</h4><ul class="small"><li>Promo codes, loyalty / reorder shortcuts</li><li>Saved payment methods (Paystack tokens)</li><li>Delivery option; more branches; orders &gt; 3 days ahead</li><li>Analytics, A/B tests, Pidgin / Yoruba / Hausa UI</li></ul></div>
   </div>
-  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Delivery plan</span></footer>
+  <footer class="pf"><span>Veejay Foods — Product design &amp; delivery plan</span><span>Delivery plan</span></footer>
 </section>
 
 <!-- ============ 18 RISKS / DECISIONS ============ -->
@@ -593,7 +594,7 @@
         <tr><td><b>Store review delays</b><br><span class="mute small">Payments + login can trigger extra questions. Keep a 1-week buffer.</span></td></tr>
         <tr><td><b>Staff adoption at peak</b><br><span class="mute small">Needs a counter device, training, and the code-entry fallback.</span></td></tr>
         <tr><td><b>Slot tuning</b><br><span class="mute small">Wrong capacity either starves sales or recreates the queue.</span></td></tr>
-        <tr><td><b>24-hour operation</b><br><span class="mute small">Night staffing and security; decide whether online orders run all night.</span></td></tr>
+        <tr><td><b>Service-area expectations</b><br><span class="mute small">Abuja Municipal only at launch. Say so clearly in the app, the store listing and marketing.</span></td></tr>
         <tr><td><b>Image storage</b><br><span class="mute small">Photos are on local disk today; lost on redeploy until moved to object storage.</span></td></tr>
       </tbody></table>
     </div>
@@ -601,11 +602,11 @@
       <h3>Decisions needed</h3>
       <div class="card"><ol class="small" style="margin:0;padding-left:18px">
         <li>Confirm logo files and brand colours (sampled from the logo you shared).</li>
-        <li>Prep times and slot capacity per hour of day (day vs night).</li>
-        <li>Do online orders run 24 hours, or a shorter window at first?</li>
+        <li>Real pickup points: street addresses and opening hours (samples now: Wuse II, Garki, Jabi).</li>
+        <li>Which AMAC districts go first, and when to open more areas.</li>
         <li>Real menu, photography and prices (current ones are samples).</li>
         <li>Refund policy: who may approve, partial refund rules, time limit.</li>
-        <li>Pickup-only at launch, or delivery in phase 4?</li><li>Customer support line: +234 906 685 9066 / +234 906 993 9673?</li>
+        <li>Pickup-only at launch, or delivery in phase 4?</li><li>Customer-support contact (phone / WhatsApp) to show in the app.</li>
         <li>Paystack account owner and settlement bank.</li>
         <li>Hosting region and provider (managed Postgres).</li>
       </ol></div>
@@ -628,7 +629,7 @@
     </div>
   </div>
   <div class="card" style="margin-top:10px"><h4>Repository layout</h4><div class="small" style="display:flex;gap:26px;flex-wrap:wrap"><span><code>veejay-foods/backend</code> API, Prisma schema, 67 tests</span><span><code>veejay-foods/app</code> Expo customer app</span><span><code>veejay-foods/admin</code> staff &amp; admin dashboard</span><span><code>veejay-foods/docs</code> architecture + this document</span></div></div>
-  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Appendix</span></footer>
+  <footer class="pf"><span>Veejay Foods — Product design &amp; delivery plan</span><span>Appendix</span></footer>
 </section>
 
 </body>
