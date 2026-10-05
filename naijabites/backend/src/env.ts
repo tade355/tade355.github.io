@@ -16,8 +16,10 @@ const schema = z.object({
 });
 
 export const env = schema.parse(process.env);
-if (env.NODE_ENV === "production" && /^dev-/.test(env.JWT_ACCESS_SECRET + env.OTP_SECRET + env.QR_SECRET)) {
-  throw new Error("Set real JWT_ACCESS_SECRET / OTP_SECRET / QR_SECRET in production");
+if (env.NODE_ENV === "production") {
+  const weak = (["JWT_ACCESS_SECRET", "OTP_SECRET", "QR_SECRET"] as const).filter((k) => env[k].startsWith("dev-"));
+  if (env.PAYSTACK_SECRET_KEY === "sk_test_dev") weak.push("PAYSTACK_SECRET_KEY" as never);
+  if (weak.length) throw new Error(`Set real values for: ${weak.join(", ")}`);
 }
 
 // Policy constants

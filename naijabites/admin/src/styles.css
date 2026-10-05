@@ -1,0 +1,25 @@
+:root{--green:#0B6E4F;--saffron:#F4A300;--cream:#FFF8EC;--ink:#1B1B18;--mute:#6B6B63;--line:#E8E0CF;--danger:#C0392B;--ok:#1E8E3E}
+*{box-sizing:border-box}body{margin:0;font:15px/1.4 system-ui,sans-serif;background:var(--cream);color:var(--ink)}
+header.top{background:var(--green);color:#fff;display:flex;align-items:center;gap:16px;padding:10px 20px;flex-wrap:wrap}
+header.top b{font-size:18px}nav{display:flex;gap:4px;flex:1;flex-wrap:wrap}
+nav button{background:transparent;color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer;font:inherit}
+nav button.on{background:#fff2;font-weight:700}
+main{max-width:1200px;margin:0 auto;padding:20px}
+h2{margin:0 0 12px}.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+button.btn{background:var(--green);color:#fff;border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font:inherit;font-weight:600}
+button.btn.ghost{background:#fff;color:var(--green);border:1px solid var(--green)}button.btn.danger{background:var(--danger)}
+button.btn:disabled{opacity:.5;cursor:not-allowed}
+input,select,textarea{font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff;max-width:100%}
+label{display:grid;gap:3px;font-size:13px;color:var(--mute);font-weight:600}
+.row{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:10px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;align-items:start}
+.col h3{margin:0 0 8px;display:flex;justify-content:space-between}
+.pill{background:var(--green);color:#fff;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:700}
+.err{color:var(--danger);font-weight:600;margin:8px 0}.ok{color:var(--ok);font-weight:600}.mute{color:var(--mute)}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line)}
+.code{font-size:22px;font-weight:800;letter-spacing:2px}
+.bar{height:14px;background:var(--green);border-radius:4px;min-width:2px}
+.login{max-width:360px;margin:12vh auto;padding:0 16px}
+#reader{width:100%;max-width:420px;margin:0 auto}
+.flash{padding:14px;border-radius:12px;font-weight:700;margin:12px 0}.flash.good{background:#dcf5e3;color:#14602a}.flash.bad{background:#fde3df;color:#8a1f13}
+img.thumb{max-width:220px;border-radius:8px;border:1px solid var(--line)}
