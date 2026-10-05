@@ -12,7 +12,11 @@ const OWNERSHIP_LABELS = {
   Rented: 'Rented (3rd-party, fully external)',
 };
 
-const FLEET_CATEGORIES = ['Heavy Equipment', 'Vehicles'];
+// Dozers only — bikes/vehicles moved to Project Items under Resource
+// Management (erp/js/views/projectItems.js), tracked by project/manager
+// assignment instead of the dozer-specific fields here (hourly rate, diesel
+// consumption, service interval, etc. don't apply to a bike or car).
+const FLEET_CATEGORIES = ['Heavy Equipment'];
 
 function projectOptions() {
   return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
@@ -127,7 +131,6 @@ function fleetFields() {
     { name: 'name', label: 'Asset Name', required: true },
     { name: 'category', label: 'Type', type: 'select', required: true, options: [
       { value: 'Heavy Equipment', label: 'Heavy Equipment (Bulldozer, Excavator, etc.)' },
-      { value: 'Vehicles', label: 'Vehicle' },
     ] },
     { name: 'sku', label: 'Asset Tag / SKU / Dozer Code', required: true },
     { name: 'ownership', label: 'Ownership', type: 'select', required: true, options: OWNERSHIP_CATEGORIES.map((o) => ({ value: o, label: OWNERSHIP_LABELS[o] })) },
