@@ -90,37 +90,28 @@ const TACOMA_REQUEST_BASIS_START_DATE = '2026-10-01';
 // collects a flat 20L of PMS on a day a Tacoma request was actually
 // recorded, not automatically on every day a Partnership dozer works (it
 // doesn't run every such day). From TACOMA_REQUEST_BASIS_START_DATE, this
-// requires an explicit same-day PMS collection whose notes/reference
+// also requires an explicit same-day PMS collection whose notes/reference
 // mention "Tacoma"; before that date, no such record exists in the data at
 // all, so this falls back to the old any-Partnership-workday assumption as
 // the best available estimate for history.
 //
-// A Tacoma request can also land on a day with NO Daily Operations report
-// at all (operator came late, report never submitted, etc.) — the cost
-// still happened, so this isn't gated on finding a same-day operations row.
-// fuel_credit_collections has no project field of its own, so an orphan
-// request like that is attributed to a project only if it has genuinely had
-// Partnership-dozer work logged at some point (not just a Partnership
-// dozer currently assigned there — more than one project can have one
-// assigned while only one actually puts it to work).
-function projectHasEverHadPartnershipWork(project) {
-  return store.get('operations').some((o) => o.siteName === project
-    && store.get('inventory').find((i) => i.name === o.equipment)?.ownership === 'Partnership');
-}
-
+// Gated on rows actually showing a Partnership dozer at work that day —
+// NOT on a same-day Tacoma PMS collection alone. A previous version treated
+// a Tacoma-tagged collection as sufficient evidence by itself (to cover a
+// day with no Daily Operations report at all) and attributed it to every
+// project that had ever had Partnership-dozer work, which (a) double-counted
+// the same real-world trip once per qualifying project when summed
+// company-wide, since fuel_credit_collections has no project field to
+// disambiguate, and (b) charged a project on a day it had zero activity at
+// all - confirmed wrong for 1-2 Oct 2026: a Tacoma collection was logged
+// both days but no Chizon dozer actually worked either day, so the real
+// cost is ₦0, not whatever that collection implied.
 function tacomaLogisticsForRows(project, from, to, rows) {
   const partnershipDaysWithWork = new Set();
   rows.forEach((o) => {
     const ownership = store.get('inventory').find((i) => i.name === o.equipment)?.ownership;
     if (ownership === 'Partnership') partnershipDaysWithWork.add(o.date);
   });
-  if (projectHasEverHadPartnershipWork(project)) {
-    store.get('fuelCreditCollections').forEach((c) => {
-      if (c.fuelType !== 'PMS' || c.date < TACOMA_REQUEST_BASIS_START_DATE) return;
-      if (!dateInRange(c.date, from, to)) return;
-      if (/tacoma/i.test(`${c.notes || ''} ${c.reference || ''}`)) partnershipDaysWithWork.add(c.date);
-    });
-  }
   let total = 0;
   partnershipDaysWithWork.forEach((date) => {
     if (date >= TACOMA_REQUEST_BASIS_START_DATE) {
