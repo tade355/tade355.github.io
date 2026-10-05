@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "VeeJay Foods",
+    "slug": "veejay-foods",
+    "scheme": "veejay",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.example.veejayfoods",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Attach a photo when you report a problem with an order.",
+        "NSCameraUsageDescription": "Take a photo of a wrong or damaged order."
+      }
+    },
+    "android": {
+      "package": "com.example.veejayfoods",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "color": "#019947"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Attach a photo when you report a problem with an order.",
+          "cameraPermission": "Take a photo of a wrong or damaged order."
+        }
+      ]
+    ],
+    "extra": {
+      "apiUrl": "http://localhost:4000",
+      "eas": {
+        "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
+      }
+    }
+  }
+}

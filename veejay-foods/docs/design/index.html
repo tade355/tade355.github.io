@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VeeJay Foods — Product Design &amp; Delivery Plan</title>
+<style>
+  :root{
+    --green:#017A39; --green-d:#00582A; --green-l:#E6F5EC; --brand-green:#019947; --brand-red:#F81A08; --red-d:#C8140A;
+    --red:#F81A08; --red-l:#FFE9E5;
+    --cream:#FFFAF5; --paper:#FFFFFF; --ink:#1B1B18; --mute:#6B6B63; --line:#EDE4DC; --danger:#B3261E; --ok:#1E8E3E;
+    --sans: Inter,"Segoe UI",system-ui,-apple-system,"Liberation Sans",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{background:#d9d4c7}
+  body{margin:0;font:13.5px/1.45 var(--sans);color:var(--ink);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{size:A4 landscape;margin:0}
+
+  /* ---- page ---- */
+  .page{width:297mm;height:210mm;margin:14px auto;background:var(--cream);position:relative;overflow:hidden;padding:13mm 15mm 12mm;box-shadow:0 4px 24px #0003;page-break-after:always;break-after:page}
+  @media print{html{background:none}.page{margin:0;box-shadow:none}}
+  @media screen and (max-width:1160px){html{background:var(--cream)}.page{width:100%;height:auto;min-height:0;margin:0;box-shadow:none;border-bottom:1px solid var(--line);overflow:visible}}
+  .page > header{display:flex;align-items:baseline;gap:12px;margin-bottom:7mm}
+  .eyebrow{white-space:nowrap;flex:none;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--green);font-weight:800}
+  h1,h2,h3,h4{margin:0;line-height:1.15}
+  h2{font-size:25px;letter-spacing:-.01em}
+  h3{font-size:15px;margin-bottom:5px}
+  h4{font-size:12.5px;margin-bottom:3px}
+  .num{margin-left:auto;color:var(--mute);font-size:11px;white-space:nowrap;flex:none}
+  footer.pf{position:absolute;left:15mm;right:15mm;bottom:6mm;display:flex;justify-content:space-between;font-size:9.5px;color:var(--mute)}
+  p{margin:0 0 7px}
+  .lead{font-size:15.5px;line-height:1.5;max-width:210mm}
+  .mute{color:var(--mute)}
+  .small{font-size:11.5px}
+  .tiny{font-size:10px}
+
+  /* ---- layout helpers ---- */
+  .grid{display:grid;gap:10px}
+  .g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g5{grid-template-columns:repeat(5,1fr)}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:11px 13px}
+  .card.tint{background:var(--green-l);border-color:#cfe6d9}
+  .card.warn{background:var(--red-l);border-color:#f6c9c2}
+  .pill{display:inline-block;border-radius:99px;padding:1px 9px;font-size:10px;font-weight:800;letter-spacing:.03em;background:var(--green);color:#fff;white-space:nowrap}
+  .pill.s{background:var(--red-d);color:#fff}.pill.o{background:#fff;color:var(--green);border:1px solid var(--green)}.pill.g{background:#ddd8c9;color:#444}
+  ul{margin:3px 0 0;padding-left:17px}li{margin:2px 0}
+  table{width:100%;border-collapse:collapse;font-size:11.5px}
+  th,td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute)}
+  code{font:11px/1.3 "DejaVu Sans Mono","Liberation Mono",monospace;background:#f1ead9;padding:1px 4px;border-radius:4px}
+  .stat{font-size:30px;font-weight:800;color:var(--green);line-height:1}
+
+  /* ---- device frames ---- */
+  .phones{display:flex;gap:14px;justify-content:center;align-items:flex-start}
+  figure{margin:0}
+  figcaption{font-size:11px;margin-top:7px;color:var(--mute);line-height:1.35}
+  figcaption b{color:var(--ink);display:block;font-size:12px}
+  .phone{border:5px solid #1b1b18;border-radius:26px;overflow:hidden;background:#000;box-shadow:0 6px 16px #0003;line-height:0}
+  .phone img{width:100%;display:block}
+  .browser{border:1px solid #cfc7b4;border-radius:10px;overflow:hidden;background:#fff;box-shadow:0 6px 16px #0002;line-height:0}
+  .browser .bar{height:16px;background:#ece6d6;display:flex;align-items:center;gap:4px;padding:0 8px;line-height:0}
+  .browser .bar i{width:6px;height:6px;border-radius:50%;background:#c9c1ab;display:block}
+  .browser img{width:100%;display:block}
+
+  /* ---- cover ---- */
+  .cover{background:linear-gradient(135deg,#00582A,#017A39 55%,#019947);color:#fff}
+  .cover .eyebrow{color:#fff;opacity:.85}
+  .cover .logo{width:44mm;height:44mm;border-radius:50%;box-shadow:0 8px 24px #0004;margin-bottom:8mm;display:block}
+  .cover h1{font-size:50px;letter-spacing:-.02em;margin:6px 0 10px}
+  .cover h1 span{background:var(--brand-red);color:#fff;border-radius:10px;padding:0 12px;margin-left:10px}
+  .cover .lead{color:#effff6;max-width:96mm;font-size:14.5px}
+  .cover .meta{position:absolute;left:15mm;bottom:12mm;font-size:11px;color:#d4f3e2;line-height:1.6}
+  .cover .phones{position:absolute;right:14mm;top:14mm;gap:12px}
+  .cover .phone{width:50mm}.cover .phone:nth-child(2){margin-top:12mm}.cover .phone:nth-child(3){margin-top:24mm}
+
+  /* ---- journey ---- */
+  .steps{display:flex;gap:0}
+  .step{flex:1;background:var(--paper);border:1px solid var(--line);padding:9px 8px 9px 16px;position:relative;margin-right:-1px;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,0 100%,12px 50%)}
+  .step:first-child{clip-path:polygon(0 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,0 100%);padding-left:10px;border-radius:10px 0 0 10px}
+  .step b{display:block;font-size:11.5px}.step span{font-size:10px;color:var(--mute);display:block;line-height:1.3}
+  .step .n{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;background:var(--green);color:#fff;font-size:10px;font-weight:800;margin-bottom:3px}
+
+  /* ---- swatches ---- */
+  .sw{height:40px;border-radius:8px;border:1px solid #0001;margin-bottom:4px}
+  .sw+div{font-size:10.5px;line-height:1.25}
+
+  /* ---- roadmap ---- */
+  .gantt{display:block;font-size:11px;margin-bottom:6px}
+  .gantt .h{font-size:10px;color:var(--mute);text-align:center;border-left:1px solid var(--line);padding:3px 0}
+  .gantt .gr{display:grid;grid-template-columns:150px repeat(14,1fr);align-items:center;border-bottom:1px solid var(--line);min-height:34px}
+  .gantt .gb{display:flex;align-items:center;height:34px}
+  .gantt .lab{padding:6px 6px 6px 0;font-weight:700}
+  .gantt .bar{width:100%;height:22px;border-radius:6px;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;padding:0 7px;white-space:nowrap;overflow:hidden}
+  svg text{font-family:var(--sans)}
+</style>
+</head>
+<body>
+
+<!-- ============ 1 COVER ============ -->
+<section class="page cover">
+  <img class="logo" src="shots/logo.png" alt="VeeJay Foods logo">
+  <div class="eyebrow">Product design &amp; delivery plan · v1.1</div>
+  <h1>VeeJay<span>Foods</span></h1>
+  <p class="lead">Order ahead. Skip the queue. A mobile pre-order and pickup app for VeeJay Foods, Lokoja — pay with card, bank transfer or USSD, track your order, and collect with a QR code.</p>
+  <div class="phones">
+    <figure class="phone"><img src="shots/app-03-menu.png" alt="Menu screen"></figure>
+    <figure class="phone"><img src="shots/app-09-order-ready-qr.png" alt="Order ready with QR"></figure>
+    <figure class="phone"><img src="shots/app-07-checkout.png" alt="Checkout"></figure>
+  </div>
+  <div class="meta">
+    Prepared 5 October 2026 · VeeJay Foods · Kogi Circle, along Ava Hotel, Ali Attah Road, Lokoja, Kogi State · Open 24 hours<br>
+    Customer app (Expo / React Native) · API (Node, Express, Prisma, PostgreSQL) · Staff &amp; admin dashboard (React)<br>
+    All screenshots are captured from the real code running against the real API. Menu items, prices and customers shown are sample data.
+  </div>
+</section>
+
+<!-- ============ 2 CONCEPT ============ -->
+<section class="page">
+  <header><span class="eyebrow">01 · Concept</span><h2>Counter queues are the problem. Pre-ordering is the fix.</h2><span class="num">2 / 19</span></header>
+  <div class="grid g2" style="gap:14px">
+    <div>
+      <h3>The problem</h3>
+      <p>VeeJay Foods serves homemade African meals, pastries and local cuisine around the clock from Kogi Circle in Lokoja. Like any popular outlet it loses sales and goodwill at peak hours: long counter queues, orders shouted over a crowd, cash handling, and “where is my order?” with no answer. Customers abandon the queue; staff get overwhelmed in bursts and idle in between.</p>
+      <h3 style="margin-top:10px">The idea</h3>
+      <p>Let customers choose a <b>pickup point and a time slot</b>, <b>pay in advance</b>, and walk in to <b>scan a QR code</b>. The kitchen sees a live, time-ordered queue, so demand is spread across slots instead of arriving in a rush. Money is settled before food is made, and every order has an auditable trail.</p>
+      <div class="card tint" style="margin-top:10px">
+        <h4>One-line promise</h4>
+        <div style="font-size:17px;font-weight:800;color:var(--green-d)">“Pick it, pay it, collect it — no queue.”</div>
+      </div>
+    </div>
+    <div>
+      <h3>Why it works for each side</h3>
+      <div class="grid g2">
+        <div class="card"><h4>Customer</h4><ul class="small"><li>No waiting in line</li><li>Choose the exact pickup time</li><li>Pay by card, transfer or USSD</li><li>Live status + push notifications</li><li>Wrong order? Report with a photo, get refunded</li></ul></div>
+        <div class="card"><h4>Kitchen / counter</h4><ul class="small"><li>Orders arrive already paid</li><li>Slot capacity caps the rush</li><li>Clear New → Preparing → Ready board</li><li>Scan-to-collect, no disputes</li><li>Works for day and night shifts</li></ul></div>
+        <div class="card"><h4>Owner</h4><ul class="small"><li>Sales by day, outlet and item</li><li>Sold-out toggles per outlet</li><li>Refund control, audit trail</li><li>Menu, prices and hours without a developer</li></ul></div>
+        <div class="card warn"><h4>Proposed success metrics</h4><ul class="small"><li>Median counter wait at pickup &lt; 2 min</li><li>Cart → paid conversion</li><li>Refund rate &lt; 2% of orders</li><li>Repeat orders within 14 days</li></ul><div class="tiny mute" style="margin-top:3px">Targets to agree with the business — none measured yet.</div></div>
+      </div>
+    </div>
+  </div>
+  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Concept</span></footer>
+</section>
+
+<!-- ============ 3 USERS & JOURNEY ============ -->
+<section class="page">
+  <header><span class="eyebrow">02 · Users &amp; journey</span><h2>Three people, one order</h2><span class="num">3 / 19</span></header>
+  <div class="grid g3">
+    <div class="card"><div style="font-size:26px">👩🏾‍💼</div><h3>Amina — the customer</h3><p class="small mute">27, works near Kogi Circle in Lokoja. Has 25 minutes for lunch, hates queues, pays by bank transfer or card on her phone. Patchy mobile data on the commute.</p><p class="small"><b>Needs:</b> fast reorder, certainty about pickup time, proof of payment, a way to fix mistakes.</p></div>
+    <div class="card"><div style="font-size:26px">👨🏿‍🍳</div><h3>Musa — counter staff</h3><p class="small mute">Runs the counter during the lunch rush, or on the night shift. Works on a shared tablet or phone, no time for menus.</p><p class="small"><b>Needs:</b> one screen showing what to cook next, big buttons, a scanner that just works, a fallback when a phone dies.</p></div>
+    <div class="card"><div style="font-size:26px">👩🏽‍💼</div><h3>The owner / admin</h3><p class="small mute">Wants to change prices, hide a sold-out dish, add a future branch, and see yesterday’s sales over breakfast.</p><p class="small"><b>Needs:</b> control without a developer, trustworthy numbers, safe refunds.</p></div>
+  </div>
+  <h3 style="margin-top:12px">The core journey (customer)</h3>
+  <div class="steps" style="margin-top:6px">
+    <div class="step"><div class="n">1</div><b>Sign in</b><span>Phone number + SMS code</span></div>
+    <div class="step"><div class="n">2</div><b>Browse</b><span>Menu, combos, per-outlet stock</span></div>
+    <div class="step"><div class="n">3</div><b>Cart</b><span>Quantities, running total</span></div>
+    <div class="step"><div class="n">4</div><b>Pick slot</b><span>Outlet, day, time</span></div>
+    <div class="step"><div class="n">5</div><b>Pay</b><span>Paystack: card · transfer · USSD</span></div>
+    <div class="step"><div class="n">6</div><b>Track</b><span>Placed → Preparing → Ready</span></div>
+    <div class="step"><div class="n">7</div><b>Collect</b><span>Show QR, staff scan</span></div>
+  </div>
+  <div class="grid g2" style="margin-top:12px">
+    <div class="card"><h4>If something goes wrong</h4><ul class="small"><li><b>Paid but screen didn’t update</b> — the app asks the server to re-check with Paystack; the webhook is the safety net.</li><li><b>Phone dies at the counter</b> — staff type the 6-character order code instead of scanning.</li><li><b>Wrong or cold food</b> — report in-app with a photo; admin approves and the refund goes back to the original payment method.</li></ul></div>
+    <div class="card"><h4>Design rules that follow from the users</h4><ul class="small"><li>A user with a paid, uncollected order is <b>never signed out</b> — they always have their QR.</li><li>Every critical button is ≥ 50 px tall; the counter UI works one-handed.</li><li>Prices are integers in kobo end-to-end — no rounding surprises in ₦.</li><li>Network failures never look like “logged out” or “payment failed”.</li></ul></div>
+  </div>
+  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Users &amp; journey</span></footer>
+</section>
+
+<!-- ============ 4 FEATURES ============ -->
+<section class="page">
+  <header><span class="eyebrow">03 · Features</span><h2>Nine capabilities, all built</h2><span class="num">4 / 19</span></header>
+  <table>
+    <thead><tr><th style="width:3%">#</th><th style="width:19%">Feature</th><th>What it does</th><th style="width:25%">How it was verified</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><b>Phone + OTP sign-in</b></td><td>6-digit SMS code (hashed, 5-min expiry, 5 attempts, rate-limited). 15-min access token + rotating 30-day refresh token. Never ends a session while an order is active.</td><td><span class="pill">16 automated tests</span> incl. expiry, lock-out, replay, active-order rule</td></tr>
+      <tr><td>2</td><td><b>Menu &amp; combos</b></td><td>Categories, items, combos / meal plans with components, images, prices in ₦, per-outlet “sold out” switches.</td><td>Browser-verified (app + dashboard)</td></tr>
+      <tr><td>3</td><td><b>Pickup points &amp; slots</b></td><td>Outlets with weekly hours (including “24 hours”), prep time, slot length and per-slot capacity; capacity enforced under concurrent bookings. Ready for more branches.</td><td><span class="pill">4 + 21 tests</span> slot maths, capacity race, hold expiry</td></tr>
+      <tr><td>4</td><td><b>Cart &amp; checkout</b></td><td>Choose outlet, day and time; server recomputes the price; unpaid orders hold the slot for 15 minutes, then release it.</td><td>Tests + browser-verified</td></tr>
+      <tr><td>5</td><td><b>Paystack payments</b></td><td>Hosted checkout (card, bank transfer, USSD) — card data never touches our code. Webhook verifies HMAC-SHA512, amount, currency, reference; idempotent. App can reconcile via server → Paystack verify.</td><td><span class="pill">14 webhook tests</span> <span class="pill s">live Paystack not yet exercised</span></td></tr>
+      <tr><td>6</td><td><b>Order tracking + push</b></td><td>Placed → Preparing → Ready → Collected, polled in-app and pushed via Expo/FCM at every change.</td><td><span class="pill">5 state tests</span> <span class="pill s">push not yet on a device</span></td></tr>
+      <tr><td>7</td><td><b>QR pickup</b></td><td>Unforgeable per-order QR (HMAC). Staff scan; only a paid, READY order at that outlet can be collected — once. Order-code fallback.</td><td>Tests: forged, unpaid, double-scan, wrong outlet, race</td></tr>
+      <tr><td>8</td><td><b>Complaints &amp; refunds</b></td><td>Report a wrong order with a photo; admin approves (full or partial) → Paystack refund to the original method → webhook finalises. Failed refunds reopen the complaint.</td><td><span class="pill">7 tests</span> <span class="pill s">live refund not yet exercised</span></td></tr>
+      <tr><td>9</td><td><b>Staff &amp; admin dashboard</b></td><td>Live order board (with sound), QR scanner, menu / outlets / staff management, complaints &amp; refunds, sales reports.</td><td>Browser-driven against the live API</td></tr>
+    </tbody>
+  </table>
+  <p class="tiny mute" style="margin-top:8px">Orders are pickup-only at launch. Delivery, promo codes and loyalty are deliberately out of scope (see roadmap).</p>
+  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Features</span></footer>
+</section>
+
+<!-- ============ 5 DESIGN SYSTEM ============ -->
+<section class="page">
+  <header><span class="eyebrow">04 · Design language</span><h2>Warm, appetising, easy to tap</h2><span class="num">5 / 19</span></header>
+  <div class="grid g2" style="gap:16px">
+    <div>
+      <h3>Colour — taken from the VeeJay logo</h3>
+      <div class="grid g5" style="gap:8px">
+        <div><div class="sw" style="background:#019947"></div><div><b>VeeJay Green</b><br>#019947<br><span class="mute">Logo green · login, accents</span></div></div>
+        <div><div class="sw" style="background:#017A39"></div><div><b>Deep Green</b><br>#017A39<br><span class="mute">Buttons &amp; text (AA contrast)</span></div></div>
+        <div><div class="sw" style="background:#F81A08"></div><div><b>VeeJay Red</b><br>#F81A08<br><span class="mute">Logo red · highlights</span></div></div>
+        <div><div class="sw" style="background:#C8140A"></div><div><b>Deep Red</b><br>#C8140A<br><span class="mute">Red text on white</span></div></div>
+        <div><div class="sw" style="background:#FFFAF5"></div><div><b>Warm White</b><br>#FFFAF5<br><span class="mute">Canvas</span></div></div>
+      </div>
+      <p class="small mute" style="margin-top:8px">Green and red are sampled from the logo itself. The pure logo shades sit at about 3.6:1 and 4:1 against white, so text and button fills use the slightly deeper variants, which clear WCAG AA (≈5.4:1 and ≈5.9:1).</p>
+      <h3 style="margin-top:12px">Principles</h3>
+      <ul class="small">
+        <li><b>Food first</b> — large images, price always in green, “Add” is the loudest thing on a card.</li>
+        <li><b>State is always visible</b> — a four-step timeline with a red ring on “now”; one status pill per order.</li>
+        <li><b>Calm money screens</b> — one total, one button, a plain sentence about Paystack.</li>
+        <li><b>Big targets</b> — 50 px buttons, 34 px steppers, chips instead of dropdowns for slots.</li>
+        <li><b>Honest empty/error states</b> — tell people what happened and what to do next.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Components</h3>
+      <div class="grid g2" style="gap:8px">
+        <div class="card" style="text-align:center"><div style="background:var(--green);color:#fff;border-radius:14px;padding:13px;font-weight:800">Pay ₦14,000</div><div class="tiny mute" style="margin-top:5px">Primary button · 14 px radius</div></div>
+        <div class="card" style="text-align:center"><div style="border:1.5px solid var(--green);color:var(--green);border-radius:14px;padding:12px;font-weight:800">Resend code in 24s</div><div class="tiny mute" style="margin-top:5px">Ghost button</div></div>
+        <div class="card"><span style="display:inline-block;background:var(--green);color:#fff;border-radius:99px;padding:7px 15px;font-weight:700;margin-right:6px">Tomorrow</span><span style="display:inline-block;background:#fff;border:1px solid var(--line);border-radius:99px;padding:7px 15px;font-weight:700">14:00</span><div class="tiny mute" style="margin-top:5px">Chips for day / time / category</div></div>
+        <div class="card"><span class="pill">Placed</span> <span class="pill">Preparing</span> <span class="pill" style="background:var(--ok)">Ready</span> <span class="pill" style="background:#7a7a70">Collected</span><div class="tiny mute" style="margin-top:5px">Status pills</div></div>
+        <div class="card" style="border:2px solid var(--brand-red)"><div class="tiny" style="color:var(--red-d);font-weight:800;letter-spacing:.1em">MEAL PLAN</div><b>VeeJay Meal Deal</b><div style="color:var(--green);font-weight:800">₦5,500</div><div class="tiny mute">Combo card · red border</div></div>
+        <div class="card"><div style="display:flex;gap:10px;align-items:center"><span style="width:20px;height:20px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;font-size:11px">✓</span><b>Preparing</b></div><div style="margin-left:9px;border-left:2px solid var(--green);height:12px"></div><div style="display:flex;gap:10px;align-items:center"><span style="width:20px;height:20px;border-radius:50%;border:3px solid var(--brand-red);background:var(--green);display:block"></span><b>Ready</b></div><div class="tiny mute" style="margin-top:5px">Timeline</div></div>
+      </div>
+      <h3 style="margin-top:12px">Type &amp; spacing</h3>
+      <p class="small">System font stack (San Francisco / Roboto) for speed and native feel. Scale: 13 · 16 · 18 · 20 · 26 · 32. Spacing in 4 px steps; screens use a 16 px gutter; cards 14 px radius with a 1 px warm-grey border instead of shadows.</p>
+      <p class="small mute">Brand name, logo and palette live in one theme file per surface (app, dashboard, API), so a future rebrand is a small change.</p>
+    </div>
+  </div>
+  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Design language</span></footer>
+</section>
+
+<!-- ============ 6 SNAPSHOTS: ONBOARDING + BROWSE ============ -->
+<section class="page">
+  <header><span class="eyebrow">05 · Snapshots · Browse</span><h2>From phone number to a full basket in four screens</h2><span class="num">6 / 19</span></header>
+  <div class="phones" style="gap:12px">
+    <figure style="width:50mm"><div class="phone"><img src="shots/app-01-login.png" alt=""></div><figcaption><b>Sign in</b>Logo, the Kogi Circle address and “Open 24 hours”. Phone number only — no passwords to forget.</figcaption></figure>
+    <figure style="width:50mm"><div class="phone"><img src="shots/app-02-otp.png" alt=""></div><figcaption><b>Verify</b>6-digit SMS code with a resend timer.</figcaption></figure>
+    <figure style="width:50mm"><div class="phone"><img src="shots/app-03-menu.png" alt=""></div><figcaption><b>Menu</b>Pickup point on top; category chips; the meal plan is highlighted with a red border.</figcaption></figure>
+    <figure style="width:50mm"><div class="phone"><img src="shots/app-05-menu-cart-bar.png" alt=""></div><figcaption><b>Add to basket</b>Steppers replace “Add”; a floating bar shows count and total.</figcaption></figure>
+    <figure style="width:50mm"><div class="phone"><img src="shots/app-06-cart.png" alt=""></div><figcaption><b>Cart</b>Edit quantities; one clear next step.</figcaption></figure>
+  </div>
+  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Snapshots are from the real app code (web build) with sample data</span></footer>
+</section>
+
+<!-- ============ 7 SNAPSHOTS: CHECKOUT + PAYMENT ============ -->
+<section class="page">
+  <header><span class="eyebrow">05 · Snapshots · Pay</span><h2>Pick a slot, pay securely, done</h2><span class="num">7 / 19</span></header>
+  <div class="grid" style="grid-template-columns:62mm 1fr;gap:16px;align-items:start">
+    <figure><div class="phone"><img src="shots/app-07-checkout.png" alt=""></div><figcaption><b>Pickup &amp; pay</b>Outlet, day chips, 30-minute time slots across the 24-hour day (full or past slots are hidden), kitchen note, itemised total.</figcaption></figure>
+    <div>
+      <h3>What happens when “Pay” is tapped</h3>
+      <div class="grid g2" style="gap:10px">
+        <div class="card"><div class="pill">1</div> <b>Order is created on the server</b><p class="small mute" style="margin:4px 0 0">Prices are re-read from the database (the client can’t set them). The chosen slot is locked and re-checked for capacity. The order sits in <code>PENDING_PAYMENT</code> for 15 minutes.</p></div>
+        <div class="card"><div class="pill">2</div> <b>Paystack hosted checkout opens</b><p class="small mute" style="margin:4px 0 0">In a secure in-app browser, with card, bank transfer and USSD enabled. Card numbers are entered on Paystack’s page — never in our app or API.</p></div>
+        <div class="card"><div class="pill">3</div> <b>Paystack calls our webhook</b><p class="small mute" style="margin:4px 0 0">We verify the signature over the raw body, then check reference, amount and currency before moving the order to <code>PLACED</code>.</p></div>
+        <div class="card"><div class="pill">4</div> <b>The app confirms with the server</b><p class="small mute" style="margin:4px 0 0">On return it asks <code>/orders/:id/verify</code>, which asks Paystack directly. Webhook and verify share one code path, so they can never disagree.</p></div>
+      </div>
+      <div class="card tint" style="margin-top:10px"><h4>Edge cases handled</h4><ul class="small"><li><b>Webhook arrives twice (or six times at once)</b> → applied once, one push notification.</li><li><b>Amount or currency differs</b> → order stays unpaid; payment flagged.</li><li><b>Payment lands after the hold expired</b> → automatically refunded, order stays cancelled.</li><li><b>Server error mid-webhook</b> → returns 500 so Paystack retries; nothing half-applied.</li><li><b>Closed browser / lost signal</b> → order screen keeps checking and offers “Pay now” until the hold lapses.</li></ul></div>
+    </div>
+  </div>
+  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Pickup &amp; pay</span></footer>
+</section>
+
+<!-- ============ 8 SNAPSHOTS: TRACK + QR ============ -->
+<section class="page">
+  <header><span class="eyebrow">05 · Snapshots · Collect</span><h2>Always know where your order is — and prove it’s yours</h2><span class="num">8 / 19</span></header>
+  <div class="phones" style="gap:16px">
+    <figure style="width:56mm"><div class="phone"><img src="shots/app-08-orders.png" alt=""></div><figcaption><b>My orders</b>Active orders float to the top with a red outline; auto-refreshes.</figcaption></figure>
+    <figure style="width:56mm"><div class="phone"><img src="shots/app-09-order-ready-qr.png" alt=""></div><figcaption><b>Ready — show this QR</b>Four-step timeline with times; a large backup code if the camera fails.</figcaption></figure>
+    <figure style="width:56mm"><div class="phone"><img src="shots/app-10-order-detail-lower.png" alt=""></div><figcaption><b>Receipt</b>Snapshot of items and prices at the time of ordering, plus “Report a problem”.</figcaption></figure>
+    <div style="flex:1;max-width:62mm" class="card tint">
+      <h4>Notifications</h4>
+      <p class="small">A push is sent on every status change:</p>
+      <ul class="small"><li>✅ <b>Order placed</b> — payment received</li><li>🍳 <b>Preparing</b> — kitchen started</li><li>🛍️ <b>Ready for pickup</b> — show your QR</li><li>😋 <b>Collected</b> — thank you</li></ul>
+      <p class="small mute" style="margin-top:6px">Tapping a notification opens that order. Delivery via Expo Push (FCM on Android, APNs on iOS). Needs a development / production build, not Expo Go.</p>
+      <h4 style="margin-top:8px">QR design</h4>
+      <p class="small mute">Payload <code>nbg1.&lt;orderId&gt;.&lt;HMAC&gt;</code> — derived, not stored, so it can always be re-rendered and can’t be guessed.</p>
+    </div>
+  </div>
+  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Track &amp; collect</span></footer>
+</section>
+
+<!-- ============ 9 SNAPSHOTS: AFTER SALES ============ -->
+<section class="page">
+  <header><span class="eyebrow">05 · Snapshots · After-sales</span><h2>When something’s wrong, fixing it is easy</h2><span class="num">9 / 19</span></header>
+  <div class="grid" style="grid-template-columns:56mm 56mm 1fr;gap:18px;align-items:start">
+    <figure><div class="phone"><img src="shots/app-11-report.png" alt=""></div><figcaption><b>Report a problem</b>Reason chips, free-text details, camera or gallery photo.</figcaption></figure>
+    <figure><div class="phone"><img src="shots/app-12-account.png" alt=""></div><figcaption><b>Account</b>Name, phone, sign-out (with a warning if an order is in progress).</figcaption></figure>
+    <div>
+      <h3>The refund journey</h3>
+      <div class="card"><ol class="small" style="margin:0;padding-left:18px">
+        <li><b>Customer</b> reports a paid order — one open report per order; photo uploads are limited to JPG / PNG / WebP, 5 MB.</li>
+        <li><b>Admin</b> sees it in <i>Complaints &amp; refunds</i> with the photo and what was ordered (see next pages).</li>
+        <li><b>Approve</b> (full or partial) → refund is sent to Paystack against the <b>original transaction</b>, so money returns to the original card / account. Amount is capped at what was paid.</li>
+        <li><b>Paystack confirms</b> asynchronously → our webhook marks the refund <code>SUCCESS</code> and the payment <code>REFUNDED</code>.</li>
+        <li><b>If Paystack refuses</b> → the complaint reopens automatically so an admin can retry. Double-clicks can’t double-refund.</li>
+      </ol></div>
+      <div class="card warn" style="margin-top:10px"><h4>Account safety</h4><p class="small" style="margin:0">Signing out is a deliberate choice only. Sessions end involuntarily only after 30 days of inactivity or a detected token-theft pattern — and never while an order is active.</p></div>
+    </div>
+  </div>
+  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>After-sales</span></footer>
+</section>
+
+<!-- ============ 10 DASHBOARD: KITCHEN ============ -->
+<section class="page">
+  <header><span class="eyebrow">06 · Dashboard · Kitchen</span><h2>One screen to run the rush</h2><span class="num">10 / 19</span></header>
+  <div class="grid" style="grid-template-columns:1.7fr 1fr;gap:14px;align-items:start">
+    <figure><div class="browser"><div class="bar"><i></i><i></i><i></i></div><img src="shots/admin-01-queue.png" alt=""></div><figcaption><b>Live orders</b>Columns New → Preparing → Ready, sorted by pickup time; customer notes highlighted; refreshes every 5 s with a chime on new paid orders. Staff only see their own outlet.</figcaption></figure>
+    <figure><div class="browser"><div class="bar"><i></i><i></i><i></i></div><img src="shots/admin-02-scanner.png" alt=""></div><figcaption><b>Scan pickup QR</b>Uses the device camera; a green banner confirms the hand-over. Typing the order code is the fallback (shown here after a manual hand-over). Double scans and not-ready orders are rejected with a clear message.</figcaption></figure>
+  </div>
+  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>The scanner’s live camera feed can’t run in a headless browser, so the code-entry path is pictured</span></footer>
+</section>
+
+<!-- ============ 11 DASHBOARD: INSIGHT ============ -->
+<section class="page">
+  <header><span class="eyebrow">06 · Dashboard · Insight</span><h2>See the business, and fix mistakes safely</h2><span class="num">11 / 19</span></header>
+  <div class="grid g2" style="gap:14px">
+    <figure><div class="browser"><div class="bar"><i></i><i></i><i></i></div><img src="shots/admin-06-sales.png" alt=""></div><figcaption><b>Sales</b>Date range and outlet filters; gross, refunds, net and average order; by-day bars; top items. Revenue counts paid orders only, minus successful refunds. (Sample data.)</figcaption></figure>
+    <figure><div class="browser"><div class="bar"><i></i><i></i><i></i></div><img src="shots/admin-03-complaints.png" alt=""></div><figcaption><b>Complaints &amp; refunds</b>The customer’s photo and what they ordered side by side; approve in full, partially, or reject with a reason that’s kept on record. Approved refunds go back to the original payment method.</figcaption></figure>
+  </div>
+  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Admin dashboard</span></footer>
+</section>
+
+<!-- ============ 11b DASHBOARD: CONTROL ============ -->
+<section class="page">
+  <header><span class="eyebrow">06 · Dashboard · Control</span><h2>Run the menu and the outlet without calling a developer</h2><span class="num">12 / 19</span></header>
+  <div class="grid g2" style="gap:14px">
+    <figure><div class="browser"><div class="bar"><i></i><i></i><i></i></div><img src="shots/admin-04-menu.png" alt=""></div><figcaption><b>Menu</b>Categories, items, combos / meal plans, images, prices, and a per-outlet availability switch to mark a dish sold out the moment the kitchen runs out. Items are hidden, never deleted, so past orders stay intact.</figcaption></figure>
+    <figure><div class="browser"><div class="bar"><i></i><i></i><i></i></div><img src="shots/admin-05-outlets.png" alt=""></div><figcaption><b>Outlets</b>Per-day hours with a “24 hours” switch (Kogi Circle is open round the clock), prep time, slot length and orders-per-slot capacity. Add a new branch in one form when VeeJay Foods grows.</figcaption></figure>
+  </div>
+  <div class="card tint" style="margin-top:10px"><h4>Staff access</h4><p class="small" style="margin:0">A seventh tab, <b>Staff</b>, adds or removes team members by phone number, role (Staff or Admin) and outlet. They sign in with an SMS code like customers do, and removing access takes effect immediately — the server re-checks the role on every request.</p></div>
+  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Admin dashboard</span></footer>
+</section>
+
+<!-- ============ 12 ARCHITECTURE ============ -->
+<section class="page">
+  <header><span class="eyebrow">07 · Architecture</span><h2>Small, boring, and safe with money</h2><span class="num">13 / 19</span></header>
+  <svg viewBox="0 0 1000 400" width="100%" role="img" aria-label="System architecture diagram">
+    <defs><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#6B6B63"/></marker></defs>
+    <!-- clients -->
+    <rect x="20" y="40" width="210" height="90" rx="14" fill="#E6F5EC" stroke="#017A39"/>
+    <text x="125" y="70" text-anchor="middle" font-weight="800" font-size="15" fill="#00582A">Customer app</text>
+    <text x="125" y="90" text-anchor="middle" font-size="12" fill="#444">Expo · React Native · TS</text>
+    <text x="125" y="108" text-anchor="middle" font-size="11" fill="#6B6B63">iOS &amp; Android</text>
+    <rect x="20" y="230" width="210" height="90" rx="14" fill="#E6F5EC" stroke="#017A39"/>
+    <text x="125" y="260" text-anchor="middle" font-weight="800" font-size="15" fill="#00582A">Staff &amp; admin web</text>
+    <text x="125" y="280" text-anchor="middle" font-size="12" fill="#444">Vite · React · TS</text>
+    <text x="125" y="298" text-anchor="middle" font-size="11" fill="#6B6B63">board · scanner · reports</text>
+    <!-- api -->
+    <rect x="390" y="110" width="230" height="170" rx="16" fill="#fff" stroke="#017A39" stroke-width="2"/>
+    <text x="505" y="140" text-anchor="middle" font-weight="800" font-size="16" fill="#00582A">API</text>
+    <text x="505" y="160" text-anchor="middle" font-size="12" fill="#444">Node 22 · Express · TypeScript</text>
+    <text x="505" y="186" text-anchor="middle" font-size="11" fill="#6B6B63">auth · menu · slots · orders</text>
+    <text x="505" y="203" text-anchor="middle" font-size="11" fill="#6B6B63">payments · webhooks · QR</text>
+    <text x="505" y="220" text-anchor="middle" font-size="11" fill="#6B6B63">complaints · refunds · reports</text>
+    <text x="505" y="246" text-anchor="middle" font-size="11" fill="#017A39" font-weight="700">state machine · idempotency</text>
+    <!-- db -->
+    <rect x="390" y="320" width="230" height="64" rx="14" fill="#FFE9E5" stroke="#F81A08"/>
+    <text x="505" y="348" text-anchor="middle" font-weight="800" font-size="14" fill="#7a0f06">PostgreSQL (Prisma)</text>
+    <text x="505" y="366" text-anchor="middle" font-size="11" fill="#6B6B63">users · orders · payments · audit</text>
+    <!-- providers -->
+    <rect x="770" y="30" width="210" height="76" rx="14" fill="#fff" stroke="#bbb"/>
+    <text x="875" y="60" text-anchor="middle" font-weight="800" font-size="14">Paystack</text>
+    <text x="875" y="79" text-anchor="middle" font-size="10" fill="#6B6B63">checkout · webhooks · refunds</text>
+    <text x="875" y="94" text-anchor="middle" font-size="10" fill="#6B6B63">card · bank transfer · USSD</text>
+    <rect x="770" y="145" width="210" height="64" rx="14" fill="#fff" stroke="#bbb"/>
+    <text x="875" y="173" text-anchor="middle" font-weight="800" font-size="14">SMS provider</text>
+    <text x="875" y="191" text-anchor="middle" font-size="11" fill="#6B6B63">OTP codes (Termii-style)</text>
+    <rect x="770" y="245" width="210" height="64" rx="14" fill="#fff" stroke="#bbb"/>
+    <text x="875" y="273" text-anchor="middle" font-weight="800" font-size="14">Expo Push</text>
+    <text x="875" y="291" text-anchor="middle" font-size="11" fill="#6B6B63">→ FCM (Android) · APNs (iOS)</text>
+    <rect x="770" y="335" width="210" height="50" rx="14" fill="#fff" stroke="#bbb" stroke-dasharray="4 3"/>
+    <text x="875" y="358" text-anchor="middle" font-weight="800" font-size="13">Object storage (to add)</text>
+    <text x="875" y="374" text-anchor="middle" font-size="10" fill="#6B6B63">photos · menu images (today: disk)</text>
+    <!-- arrows -->
+    <path d="M230 85 C 310 85, 320 150, 388 160" fill="none" stroke="#6B6B63" stroke-width="1.6" marker-end="url(#ar)"/>
+    <text x="300" y="100" font-size="10.5" fill="#6B6B63">HTTPS · JWT</text>
+    <path d="M230 275 C 310 275, 320 230, 388 225" fill="none" stroke="#6B6B63" stroke-width="1.6" marker-end="url(#ar)"/>
+    <text x="300" y="270" font-size="10.5" fill="#6B6B63">HTTPS · JWT</text>
+    <path d="M505 282 L505 318" stroke="#6B6B63" stroke-width="1.6" marker-end="url(#ar)"/>
+    <path d="M620 150 C 690 130, 700 80, 768 72" fill="none" stroke="#6B6B63" stroke-width="1.6" marker-end="url(#ar)"/>
+    <text x="632" y="64" font-size="10.5" fill="#6B6B63">initialize · verify · refund</text>
+    <path d="M768 92 C 700 110, 690 170, 622 176" fill="none" stroke="#017A39" stroke-width="1.6" stroke-dasharray="5 3" marker-end="url(#ar)"/>
+    <text x="700" y="150" font-size="10.5" fill="#017A39" font-weight="700">webhook (HMAC)</text>
+    <path d="M620 195 L768 177" stroke="#6B6B63" stroke-width="1.6" marker-end="url(#ar)"/>
+    <path d="M620 235 C 690 245, 700 265, 768 270" fill="none" stroke="#6B6B63" stroke-width="1.6" marker-end="url(#ar)"/>
+    <text x="640" y="222" font-size="10.5" fill="#6B6B63">OTP SMS</text>
+    <text x="650" y="262" font-size="10.5" fill="#6B6B63">push</text>
+    <!-- card boundary note -->
+    <rect x="20" y="150" width="210" height="52" rx="10" fill="#FFE9E5" stroke="#F81A08" stroke-dasharray="4 3"/>
+    <text x="125" y="172" text-anchor="middle" font-size="11" font-weight="800" fill="#7a0f06">Card details never reach</text>
+    <text x="125" y="188" text-anchor="middle" font-size="11" font-weight="800" fill="#7a0f06">our app or API — Paystack only</text>
+  </svg>
+  <div class="grid g3" style="margin-top:6px">
+    <div class="card"><h4>Why this stack</h4><p class="small mute" style="margin:0">One language (TypeScript) across API, app and dashboard; Expo gives iOS + Android from one codebase and managed push; PostgreSQL gives transactions and row locks that money and slot-capacity need.</p></div>
+    <div class="card"><h4>Seams for change</h4><p class="small mute" style="margin:0">Paystack, SMS, push and storage are interfaces injected into services — swapped for fakes in tests and replaceable (e.g. Flutterwave, another SMS gateway, S3) without touching business logic.</p></div>
+    <div class="card"><h4>Scale</h4><p class="small mute" style="margin:0">A single small Node instance and a managed Postgres comfortably serve a multi-outlet restaurant brand. The 60-second expiry job and 5-second polling are the only periodic load.</p></div>
+  </div>
+  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Architecture</span></footer>
+</section>
+
+<!-- ============ 13 PAYMENT FLOW + STATE MACHINE ============ -->
+<section class="page">
+  <header><span class="eyebrow">08 · Payment flow</span><h2>One source of truth for “is it paid?”</h2><span class="num">14 / 19</span></header>
+  <div class="grid" style="grid-template-columns:1.25fr 1fr;gap:12px;align-items:start">
+    <svg viewBox="0 0 640 400" width="100%" role="img" aria-label="Payment sequence diagram">
+      <defs><marker id="a2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#1B1B18"/></marker></defs>
+      <g font-size="12" font-weight="800" text-anchor="middle">
+        <rect x="20" y="8" width="110" height="28" rx="8" fill="#E6F5EC" stroke="#017A39"/><text x="75" y="27">App</text>
+        <rect x="190" y="8" width="110" height="28" rx="8" fill="#fff" stroke="#017A39" stroke-width="2"/><text x="245" y="27">API</text>
+        <rect x="360" y="8" width="110" height="28" rx="8" fill="#fff" stroke="#bbb"/><text x="415" y="27">Paystack</text>
+        <rect x="520" y="8" width="100" height="28" rx="8" fill="#FFE9E5" stroke="#F81A08"/><text x="570" y="27">Database</text>
+      </g>
+      <g stroke="#cfc7b4" stroke-dasharray="3 4"><line x1="75" y1="38" x2="75" y2="394"/><line x1="245" y1="38" x2="245" y2="394"/><line x1="415" y1="38" x2="415" y2="394"/><line x1="570" y1="38" x2="570" y2="394"/></g>
+      <g font-size="11" fill="#1B1B18" stroke="#1B1B18" stroke-width="1.4">
+        <line x1="75" y1="62" x2="243" y2="62" marker-end="url(#a2)"/><text x="82" y="57" stroke="none">POST /orders (items, slot)</text>
+        <line x1="245" y1="84" x2="568" y2="84" marker-end="url(#a2)"/><text x="260" y="79" stroke="none">price from DB · lock slot · PENDING_PAYMENT</text>
+        <line x1="75" y1="112" x2="243" y2="112" marker-end="url(#a2)"/><text x="82" y="107" stroke="none">POST /orders/:id/pay</text>
+        <line x1="245" y1="134" x2="413" y2="134" marker-end="url(#a2)"/><text x="256" y="129" stroke="none">initialize (amount, ref)</text>
+        <line x1="413" y1="156" x2="77" y2="156" marker-end="url(#a2)"/><text x="108" y="151" stroke="none">authorization_url (via API)</text>
+        <line x1="75" y1="184" x2="413" y2="184" marker-end="url(#a2)" stroke="#017A39"/><text x="150" y="179" stroke="none" fill="#017A39">customer pays on hosted checkout (card · transfer · USSD)</text>
+        <line x1="413" y1="214" x2="247" y2="214" marker-end="url(#a2)" stroke="#017A39" stroke-width="2"/><text x="262" y="209" stroke="none" fill="#017A39" font-weight="800">webhook charge.success + signature</text>
+        <line x1="245" y1="238" x2="245" y2="238"/>
+        <text x="256" y="236" stroke="none" fill="#6B6B63">✔ HMAC-SHA512 over raw body</text>
+        <text x="256" y="251" stroke="none" fill="#6B6B63">✔ reference, amount, currency match</text>
+        <line x1="245" y1="284" x2="568" y2="284" marker-end="url(#a2)"/><text x="262" y="279" stroke="none">PLACED · payment SUCCESS · event (one txn, row-locked)</text>
+        <line x1="245" y1="292" x2="245" y2="292"/>
+        <text x="256" y="306" stroke="none" fill="#6B6B63">push “Order placed”</text>
+        <line x1="75" y1="334" x2="243" y2="334" marker-end="url(#a2)"/><text x="82" y="329" stroke="none">GET /orders/:id/verify</text>
+        <line x1="245" y1="356" x2="413" y2="356" marker-end="url(#a2)"/><text x="256" y="351" stroke="none">verify(ref) — never trust the client</text>
+        <line x1="245" y1="382" x2="77" y2="382" marker-end="url(#a2)"/><text x="108" y="377" stroke="none">order status: PLACED</text>
+      </g>
+    </svg>
+    <div>
+      <svg viewBox="0 0 440 250" width="100%" role="img" aria-label="Order state machine">
+        <defs><marker id="a3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#017A39"/></marker><marker id="a4" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#C8140A"/></marker></defs>
+        <g font-size="11" font-weight="800" text-anchor="middle">
+          <rect x="6" y="20" width="96" height="42" rx="10" fill="#FFE9E5" stroke="#F81A08"/><text x="54" y="38">PENDING</text><text x="54" y="52">PAYMENT</text>
+          <rect x="176" y="20" width="80" height="42" rx="10" fill="#017A39"/><text x="216" y="46" fill="#fff">PLACED</text>
+          <rect x="326" y="20" width="108" height="42" rx="10" fill="#017A39"/><text x="380" y="46" fill="#fff">PREPARING</text>
+          <rect x="326" y="130" width="108" height="42" rx="10" fill="#1E8E3E"/><text x="380" y="156" fill="#fff">READY</text>
+          <rect x="166" y="130" width="100" height="42" rx="10" fill="#6b6b63"/><text x="216" y="156" fill="#fff">COLLECTED</text>
+          <rect x="6" y="130" width="96" height="42" rx="10" fill="#fff" stroke="#C8140A"/><text x="54" y="156" fill="#C8140A">CANCELLED</text>
+        </g>
+        <g stroke="#017A39" stroke-width="1.8" fill="none"><line x1="103" y1="41" x2="174" y2="41" marker-end="url(#a3)"/><line x1="257" y1="41" x2="324" y2="41" marker-end="url(#a3)"/><line x1="380" y1="63" x2="380" y2="128" marker-end="url(#a3)"/><line x1="324" y1="151" x2="268" y2="151" marker-end="url(#a3)"/></g>
+        <line x1="54" y1="63" x2="54" y2="128" stroke="#C8140A" stroke-width="1.8" marker-end="url(#a4)"/>
+        <g font-size="10" fill="#444"><text x="108" y="33">webhook ✔</text><text x="276" y="33">staff</text><text x="388" y="100">staff</text><text x="276" y="143">QR scan</text><text x="62" y="100" fill="#C8140A">15-min hold lapsed</text></g>
+        <text x="6" y="205" font-size="10" fill="#6B6B63">Green arrows are the only legal moves. Anything else is rejected with HTTP 409.</text>
+      </svg>
+      <div class="card" style="margin-top:6px"><h4>Rules enforced in code</h4><ul class="small"><li>No skipping or going backwards; terminal states are final.</li><li>A paid order can never be cancelled — only refunded.</li><li>Each transition is a guarded <code>UPDATE … WHERE status = from</code>, so two simultaneous taps apply once.</li><li>Staff can set Preparing / Ready; <b>Collected</b> only via the QR scan (or the order-code fallback).</li></ul></div>
+    </div>
+  </div>
+  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Payment flow &amp; lifecycle</span></footer>
+</section>
+
+<!-- ============ 14 DATA MODEL ============ -->
+<section class="page">
+  <header><span class="eyebrow">09 · Data model</span><h2>Sixteen tables, money in integer kobo</h2><span class="num">15 / 19</span></header>
+  <svg viewBox="0 0 1000 410" width="100%" role="img" aria-label="Entity relationship diagram">
+    <style>.t{fill:#fff;stroke:#cfc7b4}.th{font-weight:800;font-size:12.5px}.f{font-size:10.5px;fill:#444}.k{font-size:10.5px;fill:#017A39;font-weight:700}.l{stroke:#6B6B63;stroke-width:1.3;fill:none}</style>
+    <!-- Users column -->
+    <rect class="t" x="10" y="10" width="170" height="112" rx="8"/><rect x="10" y="10" width="170" height="24" rx="8" fill="#E6F5EC"/><text class="th" x="20" y="27">User</text>
+    <text class="k" x="20" y="50">phone (unique, E.164)</text><text class="f" x="20" y="65">name · role (customer / staff / admin)</text><text class="f" x="20" y="80">outletId (staff) · expoPushToken</text><text class="f" x="20" y="95">createdAt</text>
+    <rect class="t" x="10" y="140" width="170" height="68" rx="8"/><rect x="10" y="140" width="170" height="24" rx="8" fill="#E6F5EC"/><text class="th" x="20" y="157">RefreshToken</text><text class="f" x="20" y="180">tokenHash · familyId</text><text class="f" x="20" y="195">expiresAt · rotatedAt · revokedAt</text>
+    <rect class="t" x="10" y="226" width="170" height="60" rx="8"/><rect x="10" y="226" width="170" height="24" rx="8" fill="#E6F5EC"/><text class="th" x="20" y="243">OtpCode</text><text class="f" x="20" y="266">codeHash · expiresAt</text><text class="f" x="20" y="279">attempts · consumedAt</text>
+    <!-- Menu -->
+    <rect class="t" x="10" y="310" width="170" height="90" rx="8"/><rect x="10" y="310" width="170" height="24" rx="8" fill="#FFE9E5"/><text class="th" x="20" y="327">Category → MenuItem</text><text class="k" x="20" y="350">priceKobo (int)</text><text class="f" x="20" y="365">isCombo · active · imageUrl</text><text class="f" x="20" y="380">ComboComponent(combo, item, qty)</text>
+    <!-- Outlet -->
+    <rect class="t" x="260" y="10" width="190" height="104" rx="8"/><rect x="260" y="10" width="190" height="24" rx="8" fill="#FFE9E5"/><text class="th" x="270" y="27">Outlet</text><text class="f" x="270" y="50">name · address · city · lat/lng</text><text class="f" x="270" y="65">prepMinutes · slotMinutes</text><text class="k" x="270" y="80">slotCapacity · active</text><text class="f" x="270" y="97">OutletHours(day, openMin, closeMin)</text>
+    <rect class="t" x="260" y="140" width="190" height="46" rx="8"/><rect x="260" y="140" width="190" height="24" rx="8" fill="#FFE9E5"/><text class="th" x="270" y="157">OutletItemAvailability</text><text class="f" x="270" y="178">sold-out override per outlet</text>
+    <!-- Order -->
+    <rect class="t" x="330" y="215" width="250" height="175" rx="8" stroke="#017A39" stroke-width="2"/><rect x="330" y="215" width="250" height="24" rx="8" fill="#017A39"/><text class="th" x="340" y="232" fill="#fff">Order</text>
+    <text class="k" x="340" y="258">code (unique, 6 chars) · status</text><text class="f" x="340" y="273">userId · outletId · pickupAt</text><text class="f" x="340" y="288">subtotalKobo · totalKobo · note</text><text class="f" x="340" y="303">paidAt · collectedAt · collectedById</text><text class="f" x="340" y="318">expiresAt (payment hold)</text>
+    <text class="f" x="340" y="342" font-weight="700">OrderItem — name &amp; unit price snapshot</text><text class="f" x="340" y="358" font-weight="700">OrderEvent — every status change + actor</text><text class="f" x="340" y="374" fill="#6B6B63">history is never rewritten</text>
+    <!-- Payment -->
+    <rect class="t" x="660" y="215" width="190" height="120" rx="8"/><rect x="660" y="215" width="190" height="24" rx="8" fill="#FFE9E5"/><text class="th" x="670" y="232">Payment</text><text class="k" x="670" y="258">reference (unique)</text><text class="f" x="670" y="273">amountKobo · currency</text><text class="f" x="670" y="288">status INITIATED|SUCCESS|</text><text class="f" x="670" y="303">FAILED|REFUNDED</text><text class="f" x="670" y="318">channel · paystackId · paidAt</text>
+    <rect class="t" x="740" y="40" width="250" height="68" rx="8"/><rect x="740" y="40" width="250" height="24" rx="8" fill="#FFE9E5"/><text class="th" x="750" y="57">WebhookEvent</text><text class="k" x="750" y="80">eventKey (unique) — idempotency</text><text class="f" x="750" y="95">type · payload JSON · processedAt</text>
+    <!-- Complaint / Refund -->
+    <rect class="t" x="480" y="40" width="200" height="86" rx="8"/><rect x="480" y="40" width="200" height="24" rx="8" fill="#FFE9E5"/><text class="th" x="490" y="57">Complaint</text><text class="f" x="490" y="80">orderId · userId · reason</text><text class="f" x="490" y="95">description · photoUrl</text><text class="f" x="490" y="110">status OPEN|APPROVED|REJECTED</text>
+    <rect class="t" x="880" y="215" width="112" height="120" rx="8" transform="translate(-10 0)"/><rect x="870" y="215" width="112" height="24" rx="8" fill="#FFE9E5"/><text class="th" x="880" y="232">Refund</text><text class="f" x="880" y="256">paymentId</text><text class="f" x="880" y="271">complaintId?</text><text class="f" x="880" y="286">amountKobo</text><text class="f" x="880" y="301">status</text><text class="f" x="880" y="316">approvedById</text>
+    <!-- links (orthogonal, routed through free space) -->
+    <path class="l" d="M180 80 H235 V300 H330"/>                     <!-- User → Order -->
+    <path class="l" d="M180 360 H300 V365 H330" stroke-dasharray="3 3"/> <!-- MenuItem → OrderItem -->
+    <path class="l" d="M450 70 H465 V215"/>                          <!-- Outlet → Order -->
+    <path class="l" d="M355 114 V140" stroke-dasharray="3 3"/>      <!-- Outlet → availability -->
+    <path class="l" d="M560 126 V215"/>                              <!-- Order → Complaint -->
+    <path class="l" d="M580 300 H660"/>                              <!-- Order → Payment -->
+    <path class="l" d="M850 290 H870"/>                              <!-- Payment → Refund -->
+    <path class="l" d="M800 108 V215" stroke-dasharray="3 3"/>      <!-- WebhookEvent ⇢ Payment (by reference) -->
+    <path class="l" d="M95 122 V140"/><path class="l" d="M95 208 V226" stroke-dasharray="3 3"/>
+  </svg>
+  <div class="grid g3" style="margin-top:6px">
+    <div class="card"><h4>Integrity by design</h4><p class="small mute" style="margin:0">Order lines snapshot name and price; payments are append-only with a unique Paystack reference; every status change writes an <code>OrderEvent</code>.</p></div>
+    <div class="card"><h4>Idempotency</h4><p class="small mute" style="margin:0"><code>WebhookEvent.eventKey</code> is unique, so a re-delivered webhook is detected at the database, even across concurrent requests.</p></div>
+    <div class="card"><h4>Time zone</h4><p class="small mute" style="margin:0">All instants are UTC; opening hours and slots are computed in Africa/Lagos (UTC+1, no DST) in one module.</p></div>
+  </div>
+  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Data model (simplified; full schema in backend/prisma/schema.prisma)</span></footer>
+</section>
+
+<!-- ============ 15 SECURITY ============ -->
+<section class="page">
+  <header><span class="eyebrow">10 · Security &amp; reliability</span><h2>Designed for the ways money apps actually fail</h2><span class="num">16 / 19</span></header>
+  <table>
+    <thead><tr><th style="width:22%">Risk</th><th>Mitigation in the build</th><th style="width:22%">Evidence</th></tr></thead>
+    <tbody>
+      <tr><td>Forged “payment succeeded” call</td><td>Webhook signature (HMAC-SHA512 over the <i>raw</i> body, constant-time compare); client never decides payment; verify goes server → Paystack.</td><td>Tests: missing / wrong signature, re-serialised body</td></tr>
+      <tr><td>Wrong amount or currency</td><td>Amount, currency and reference must match our own Payment row; mismatch marks payment failed and leaves the order unpaid.</td><td>Tests: tampered amount, USD</td></tr>
+      <tr><td>Duplicate / concurrent webhooks</td><td>Unique event key + row lock on the payment; single transaction applies the transition once.</td><td>Test: 6 simultaneous deliveries → 1 event, 1 push</td></tr>
+      <tr><td>Client edits the price</td><td>Server re-reads prices; request price fields are ignored.</td><td>Test with <code>priceKobo: 1</code> in the body</td></tr>
+      <tr><td>Over-booked pickup slots</td><td>Advisory lock per outlet+slot; unpaid holds expire after 15 minutes.</td><td>Test: 5 concurrent bookings, capacity 2 → 2 succeed</td></tr>
+      <tr><td>OTP brute force / abuse</td><td>Hashed codes, 5-minute expiry, 5 attempts, 3 codes per 10 min per phone, IP rate limit; code consumed atomically.</td><td>Tests: lock-out, reuse, expiry, rate limit</td></tr>
+      <tr><td>Stolen refresh token</td><td>Rotation with family revocation on replay (60 s grace for lost responses). <b>Exception:</b> never revoked while the user has an active order.</td><td>Tests: replay, grace, active-order cases</td></tr>
+      <tr><td>Fake or reused QR</td><td>HMAC-signed payload; paid + READY + same outlet required; atomic single use.</td><td>Tests: forged, tampered, double-scan race</td></tr>
+      <tr><td>Staff privilege drift</td><td>Role and outlet re-read from the database on every staff request, so removing access is immediate.</td><td>Code path + role tests</td></tr>
+      <tr><td>Double refund / over-refund</td><td>Complaint claimed with a conditional update; refund capped at the remaining paid amount; failed provider call reopens the complaint.</td><td>Tests: double-approve, cap, provider failure</td></tr>
+      <tr><td>Malicious uploads</td><td>Image-only MIME filter, 5 MB cap, random filenames.</td><td>Tests: HTML upload, 6 MB upload</td></tr>
+    </tbody>
+  </table>
+  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Security &amp; reliability</span></footer>
+</section>
+
+<!-- ============ 16 QUALITY ============ -->
+<section class="page">
+  <header><span class="eyebrow">11 · Quality status</span><h2>What’s proven — and what isn’t yet</h2><span class="num">17 / 19</span></header>
+  <div class="grid" style="grid-template-columns:1fr 1.25fr;gap:14px">
+    <div>
+      <div class="grid g3" style="margin-bottom:10px">
+        <div class="card"><div class="stat">67</div><div class="small mute">backend tests, all passing, on a real PostgreSQL</div></div>
+        <div class="card"><div class="stat">21/21</div><div class="small mute">Expo project health checks</div></div>
+        <div class="card"><div class="stat">0</div><div class="small mute">uncaught script errors across the scripted app &amp; dashboard sessions</div></div>
+      </div>
+      <h3>Backend tests by area</h3>
+      <table>
+        <tbody>
+          <tr><td>Orders, slots, staff transitions, QR pickup</td><td><b>21</b></td></tr>
+          <tr><td>Sessions &amp; OTP login</td><td><b>16</b></td></tr>
+          <tr><td>Paystack webhook &amp; payment verify</td><td><b>14</b></td></tr>
+          <tr><td>Complaints, refunds, sales report</td><td><b>7</b></td></tr>
+          <tr><td>Order state machine</td><td><b>5</b></td></tr>
+          <tr><td>Slot calculation</td><td><b>4</b></td></tr>
+        </tbody>
+      </table>
+      <p class="small mute" style="margin-top:8px">Plus 3 app helper tests, a CI workflow that runs backend tests and typechecks / builds both clients on every push.</p>
+    </div>
+    <div>
+      <div class="card tint"><h4>Verified</h4><ul class="small">
+        <li>Backend logic and money paths via automated tests (fakes for Paystack, SMS, push).</li>
+        <li>Customer app (re-checked after the VeeJay rebrand): type-checks, bundles for Android, and the full flow (sign-in → menu → cart → checkout → orders → QR → report) was driven in a phone-sized browser against the live API.</li>
+        <li>Dashboard: builds; staff and admin flows driven in a browser against the live API.</li>
+        <li>Real renders caught a bug that typecheck and the bundler missed (menu category chips collapsed) — fixed. Building the 24-hour outlet also exposed a hours-editor gap (24:00 can’t be typed) — fixed with a “24 hours” switch.</li>
+      </ul></div>
+      <div class="card warn" style="margin-top:10px"><h4>Not yet verified — must happen before launch</h4><ul class="small">
+        <li><b>Real Paystack</b> test-mode payment, webhook delivery and refund end-to-end.</li>
+        <li><b>Real SMS</b> delivery on Nigerian networks (and sender-ID registration).</li>
+        <li><b>Native devices</b> — iOS and Android: layout, keyboard handling, camera / photo picker, deep-link return from checkout.</li>
+        <li><b>Push notifications</b> on a real device build.</li>
+        <li>Live camera QR scanning on the actual counter hardware.</li>
+        <li>Load behaviour at peak (expected to be comfortable; not measured).</li>
+        <li>Accessibility pass with a screen reader; low-end Android performance.</li>
+      </ul></div>
+    </div>
+  </div>
+  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Quality status</span></footer>
+</section>
+
+<!-- ============ 17 ROADMAP ============ -->
+<section class="page">
+  <header><span class="eyebrow">12 · Delivery plan</span><h2>From working build to first paying customers</h2><span class="num">18 / 19</span></header>
+  <div class="gantt">
+    <div class="gr"><div></div><div class="h">W1</div><div class="h">W2</div><div class="h">W3</div><div class="h">W4</div><div class="h">W5</div><div class="h">W6</div><div class="h">W7</div><div class="h">W8</div><div class="h">W9</div><div class="h">W10</div><div class="h">W11</div><div class="h">W12</div><div class="h">W13</div><div class="h">W14</div></div>
+    <div class="gr"><div class="lab">0 · Build <span class="pill o">done</span></div><div class="gb" style="grid-column:2 / span 14"><div class="bar" style="background:#6b6b63;color:#fff">Backend · customer app · staff &amp; admin dashboard · tests · CI (this repository)</div></div></div>
+    <div class="gr"><div class="lab">1 · Pilot readiness</div><div class="gb" style="grid-column:2 / span 3"><div class="bar" style="background:var(--green);color:#fff">Keys · SMS · builds · QA</div></div></div>
+    <div class="gr"><div class="lab">2 · Soft launch</div><div class="gb" style="grid-column:5 / span 3"><div class="bar" style="background:var(--brand-red);color:#fff">Invite-only · training</div></div></div>
+    <div class="gr"><div class="lab">3 · Public launch</div><div class="gb" style="grid-column:8 / span 4"><div class="bar" style="background:var(--green-d);color:#fff">Kogi Circle · store release</div></div></div>
+    <div class="gr"><div class="lab">4 · Growth</div><div class="gb" style="grid-column:12 / span 3"><div class="bar" style="background:var(--green);color:#fff">Iterate →</div></div></div>
+  </div>
+  <p class="tiny mute" style="margin:2px 0 8px">Indicative estimate assuming one full-stack developer plus part-time design and operations support. SMS sender-ID registration and App Store / Play review have external lead times and are the likeliest schedule risks.</p>
+  <div class="grid g4" style="gap:8px">
+    <div class="card"><h4>1 · Pilot readiness (≈3 wks)</h4><ul class="small"><li>Paystack live keys; webhook URL; test-mode drills</li><li>SMS provider + sender ID</li><li>EAS builds → TestFlight / Play internal testing</li><li>Object storage for images; Sentry; DB backups</li><li>Real menu, prices &amp; food photography; privacy policy / NDPA notice</li></ul></div>
+    <div class="card"><h4>2 · Soft launch (≈3 wks)</h4><ul class="small"><li>Kogi Circle only, invited customers</li><li>Counter device + scan test; day &amp; night staff training</li><li>Daily review of orders, refunds, support</li><li>Tune slot length / capacity / prep time</li></ul></div>
+    <div class="card"><h4>3 · Launch (≈4 wks)</h4><ul class="small"><li>Store listings, screenshots, review buffer</li><li>Launch offer + in-store QR posters</li><li>Share on Instagram / Facebook</li><li>Support playbook and on-call rota</li></ul></div>
+    <div class="card"><h4>4 · Growth (after)</h4><ul class="small"><li>Promo codes, loyalty / reorder shortcuts</li><li>Saved payment methods (Paystack tokens)</li><li>Delivery option; more branches; orders &gt; 3 days ahead</li><li>Analytics, A/B tests, Pidgin / Yoruba / Hausa UI</li></ul></div>
+  </div>
+  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Delivery plan</span></footer>
+</section>
+
+<!-- ============ 18 RISKS / DECISIONS ============ -->
+<section class="page">
+  <header><span class="eyebrow">13 · Risks &amp; decisions</span><h2>What to decide next</h2><span class="num">19 / 19</span></header>
+  <div class="grid g3" style="gap:12px">
+    <div>
+      <h3>Top risks</h3>
+      <table><tbody>
+        <tr><td><b>SMS deliverability</b><br><span class="mute small">OTP is the front door. Sender IDs need registration; carriers filter.</span></td></tr>
+        <tr><td><b>Store review delays</b><br><span class="mute small">Payments + login can trigger extra questions. Keep a 1-week buffer.</span></td></tr>
+        <tr><td><b>Staff adoption at peak</b><br><span class="mute small">Needs a counter device, training, and the code-entry fallback.</span></td></tr>
+        <tr><td><b>Slot tuning</b><br><span class="mute small">Wrong capacity either starves sales or recreates the queue.</span></td></tr>
+        <tr><td><b>24-hour operation</b><br><span class="mute small">Night staffing and security; decide whether online orders run all night.</span></td></tr>
+        <tr><td><b>Image storage</b><br><span class="mute small">Photos are on local disk today; lost on redeploy until moved to object storage.</span></td></tr>
+      </tbody></table>
+    </div>
+    <div>
+      <h3>Decisions needed</h3>
+      <div class="card"><ol class="small" style="margin:0;padding-left:18px">
+        <li>Confirm logo files and brand colours (sampled from the logo you shared).</li>
+        <li>Prep times and slot capacity per hour of day (day vs night).</li>
+        <li>Do online orders run 24 hours, or a shorter window at first?</li>
+        <li>Real menu, photography and prices (current ones are samples).</li>
+        <li>Refund policy: who may approve, partial refund rules, time limit.</li>
+        <li>Pickup-only at launch, or delivery in phase 4?</li><li>Customer support line: +234 906 685 9066 / +234 906 993 9673?</li>
+        <li>Paystack account owner and settlement bank.</li>
+        <li>Hosting region and provider (managed Postgres).</li>
+      </ol></div>
+    </div>
+    <div>
+      <h3>Go-live checklist</h3>
+      <div class="card"><ul class="small" style="list-style:none;padding:0;margin:0">
+        <li>☐ Production secrets set (server refuses dev defaults)</li>
+        <li>☐ <code>PAYSTACK_SECRET_KEY</code> + webhook URL configured</li>
+        <li>☐ SMS provider key + sender ID</li>
+        <li>☐ Object storage for uploads</li>
+        <li>☐ CORS restricted to the dashboard origin</li>
+        <li>☐ Dashboard on HTTPS; API behind TLS</li>
+        <li>☐ Bundle IDs, icons, splash, store listing</li>
+        <li>☐ EAS project ID for push notifications</li>
+        <li>☐ Backups + monitoring + alerting</li>
+        <li>☐ Privacy policy / NDPA notice</li>
+        <li>☐ One real payment + one real refund, end to end</li>
+      </ul></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:10px"><h4>Repository layout</h4><div class="small" style="display:flex;gap:26px;flex-wrap:wrap"><span><code>veejay-foods/backend</code> API, Prisma schema, 67 tests</span><span><code>veejay-foods/app</code> Expo customer app</span><span><code>veejay-foods/admin</code> staff &amp; admin dashboard</span><span><code>veejay-foods/docs</code> architecture + this document</span></div></div>
+  <footer class="pf"><span>VeeJay Foods — Product design &amp; delivery plan</span><span>Appendix</span></footer>
+</section>
+
+</body>
+</html>
