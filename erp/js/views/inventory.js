@@ -9,6 +9,11 @@ import { renderTable, actionButtons, sectionHeader, openModal, confirmDelete } f
 // Resource Management.
 const WITHDRAWAL_CATEGORIES = ['Tools', 'Safety Gear'];
 
+// Heavy Equipment and Vehicles get their own dedicated tabs (Fleet Roster,
+// Project Items) with fleet/vehicle-specific fields — keep them out of this
+// generic catalog so there's one place to add/find each kind of item.
+const EXCLUDED_CATEGORIES = ['Heavy Equipment', 'Vehicles'];
+
 function projectOptions() {
   return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
 }
@@ -42,8 +47,6 @@ function fields() {
   return [
     { name: 'name', label: 'Item Name', required: true },
     { name: 'category', label: 'Category', type: 'select', required: true, options: [
-      { value: 'Heavy Equipment', label: 'Heavy Equipment' },
-      { value: 'Vehicles', label: 'Vehicles' },
       { value: 'Tools', label: 'Tools' },
       { value: 'Consumables', label: 'Consumables (managed under Resource Management)' },
       { value: 'Safety Gear', label: 'Safety Gear' },
@@ -66,7 +69,7 @@ export function renderInventory(container) {
   container.innerHTML = '';
 
   const addBtn = el('button', { class: 'btn btn-primary', onClick: () => openForm() }, '+ Add Item');
-  container.appendChild(sectionHeader('Inventory & Equipment', 'Machinery, tools, and consumables stock', addBtn));
+  container.appendChild(sectionHeader('Inventory & Equipment', 'Tools, consumables, and dozer parts stock — heavy equipment and vehicles live under Fleet Roster and Project Items', addBtn));
 
   const tableContainer = el('div');
   container.appendChild(tableContainer);
@@ -82,7 +85,7 @@ export function renderInventory(container) {
   container.appendChild(withdrawalContainer);
 
   function refresh() {
-    const rows = store.get('inventory');
+    const rows = store.get('inventory').filter((i) => !EXCLUDED_CATEGORIES.includes(i.category));
     renderTable(tableContainer, {
       columns: [
         { key: 'name', label: 'Item' },

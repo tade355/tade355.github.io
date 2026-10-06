@@ -7,7 +7,6 @@ import { renderOperationsGallery } from './operationsGallery.js';
 import { getCurrentTier } from '../session.js';
 import { formatDate } from '../utils.js';
 import { renderWeeklyReport } from './weeklyReport.js';
-import { renderProfitability } from './profitability.js';
 import { renderRevenueReconciliation } from './revenueReconciliationView.js';
 import { OPERATION_TYPES } from '../constants.js';
 
@@ -57,9 +56,6 @@ export function renderProjects(container) {
   const rateHistoryTabBtn = canManageProjects
     ? el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('rateHistory') }, 'Rate History')
     : null;
-  const profitabilityTabBtn = canManageProjects
-    ? el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('profitability') }, 'Profitability')
-    : null;
   const reconciliationTabBtn = canManageProjects
     ? el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('reconciliation') }, 'Revenue Reconciliation')
     : null;
@@ -68,7 +64,6 @@ export function renderProjects(container) {
   tabBar.appendChild(galleryTabBtn);
   tabBar.appendChild(weeklyReportTabBtn);
   if (rateHistoryTabBtn) tabBar.appendChild(rateHistoryTabBtn);
-  if (profitabilityTabBtn) tabBar.appendChild(profitabilityTabBtn);
   if (reconciliationTabBtn) tabBar.appendChild(reconciliationTabBtn);
   container.appendChild(tabBar);
 
@@ -82,14 +77,12 @@ export function renderProjects(container) {
     galleryTabBtn.classList.toggle('active', tab === 'gallery');
     weeklyReportTabBtn.classList.toggle('active', tab === 'weeklyReport');
     if (rateHistoryTabBtn) rateHistoryTabBtn.classList.toggle('active', tab === 'rateHistory');
-    if (profitabilityTabBtn) profitabilityTabBtn.classList.toggle('active', tab === 'profitability');
     if (reconciliationTabBtn) reconciliationTabBtn.classList.toggle('active', tab === 'reconciliation');
     if (tab === 'projects') renderProjectsTab();
     else if (tab === 'map') renderMapTab();
     else if (tab === 'gallery') renderGalleryTab();
     else if (tab === 'weeklyReport') renderWeeklyReportTab();
     else if (tab === 'rateHistory') renderRateHistoryTab();
-    else if (tab === 'profitability') renderProfitabilityTab();
     else renderReconciliationTab();
   }
 
@@ -109,12 +102,6 @@ export function renderProjects(container) {
     actionSlot.innerHTML = '';
     body.innerHTML = '';
     renderWeeklyReport(body);
-  }
-
-  function renderProfitabilityTab() {
-    actionSlot.innerHTML = '';
-    body.innerHTML = '';
-    renderProfitability(body);
   }
 
   function renderReconciliationTab() {

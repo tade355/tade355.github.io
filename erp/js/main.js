@@ -61,12 +61,20 @@ function renderUserBadge() {
   userBadge.innerHTML = '';
   const user = getCurrentUser();
   if (!user) return;
+
+  // Routes flagged hideFromNav skip the main sidebar list (low daily-use,
+  // admin-only tools) and surface here instead, next to account actions.
+  const footerLinks = ROUTES
+    .filter((route) => route.hideFromNav && canAccess(route.tiers))
+    .map((route) => el('a', { href: `#/${route.path}`, class: 'user-badge-switch' }, route.label));
+
   userBadge.appendChild(el('div', { class: 'user-badge' }, [
     el('div', {}, [
       el('span', { class: 'user-badge-name' }, user.name),
       el('span', { class: 'user-badge-tier' }, getCurrentTier()),
     ]),
     el('div', { class: 'user-badge-actions' }, [
+      ...footerLinks,
       el('button', {
         type: 'button',
         class: 'user-badge-switch',
@@ -91,6 +99,7 @@ function initApp() {
 
   const navLinks = {};
   ROUTES.forEach((route) => {
+    if (route.hideFromNav) return;
     if (!canAccess(route.tiers)) return;
     const link = el('a', { href: `#/${route.path}`, class: 'nav-link' }, [
       el('span', { class: 'nav-icon', 'aria-hidden': 'true', html: route.icon }),

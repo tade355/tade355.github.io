@@ -36,8 +36,9 @@ export const ROUTES = [
   { path: 'leave', label: 'Leave & Attendance', icon: ICONS.clock, load: () => import('./views/leaveAttendance.js').then((m) => m.renderLeaveAttendance), tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   { path: 'mySalary', label: 'My Salary', icon: ICONS.banknote, load: () => import('./views/mySalary.js').then((m) => m.renderMySalary), tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   { path: 'training', label: 'Training', icon: ICONS.checkCircle, load: () => import('./views/training.js').then((m) => m.renderTraining), tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
-  // System
-  { path: 'backup', label: 'Backup & Data', icon: ICONS.database, load: () => import('./views/backup.js').then((m) => m.renderBackup), tiers: ['Admin'] },
+  // System — kept out of the main sidebar nav (low daily-use, Admin-only);
+  // it's reached from the sidebar footer instead. See main.js renderUserBadge().
+  { path: 'backup', label: 'Backup & Data', icon: ICONS.database, load: () => import('./views/backup.js').then((m) => m.renderBackup), tiers: ['Admin'], hideFromNav: true },
 ];
 
 export function initRouter(viewContainer, onRouteChange) {

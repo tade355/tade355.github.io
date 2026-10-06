@@ -131,14 +131,12 @@ export function renderHR(container) {
   const tabBar = el('div', { class: 'tab-bar' });
   const employeesTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('employees') }, 'Employees');
   const memosTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('memos') }, 'Memos & Notices');
-  const queryCommendTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('queryCommend') }, 'Query / Commendation');
   const assetsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('assets') }, 'Assets Tracker');
   const payrollTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('payroll') }, 'Payroll');
   const operatorAllowanceTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('operatorAllowance') }, 'Operator Allowance');
   const trainingProgramsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('trainingPrograms') }, 'Training Programs');
   tabBar.appendChild(employeesTabBtn);
   tabBar.appendChild(memosTabBtn);
-  tabBar.appendChild(queryCommendTabBtn);
   tabBar.appendChild(assetsTabBtn);
   tabBar.appendChild(payrollTabBtn);
   tabBar.appendChild(operatorAllowanceTabBtn);
@@ -155,14 +153,12 @@ export function renderHR(container) {
     tab = next;
     employeesTabBtn.classList.toggle('active', tab === 'employees');
     memosTabBtn.classList.toggle('active', tab === 'memos');
-    queryCommendTabBtn.classList.toggle('active', tab === 'queryCommend');
     assetsTabBtn.classList.toggle('active', tab === 'assets');
     payrollTabBtn.classList.toggle('active', tab === 'payroll');
     operatorAllowanceTabBtn.classList.toggle('active', tab === 'operatorAllowance');
     trainingProgramsTabBtn.classList.toggle('active', tab === 'trainingPrograms');
     if (tab === 'employees') renderEmployeesTab();
     else if (tab === 'memos') renderMemosTab();
-    else if (tab === 'queryCommend') renderQueryCommendTab();
     else if (tab === 'assets') renderAssetsTab();
     else if (tab === 'payroll') renderPayrollTab();
     else if (tab === 'operatorAllowance') renderOperatorAllowanceTab();
@@ -250,69 +246,6 @@ export function renderHR(container) {
     refresh();
   }
 
-  function renderQueryCommendTab() {
-    actionSlot.innerHTML = '';
-    actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openQueryCommendForm() }, '+ Issue Query / Commendation'));
-
-    body.innerHTML = '';
-    body.appendChild(el('p', { class: 'section-subtitle' }, 'A shortcut for issuing a Query or Commendation letter to a staff member — stored alongside Memos & Notices, filtered to just these two types here.'));
-    const tableContainer = el('div');
-    body.appendChild(tableContainer);
-
-    function refresh() {
-      const rows = store.get('staffMemos')
-        .filter((m) => m.type === 'Query Letter' || m.type === 'Commendation Letter')
-        .slice().sort((a, b) => (a.date < b.date ? 1 : -1));
-      renderTable(tableContainer, {
-        columns: [
-          { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
-          { key: 'type', label: 'Type', render: (r) => statusPill(r.type === 'Query Letter' ? 'Query' : 'Commendation') },
-          { key: 'employeeId', label: 'Staff Member', render: (r) => (r.employeeId ? employeeName(r.employeeId) : '—') },
-          { key: 'subject', label: 'Subject' },
-          { key: 'issuedBy', label: 'Issued By', render: (r) => (r.issuedBy ? employeeName(r.issuedBy) : '—') },
-          {
-            key: 'actions',
-            label: '',
-            render: (r) => actionButtons({
-              onPrint: () => printStaffMemo(r, {
-                employeeName: r.employeeId ? employeeName(r.employeeId) : '',
-                issuedByName: r.issuedBy ? employeeName(r.issuedBy) : '',
-              }),
-              onEdit: () => openQueryCommendForm(r),
-              onDelete: async () => {
-                if (!confirmDelete(r.subject)) return;
-                try {
-                  await store.remove('staffMemos', r.id);
-                  refresh();
-                } catch (err) {
-                  window.alert(err.message || 'Could not delete this record.');
-                }
-              },
-            }),
-          },
-        ],
-        rows,
-        emptyText: 'No queries or commendations issued yet.',
-      });
-    }
-
-    function openQueryCommendForm(record) {
-      openModal({
-        title: record ? 'Edit Query / Commendation' : 'Issue Query / Commendation',
-        fields: queryCommendFields(),
-        initial: record || { date: todayISOString(), type: 'Query Letter', issuedBy: getCurrentUserId() || '' },
-        submitLabel: record ? 'Save Changes' : 'Issue',
-        onSubmit: async (data) => {
-          if (record) await store.update('staffMemos', record.id, data);
-          else await store.add('staffMemos', data);
-          refresh();
-        },
-      });
-    }
-
-    refresh();
-  }
-
   function renderAssetsTab() {
     actionSlot.innerHTML = '';
     actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openAssetForm() }, '+ Add Asset'));
@@ -379,6 +312,7 @@ export function renderHR(container) {
   function renderMemosTab() {
     actionSlot.innerHTML = '';
     actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openMemoForm() }, '+ New Memo / Notice'));
+    actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openQueryCommendForm() }, '+ Issue Query / Commendation'));
 
     body.innerHTML = '';
     const tableContainer = el('div');
@@ -425,6 +359,20 @@ export function renderHR(container) {
         fields: memoFields(),
         initial: record || { date: todayISOString(), type: 'Memo', issuedBy: getCurrentUserId() || '' },
         submitLabel: record ? 'Save Changes' : 'Save',
+        onSubmit: async (data) => {
+          if (record) await store.update('staffMemos', record.id, data);
+          else await store.add('staffMemos', data);
+          refresh();
+        },
+      });
+    }
+
+    function openQueryCommendForm(record) {
+      openModal({
+        title: record ? 'Edit Query / Commendation' : 'Issue Query / Commendation',
+        fields: queryCommendFields(),
+        initial: record || { date: todayISOString(), type: 'Query Letter', issuedBy: getCurrentUserId() || '' },
+        submitLabel: record ? 'Save Changes' : 'Issue',
         onSubmit: async (data) => {
           if (record) await store.update('staffMemos', record.id, data);
           else await store.add('staffMemos', data);

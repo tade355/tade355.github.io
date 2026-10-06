@@ -40,7 +40,7 @@ Open the ERP in a browser and you'll see a **"Sign in to Emagrims ERP"** screen 
 
 ### Logging out / changing your password
 
-At the bottom of the sidebar, under your name and access tier, there are two links:
+At the bottom of the sidebar, under your name and access tier, there are a couple of links (Admin also sees **Backup & Data** here — see [section 18](#18-backup--data)):
 - **Change Password** — opens a form asking for a **New Password** (minimum 6 characters). Use this any time, including right after your Admin gives you a temporary password.
 - **Log Out** — ends your session and returns you to the login screen.
 
@@ -57,7 +57,7 @@ Three buttons in the sidebar footer — **🖥 Auto**, **☀ Light**, **🌙 Dar
 | **Sidebar navigation** | Left | The full list of modules you have access to (see [Access Tiers](#3-access-tiers--who-can-see-what) — items you can't access simply don't appear). On a phone/narrow screen, tap the ☰ menu icon in the top bar to open/close it. |
 | **↻ Refresh Data** | Sidebar footer | Every screen loads from a shared, central database — if a colleague changed something while you were looking at a page, this button re-fetches everything and reloads the current view. The app also refreshes automatically in the background whenever you switch back to the tab, and every 90 seconds while it's open, but those background refreshes never interrupt what you're doing (they won't close a form you have open) — only clicking Refresh Data or navigating to a new page shows you the freshest data on screen. |
 | **↗ Company website (LinkedIn)** | Sidebar footer | Opens Emagrims Ltd's LinkedIn page in a new tab. |
-| **User badge** | Sidebar footer | Shows your name and access tier, plus Change Password / Log Out. |
+| **User badge** | Sidebar footer | Shows your name and access tier, plus Change Password / Log Out (and, for Admin, a Backup & Data link — it's not in the main nav list since it's a low-use admin tool). |
 
 ---
 
@@ -68,8 +68,8 @@ Every staff account is assigned one of four **ERP Access Levels** in HR & Employ
 | Tier | Who this is for | What they get |
 |---|---|---|
 | **Admin** | Management / ownership | Everything — every module, every tab, every action, including HR, Payroll, and the Admin-only Internal Ledger inside Dozer Economics. |
-| **Accounts** | Office / accounts staff | Dashboard, Documents and Notices, Projects (including Profitability and Rate History), Resource Management, Sales & Invoicing, Purchasing & Suppliers, Accounting & Expenses, Fund Requests & Approvals, My Salary, Leave & Attendance. **Not**: Daily Operations, Fleet Management, HR & Employees. |
-| **Supervisor** | Site supervisors | Documents and Notices, Projects (Map View, Photo Gallery, and Weekly Report only — no Projects list, Rate History, or Profitability tab), Daily Operations, Fleet Management, Resource Management, Fund Requests & Approvals (including the Approvals inbox), My Salary, Leave & Attendance. A Supervisor's view of Fund Requests, Leave Requests, and Fueling Vouchers is further narrowed to their own **Assigned Project** (set on their HR record) — see the note under each relevant module. **Not**: Dashboard, Sales, Purchasing, Accounting, HR. |
+| **Accounts** | Office / accounts staff | Dashboard, Documents and Notices, Projects (including Rate History), Resource Management, Sales & Invoicing, Purchasing & Suppliers, Accounting & Expenses (including Profitability), Fund Requests & Approvals, My Salary, Leave & Attendance. **Not**: Daily Operations, Fleet Management, HR & Employees. |
+| **Supervisor** | Site supervisors | Documents and Notices, Projects (Map View, Photo Gallery, and Weekly Report only — no Projects list or Rate History), Daily Operations, Fleet Management, Resource Management, Fund Requests & Approvals (including the Approvals inbox), My Salary, Leave & Attendance. A Supervisor's view of Fund Requests, Leave Requests, and Fueling Vouchers is further narrowed to their own **Assigned Project** (set on their HR record) — see the note under each relevant module. **Not**: Dashboard, Sales, Purchasing, Accounting, HR. |
 | **Staff** | Everyone else (general/field staff) | Documents and Notices, Fund Requests & Approvals (their own requests only — no Approvals tab), My Salary (their own pay history only), Leave & Attendance (their own leave/attendance only). Nothing else. |
 
 > **Important caveat:** this tier system controls what the app's screens *show and offer* — it is not a database-level security wall. Anyone determined enough with technical access to the underlying system could bypass it. Treat it as "the right doors are hidden from the wrong people," not "the wrong people are locked out even if they try to force their way in."
@@ -141,8 +141,8 @@ No print button on this screen.
 
 **Who sees it:** Admin, Accounts, Supervisor.
 **Tab visibility differs by tier:**
-- **Admin / Accounts** see all six tabs: Projects, Map View, Photo Gallery, Weekly Report, Rate History, Profitability.
-- **Supervisor** sees only **Map View, Photo Gallery, and Weekly Report** — no ability to add/edit projects, and no Rate History or Profitability tabs.
+- **Admin / Accounts** see five tabs: Projects, Map View, Photo Gallery, Weekly Report, Rate History. (Profitability lives only under [Accounting & Expenses](#13-accounting--expenses) now — it isn't duplicated here.)
+- **Supervisor** sees only **Map View, Photo Gallery, and Weekly Report** — no ability to add/edit projects, and no Rate History tab.
 
 ### Projects tab (Admin/Accounts only)
 
@@ -230,10 +230,6 @@ If a dozer you expect to see is missing: it has no operations report logged agai
 A dated log of every contract-rate change, per project **and, usually, per Operation Type** — most contracts price each operation type separately (a hectare's contract value isn't earned until every operation type contracted for it, e.g. Felling, then Stacking, then Bonding, has actually been done). **"+ Log Rate Change"** fields: Project (required), Operation Type (optional — leave as "General (all operations)" for a fallback rate that applies to any operation type without its own specific entry), Effective From (date, required), Rate (₦), Rate Unit, Notes. Filterable by Project and Operation Type.
 
 Editing a project's own **Default Rate** (Projects tab) auto-logs a general (no-Operation-Type) entry here, same as before — add an Operation Type-specific entry manually here when a contract prices that operation differently, or when a rate is reviewed upward later and you need the old rate preserved for work already done under it. Provisional revenue (Profitability, Revenue Reconciliation) always looks up the operation-type-specific rate in effect on the report's date first, falling back to the project's general rate if none exists.
-
-### Profitability tab (Admin/Accounts only)
-
-The same screen also appears inside [Accounting & Expenses](#13-accounting--expenses) — see that section for the full breakdown of how revenue, cost, and margin are calculated. It's a read-only report; there's nothing to add or edit here.
 
 ### Revenue Reconciliation tab (Admin/Accounts only)
 
@@ -360,7 +356,7 @@ Stat cards: Fleet Size, Company Owned, Partnership, Rented, Down / Under Mainten
 
 > Saving a new asset, or changing its rates, automatically logs an entry to the **Rate History** tab (an opening entry on creation; a new entry on edit only if a rate actually changed) — so historical costing always uses the rate that was really in effect at the time, not today's rate applied retroactively.
 
-Deleting a fleet asset deletes the underlying inventory record — the Fleet Roster is really just Inventory & Equipment filtered down to Heavy Equipment and Vehicles. No print button on this tab.
+Deleting a fleet asset deletes the underlying inventory record — Fleet Roster shares its data with Inventory & Equipment and Project Items (same table, different categories), it's just the dedicated tab for the Heavy Equipment category, with fleet-specific fields the other two don't need. No print button on this tab.
 
 ### Maintenance Log tab
 
@@ -372,9 +368,9 @@ The record's total cost is always Parts Cost + Labor Cost added automatically �
 
 ### Inventory & Equipment tab
 
-The master stock list of everything the company owns or holds: machinery, vehicles, tools, consumables, and safety gear. (Fleet Roster above is this same list, filtered to just Heavy Equipment + Vehicles.)
+The general stock catalog for everything that isn't machinery or a vehicle: tools, consumables, and safety gear. It shares its underlying data with Fleet Roster (which holds Heavy Equipment) and Resource Management's Project Items (which holds Vehicles) — each of those has its own tab with fleet/vehicle-specific fields, so Heavy Equipment and Vehicles aren't offered as categories here, to avoid the same item being addable in two places.
 
-**"+ Add Item" fields:** Item Name, Category (Heavy Equipment, Vehicles, Tools, Consumables, Safety Gear, or Dozer Parts — the last two are really managed from [Resource Management](#10-resource-management), see there), SKU, Quantity, Unit, Unit Cost (₦), Reorder Level, Location, Current Project.
+**"+ Add Item" fields:** Item Name, Category (Tools, Consumables, Safety Gear, or Dozer Parts — the last two are really managed from [Resource Management](#10-resource-management), see there), SKU, Quantity, Unit, Unit Cost (₦), Reorder Level, Location, Current Project.
 
 Rows where **Quantity ≤ Reorder Level** are flagged with an amber row highlight — your visual cue to reorder.
 
@@ -700,7 +696,7 @@ For each row you get **Approve** and **Reject** buttons (Reject asks you to conf
 
 **Who sees it:** Admin only.
 
-Six tabs: **Employees, Memos & Notices, Query / Commendation, Assets Tracker, Payroll, Operator Allowance.**
+Tabs: **Employees, Memos & Notices, Assets Tracker, Payroll, Operator Allowance, Training Programs.**
 
 ### Employees tab
 
@@ -729,15 +725,9 @@ General formal written correspondence — memos, notices, warning letters, query
 
 **"+ New Memo / Notice" fields:** Date, Document Type, Addressed To (a specific employee, or leave blank for "All Staff"), Subject, Body, Issued By.
 
+A second button, **"+ Issue Query / Commendation,"** is a shortcut for the two most common document types — it opens a narrower form (Staff Member required, Subject, Reason / Details, Issued By) with Type limited to Query or Commendation. It saves into the exact same list as a regular memo; it's a quicker form, not a separate system, and the resulting record shows up in this same table like any other memo.
+
 **Print** produces a letterhead titled with the document type (e.g. "QUERY LETTER"), the subject and body, and signature lines for Issued By and Received By.
-
-### Query / Commendation tab
-
-**Purpose:** a quick shortcut for issuing a Query (disciplinary) or Commendation (praise) letter to one named staff member, without filling out the full Memos form.
-
-**"+ Issue Query / Commendation" fields:** Date, Type (Query or Commendation), Staff Member (required — unlike the general Memos form, this one isn't optional here), Subject, Reason / Details, Issued By.
-
-> Query and Commendation letters are **not a separate system** — they're saved into the exact same list as Memos & Notices, just filtered to show only those two types on this tab. Editing one from the Memos tab and changing its Document Type will move it in or out of this view accordingly. Printing here produces the identical letterhead document as the Memos tab.
 
 ### Assets Tracker tab
 
