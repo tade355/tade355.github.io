@@ -21,9 +21,10 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the data model and design
 ```bash
 # 1. Backend
 cd backend && cp .env.example .env        # set DATABASE_URL + secrets
-npm install && npx prisma db push && npm run seed   # seeds 3 SAMPLE Abuja pickup points, a SAMPLE menu with a combo, and an admin
+npm install && npx prisma migrate deploy && npm run seed   # seeds 3 SAMPLE Abuja pickup points, a SAMPLE menu with a combo, and an admin
 ADMIN_PHONE=+2348012345678 npm run seed   # optional: pick your admin number
-npm run dev                               # http://localhost:4000 ; OTP codes print to the console (SMS_PROVIDER=console)
+npm run dev                               # http://localhost:4000 (reads .env); OTP codes print to the console (SMS_PROVIDER=console)
+# production: npm ci && npm run build && npm run migrate && npm start
 
 # 2. Staff/admin dashboard
 cd ../admin && cp .env.example .env && npm install && npm run dev
