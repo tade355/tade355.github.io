@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Veejay Foods — Go-Live Guide</title>
+<style>
+  :root{--green:#017A39;--green-d:#00582A;--green-l:#E6F5EC;--brand-green:#019947;--red:#F81A08;--red-d:#C8140A;--red-l:#FFE9E5;
+    --cream:#FFFAF5;--ink:#1B1B18;--mute:#6B6B63;--line:#EDE4DC;--amber:#FFF4D6;--amber-d:#7a5a00;
+    --sans:Inter,"Segoe UI",system-ui,-apple-system,"Liberation Sans",Arial,sans-serif}
+  *{box-sizing:border-box}
+  @page{size:A4;margin:16mm 15mm 18mm;
+    @bottom-left{content:"Veejay Foods — Go-Live Guide";font:8.5px Inter,"Liberation Sans",Arial,sans-serif;color:#6B6B63;vertical-align:top;padding-top:4mm}
+    @bottom-right{content:"Page " counter(page) " of " counter(pages);font:8.5px Inter,"Liberation Sans",Arial,sans-serif;color:#6B6B63;vertical-align:top;padding-top:4mm}}
+  @page:first{margin:0;@bottom-left{content:none}@bottom-right{content:none}}
+  html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{margin:0;font:11px/1.5 var(--sans);color:var(--ink);background:#fff}
+  .sheet{max-width:180mm;margin:0 auto}
+  h1,h2,h3,h4{line-height:1.2;margin:0}
+  h2{font-size:19px;color:var(--green-d);margin:0 0 7px;padding-bottom:5px;border-bottom:2px solid var(--green)}
+  h3{font-size:13px;margin:13px 0 5px;color:var(--ink)}
+  h4{font-size:11px;margin:8px 0 3px}
+  p{margin:0 0 6px}
+  ul,ol{margin:3px 0 7px;padding-left:18px}li{margin:2px 0}
+  .mute{color:var(--mute)}.small{font-size:10px}.tiny{font-size:9px}
+  section{break-before:page}
+  section.flow{break-before:auto;margin-top:16px}
+  .no-break,.box,.step,.done{break-inside:avoid}
+  h2,h3,h4,.ph,p.meta{break-after:avoid}
+  thead{display:table-header-group}
+  table.dense th,table.dense td{padding:3px 6px;font-size:9.5px}
+  code{font:9.5px/1.3 "DejaVu Sans Mono","Liberation Mono",monospace;background:#f3ecdf;padding:1px 4px;border-radius:3px;word-break:break-word}
+  pre{font:9.5px/1.45 "DejaVu Sans Mono","Liberation Mono",monospace;background:#1f2a24;color:#e7f6ec;padding:8px 10px;border-radius:7px;margin:5px 0 8px;white-space:pre-wrap;word-break:break-word;break-inside:avoid}
+  table{width:100%;border-collapse:collapse;font-size:10px;margin:4px 0 10px}
+  th{background:var(--green-l);color:var(--green-d);text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.06em}
+  th,td{padding:5px 7px;border:1px solid var(--line);vertical-align:top}
+  tr{break-inside:avoid}
+  .box{border:1px solid var(--line);border-radius:9px;padding:8px 11px;margin:7px 0;background:#fff}
+  .box.ok{background:var(--green-l);border-color:#cfe6d9}.box.warn{background:var(--amber);border-color:#f0dc9b}.box.bad{background:var(--red-l);border-color:#f6c9c2}
+  .box h4:first-child{margin-top:0}
+  .tag{display:inline-block;border-radius:99px;padding:0 7px;font-size:8.5px;font-weight:800;letter-spacing:.03em;white-space:nowrap;vertical-align:1px;color:#fff}
+  .t-you{background:#2b5fb4}.t-client{background:var(--red-d)}.t-ai{background:var(--green)}.t-both{background:#6b4aa8}
+  .step{display:grid;grid-template-columns:22px 1fr;gap:7px;margin:5px 0;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#fff}
+  .step .n{width:20px;height:20px;border-radius:50%;background:var(--green);color:#fff;font-weight:800;font-size:10px;display:grid;place-items:center;margin-top:1px}
+  .step b.t{display:block;font-size:11px}
+  .done{margin:6px 0 4px;padding:5px 9px;border-left:4px solid var(--brand-green);background:var(--green-l);font-size:10px}
+  .ph{display:flex;align-items:center;gap:10px;margin:0 0 8px}
+  .ph .pn{background:var(--green);color:#fff;border-radius:10px;padding:5px 11px;font-weight:800;font-size:12px;white-space:nowrap}
+  .ph .meta{font-size:10px;color:var(--mute)}
+  .cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .cols2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .cols3 .box,.cols2 .box{margin:0}
+  .chk{list-style:none;padding:0;margin:3px 0 7px}.chk li{padding-left:16px;position:relative;margin:3px 0}.chk li::before{content:"☐";position:absolute;left:0;color:var(--green)}
+  .cover{break-before:auto;height:296.5mm;display:flex;flex-direction:column;justify-content:center;background:linear-gradient(160deg,#00582A,#017A39 55%,#019947);color:#fff;margin:0 -15mm;padding:0 25mm;break-after:page}
+  .cover img{width:42mm;height:42mm;border-radius:50%;box-shadow:0 8px 24px #0004;margin-bottom:10mm}
+  .cover .eb{font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.85;font-weight:800}
+  .cover h1{font-size:40px;letter-spacing:-.02em;margin:6px 0 8px}
+  .cover h1 span{background:var(--red);padding:0 10px;border-radius:9px;margin-left:8px}
+  .cover p.lead{font-size:15px;max-width:140mm;opacity:.95}
+  .cover .facts{margin-top:14mm;font-size:11px;line-height:1.7;opacity:.95}
+  .gantt{width:100%;border-collapse:collapse;font-size:9px}
+  .gantt td,.gantt th{border:1px solid var(--line);padding:3px 2px;text-align:center}
+  .gantt td.l{text-align:left;padding-left:6px;font-weight:700;font-size:9.5px;width:34%}
+  .gantt .b1{background:var(--green)}.gantt .b2{background:var(--red)}.gantt .b3{background:#2b5fb4}.gantt .b4{background:#8a8a80}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+<!-- ================= COVER ================= -->
+<section class="cover">
+  <img src="logo.png" alt="Veejay Foods logo">
+  <div class="eb">Go-live guide · Version 1.0 · 6 October 2026</div>
+  <h1>Veejay<span>Foods</span></h1>
+  <p class="lead">From today’s working build to a live, public app: every step, the accounts and tools you need, who does what, and what can and can’t be done for you.</p>
+  <div class="facts">
+    Prepared for: Veejay Foods — launch area Abuja Municipal (AMAC), pickup only<br>
+    Covers: customer app (iOS &amp; Android) · API &amp; database · staff / admin dashboard<br>
+    Companion files: Design &amp; delivery plan · Architecture notes · repository README
+  </div>
+</section>
+
+<!-- ================= 1. WHERE WE ARE ================= -->
+<section>
+  <h2>1 · Where we are today</h2>
+  <p>The app is a <b>working, tested build with sample data</b>. It is not yet running on the internet, and it has never handled a real payment. The distance to launch is mostly accounts, approvals, real content and real-device testing — not new features.</p>
+  <div class="cols2">
+    <div class="box ok"><h4>Done and verified</h4><ul class="small">
+      <li>Customer app, API and staff/admin dashboard are built (all nine planned capabilities).</li>
+      <li>67 automated backend tests pass on a real PostgreSQL database — payments webhook, order states, QR pickup, sessions, refunds, slots.</li>
+      <li>App type-checks and bundles for Android; dashboard builds; full customer and staff flows were driven in a browser against the live API.</li>
+      <li>Production start-up verified: <code>npm run build</code> then <code>npm start</code> serves the API; <code>.env</code> files load; an initial database migration applies cleanly to an empty database with zero drift.</li>
+      <li>A production-safe command to create the first admin (<code>admin:create</code>) — separate from the sample-data seed.</li>
+      <li>Brand applied (name, logo, colours); launch area set to Abuja.</li>
+    </ul></div>
+    <div class="box bad"><h4>Not done yet</h4><ul class="small">
+      <li>No hosting, domain or live database.</li>
+      <li>No Paystack live account; real payments, refunds, SMS and push notifications have <b>never been exercised</b> (tests use stand-ins).</li>
+      <li>Never run on a physical iPhone or Android phone.</li>
+      <li>Outlets, menu, prices and photos are <b>samples</b> (Wuse II, Garki, Jabi).</li>
+      <li>Photos are stored on the server’s disk (lost on redeploy).</li>
+      <li>No in-app account deletion, privacy policy or terms (both app stores require them).</li>
+      <li>No store accounts, store listings, or mobile build configuration.</li>
+      <li>No monitoring, alerting or restore-tested backups.</li>
+    </ul></div>
+  </div>
+  <div class="box warn"><h4>Bottom line</h4><p style="margin:0">Yes, the app can be deployed, launched, handed over and opened to the public. Expect roughly <b>4–8 weeks</b> from the day accounts are opened. The hands-on work is about 2–3 weeks; the rest is waiting for Paystack, SMS sender-ID and app-store approvals, which you do not control. <span class="mute">(These are estimates, not guarantees.)</span></p></div>
+
+  <h3>How to read this guide</h3>
+  <p>Every step carries an owner tag:</p>
+  <p><span class="tag t-you">YOU</span> the developer/agency delivering the project &nbsp; <span class="tag t-client">CLIENT</span> Veejay Foods (owner/admin; legal and payment identity) &nbsp; <span class="tag t-ai">CLAUDE</span> work I can do in this repository &nbsp; <span class="tag t-both">TOGETHER</span> needs both</p>
+  <p>Each phase ends with a <b>“Done when”</b> test. Don’t start the next phase until it passes — most launch problems come from skipping one.</p>
+</section>
+
+<!-- ================= 2. ROUTE AT A GLANCE ================= -->
+<section>
+  <h2>2 · The route at a glance</h2>
+  <table>
+    <tr><th style="width:5%">#</th><th style="width:21%">Phase</th><th>Goal</th><th style="width:13%">Mainly</th><th style="width:13%">Typical time</th></tr>
+    <tr><td>0</td><td><b>Decisions &amp; content</b></td><td>Real outlets, menu, prices, refund rules, staff list, launch date</td><td><span class="tag t-client">CLIENT</span></td><td>1 wk (parallel)</td></tr>
+    <tr><td>1</td><td><b>Accounts &amp; access</b></td><td>Every account exists under the client’s name; long-lead approvals started on day 1</td><td><span class="tag t-both">TOGETHER</span></td><td>1–3 wks (waiting)</td></tr>
+    <tr><td>2</td><td><b>Production hardening</b></td><td>Close the code gaps that would block deployment or store approval</td><td><span class="tag t-ai">CLAUDE</span> <span class="tag t-you">YOU</span></td><td>1–2 wks</td></tr>
+    <tr><td>3</td><td><b>Deploy</b></td><td>Staging and production: API, database, dashboard, domain, HTTPS</td><td><span class="tag t-you">YOU</span></td><td>3–5 days</td></tr>
+    <tr><td>4</td><td><b>Payments, SMS, push</b></td><td>Test-mode drills, then one real payment and refund</td><td><span class="tag t-both">TOGETHER</span></td><td>~1 wk</td></tr>
+    <tr><td>5</td><td><b>Mobile builds &amp; device testing</b></td><td>Installable builds tested on real phones</td><td><span class="tag t-you">YOU</span> <span class="tag t-client">CLIENT</span></td><td>1–2 wks</td></tr>
+    <tr><td>6</td><td><b>Soft launch</b></td><td>Invite-only at one or two outlets; staff trained</td><td><span class="tag t-client">CLIENT</span> <span class="tag t-you">YOU</span></td><td>2–3 wks</td></tr>
+    <tr><td>7</td><td><b>Store submission &amp; public launch</b></td><td>Approved on App Store and Google Play; opened to the public</td><td><span class="tag t-both">TOGETHER</span></td><td>1–2 wks (review)</td></tr>
+    <tr><td>8</td><td><b>Handover &amp; hypercare</b></td><td>Client owns and can run everything; support period</td><td><span class="tag t-both">TOGETHER</span></td><td>2 wks</td></tr>
+  </table>
+
+  <h3>Indicative timeline (weeks from the day accounts are opened)</h3>
+  <table class="gantt">
+    <tr><th></th><th>W1</th><th>W2</th><th>W3</th><th>W4</th><th>W5</th><th>W6</th><th>W7</th><th>W8</th></tr>
+    <tr><td class="l">0 Decisions &amp; content</td><td class="b2"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td class="l">1 Accounts &amp; approvals (waiting)</td><td class="b4"></td><td class="b4"></td><td class="b4"></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td class="l">2 Production hardening</td><td class="b1"></td><td class="b1"></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td class="l">3 Deploy (staging → prod)</td><td></td><td class="b1"></td><td class="b1"></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td class="l">4 Payments / SMS / push drills</td><td></td><td></td><td class="b3"></td><td class="b3"></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td class="l">5 Builds &amp; device testing</td><td></td><td></td><td></td><td class="b3"></td><td class="b3"></td><td></td><td></td><td></td></tr>
+    <tr><td class="l">6 Soft launch</td><td></td><td></td><td></td><td></td><td class="b2"></td><td class="b2"></td><td></td><td></td></tr>
+    <tr><td class="l">7 Store review &amp; public launch</td><td></td><td></td><td></td><td></td><td></td><td class="b4"></td><td class="b1"></td><td></td></tr>
+    <tr><td class="l">8 Handover &amp; hypercare</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="b1"></td><td class="b1"></td></tr>
+  </table>
+  <div class="box warn"><h4>The critical path is approvals, not code</h4><p style="margin:0">Start Phase 1 on <b>day one</b> and in this order: <b>(1)</b> Paystack business verification, <b>(2)</b> SMS sender-ID registration, <b>(3)</b> Apple and Google developer accounts. Each can take days to weeks and none can be rushed from our side. Everything else can run while you wait. If any of these stalls, the launch date moves — nothing else will.</p></div>
+</section>
+
+<!-- ================= 3. WHO DOES WHAT ================= -->
+<section>
+  <h2>3 · What I can do, what I can’t, and what only you or the client can do</h2>
+  <p>I’m Claude, working inside this code repository. This is the honest boundary, so nobody plans around something that can’t happen.</p>
+  <div class="cols3">
+    <div class="box ok"><h4>✔ I can do</h4><ul class="small">
+      <li>Write and change code in the app, API and dashboard; add tests; run builds and the test suite here.</li>
+      <li>Create deployment files: Docker/host configuration, <code>eas.json</code>, CI workflows, environment templates.</li>
+      <li>Add the missing production features: account deletion, cloud image storage, restricted CORS, reviewer test login, error monitoring.</li>
+      <li>Write runbooks, checklists, staff quick-cards, store-listing text, and a <i>draft</i> privacy policy and terms.</li>
+      <li>Prepare menu/outlet import from a spreadsheet you supply.</li>
+      <li>Generate screenshots for store listings from the web build.</li>
+      <li>Walk you through each console click-by-click and read logs or error messages you paste.</li>
+      <li>Re-run the whole test suite and re-generate this document as things change.</li>
+    </ul></div>
+    <div class="box bad"><h4>✘ I can’t do</h4><ul class="small">
+      <li>Create or verify accounts (Paystack, Apple, Google, SMS, hosting). They need identity, bank details, documents and payment cards.</li>
+      <li>Log in to the client’s accounts, or hold their secrets. (Don’t paste keys into chat.)</li>
+      <li>Deploy to a host from this sandbox — I have no credentials and limited outbound access. I can prepare everything; a person runs the deploy.</li>
+      <li>Run the app on a physical iPhone/Android, test real SMS delivery, real push, or a real card or bank transfer.</li>
+      <li>Submit to the App Store / Play Store or talk to reviewers; I can write the answers.</li>
+      <li>Speed up or guarantee any third-party approval.</li>
+      <li>Give legal advice (privacy law, tax, contracts) — drafts need a lawyer’s review.</li>
+      <li>Supply the real menu, prices, photos or addresses.</li>
+      <li>Monitor the live system after this conversation ends, or be on call.</li>
+      <li>Make business decisions (refund policy, opening hours, pricing).</li>
+    </ul></div>
+    <div class="box warn"><h4>★ Only you / the client can</h4><ul class="small">
+      <li><span class="tag t-client">CLIENT</span> Legal identity: business registration documents, signing agreements, bank settlement account.</li>
+      <li><span class="tag t-client">CLIENT</span> Real content: outlets, menu, prices, photos, support contact.</li>
+      <li><span class="tag t-client">CLIENT</span> Business rules: refunds, order cut-offs, who is staff/admin.</li>
+      <li><span class="tag t-client">CLIENT</span> Paying for accounts, SMS credit and hosting.</li>
+      <li><span class="tag t-you">YOU</span> Run deployments, builds and submissions with the client’s credentials.</li>
+      <li><span class="tag t-you">YOU</span> Hold the phones for device testing (one Android, one iPhone minimum).</li>
+      <li><span class="tag t-both">TOGETHER</span> Train staff; run the soft launch; sign off acceptance.</li>
+    </ul></div>
+  </div>
+  <div class="box"><h4>Practical working rule</h4><p style="margin:0">Keep all secrets in a <b>password manager</b> owned by the client and typed straight into the host’s settings page. When I need to know whether something is set up correctly, share the <i>names</i> of the settings and the <i>error text</i> — never the values.</p></div>
+</section>
+
+<!-- ================= 4. RESOURCES ================= -->
+<section>
+  <h2>4 · Resources and accounts needed</h2>
+  <p>Open these under the <b>client’s</b> ownership (company email, company payment card). Add the developer as a team member — never the other way round — so handover is simply removing access.</p>
+  <table>
+    <tr><th style="width:21%">Resource</th><th>Why it’s needed</th><th style="width:13%">Owner</th><th style="width:17%">Cost type<br><span style="text-transform:none;font-weight:400">(confirm current prices)</span></th><th style="width:13%">Lead time</th></tr>
+    <tr><td><b>Business documents</b></td><td>Needed by Paystack (and Apple for an organisation account). Exact documents depend on how the business is registered.</td><td>Client</td><td>—</td><td>Gather in week 1</td></tr>
+    <tr><td><b>Paystack business account</b></td><td>Takes card, bank-transfer and USSD payments; sends webhooks; processes refunds. Provides test keys immediately and live keys after approval.</td><td>Client</td><td>Per-transaction fees</td><td>Days to weeks</td></tr>
+    <tr><td><b>Settlement bank account</b></td><td>Where Paystack pays out the money.</td><td>Client</td><td>—</td><td>Same as above</td></tr>
+    <tr><td><b>SMS provider</b> (code supports Termii)</td><td>Sends login codes. Sender-ID registration and OTP routing to DND-registered numbers must be confirmed with the provider.</td><td>Client</td><td>Prepaid per SMS</td><td>Days to weeks</td></tr>
+    <tr><td><b>Apple Developer Program</b></td><td>Publish on the App Store; push-notification keys. Organisation enrolment typically needs a D-U-N-S number.</td><td>Client</td><td>Yearly fee</td><td>Days to 2+ weeks</td></tr>
+    <tr><td><b>Google Play Console</b></td><td>Publish on Google Play. Identity verification applies; new accounts may have to run a closed test with a minimum number of testers first — check current Play rules.</td><td>Client</td><td>One-time fee</td><td>Days; test period may add ~2 wks</td></tr>
+    <tr><td><b>Expo (EAS) account</b></td><td>Cloud builds for iOS/Android (no Mac needed), push credentials, store submission.</td><td>Client</td><td>Free tier; paid for priority</td><td>Minutes</td></tr>
+    <tr><td><b>Hosting + managed PostgreSQL</b></td><td>Runs the API and the database with automatic backups.</td><td>Client</td><td>Monthly</td><td>Minutes</td></tr>
+    <tr><td><b>Domain name + DNS access</b></td><td>e.g. <code>api.</code> for the API and <code>staff.</code> for the dashboard; HTTPS certificates.</td><td>Client</td><td>Yearly</td><td>Hours</td></tr>
+    <tr><td><b>Image storage</b> (S3-compatible)</td><td>Menu images and complaint photos that survive redeploys.</td><td>Client</td><td>Usage-based</td><td>Minutes</td></tr>
+    <tr><td><b>GitHub organisation</b></td><td>Owns the code; the developer is added as a member.</td><td>Client</td><td>Free / paid</td><td>Minutes</td></tr>
+    <tr><td><b>Error monitoring</b> (e.g. Sentry) + uptime check</td><td>Know about crashes and outages before customers do.</td><td>Client</td><td>Free tier available</td><td>Minutes</td></tr>
+    <tr><td><b>Support email / WhatsApp</b></td><td>Customer-facing contact in the app and store listings; business email for Paystack receipts.</td><td>Client</td><td>—</td><td>Hours</td></tr>
+    <tr><td><b>Legal review</b></td><td>Privacy policy, terms of use, Nigerian data-protection (NDPA) obligations.</td><td>Client</td><td>Professional fee</td><td>1–2 wks</td></tr>
+    <tr><td><b>Real menu, photos, outlet details, logo files</b></td><td>Replace all sample data (photos: square, at least 1000 px).</td><td>Client</td><td>—</td><td>Week 1–2</td></tr>
+    <tr><td><b>Counter devices</b></td><td>One Android tablet/phone per outlet (Chrome) for the staff board and QR scanning; stable internet.</td><td>Client</td><td>One-time</td><td>Days</td></tr>
+    <tr><td><b>Test phones &amp; money</b></td><td>≥1 iPhone, ≥2 Android (one low-end) and small real payments for the final drill.</td><td>You</td><td>—</td><td>Before Phase 5</td></tr>
+  </table>
+</section>
+
+<!-- ================= 5. TOOLS ================= -->
+<section class="flow">
+  <h2>5 · Tools and software needed</h2>
+  <table>
+    <tr><th style="width:26%">Tool</th><th>Used for</th><th style="width:22%">Who installs</th></tr>
+    <tr><td><b>Node.js 22</b> + npm</td><td>Build and run the API, dashboard and app tooling.</td><td>You (and the host)</td></tr>
+    <tr><td><b>Git + GitHub</b></td><td>Code history, review, CI (tests run automatically on every push).</td><td>You</td></tr>
+    <tr><td><b>EAS CLI</b> — <code>npm i -g eas-cli</code></td><td>Cloud builds, credentials and store submission for the mobile app. <i>No Mac required.</i></td><td>You</td></tr>
+    <tr><td><b>Prisma CLI</b> (via <code>npx</code>)</td><td>Applies database migrations in each environment.</td><td>You (host build step)</td></tr>
+    <tr><td><b>A database client</b> (e.g. <code>psql</code>, TablePlus)</td><td>Inspect data and verify backups (read-only habits in production).</td><td>You</td></tr>
+    <tr><td><b>Chrome</b> on staff devices</td><td>The dashboard and camera QR scanner (camera needs HTTPS).</td><td>Client</td></tr>
+    <tr><td><b>TestFlight</b> (iOS) &amp; <b>Play internal testing</b> (Android)</td><td>Distribute test builds to real phones before public release.</td><td>You / testers</td></tr>
+    <tr><td><b>Password manager</b></td><td>Store every secret and account login; client-owned shared vault.</td><td>Client</td></tr>
+    <tr><td><b>curl / Postman</b></td><td>Check <code>/health</code> and API behaviour in each environment.</td><td>You</td></tr>
+    <tr><td><b>Sentry + an uptime monitor</b></td><td>Crash reports and “is it up?” alerts.</td><td>You / Client</td></tr>
+    <tr><td><b>Spreadsheet</b> (Excel / Sheets)</td><td>Client fills the menu and outlet template that I can turn into an import.</td><td>Client</td></tr>
+  </table>
+
+  <h3>Hosting choice (decision needed in Phase 0)</h3>
+  <table>
+    <tr><th style="width:24%">Option</th><th>Good for</th><th style="width:36%">Watch out for</th></tr>
+    <tr><td><b>A. Managed app platform + managed Postgres</b><br><span class="mute small">(e.g. Render, Railway, Fly.io)</span></td><td>Fastest, least upkeep, automatic HTTPS and deploys from GitHub. <b>Recommended to start.</b></td><td>Data centre is usually in Europe/US — latency is fine for this app, but ask the lawyer about cross-border personal-data transfer.</td></tr>
+    <tr><td><b>B. Cloud virtual machine + managed database</b><br><span class="mute small">(e.g. AWS, DigitalOcean, Azure)</span></td><td>More control; some providers have an Africa region.</td><td>You run and patch the server; more to set up and monitor.</td></tr>
+    <tr><td><b>C. Nigerian hosting provider</b></td><td>Local data residency.</td><td>Maturity and managed-database features vary; check backups, TLS and support carefully.</td></tr>
+  </table>
+  <p class="small mute">Whichever is chosen: the client’s account, daily backups with a tested restore, automatic HTTPS, and a region decision made together with the privacy review.</p>
+</section>
+
+<!-- ================= PHASE 0 ================= -->
+<section>
+  <div class="ph"><span class="pn">PHASE 0</span><h2 style="border:0;padding:0;margin:0">Decisions &amp; content</h2></div>
+  <p class="meta mute">Owner: <span class="tag t-client">CLIENT</span> · about 1 week, runs in parallel with Phase 1 · I provide the spreadsheet templates.</p>
+  <div class="step"><div class="n">1</div><div><b class="t">Confirm the brand assets <span class="tag t-client">CLIENT</span></b>Legal business name, logo in vector form (SVG/AI/PDF) plus a high-resolution PNG, brand colours. (The app currently uses a cropped logo image and colours sampled from it.)</div></div>
+  <div class="step"><div class="n">2</div><div><b class="t">List the real Abuja pickup points <span class="tag t-client">CLIENT</span></b>For each: display name, street address, opening hours per day, preparation time, how many orders the kitchen can handle per 30-minute slot. Start with one or two outlets for the soft launch.</div></div>
+  <div class="step"><div class="n">3</div><div><b class="t">Prepare the menu <span class="tag t-client">CLIENT</span></b>Categories, item names, descriptions, prices in ₦, combos/meal plans with what’s included, and one square photo per item. Items that must not be orderable at a given outlet.</div></div>
+  <div class="step"><div class="n">4</div><div><b class="t">Decide the refund and complaint policy <span class="tag t-client">CLIENT</span></b>Who may approve refunds, whether partial refunds are allowed, how long customers have to report a problem, and what happens to no-shows (paid orders never collected).</div></div>
+  <div class="step"><div class="n">5</div><div><b class="t">Decide ordering rules <span class="tag t-client">CLIENT</span></b>Online ordering hours, how far ahead customers can book (the app currently offers today and the next 3 days), minimum prep time, cut-off before closing.</div></div>
+  <div class="step"><div class="n">6</div><div><b class="t">Name the people <span class="tag t-client">CLIENT</span></b>Admins and staff: full name, phone number, which outlet. They sign in with an SMS code, so the number must be theirs.</div></div>
+  <div class="step"><div class="n">7</div><div><b class="t">Choose a support contact and a launch date <span class="tag t-client">CLIENT</span></b>A phone/WhatsApp/email shown in the app and store listings; a target date and the first 20–50 invitees for the soft launch.</div></div>
+  <div class="step"><div class="n">8</div><div><b class="t">Pick the hosting option <span class="tag t-both">TOGETHER</span></b>See section 5. A one-line written decision is enough.</div></div>
+  <div class="done"><b>Done when:</b> the client has signed off the outlet list, menu, policies and staff list in writing (email is fine), and the hosting option is chosen.</div>
+</section>
+
+<!-- ================= PHASE 1 ================= -->
+<section class="flow">
+  <div class="ph"><span class="pn">PHASE 1</span><h2 style="border:0;padding:0;margin:0">Accounts &amp; access</h2></div>
+  <p class="meta mute">Owner: <span class="tag t-both">TOGETHER</span> · 1–3 weeks of mostly waiting · <b>start the first three steps on day one</b></p>
+  <div class="step"><div class="n">1</div><div><b class="t">Paystack: start business verification <span class="tag t-client">CLIENT</span></b>Register at paystack.com, complete the business profile, upload the requested documents, add the settlement bank account. In parallel, copy the <b>test</b> keys (Settings → API Keys &amp; Webhooks) so development isn’t blocked. Live keys appear only after approval.</div></div>
+  <div class="step"><div class="n">2</div><div><b class="t">SMS provider: open the account and register a sender ID <span class="tag t-client">CLIENT</span></b>Create the account (the code supports Termii), fund the wallet, submit the sender ID (e.g. “Veejay”). <b>Ask them in writing</b> which route delivers OTPs to numbers on the Do-Not-Disturb list — the current code uses the provider’s generic channel, and that may need changing.</div></div>
+  <div class="step"><div class="n">3</div><div><b class="t">Developer accounts: Apple and Google <span class="tag t-client">CLIENT</span></b>Enrol the business in the Apple Developer Program (organisation accounts usually require a D-U-N-S number — request it early) and create the Google Play Console account with identity verification. Check Google’s current requirement for a closed-testing period on new accounts.</div></div>
+  <div class="step"><div class="n">4</div><div><b class="t">GitHub: put the code under the client <span class="tag t-both">TOGETHER</span></b>Client creates a GitHub organisation; transfer or fork the repository into it; add the developer as a member. Merge the working branch (<code>ccr-162c3e6b-4vdvog</code>) into the main branch via a reviewed pull request.</div></div>
+  <div class="step"><div class="n">5</div><div><b class="t">Expo (EAS) account <span class="tag t-client">CLIENT</span></b>Create an Expo organisation account, add the developer. Later, <code>eas init</code> creates the project ID that push notifications need.</div></div>
+  <div class="step"><div class="n">6</div><div><b class="t">Hosting, database, domain, storage <span class="tag t-client">CLIENT</span></b>Create the host account and a managed PostgreSQL instance with daily backups; buy or point the domain; create an S3-compatible bucket (private).</div></div>
+  <div class="step"><div class="n">7</div><div><b class="t">Create the secrets vault <span class="tag t-client">CLIENT</span></b>A shared password-manager vault. Rule: secrets live <b>only</b> there and in the host’s settings — never in chat, email, screenshots or Git.</div></div>
+  <div class="step"><div class="n">8</div><div><b class="t">Monitoring <span class="tag t-you">YOU</span></b>Create an error-monitoring project and an uptime check (it will watch <code>/health</code>) under the client’s email.</div></div>
+  <div class="done"><b>Done when:</b> every account in section 4 exists under the client’s ownership; the developer has team-member access; Paystack, SMS sender-ID and the developer-account applications are submitted and you know their expected dates.</div>
+  <div class="box warn"><h4>If an approval stalls</h4><p class="small" style="margin:0">Keep building and testing on test keys and the staging environment. Don’t go live on a workaround (e.g. taking payments into a personal account) — it breaks refunds, accounting and the store’s payment rules.</p></div>
+</section>
+
+<!-- ================= PHASE 2 ================= -->
+<section>
+  <div class="ph"><span class="pn">PHASE 2</span><h2 style="border:0;padding:0;margin:0">Production hardening</h2></div>
+  <p class="meta mute">Owner: <span class="tag t-ai">CLAUDE</span> writes it · <span class="tag t-you">YOU</span> review and merge · 1–2 weeks · can start now</p>
+  <p>These close the gaps between “works in testing” and “safe to put real customers on”. Effort is an AI-assisted estimate in focused working days.</p>
+  <table class="dense">
+    <tr><th style="width:4%">#</th><th style="width:27%">Work item</th><th>What it does / why it matters</th><th style="width:11%">Status</th><th style="width:9%">Effort</th></tr>
+    <tr><td>1</td><td>Fix <code>npm start</code> / build</td><td>The production start command previously crashed; now builds to <code>dist/</code> and runs.</td><td><b style="color:var(--green)">Done</b></td><td>—</td></tr>
+    <tr><td>2</td><td>Load <code>.env</code> in dev and seed</td><td>Settings files were silently ignored.</td><td><b style="color:var(--green)">Done</b></td><td>—</td></tr>
+    <tr><td>3</td><td>Database migrations</td><td>Initial migration (16 tables) applied to an empty DB with zero drift; CI now runs it every push. Future schema changes ship as new migrations.</td><td><b style="color:var(--green)">Done</b></td><td>—</td></tr>
+    <tr><td>4</td><td><code>admin:create</code> command</td><td>Creates the first admin only — the sample-data <code>seed</code> must <b>never</b> be run in production.</td><td><b style="color:var(--green)">Done</b></td><td>—</td></tr>
+    <tr><td>4b</td><td>Strict production guard</td><td>Start-up refuses placeholder/short secrets and console SMS; <code>prisma</code> moved to main dependencies so <code>npm run migrate</code> works on hosts that install production packages only. Proven end-to-end on a clean install.</td><td><b style="color:var(--green)">Done</b></td><td>—</td></tr>
+    <tr><td>5</td><td>Deploy configuration</td><td>Dockerfile / host build &amp; start commands, health check, graceful shutdown, <code>.env</code> checklist.</td><td>To do</td><td>0.5 d</td></tr>
+    <tr><td>6</td><td>Restrict CORS</td><td>Today any website can call the API from a browser. Limit to the dashboard’s address.</td><td>To do</td><td>0.25 d</td></tr>
+    <tr><td>7</td><td>Cloud image storage</td><td>Menu images and complaint photos go to a private bucket (served via short-lived links) instead of server disk.</td><td>To do</td><td>1 d</td></tr>
+    <tr><td>8</td><td>Account deletion</td><td>In-app “Delete my account” + server endpoint (anonymise personal data, keep order/payment records as required). <b>Both app stores require it.</b></td><td>To do</td><td>1 d</td></tr>
+    <tr><td>9</td><td>Privacy policy &amp; terms pages</td><td>Hosted pages linked from the app and store listings. I draft; a lawyer reviews.</td><td>To do</td><td>0.5 d + legal</td></tr>
+    <tr><td>10</td><td>Store-reviewer login</td><td>Reviewers can’t receive a real SMS. Add a designated test phone with a fixed code, enabled only by a setting, and removed after approval.</td><td>To do</td><td>0.25 d</td></tr>
+    <tr><td>11</td><td>Mobile build configuration</td><td><code>eas.json</code> profiles (preview / production), bundle IDs, version numbers, deep-link scheme check, push-credential setup notes.</td><td>To do</td><td>0.5 d</td></tr>
+    <tr><td>12</td><td>Error monitoring &amp; logging</td><td>Crash reports from app and API; structured logs; alert on webhook failures.</td><td>To do</td><td>0.5 d</td></tr>
+    <tr><td>13</td><td>SMS route for DND numbers</td><td>Switch the OTP channel once the provider confirms the correct route.</td><td>To do</td><td>0.25 d</td></tr>
+    <tr><td>14</td><td>Menu/outlet import</td><td>Load the client’s spreadsheet instead of typing items one by one.</td><td>Optional</td><td>0.5 d</td></tr>
+    <tr><td>15</td><td>Runbook &amp; staff quick-card</td><td>“If X happens, do Y” for the owner; a one-page counter guide for staff.</td><td>To do</td><td>1 d</td></tr>
+    <tr><td>16</td><td>Dependency &amp; security pass</td><td>Update packages, run an audit, review security headers and rate limits.</td><td>To do</td><td>0.5 d</td></tr>
+  </table>
+  <div class="box warn"><h4>Known limits to keep in mind</h4><ul class="small" style="margin:2px 0 0"><li><b>Single API instance.</b> The 60-second order-expiry job and the login rate limiter live in the server’s memory. That is fine for one instance; before running several, the rate limiter needs a shared store.</li><li><b>Pickup only.</b> No delivery, promo codes or loyalty at launch.</li></ul></div>
+  <div class="done"><b>Done when:</b> items 5–13 and 15–16 are merged, CI is green, and the test suite passes after the changes.</div>
+</section>
+
+<!-- ================= PHASE 3 ================= -->
+<section>
+  <div class="ph"><span class="pn">PHASE 3</span><h2 style="border:0;padding:0;margin:0">Deploy: staging, then production</h2></div>
+  <p class="meta mute">Owner: <span class="tag t-you">YOU</span> (with the client’s accounts) · 3–5 days · I prepare the files and can debug from error text</p>
+  <p>Build <b>staging first</b> — an identical copy with its own database and Paystack <i>test</i> keys — then repeat for production. Never test on production data.</p>
+  <div class="step"><div class="n">1</div><div><b class="t">Create the database <span class="tag t-you">YOU</span></b>Managed PostgreSQL, daily backups on, access limited to the API. Copy the connection string into the password manager.</div></div>
+  <div class="step"><div class="n">2</div><div><b class="t">Generate three different secrets <span class="tag t-you">YOU</span></b>One each for sessions, login codes and QR codes:
+<pre>openssl rand -base64 48     # run three times; store each in the vault</pre></div></div>
+  <div class="step"><div class="n">3</div><div><b class="t">Create the API service from the repository <span class="tag t-you">YOU</span></b>Point the host at <code>veejay-foods/backend</code>. Set the settings listed in Appendix A, then:
+<pre>Build command : npm ci &amp;&amp; npm run build
+Start command : npm run migrate &amp;&amp; npm start
+Health check  : GET /health   (returns {"ok":true})</pre>In production (<code>NODE_ENV=production</code>) the server refuses to start with placeholder or short secrets, the test Paystack placeholder, or console SMS — that’s intentional. For the staging copy use <code>NODE_ENV=staging</code> with its own random secrets.</div></div>
+  <div class="step"><div class="n">4</div><div><b class="t">Attach the domain <span class="tag t-both">TOGETHER</span></b>Point <code>api.&lt;domain&gt;</code> at the service and enable automatic HTTPS. Set <code>PUBLIC_API_URL</code> to that address.</div></div>
+  <div class="step"><div class="n">5</div><div><b class="t">Create the first admin — <u>not</u> the seed <span class="tag t-you">YOU</span>
+<pre>node dist/create-admin.js 0803XXXXXXX "Owner Name"</pre></b>Never run <code>npm run seed</code> in production: it adds sample outlets and menu items.</div></div>
+  <div class="step"><div class="n">6</div><div><b class="t">Publish the staff dashboard <span class="tag t-you">YOU</span>
+<pre>cd veejay-foods/admin
+VITE_API_URL=https://api.&lt;domain&gt; npm run build
+# upload the dist/ folder to any static host at staff.&lt;domain&gt;</pre></b>It must be on <b>HTTPS</b>, or browsers will block the camera used for QR scanning.</div></div>
+  <div class="step"><div class="n">7</div><div><b class="t">Enter the real outlets and menu <span class="tag t-both">TOGETHER</span></b>Sign in to the dashboard as the admin, then fill Outlets (hours, prep time, capacity), Menu (categories, items, combos, photos) and Staff (people from Phase 0).</div></div>
+  <div class="step"><div class="n">8</div><div><b class="t">Smoke test <span class="tag t-you">YOU</span></b><code>curl https://api.&lt;domain&gt;/health</code> → <code>{"ok":true}</code>; sign in on the dashboard; confirm the outlets list loads from <code>/outlets</code>; confirm the uptime monitor is green.</div></div>
+  <div class="done"><b>Done when:</b> staging and production both answer on HTTPS, the owner can sign in to the dashboard on each, and backups are confirmed on.</div>
+  <div class="box"><h4>Back up before you trust the backups</h4><p class="small" style="margin:0">Restore one backup into a scratch database and open it. A backup you have never restored is a hope, not a backup. Do this once before launch and again after handover.</p></div>
+</section>
+
+<!-- ================= PHASE 4 ================= -->
+<section>
+  <div class="ph"><span class="pn">PHASE 4</span><h2 style="border:0;padding:0;margin:0">Payments, SMS and push notifications</h2></div>
+  <p class="meta mute">Owner: <span class="tag t-both">TOGETHER</span> · about 1 week · this is the first time real third-party services touch the app</p>
+  <div class="step"><div class="n">1</div><div><b class="t">Wire up Paystack in <u>test</u> mode (staging) <span class="tag t-you">YOU</span></b>Put the test secret key in <code>PAYSTACK_SECRET_KEY</code>. In the Paystack dashboard, set the webhook URL to <code>https://api.&lt;staging-domain&gt;/webhooks/paystack</code> (test and live modes keep separate settings — confirm in the dashboard). Set <code>PAYSTACK_EMAIL_DOMAIN</code> to a domain the client owns.</div></div>
+  <div class="step"><div class="n">2</div><div><b class="t">Run the payment drills <span class="tag t-you">YOU</span></b>Use the test cards/accounts listed in Paystack’s own documentation. Every row must pass:
+<table>
+<tr><th style="width:42%">Drill</th><th>Expected result</th></tr>
+<tr><td>Successful card payment</td><td>Order becomes <b>Placed</b>; push received; QR appears</td></tr>
+<tr><td>Declined / failed payment</td><td>Order stays unpaid; can retry; slot released after 15 min</td></tr>
+<tr><td>Close the browser mid-payment</td><td>Order screen reconciles itself and shows the right state</td></tr>
+<tr><td>Re-send the same webhook from Paystack’s dashboard</td><td>No duplicate order event, no second notification</td></tr>
+<tr><td>Bank transfer and USSD (where test mode supports them)</td><td>Order placed once the payment is confirmed</td></tr>
+<tr><td>Admin approves a full refund, then a partial refund</td><td>Refund created; status moves to Success when Paystack confirms</td></tr>
+<tr><td>Paystack refund refused (e.g. already refunded)</td><td>Complaint reopens; admin sees a clear error</td></tr>
+</table></div></div>
+  <div class="step"><div class="n">3</div><div><b class="t">Switch SMS on <span class="tag t-you">YOU</span></b>Set <code>SMS_PROVIDER=termii</code>, <code>TERMII_API_KEY</code>, <code>TERMII_SENDER_ID</code>. Request login codes to numbers on <b>MTN, Airtel, Glo and 9mobile</b> and to a number on the DND list. Note delivery time. If any network fails, stop and fix with the provider before continuing.</div></div>
+  <div class="step"><div class="n">4</div><div><b class="t">Push notifications <span class="tag t-you">YOU</span></b>Run <code>eas init</code> and put the project ID in the app config. Upload the Android (FCM) credentials and let EAS create the Apple push key, following Expo’s current instructions. Remote push does <b>not</b> work in Expo Go on Android — test on an installed build (Phase 5).</div></div>
+  <div class="step"><div class="n">5</div><div><b class="t">Go live with payments — only after Paystack approves <span class="tag t-both">TOGETHER</span></b>Put the <b>live</b> key in the <b>production</b> settings only; set the live webhook URL; then make one real small purchase from a staff phone and refund it. Check the money actually arrives, leaves, and appears in the Paystack dashboard and bank statement.</div></div>
+  <div class="done"><b>Done when:</b> every drill row passes on staging; OTPs arrive on all four networks; one real payment and one real refund succeeded on production.</div>
+</section>
+
+<!-- ================= PHASE 5 ================= -->
+<section class="flow">
+  <div class="ph"><span class="pn">PHASE 5</span><h2 style="border:0;padding:0;margin:0">Mobile builds &amp; real-device testing</h2></div>
+  <p class="meta mute">Owner: <span class="tag t-you">YOU</span> + <span class="tag t-client">CLIENT</span> testers · 1–2 weeks · I’ve never run the app on a phone — this phase finds what that misses</p>
+  <div class="step"><div class="n">1</div><div><b class="t">Create test builds <span class="tag t-you">YOU</span></b>
+<pre>cd veejay-foods/app
+eas login &amp;&amp; eas init
+EXPO_PUBLIC_API_URL=https://api.&lt;staging-domain&gt;   # set in the EAS build profile
+eas build --platform android --profile preview   # installable APK link
+eas build --platform ios     --profile preview   # needs the Apple account</pre>(The <code>eas.json</code> profiles are Phase 2, item 11.)</div></div>
+  <div class="step"><div class="n">2</div><div><b class="t">Install on real phones <span class="tag t-both">TOGETHER</span></b>At least <b>one iPhone, two Android phones (one low-end or older)</b>. Distribute with TestFlight and Play internal testing.</div></div>
+  <div class="step"><div class="n">3</div><div><b class="t">Work through the device checklist <span class="tag t-both">TOGETHER</span></b>
+<ul class="chk">
+<li>First launch → enter phone → SMS code arrives → signed in</li>
+<li>Menu loads with images; category chips scroll and jump; combo shows what’s included</li>
+<li>Cart survives closing and reopening the app</li>
+<li>Checkout: day and time slots correct for Abuja time; full/past slots hidden</li>
+<li>Paystack page opens, payment completes, <b>app returns automatically</b></li>
+<li>Switch to airplane mode mid-order, then back: no sign-out, no duplicate order</li>
+<li>Force-quit during payment: reopening shows the correct order state</li>
+<li>Push arrives for Placed / Preparing / Ready / Collected, app open and app closed; tapping opens that order</li>
+<li>QR is readable by the counter scanner at low and high screen brightness</li>
+<li>Report a problem: camera and gallery photo both upload</li>
+<li>Large-text and dark-mode phones are still readable; small screens don’t cut off buttons</li>
+<li>Poor network (throttled): spinners and errors are understandable; nothing double-submits</li>
+</ul></div></div>
+  <div class="step"><div class="n">4</div><div><b class="t">Counter hardware test <span class="tag t-client">CLIENT</span></b>On the real counter device, open the dashboard, scan a QR from a customer phone in real lighting, and use the order-code fallback.</div></div>
+  <div class="step"><div class="n">5</div><div><b class="t">Fix, rebuild, repeat <span class="tag t-ai">CLAUDE</span> <span class="tag t-you">YOU</span></b>Send me each bug with the phone model, steps and a screenshot; I fix and add a test where it makes sense.</div></div>
+  <div class="done"><b>Done when:</b> the checklist passes on every test phone and the counter device, with no open “must-fix” issues.</div>
+</section>
+
+<!-- ================= PHASE 6 ================= -->
+<section>
+  <div class="ph"><span class="pn">PHASE 6</span><h2 style="border:0;padding:0;margin:0">Soft launch (invite-only)</h2></div>
+  <p class="meta mute">Owner: <span class="tag t-client">CLIENT</span> + <span class="tag t-you">YOU</span> · 2–3 weeks · one or two outlets, 20–50 invited customers</p>
+  <div class="step"><div class="n">1</div><div><b class="t">Cut over to real data <span class="tag t-both">TOGETHER</span></b>Production has only real outlets, menu and staff (no sample items). Prices, photos and hours double-checked by the client.</div></div>
+  <div class="step"><div class="n">2</div><div><b class="t">Train the staff (about 1 hour per outlet) <span class="tag t-both">TOGETHER</span></b>Sign in; read the board; New → Preparing → Ready; scan and hand over; use the order-code fallback; what to say to a customer with a problem; how to mark an item sold out. Leave the one-page quick-card at the counter.</div></div>
+  <div class="step"><div class="n">3</div><div><b class="t">Release the builds to invitees <span class="tag t-you">YOU</span></b>TestFlight / Play internal or closed testing, with a short “how to order” message.</div></div>
+  <div class="step"><div class="n">4</div><div><b class="t">Review daily <span class="tag t-both">TOGETHER</span></b>Every morning for the first two weeks: orders vs. payments in Paystack (must match), refunds, complaints, login-code failures, app crashes, slot fullness, counter wait times.</div></div>
+  <div class="step"><div class="n">5</div><div><b class="t">Tune the numbers <span class="tag t-client">CLIENT</span></b>Adjust preparation time, slot length and orders-per-slot from the Outlets tab until the kitchen is comfortable.</div></div>
+  <div class="box"><h4>Proposed go / no-go checks before the public launch</h4><p class="small" style="margin:0">Targets to agree with the client — these are suggestions, not measured facts.</p>
+  <ul class="chk small"><li><b>Zero</b> lost payments: every successful Paystack charge has a matching order or refund</li><li>Login codes arrive within an agreed time on all four networks</li><li>No unresolved crash reports; no must-fix bugs</li><li>Refunds work end to end, and staff are confident handing over by QR</li><li>Feedback from invitees reviewed; top issues fixed</li></ul></div>
+  <div class="done"><b>Done when:</b> the client signs a written “go” after the checks above.</div>
+</section>
+
+<!-- ================= PHASE 7 ================= -->
+<section>
+  <div class="ph"><span class="pn">PHASE 7</span><h2 style="border:0;padding:0;margin:0">Store submission &amp; public launch</h2></div>
+  <p class="meta mute">Owner: <span class="tag t-both">TOGETHER</span> · 1–2 weeks, mostly review time · store rules change — check each store’s current requirements before submitting</p>
+  <div class="step"><div class="n">1</div><div><b class="t">Prepare the store listing <span class="tag t-ai">CLAUDE</span> <span class="tag t-client">CLIENT</span></b>App name, short and long descriptions, category (Food &amp; Drink), keywords, icon, phone screenshots (I generate them from the app), support email/URL, privacy-policy URL, age rating, and each store’s privacy questionnaire (Apple “App Privacy” labels, Google “Data safety” form). I draft the text; the client approves it.</div></div>
+  <div class="step"><div class="n">2</div><div><b class="t">Give the reviewers a way in <span class="tag t-you">YOU</span></b>Enable the reviewer test login (Phase 2, item 10) and put the phone number and code in the store’s “review notes”, with a line explaining that payment is by Paystack for physical food collected at an outlet. <b>Disable it after approval.</b></div></div>
+  <div class="step"><div class="n">3</div><div><b class="t">Submit to Apple <span class="tag t-you">YOU</span></b>Production build → App Store Connect (<code>eas submit</code> or upload) → add to the version → submit for review. Review usually takes a few days but can be longer; answer reviewer questions the same day. Typical rejection reasons to pre-empt: missing in-app account deletion, broken reviewer login, vague permission descriptions.</div></div>
+  <div class="step"><div class="n">4</div><div><b class="t">Submit to Google Play <span class="tag t-you">YOU</span></b>Production build → Play Console → complete the Data safety form, content rating and (if required for a new account) the closed-testing period → release to production. Use a <b>staged rollout</b> (e.g. 10% → 50% → 100%) if offered.</div></div>
+  <div class="step"><div class="n">5</div><div><b class="t">Public launch day <span class="tag t-both">TOGETHER</span></b>Switch the listings live; confirm the production API is healthy; print the in-store QR poster pointing to the store link; announce on the brand’s social media; keep the owner and developer reachable all day.</div></div>
+  <div class="step"><div class="n">6</div><div><b class="t">Watch the first 100 orders <span class="tag t-both">TOGETHER</span></b>Check every one against Paystack and the kitchen’s experience; fix anything odd within a day.</div></div>
+  <div class="done"><b>Done when:</b> the app is live and downloadable on both stores, and the first 100 orders reconcile cleanly.</div>
+  <div class="box warn"><h4>Plan for a rejection</h4><p class="small" style="margin:0">A first-time rejection is common and usually fixable in a day or two. Leave a week of buffer between “submitted” and any hard public date (a promotion, a poster print run).</p></div>
+</section>
+
+<!-- ================= PHASE 8 ================= -->
+<section>
+  <div class="ph"><span class="pn">PHASE 8</span><h2 style="border:0;padding:0;margin:0">Handover &amp; hypercare</h2></div>
+  <p class="meta mute">Owner: <span class="tag t-both">TOGETHER</span> · 2 weeks of close support after launch, then a maintenance arrangement</p>
+  <h3>Ownership transfer checklist</h3>
+  <ul class="chk">
+    <li>Client is the <b>Owner / Account Holder</b> on: GitHub, Paystack, SMS provider, Apple, Google Play, Expo, hosting, database, domain/DNS, storage, monitoring</li>
+    <li>Developer access reduced to “team member” (or removed) on each — and <b>production secrets rotated</b> so the developer no longer holds working copies</li>
+    <li>Password-manager vault contents verified by the client (every login and key present and working)</li>
+    <li>Store accounts: client’s email for notices; two-factor on for every account; a second admin added in case the owner is unavailable</li>
+    <li>Renewal calendar created: Apple yearly fee, domain, certificates, SMS credit top-ups, hosting plan</li>
+    <li>Final backup <b>restore test</b> performed with the client watching</li>
+  </ul>
+  <h3>What the client receives</h3>
+  <ul class="small">
+    <li><b>Runbook</b> — “if X happens, do Y” (see section 7).</li>
+    <li><b>Staff quick-card</b> and a short admin guide: menu, outlets, staff, refunds, reports.</li>
+    <li><b>This guide, the design &amp; delivery plan, and the architecture notes.</b></li>
+    <li><b>Repository README</b> — how to run, test, build and deploy.</li>
+    <li><b>Environment-settings sheet</b> — every setting name, what it does, where it lives (values stay in the vault).</li>
+  </ul>
+  <h3>Training sessions</h3>
+  <table>
+    <tr><th style="width:22%">Audience</th><th>Covers</th><th style="width:14%">Length</th></tr>
+    <tr><td>Owner / admins</td><td>Dashboard tour: menu, sold-out switches, outlets and hours, staff access, complaints and refunds, sales report; reading the Paystack dashboard; what to do in an incident.</td><td>~1.5 h</td></tr>
+    <tr><td>Counter staff</td><td>Live board, scanning, code fallback, customer problems.</td><td>~1 h</td></tr>
+  </table>
+  <h3>After handover: support and maintenance</h3>
+  <p class="small">Agree in writing: who answers when something breaks (hours and response times), how bugs and requests are raised, who applies updates, and how often. Apps need periodic upkeep — package security updates, annual Expo SDK upgrades, store policy changes, and new Android/iOS versions can each require a new build.</p>
+  <div class="done"><b>Done when:</b> the client confirms every item above, signs the acceptance, and the hypercare period ends with no open must-fix issues.</div>
+</section>
+
+<!-- ================= 7. RUNNING IT ================= -->
+<section class="flow">
+  <h2>7 · Running the app after launch</h2>
+  <div class="cols3">
+    <div class="box"><h4>Every day (owner)</h4><ul class="small"><li>Look at the staff board volume and any Ready orders waiting too long</li><li>Open Complaints &amp; refunds; resolve within the policy time</li><li>Check yesterday’s sales on the Sales tab</li></ul></div>
+    <div class="box"><h4>Every week</h4><ul class="small"><li>Match Paystack payouts with the Sales report</li><li>Review slot fullness; adjust capacity</li><li>Check SMS credit balance</li><li>Skim error-monitoring for new issues</li></ul></div>
+    <div class="box"><h4>Every month / year</h4><ul class="small"><li>Confirm backups; restore-test quarterly</li><li>Apply package and security updates</li><li>Renew Apple (yearly), domain, plans</li><li>Review costs and the support arrangement</li></ul></div>
+  </div>
+  <h3>If something goes wrong</h3>
+  <table>
+    <tr><th style="width:26%">Symptom</th><th>First checks</th></tr>
+    <tr><td><b>Customer paid but sees no order</b></td><td>1) Find the charge in the Paystack dashboard. 2) Check the webhook log there and resend it if it failed. 3) Ask the customer to open the order (the app re-checks with Paystack automatically). 4) If the pickup slot had expired, the system refunds automatically — confirm the refund in Paystack.</td></tr>
+    <tr><td><b>Login code doesn’t arrive</b></td><td>SMS wallet balance and delivery report; try another network; confirm the sender ID is still approved; wait a minute before requesting again (the system limits repeat requests).</td></tr>
+    <tr><td><b>Staff can’t scan</b></td><td>Dashboard must be on HTTPS; allow camera permission in the browser; use the order-code fallback so the customer isn’t held up.</td></tr>
+    <tr><td><b>Refund stuck “pending”</b></td><td>Check the refund in Paystack; they confirm asynchronously. If it shows processed there but not in the dashboard, check the webhook log.</td></tr>
+    <tr><td><b>App or API down</b></td><td>The uptime monitor should alert first. Check the host’s status page and logs; the database host’s status; recent deployments (roll back the last one if it started right after a release).</td></tr>
+    <tr><td><b>Wrong price or sold-out item</b></td><td>Menu tab: edit the price, or toggle that outlet’s availability. Existing orders keep the price they were placed at.</td></tr>
+    <tr><td><b>A staff member leaves</b></td><td>Staff tab → remove access; takes effect immediately.</td></tr>
+  </table>
+</section>
+
+<!-- ================= 8. RISKS ================= -->
+<section class="flow">
+  <h2>8 · Risks and how to handle them</h2>
+  <table class="dense">
+    <tr><th style="width:24%">Risk</th><th style="width:9%">Likelihood</th><th>What to do</th></tr>
+    <tr><td><b>Paystack approval delayed</b></td><td>Medium</td><td>Apply on day 1; submit complete documents; keep working on test keys; set the launch date <i>after</i> approval, not before.</td></tr>
+    <tr><td><b>OTP SMS not reaching all networks / DND numbers</b></td><td>Medium</td><td>Test on all four networks early (Phase 4); confirm the OTP route in writing; keep a second provider option; consider voice-call OTP later.</td></tr>
+    <tr><td><b>Store rejection or slow review</b></td><td>Medium</td><td>Account deletion, privacy policy and reviewer login done beforehand; one week of buffer; reply to reviewers same day.</td></tr>
+    <tr><td><b>New Google Play account testing requirement</b></td><td>Medium</td><td>Check current rules on day 1; recruit testers early; may add ~2 weeks.</td></tr>
+    <tr><td><b>Problems that only appear on real phones</b></td><td>High</td><td>This is why Phase 5 exists. Budget fix time; test an older Android phone.</td></tr>
+    <tr><td><b>Staff adoption at the counter</b></td><td>Medium</td><td>Training, quick-card, order-code fallback, owner present on the first days.</td></tr>
+    <tr><td><b>Wrong kitchen capacity settings</b></td><td>Medium</td><td>Start conservative; adjust daily during the soft launch.</td></tr>
+    <tr><td><b>Data-protection compliance</b></td><td>Medium</td><td>Lawyer reviews policy and registration duties before launch; account deletion built; photos and phone numbers kept only as long as needed.</td></tr>
+    <tr><td><b>Photos lost on redeploy</b></td><td>Certain until fixed</td><td>Phase 2 item 7 (cloud storage) — do not launch without it.</td></tr>
+    <tr><td><b>Single point of knowledge</b></td><td>Medium</td><td>Runbook, documented settings sheet, a second admin on every account, maintenance agreement.</td></tr>
+  </table>
+
+  <h3>Cost categories (get current quotes — none are fixed here)</h3>
+  <table class="dense">
+    <tr><th style="width:22%">Type</th><th>Items</th></tr>
+    <tr><td><b>One-time</b></td><td>Google Play registration; legal review; counter devices; test phones; poster printing; development/launch effort.</td></tr>
+    <tr><td><b>Yearly</b></td><td>Apple Developer Program; domain name.</td></tr>
+    <tr><td><b>Monthly</b></td><td>Hosting and managed database; image storage; error-monitoring plan (if beyond free); Expo plan (if beyond free); support/maintenance.</td></tr>
+    <tr><td><b>Per use</b></td><td>Paystack fee on each payment (and on refunds, check their schedule); SMS per login code.</td></tr>
+  </table>
+</section>
+
+<!-- ================= 9. MASTER CHECKLIST ================= -->
+<section>
+  <h2>9 · Master checklist</h2>
+  <p class="small mute">Tick as you go. Owner letters: <b>C</b> client · <b>Y</b> you · <b>AI</b> Claude · <b>T</b> together.</p>
+  <div class="cols2">
+  <div>
+    <h4>Phase 0 — Decisions &amp; content</h4>
+    <ul class="chk small"><li>C · Logo files &amp; brand confirmed</li><li>C · Real Abuja outlets: addresses, hours, capacity</li><li>C · Menu, prices, photos</li><li>C · Refund &amp; complaint policy</li><li>C · Ordering rules</li><li>C · Staff &amp; admin list</li><li>C · Support contact &amp; launch date</li><li>T · Hosting option chosen</li></ul>
+    <h4>Phase 1 — Accounts</h4>
+    <ul class="chk small"><li>C · Paystack verification submitted</li><li>C · SMS account + sender ID submitted</li><li>C · Apple &amp; Google accounts opened</li><li>T · Repo under client GitHub org; PR merged</li><li>C · Expo, hosting, DB, domain, storage</li><li>C · Password-manager vault</li><li>Y · Monitoring set up</li></ul>
+    <h4>Phase 2 — Hardening</h4>
+    <ul class="chk small"><li>AI · Deploy configuration</li><li>AI · CORS restricted</li><li>AI · Cloud image storage</li><li>AI · Account deletion</li><li>AI · Privacy &amp; terms pages (+ legal review)</li><li>AI · Reviewer login</li><li>AI · EAS build config</li><li>AI · Monitoring &amp; logging</li><li>AI · OTP route for DND numbers</li><li>AI · Runbook &amp; staff card</li><li>AI · Security/dependency pass</li></ul>
+    <h4>Phase 3 — Deploy</h4>
+    <ul class="chk small"><li>Y · DB + backups</li><li>Y · Secrets generated</li><li>Y · API deployed (staging, prod)</li><li>T · Domain + HTTPS</li><li>Y · First admin created</li><li>Y · Dashboard published (HTTPS)</li><li>T · Real outlets &amp; menu entered</li><li>Y · Smoke test + backup restore</li></ul>
+  </div>
+  <div>
+    <h4>Phase 4 — Payments / SMS / push</h4>
+    <ul class="chk small"><li>Y · Paystack test keys + webhook</li><li>Y · All payment drills pass</li><li>Y · OTP on 4 networks + DND</li><li>Y · Push credentials; push received</li><li>T · Live keys + live webhook</li><li>T · One real payment + one real refund</li></ul>
+    <h4>Phase 5 — Builds &amp; devices</h4>
+    <ul class="chk small"><li>Y · Preview builds (Android &amp; iOS)</li><li>T · Device checklist passes on all phones</li><li>C · Counter device + scanner test</li><li>AI/Y · All must-fix bugs closed</li></ul>
+    <h4>Phase 6 — Soft launch</h4>
+    <ul class="chk small"><li>T · Sample data removed; real data verified</li><li>T · Staff trained</li><li>Y · Invitees have the build</li><li>T · Daily reviews for 2 weeks</li><li>C · Capacity tuned</li><li>C · Written “go”</li></ul>
+    <h4>Phase 7 — Store &amp; public launch</h4>
+    <ul class="chk small"><li>AI/C · Listing text &amp; screenshots</li><li>Y · Reviewer login enabled (then disabled)</li><li>Y · Apple submitted &amp; approved</li><li>Y · Google submitted &amp; approved</li><li>T · Launch day; poster; announcement</li><li>T · First 100 orders reconciled</li></ul>
+    <h4>Phase 8 — Handover</h4>
+    <ul class="chk small"><li>T · Ownership verified on every account</li><li>Y · Developer access reduced; secrets rotated</li><li>T · Restore test witnessed</li><li>T · Training delivered</li><li>T · Runbook &amp; docs handed over</li><li>T · Maintenance agreement; acceptance signed</li></ul>
+  </div></div>
+</section>
+
+<!-- ================= APPENDICES ================= -->
+<section>
+  <h2>Appendix A · Settings reference</h2>
+  <p class="small">Set these in the host’s settings page for the <b>API</b>. Values go in the password manager — never in Git. The server checks them at start-up.</p>
+  <table>
+    <tr><th style="width:27%">Setting</th><th>What it is</th><th style="width:22%">Production notes</th></tr>
+    <tr><td><code>DATABASE_URL</code></td><td>PostgreSQL connection string</td><td>Required</td></tr>
+    <tr><td><code>JWT_ACCESS_SECRET</code></td><td>Signs login sessions</td><td>32+ random characters, unique; production start-up refuses short, default or <code>change-me…</code> values</td></tr>
+    <tr><td><code>OTP_SECRET</code></td><td>Protects stored login codes</td><td>Same rules as above</td></tr>
+    <tr><td><code>QR_SECRET</code></td><td>Makes pickup QR codes unforgeable</td><td>Same rules as above. Changing it later invalidates every existing QR code.</td></tr>
+    <tr><td><code>PAYSTACK_SECRET_KEY</code></td><td>Paystack secret key (also verifies webhooks)</td><td>Test key on staging, live key on production; server rejects the placeholder</td></tr>
+    <tr><td><code>PAYSTACK_EMAIL_DOMAIN</code></td><td>Email domain used for the payer address Paystack requires</td><td>A domain the client owns; server rejects the <code>.invalid</code> default in production</td></tr>
+    <tr><td><code>PUBLIC_API_URL</code></td><td>Public https address of the API</td><td>Used for the post-payment return page</td></tr>
+    <tr><td><code>APP_CALLBACK_URL</code></td><td>App deep link after payment</td><td>Leave as <code>veejay://payment-complete</code> unless the app scheme changes</td></tr>
+    <tr><td><code>SMS_PROVIDER</code></td><td><code>console</code> (testing) or <code>termii</code></td><td><b>Must be <code>termii</code></b> in production — the server refuses to start with <code>console</code> because it would write login codes to the log</td></tr>
+    <tr><td><code>TERMII_API_KEY</code>, <code>TERMII_SENDER_ID</code></td><td>SMS credentials and sender name</td><td>Only when SMS is <code>termii</code></td></tr>
+    <tr><td><code>NODE_ENV</code></td><td>Environment name</td><td><code>production</code> turns on the safety checks. Use it <b>only on the live system</b>; name the rehearsal copy <code>staging</code> — but still give staging its own random secrets</td></tr>
+    <tr><td><code>PORT</code></td><td>Port the API listens on</td><td>Most hosts set it automatically</td></tr>
+  </table>
+  <p class="small"><b>Mobile app:</b> <code>EXPO_PUBLIC_API_URL</code> (set in the EAS build profile). <b>Dashboard:</b> <code>VITE_API_URL</code> (set at build time).</p>
+
+  <h2 style="margin-top:14px">Appendix B · Commands cheat-sheet</h2>
+  <table>
+    <tr><th style="width:44%">Command</th><th>When</th></tr>
+    <tr><td><code>npm ci &amp;&amp; npm run build</code> (in <code>backend</code>)</td><td>Host build step</td></tr>
+    <tr><td><code>npm run migrate</code></td><td>Apply database migrations (every deploy; safe to repeat)</td></tr>
+    <tr><td><code>npm start</code></td><td>Run the API in production</td></tr>
+    <tr><td><code>node dist/create-admin.js 0803… "Name"</code></td><td>Create/promote an admin in production</td></tr>
+    <tr><td><code>npm test</code></td><td>67 backend tests (needs a local PostgreSQL)</td></tr>
+    <tr><td><code>VITE_API_URL=… npm run build</code> (in <code>admin</code>)</td><td>Build the dashboard for upload</td></tr>
+    <tr><td><code>eas build --platform android|ios --profile preview|production</code></td><td>Cloud-build the mobile app</td></tr>
+    <tr><td><code>eas submit --platform ios|android</code></td><td>Send a production build to the store</td></tr>
+  </table>
+
+  <h2 style="margin-top:14px">Appendix C · What I need from you to start Phase 2 now</h2>
+  <ul class="chk">
+    <li>Which hosting option (A, B or C) — so I write the right deploy files</li>
+    <li>The dashboard address you’ll use (for the CORS setting), even if provisional</li>
+    <li>Which image-storage provider (any S3-compatible one is fine)</li>
+    <li>Whether to build the menu import now (send the client’s spreadsheet when it exists)</li>
+    <li>A go-ahead to open a pull request for the Phase 2 work</li>
+  </ul>
+
+  <h2 style="margin-top:14px">Appendix D · Plain-English glossary</h2>
+  <table>
+    <tr><td style="width:22%"><b>API</b></td><td>The server the app and dashboard talk to; it holds the rules and the database.</td></tr>
+    <tr><td><b>Webhook</b></td><td>Paystack calling our server to say “this payment succeeded”. Verified with a secret signature.</td></tr>
+    <tr><td><b>OTP</b></td><td>One-time password — the 6-digit login code sent by SMS.</td></tr>
+    <tr><td><b>Migration</b></td><td>A versioned change to the database structure, applied the same way in every environment.</td></tr>
+    <tr><td><b>Staging</b></td><td>A private rehearsal copy of the whole system, using test money.</td></tr>
+    <tr><td><b>EAS / Expo</b></td><td>The cloud service that builds the iPhone and Android apps and sends them to the stores.</td></tr>
+    <tr><td><b>TestFlight / internal testing</b></td><td>Apple’s and Google’s official ways to give a test build to a few people before the public release.</td></tr>
+    <tr><td><b>Staged rollout</b></td><td>Releasing to a small percentage of users first, then widening if all is well.</td></tr>
+    <tr><td><b>DND</b></td><td>Do-Not-Disturb registry; some SMS routes don’t deliver to numbers on it.</td></tr>
+    <tr><td><b>NDPA</b></td><td>Nigeria Data Protection Act — rules for handling personal data such as phone numbers and photos.</td></tr>
+  </table>
+  <p class="tiny mute" style="margin-top:10px">Durations, effort figures and approval times in this guide are planning estimates, not guarantees. Third-party requirements and fees (Paystack, SMS providers, Apple, Google, hosts) change — confirm each against the provider’s current documentation before relying on it.</p>
+</section>
+
+</div>
+</body>
+</html>

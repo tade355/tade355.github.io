@@ -10,6 +10,8 @@ Mobile food **pre-order & pickup** for **Veejay Foods**. Launch area: **Abuja Mu
 | API | Node 22, Express, TypeScript, Prisma, PostgreSQL | `backend/` |
 | Staff/admin dashboard | Vite + React + TypeScript | `admin/` |
 
+**Go-live guide** (accounts, tools, every step from today to a public launch, who does what): [`docs/go-live/Veejay-Foods-Go-Live-Guide.pdf`](docs/go-live/Veejay-Foods-Go-Live-Guide.pdf).
+
 **Design & delivery plan** (concept, features, real screenshots, architecture, roadmap): [`docs/design/Veejay-Foods-Design.pdf`](docs/design/Veejay-Foods-Design.pdf) · [HTML version](docs/design/Veejay-Foods-Design.html).
 
 Brand: logo and palette (green `#019947`, red `#F81A08`) are taken from the Veejay Foods logo. Brand name and colours live in `backend/src/env.ts`, `app/src/theme.ts`, `admin/src/brand.ts` + `admin/src/styles.css`.
@@ -25,6 +27,7 @@ npm install && npx prisma migrate deploy && npm run seed   # seeds 3 SAMPLE Abuj
 ADMIN_PHONE=+2348012345678 npm run seed   # optional: pick your admin number
 npm run dev                               # http://localhost:4000 (reads .env); OTP codes print to the console (SMS_PROVIDER=console)
 # production: npm ci && npm run build && npm run migrate && npm start
+#   first admin (NEVER run `npm run seed` in production — it adds sample data): node dist/create-admin.js 0803XXXXXXX "Name"
 
 # 2. Staff/admin dashboard
 cd ../admin && cp .env.example .env && npm install && npm run dev

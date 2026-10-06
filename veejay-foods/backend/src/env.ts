@@ -18,10 +18,15 @@ const schema = z.object({
 
 export const env = schema.parse(process.env);
 if (env.NODE_ENV === "production") {
-  const weak = (["JWT_ACCESS_SECRET", "OTP_SECRET", "QR_SECRET"] as const).filter((k) => env[k].startsWith("dev-"));
-  if (env.PAYSTACK_SECRET_KEY === "sk_test_dev") weak.push("PAYSTACK_SECRET_KEY" as never);
-  if (env.PAYSTACK_EMAIL_DOMAIN.endsWith(".invalid")) weak.push("PAYSTACK_EMAIL_DOMAIN" as never);
-  if (weak.length) throw new Error(`Set real values for: ${weak.join(", ")}`);
+  // Fail fast rather than run real money with placeholder or guessable secrets.
+  const weak: string[] = (["JWT_ACCESS_SECRET", "OTP_SECRET", "QR_SECRET"] as const).filter(
+    (k) => env[k].length < 32 || /^(dev-|change-me)/.test(env[k]),
+  );
+  if (env.PAYSTACK_SECRET_KEY === "sk_test_dev") weak.push("PAYSTACK_SECRET_KEY");
+  if (env.PAYSTACK_EMAIL_DOMAIN.endsWith(".invalid")) weak.push("PAYSTACK_EMAIL_DOMAIN");
+  if (weak.length) throw new Error(`Set real values (secrets: 32+ random characters) for: ${weak.join(", ")}`);
+  // The console SMS provider prints login codes to the server log — never acceptable with real customers.
+  if (env.SMS_PROVIDER === "console") throw new Error("SMS_PROVIDER=console is not allowed in production (login codes would be logged). Use termii.");
 }
 
 // Policy constants
