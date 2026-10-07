@@ -25,7 +25,7 @@ const FIELDS = [
     { value: 'Expired', label: 'Expired' },
   ] },
   { name: 'percentComplete', label: 'Percent Complete (%)', type: 'number', min: 0, step: '1' },
-  { name: 'rate', label: 'Default Rate (₦) — used when no operation-type-specific rate is set in Rate History', type: 'number', min: 0 },
+  { name: 'rate', label: 'Default Rate (₦) — used when no operation-type-specific rate is set in Contract Rate History', type: 'number', min: 0 },
   { name: 'rateUnit', label: 'Default Rate Unit (e.g. per Ha, per KM)', },
   { name: 'expectedRatePerDay', label: 'Expected Rate/Day (Ha) — for weekly productivity tracking', type: 'number', min: 0, step: '0.1' },
   { name: 'startDate', label: 'Project Start Date — for Milestone Tracker', type: 'date' },
@@ -54,7 +54,7 @@ export function renderProjects(container) {
   const galleryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('gallery') }, 'Photo Gallery');
   const weeklyReportTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('weeklyReport') }, 'Weekly Report');
   const rateHistoryTabBtn = canManageProjects
-    ? el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('rateHistory') }, 'Rate History')
+    ? el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('rateHistory') }, 'Contract Rate History')
     : null;
   const reconciliationTabBtn = canManageProjects
     ? el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('reconciliation') }, 'Revenue Reconciliation')

@@ -130,7 +130,7 @@ export function renderHR(container) {
   let tab = 'employees';
   const tabBar = el('div', { class: 'tab-bar' });
   const employeesTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('employees') }, 'Employees');
-  const memosTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('memos') }, 'Memos & Notices');
+  const memosTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('memos') }, 'Staff Memos & Letters');
   const assetsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('assets') }, 'Assets Tracker');
   const payrollTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('payroll') }, 'Payroll');
   const operatorAllowanceTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('operatorAllowance') }, 'Operator Allowance');
@@ -143,7 +143,7 @@ export function renderHR(container) {
   tabBar.appendChild(trainingProgramsTabBtn);
 
   const actionSlot = el('div');
-  container.appendChild(sectionHeader('HR & Employees', 'Staff records, roles, memos/notices, payroll, operator allowance, and training programs', actionSlot));
+  container.appendChild(sectionHeader('HR & Employees', 'Staff records, roles, memos/letters, payroll, operator allowance, and training programs', actionSlot));
   container.appendChild(tabBar);
 
   const body = el('div');

@@ -225,7 +225,7 @@ export function renderFleet(container) {
   const maintenanceTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('maintenance') }, 'Maintenance Log');
   const statusReportTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('statusReport') }, 'Daily Status Report');
   const inventoryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('inventory') }, 'Inventory & Equipment');
-  const rateHistoryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('rateHistory') }, 'Rate History');
+  const rateHistoryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('rateHistory') }, 'Fleet Rate History');
   const dozerEconomicsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('dozerEconomics') }, 'Dozer Economics');
   tabBar.appendChild(rosterTabBtn);
   tabBar.appendChild(maintenanceTabBtn);

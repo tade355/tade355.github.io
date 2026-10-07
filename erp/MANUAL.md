@@ -68,8 +68,8 @@ Every staff account is assigned one of four **ERP Access Levels** in HR & Employ
 | Tier | Who this is for | What they get |
 |---|---|---|
 | **Admin** | Management / ownership | Everything — every module, every tab, every action, including HR, Payroll, and the Admin-only Internal Ledger inside Dozer Economics. |
-| **Accounts** | Office / accounts staff | Dashboard, Documents and Notices, Projects (including Rate History), Resource Management, Sales & Invoicing, Purchasing & Suppliers, Accounting & Expenses (including Profitability), Fund Requests & Approvals, My Salary, Leave & Attendance. **Not**: Daily Operations, Fleet Management, HR & Employees. |
-| **Supervisor** | Site supervisors | Documents and Notices, Projects (Map View, Photo Gallery, and Weekly Report only — no Projects list or Rate History), Daily Operations, Fleet Management, Resource Management, Fund Requests & Approvals (including the Approvals inbox), My Salary, Leave & Attendance. A Supervisor's view of Fund Requests, Leave Requests, and Fueling Vouchers is further narrowed to their own **Assigned Project** (set on their HR record) — see the note under each relevant module. **Not**: Dashboard, Sales, Purchasing, Accounting, HR. |
+| **Accounts** | Office / accounts staff | Dashboard, Documents and Notices, Projects (including Contract Rate History), Resource Management, Sales & Invoicing, Purchasing & Suppliers, Accounting & Expenses (including Profitability), Fund Requests & Approvals, My Salary, Leave & Attendance. **Not**: Daily Operations, Fleet Management, HR & Employees. |
+| **Supervisor** | Site supervisors | Documents and Notices, Projects (Map View, Photo Gallery, and Weekly Report only — no Projects list or Contract Rate History), Daily Operations, Fleet Management, Resource Management, Fund Requests & Approvals (including the Approvals inbox), My Salary, Leave & Attendance. A Supervisor's view of Fund Requests, Leave Requests, and Fueling Vouchers is further narrowed to their own **Assigned Project** (set on their HR record) — see the note under each relevant module. **Not**: Dashboard, Sales, Purchasing, Accounting, HR. |
 | **Staff** | Everyone else (general/field staff) | Documents and Notices, Fund Requests & Approvals (their own requests only — no Approvals tab), My Salary (their own pay history only), Leave & Attendance (their own leave/attendance only). Nothing else. |
 
 > **Important caveat:** this tier system controls what the app's screens *show and offer* — it is not a database-level security wall. Anyone determined enough with technical access to the underlying system could bypass it. Treat it as "the right doors are hidden from the wrong people," not "the wrong people are locked out even if they try to force their way in."
@@ -141,8 +141,8 @@ No print button on this screen.
 
 **Who sees it:** Admin, Accounts, Supervisor.
 **Tab visibility differs by tier:**
-- **Admin / Accounts** see five tabs: Projects, Map View, Photo Gallery, Weekly Report, Rate History. (Profitability lives only under [Accounting & Expenses](#13-accounting--expenses) now — it isn't duplicated here.)
-- **Supervisor** sees only **Map View, Photo Gallery, and Weekly Report** — no ability to add/edit projects, and no Rate History tab.
+- **Admin / Accounts** see five tabs: Projects, Map View, Photo Gallery, Weekly Report, Contract Rate History. (Profitability lives only under [Accounting & Expenses](#13-accounting--expenses) now — it isn't duplicated here.)
+- **Supervisor** sees only **Map View, Photo Gallery, and Weekly Report** — no ability to add/edit projects, and no Contract Rate History tab.
 
 ### Projects tab (Admin/Accounts only)
 
@@ -164,7 +164,7 @@ The master list of every job/site the company runs. Stat cards: Total Projects, 
 | Scope of Work | free text |
 | Notes | free text |
 
-> **Note on Rate:** setting or changing a project's Rate/Rate Unit automatically logs an entry to the **Rate History** tab (first save always logs an opening entry; later edits only log a new entry if the rate actually changed) — this preserves a dated history of what the contract rate was at any point in time. However, as currently built, this Rate value is a *record only* — Profitability's cost/revenue math draws revenue from tagged Invoices and cost from dozer/diesel rate history, not from this Project Rate field.
+> **Note on Rate:** setting or changing a project's Rate/Rate Unit automatically logs an entry to the **Contract Rate History** tab (first save always logs an opening entry; later edits only log a new entry if the rate actually changed) — this preserves a dated history of what the contract rate was at any point in time. However, as currently built, this Rate value is a *record only* — Profitability's cost/revenue math draws revenue from tagged Invoices and cost from dozer/diesel rate history, not from this Project Rate field.
 
 No print button on this tab.
 
@@ -199,7 +199,7 @@ A bolded **Cumulative** row sums every dozer's daily totals and also shows the f
 
 Below the daily grid, the financial part of the report is organized into three consistently-structured sections — a stat-card headline followed by supporting tables — so the two cost methodologies read side by side instead of as one long mixed list:
 
-**Revenue** (shown once, shared by both cost lenses below — they start from the same figure): quantity achieved this period × the contract rate in effect that day (Rate History), broken down **by Operation Type** in a table (Felling, Stacking, etc. each get their own row, since they earn at very different rates). **Trekking always shows ₦0 revenue** — it's repositioning time between sites/blocks, not billable production, even if a general fallback contract rate happens to be on file for the project (this rule is enforced in the shared revenue calculation used app-wide, so Profitability and Projects → Profitability agree with it too, not just this report). This is provisional/expected revenue, not verified or invoiced revenue.
+**Revenue** (shown once, shared by both cost lenses below — they start from the same figure): quantity achieved this period × the contract rate in effect that day (Contract Rate History), broken down **by Operation Type** in a table (Felling, Stacking, etc. each get their own row, since they earn at very different rates). **Trekking always shows ₦0 revenue** — it's repositioning time between sites/blocks, not billable production, even if a general fallback contract rate happens to be on file for the project (this rule is enforced in the shared revenue calculation used app-wide, so Profitability and Projects → Profitability agree with it too, not just this report). This is provisional/expected revenue, not verified or invoiced revenue.
 
 **Cost & Profit — Tentative (Field Estimate):** a quick field estimate using standard flat rates rather than logged ledger entries, shown as a Cost Item / Basis / Amount table:
 - **Rental Cost** — always covers every dozer on the roster, priced by ownership: **Partnership/Rented** — days worked this period × Rental Rate/Day (real rent paid out); **Company** — hours worked this period × Hourly Rate (the imputed cost of using owned equipment, what it would cost to replicate the operation from scratch). Hourly Rate is used rather than Rental Rate/Day for Company dozers because it's a required field on every dozer, so this always produces a real figure — consistent with how M/c Recovered credits Company dozers the same way further down.
@@ -225,7 +225,7 @@ If a dozer you expect to see is missing: it has no operations report logged agai
 
 **Milestone Tracker sub-tab:** pick a **Project**. Shows all-time (not period-limited) progress: Project Start Date, Days on Project, Project Speed (Ha/Day), Grand Cumulative Achieved, Total Contract Area, and Remaining to Complete — plus a table of every machine/operator that's ever worked the project (same Current-Project-or-actually-worked-here roster rule as Weekly Performance above), broken down by operation type. Requires **Project Start Date** and **Total Contract Area (Ha)** to be set on the Projects tab for the full set of figures to compute (otherwise they show "—"). Click **🖨 Print Tracker** for a printable "MILESTONE REPORT TRACKING SYSTEM" document.
 
-### Rate History tab (Admin/Accounts only)
+### Contract Rate History tab (Admin/Accounts only)
 
 A dated log of every contract-rate change, per project **and, usually, per Operation Type** — most contracts price each operation type separately (a hectare's contract value isn't earned until every operation type contracted for it, e.g. Felling, then Stacking, then Bonding, has actually been done). **"+ Log Rate Change"** fields: Project (required), Operation Type (optional — leave as "General (all operations)" for a fallback rate that applies to any operation type without its own specific entry), Effective From (date, required), Rate (₦), Rate Unit, Notes. Filterable by Project and Operation Type.
 
@@ -238,7 +238,7 @@ Editing a project's own **Default Rate** (Projects tab) auto-logs a general (no-
 **Filters:** Project (or "All Projects"), From, To.
 
 **Revenue Reconciliation table** — one row per Project × Operation Type combination that has activity in the selected range:
-- **Reported Qty / Reported Revenue** — from Daily Operations reports, quantity × the contract rate that was in effect that day (Rate History tab). This is the **provisional** figure, available same-day, before any client involvement.
+- **Reported Qty / Reported Revenue** — from Daily Operations reports, quantity × the contract rate that was in effect that day (Contract Rate History tab). This is the **provisional** figure, available same-day, before any client involvement.
 - **Invoiced Qty / Invoiced Revenue** — from invoice line items that carry the same Operation Type and whose invoice's Period overlaps the range. This is the **verified** figure, from what the client actually agreed to pay for.
 - **Qty Variance / Revenue Variance** — the gap between the two, with a status pill: **OK** (within 2% or a small floor), **Minor Variance**, or **Variance** (flagged red) if the gap is larger. **No Invoice Yet** means nothing's been invoiced for that slice at all.
 
@@ -317,7 +317,7 @@ No print button on this screen.
 
 **Who sees it:** Admin, Supervisor.
 
-Five tabs cover everything about the company's dozers, excavators, and vehicles: **Fleet Roster, Maintenance Log, Inventory & Equipment, Rate History, Dozer Economics.**
+Five tabs cover everything about the company's dozers, excavators, and vehicles: **Fleet Roster, Maintenance Log, Inventory & Equipment, Fleet Rate History, Dozer Economics.**
 
 > **Diesel Tracking and Fueling Vouchers moved.** Both now live under [Resource Management → Diesel Management](#10-resource-management), alongside the Station Ledger and Site Distribution tabs they feed. Nothing about how they work changed — only where you find them.
 
@@ -354,7 +354,7 @@ Stat cards: Fleet Size, Company Owned, Partnership, Rented, Down / Under Mainten
 | Acquisition Value (₦) | |
 | Service Interval (engine hours) | default 250 |
 
-> Saving a new asset, or changing its rates, automatically logs an entry to the **Rate History** tab (an opening entry on creation; a new entry on edit only if a rate actually changed) — so historical costing always uses the rate that was really in effect at the time, not today's rate applied retroactively.
+> Saving a new asset, or changing its rates, automatically logs an entry to the **Fleet Rate History** tab (an opening entry on creation; a new entry on edit only if a rate actually changed) — so historical costing always uses the rate that was really in effect at the time, not today's rate applied retroactively.
 
 Deleting a fleet asset deletes the underlying inventory record — Fleet Roster shares its data with Inventory & Equipment and Project Items (same table, different categories), it's just the dedicated tab for the Heavy Equipment category, with fleet-specific fields the other two don't need. No print button on this tab.
 
@@ -378,9 +378,9 @@ Rows where **Quantity ≤ Reorder Level** are flagged with an amber row highligh
 
 No print button.
 
-### Rate History tab (dozer rates)
+### Fleet Rate History tab (dozer rates)
 
-A dated log of hourly-rate/rental-rate/management-fee changes per fleet asset. **"+ Log Rate Change"** fields: Equipment, Effective From, Hourly Rate (₦), Rental Rate/Day (₦), Management Fee/Day (₦), Notes. As with Projects' Rate History, entries are normally created automatically when you edit an asset's rates on the Fleet Roster — add one manually here to backdate a correction.
+A dated log of hourly-rate/rental-rate/management-fee changes per fleet asset. **"+ Log Rate Change"** fields: Equipment, Effective From, Hourly Rate (₦), Rental Rate/Day (₦), Management Fee/Day (₦), Notes. As with Projects' Contract Rate History, entries are normally created automatically when you edit an asset's rates on the Fleet Roster — add one manually here to backdate a correction.
 
 This "rate as of a date" system is what lets Profitability and Dozer Economics always use the rate that was *actually in effect* on each day worked, even after a rate has since changed.
 
@@ -500,7 +500,7 @@ Table: Invoice #, Customer, Project, Date, Due, Total, Status, actions. Any invo
 
 **"+ New Invoice" fields:** Customer (required), Project (optional), Invoice Date, Due Date, and one or more **Line Items** (Description, Qty, Price/Unit — "+ Add Line" for more than one). **Status is no longer set by hand** — it's computed automatically from payments logged against the invoice (see "Log a Payment" below): Unpaid, Partially Paid, or Paid.
 
-> **When a Project is linked**, two things appear that don't for a freeform invoice: a **Period Start / Period End** (the measurement window this invoice verifies), and an **Operation Type** dropdown on every line item — both required. This is what lets the Revenue Reconciliation tab on the Projects screen automatically match this invoice against Daily Operations reports for the same project, operation type, and period. Non-project invoices skip both and stay freeform, same as before. Picking an Operation Type also fills that line's **Price/Unit** from the project's contract rate for that operation type as of the invoice's Period Start (Projects → Rate History) — only when Price/Unit is still blank, so it never overwrites a price you've already typed.
+> **When a Project is linked**, two things appear that don't for a freeform invoice: a **Period Start / Period End** (the measurement window this invoice verifies), and an **Operation Type** dropdown on every line item — both required. This is what lets the Revenue Reconciliation tab on the Projects screen automatically match this invoice against Daily Operations reports for the same project, operation type, and period. Non-project invoices skip both and stay freeform, same as before. Picking an Operation Type also fills that line's **Price/Unit** from the project's contract rate for that operation type as of the invoice's Period Start (Projects → Contract Rate History) — only when Price/Unit is still blank, so it never overwrites a price you've already typed.
 
 **Log a Payment (💰 button on the invoices table):** opens a window showing the invoice's payment history (Date, Amount, Method, Reference, Notes — editable/deletable) plus a form to log a new one. Every add/edit/delete immediately recomputes the invoice's Status: 0 received → Unpaid, something but less than the total → Partially Paid, the full total or more → Paid.
 
@@ -615,9 +615,9 @@ No print button.
 
 > **How the numbers are actually built — read this once, it explains a lot of "why doesn't this match" questions:**
 > - **Area Cleared** only counts Ha-unit operation types (Felling, Stacking, Direct Stacking, Root Picking, Bonding) — Road (KM) and Trekking (hrs) are deliberately excluded so they don't distort a hectares total.
-> - **Dozer Cost** = for every operation logged, hours worked × the hourly rate **that was actually in effect on that day** (from Fleet Management's Rate History) — not today's rate applied backward.
+> - **Dozer Cost** = for every operation logged, hours worked × the hourly rate **that was actually in effect on that day** (from Fleet Management's Fleet Rate History) — not today's rate applied backward.
 > - **Diesel Cost** = litres used × the diesel price **in effect on that day** (from the most recent Diesel Receipt on or before that date, or the current inventory cost if no receipt exists yet).
-> - **Provisional Revenue** = quantity × the contract rate in effect that day **for that report's Operation Type** (Rate History), summed across every Daily Operations report logged for the project — a same-day figure, available the moment a report is submitted, whether or not it's been invoiced yet. This is the number to check if an active project shows ₦0 Verified Revenue but real work has clearly gone in — it means the work hasn't been invoiced yet, not that nothing happened. **Trekking always contributes ₦0** here — it's repositioning time between sites/blocks, not billable production, even if a general fallback contract rate happens to be on file for the project.
+> - **Provisional Revenue** = quantity × the contract rate in effect that day **for that report's Operation Type** (Contract Rate History), summed across every Daily Operations report logged for the project — a same-day figure, available the moment a report is submitted, whether or not it's been invoiced yet. This is the number to check if an active project shows ₦0 Verified Revenue but real work has clearly gone in — it means the work hasn't been invoiced yet, not that nothing happened. **Trekking always contributes ₦0** here — it's repositioning time between sites/blocks, not billable production, even if a general fallback contract rate happens to be on file for the project.
 > - **Verified Revenue** = every Invoice explicitly tagged to that project on the Sales screen, **regardless of whether it's Paid or Unpaid**. (This is different from Accounting & Expenses' "Total Revenue (Paid)" stat card, which only counts Paid invoices — so don't be surprised if the two numbers don't match; Profitability's Verified Revenue also includes work that's been invoiced but not yet collected.)
 > - **Logistics Cost** = expenses tagged to the project with category "Logistics."
 > - **Other Cost** = every other expense tagged to the project, **except** "Fuel" — Fuel-category expenses are deliberately left out here, because Diesel Cost above is already computed from actual litres used, and adding Fuel expenses too would double-count the same diesel spend.
@@ -696,7 +696,7 @@ For each row you get **Approve** and **Reject** buttons (Reject asks you to conf
 
 **Who sees it:** Admin only.
 
-Tabs: **Employees, Memos & Notices, Assets Tracker, Payroll, Operator Allowance, Training Programs.**
+Tabs: **Employees, Staff Memos & Letters, Assets Tracker, Payroll, Operator Allowance, Training Programs.**
 
 ### Employees tab
 
@@ -719,7 +719,7 @@ The master staff roster.
 | ERP Access Level | Admin / Accounts / Supervisor / Staff — defaults to Staff |
 | Assigned Project | restricts what a **Supervisor** (or Staff/Accounts submitting requests) sees to just this project — see the tier notes throughout this manual |
 
-### Memos & Notices tab
+### Staff Memos & Letters tab
 
 General formal written correspondence — memos, notices, warning letters, query letters, commendation letters, confirmation letters, or "Other."
 

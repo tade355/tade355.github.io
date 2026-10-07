@@ -382,7 +382,7 @@ function renderWeeklyPerformanceTab(container) {
     // start from the exact same reported-Ha × contract-rate figure, so it's
     // shown once rather than repeated under each). ---
     body.appendChild(el('h3', { class: 'subsection-title' }, 'Revenue'));
-    body.appendChild(el('p', { class: 'section-subtitle' }, 'Quantity achieved this period × the contract rate in effect that day (Projects → Rate History) — provisional/expected revenue, not verified or invoiced revenue.'));
+    body.appendChild(el('p', { class: 'section-subtitle' }, 'Quantity achieved this period × the contract rate in effect that day (Projects → Contract Rate History) — provisional/expected revenue, not verified or invoiced revenue.'));
     body.appendChild(el('div', { class: 'stats-grid' }, [
       statCard({ label: 'Revenue', value: formatCurrency(revenueData.total), tone: 'good' }),
     ]));

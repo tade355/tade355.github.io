@@ -41,7 +41,7 @@ function renderCompanyPerformance(container, from, to) {
   });
 
   container.appendChild(el('h3', { class: 'subsection-title' }, 'Company-Owned Dozer Performance'));
-  container.appendChild(el('p', { class: 'section-subtitle' }, 'Revenue is an estimate (hours worked × the dozer\'s ₦/hr rate in effect on each day — see Fleet Management → Rate History), not real billed revenue — clients are invoiced per project, not per machine. Days Available, % Optimization, Potential Revenue, and Shortfall need both From and To set — Downtime here means calendar days with no daily operations report, not specifically repair time (see Maintenance Log for that).'));
+  container.appendChild(el('p', { class: 'section-subtitle' }, 'Revenue is an estimate (hours worked × the dozer\'s ₦/hr rate in effect on each day — see Fleet Management → Fleet Rate History), not real billed revenue — clients are invoiced per project, not per machine. Days Available, % Optimization, Potential Revenue, and Shortfall need both From and To set — Downtime here means calendar days with no daily operations report, not specifically repair time (see Maintenance Log for that).'));
   const tableContainer = el('div');
   container.appendChild(tableContainer);
   renderTable(tableContainer, {

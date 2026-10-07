@@ -375,7 +375,7 @@ export function printWeeklyPerformanceReport(project, data) {
     </table>
     <h3>Revenue</h3>
     <div class="print-block">
-      <p>Quantity achieved this period × the contract rate in effect that day (Projects → Rate History) — provisional/expected revenue, not verified or invoiced revenue.</p>
+      <p>Quantity achieved this period × the contract rate in effect that day (Projects → Contract Rate History) — provisional/expected revenue, not verified or invoiced revenue.</p>
     </div>
     <div class="print-meta-grid"><div><strong>Revenue:</strong> ${formatCurrency(data.revenueData.total)}</div></div>
     <table class="print-table">
