@@ -45,22 +45,35 @@ function leaveBalanceRows(leaveRows) {
   });
 }
 
-function leaveFields() {
+// Status/Approved By can only be set by whoever is actually allowed to
+// decide a leave request (same Admin/Supervisor rule the Approvals inbox
+// uses) — everyone else sees them as plain text, so a Staff member can't
+// open their own request and approve it themselves.
+function canApproveLeave() {
+  return ['Admin', 'Supervisor'].includes(getCurrentTier());
+}
+
+function leaveFields(record) {
+  const canApprove = canApproveLeave();
   return [
     { name: 'employeeId', label: 'Employee', type: 'select', required: true, options: employeeOptions() },
     { name: 'leaveType', label: 'Leave Type', type: 'select', required: true, options: LEAVE_TYPES.map((t) => ({ value: t, label: t })) },
     { name: 'startDate', label: 'Start Date', type: 'date', required: true },
     { name: 'endDate', label: 'End Date', type: 'date', required: true },
     { name: 'reason', label: 'Reason', type: 'textarea', required: true },
-    { name: 'status', label: 'Status', type: 'select', required: true, options: [
-      { value: 'Pending', label: 'Pending' },
-      { value: 'Approved', label: 'Approved' },
-      { value: 'Rejected', label: 'Rejected' },
-    ] },
-    { name: 'approvedBy', label: 'Approved By', type: 'select', options: [
-      { value: '', label: '— Not yet approved —' },
-      ...employeeOptions(),
-    ] },
+    canApprove
+      ? { name: 'status', label: 'Status', type: 'select', required: true, options: [
+        { value: 'Pending', label: 'Pending' },
+        { value: 'Approved', label: 'Approved' },
+        { value: 'Rejected', label: 'Rejected' },
+      ] }
+      : { name: 'status', label: 'Status', type: 'readonly', displayValue: `${record?.status || 'Pending'} — only an Admin or Supervisor can approve or reject a leave request.` },
+    canApprove
+      ? { name: 'approvedBy', label: 'Approved By', type: 'select', options: [
+        { value: '', label: '— Not yet approved —' },
+        ...employeeOptions(),
+      ] }
+      : { name: 'approvedBy', label: 'Approved By', type: 'readonly', displayValue: record?.approvedBy ? employeeName(record.approvedBy) : '— Not yet approved —' },
   ];
 }
 
@@ -199,7 +212,7 @@ export function renderLeaveAttendance(container) {
       }
       openModal({
         title: record ? 'Edit Leave Request' : 'Apply for Leave',
-        fields: leaveFields(),
+        fields: leaveFields(record),
         initial: record || { status: 'Pending', startDate: todayIso(), endDate: todayIso(), employeeId: getCurrentUserId() },
         submitLabel: record ? 'Save Changes' : 'Submit Request',
         onSubmit: async (data) => {

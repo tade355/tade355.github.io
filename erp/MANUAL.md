@@ -408,7 +408,7 @@ Four tabs: **Diesel Management, Bulldozer Parts & Supplies, Dozer Rent Payments,
 
 This tab has its own row of **five sub-tabs** beneath the main Resource Management tab bar: **Station Ledger, Site Distribution, Dozer Discrepancy Report, Diesel Tracking, Fueling Vouchers.** The first three are the accountability chain; the last two are the day-to-day records that feed it (both moved here from Fleet Management — unchanged apart from their location).
 
-**Station Ledger (Level 1)** — a *prepay* relationship: you pay a filling station up front, and it owes back litres/funds as it supplies diesel over the following days. **"+ Log Prepayment" fields:** Date, Filling Station, Amount Paid (₦), Agreed Unit Price (₦/litre), Reference, Notes. A balances table shows, per station: Total Prepaid, Litres Purchased, Litres Supplied, Balance (Diesel), Balance (Funds), and Status (Fully Settled / Partially Settled / Outstanding). "Litres Supplied" comes from **Diesel Receipts** (the Diesel Tracking sub-tab) tagged with that station — there's nothing extra to log here once a receipt is tagged. Note the balance direction is the opposite of the existing Fuel Credit tab in Purchasing & Suppliers: there, a balance means *you* owe the station (credit collected, paid later); here, a balance means *the station* still owes *you* (paid up front, not yet fully supplied). Use whichever matches how a given station actually does business with you.
+**Station Ledger (Level 1)** — a *prepay* relationship: you pay a filling station up front, and it owes back litres/funds as it supplies diesel over the following days. **"+ Log Prepayment" fields:** Date, Filling Station, Amount Paid (₦), Agreed Unit Price (₦/litre), Reference, Notes. A balances table shows, per station: Total Prepaid, Litres Purchased, Litres Supplied, Station Owes Us (Diesel), Station Owes Us (Funds), and Status (Fully Settled / Partially Settled / Outstanding). "Litres Supplied" comes from **Diesel Receipts** (the Diesel Tracking sub-tab) tagged with that station — there's nothing extra to log here once a receipt is tagged. Note the balance direction is the opposite of the existing Fuel Credit tab in Purchasing & Suppliers: there, a balance means *you* owe the station (credit collected, paid later); here, a balance means *the station* still owes *you* (paid up front, not yet fully supplied). Use whichever matches how a given station actually does business with you.
 
 **Site Distribution (Level 2)** — each project's dump-tank stock. Opening + New Supply − Distributed = Closing, filterable by date range. "New Supply" comes from Diesel Receipts tagged with that Site/Project (same receipts as Level 1, just tagged with a project instead of/as well as a station). **"Distributed" is read straight from Daily Operations reports** — the sum of every report's Diesel Supplied field for that site in range — so it updates itself as field reports come in, with nothing extra to log. **"+ Log Distribution" fields:** Date, Site/Project, Dozer/Equipment, Litres Distributed, Distributed By, Notes — this is an optional accountability record (who physically handed diesel to which dozer); logging one also pre-fills that dozer's Daily Operations report for the same date/site with these litres, but it's the report itself, not this log, that the Distributed figure counts.
 
@@ -442,7 +442,7 @@ Below the buttons, four sections:
 
 **Purpose:** an authorization slip a driver/operator takes to a filling station to get fuel on the company's account.
 
-**"+ New Fueling Voucher" fields:** Date, Fuel Station (Midejab Ltd, SK Gold, Asolak Ltd, Iloamachi Ltd, Total Enugu, Akuebuolo Ltd, Kabir Ltd), Project, Dozer/Equipment, Litres Requested, Estimated Cost (₦), Requested By, Status (Pending Approval / Approved / Rejected / Fulfilled), Approved By, Notes, Receipts / Photos.
+**"+ New Fueling Voucher" fields:** Date, Fuel Station (Midejab Ltd, SK Gold, Asolak Ltd, Iloamachi Ltd, Total Enugu, Akuebuolo Ltd, Kabir Ltd), Project, Dozer/Equipment, Litres Requested, Estimated Cost (₦), Requested By, Status (Pending Approval / Approved / Rejected / Fulfilled), Approved By, Notes, Receipts / Photos. Status and Approved By are **only editable by an Admin or Supervisor** — everyone else sees them as read-only text, so a voucher can't be self-approved by editing it directly.
 
 A voucher only counts toward the Diesel Ledger's "New" litres once it's marked **Fulfilled**. Approving or rejecting a pending voucher is normally done from the [Approvals inbox](#14-fund-requests--approvals) rather than from here.
 
@@ -536,7 +536,7 @@ Table: PO #, Supplier, Date, Total, Status, actions.
 
 **Purpose:** tracks diesel/PMS the company collects on credit from filling stations, so the office always knows what's owed to each one.
 
-**Filter:** Station dropdown. Stat cards: Total Owed Across All Stations, Stations With a Balance. A **Station Balances** table shows each station's total collected, total paid, balance owed, and status (Fully Settled / Partially Settled / Outstanding).
+**Filter:** Station dropdown. Stat cards: Total We Owe Stations, Stations With a Balance. A **Station Balances** table shows each station's total collected, total paid, We Owe Station, and status (Fully Settled / Partially Settled / Outstanding).
 
 **"+ Log Collection" fields:** Date, Filling Station, Fuel Type (Diesel / PMS), Litres Collected, Unit Price (₦/litre), Reference, Notes.
 
@@ -668,7 +668,8 @@ Search box and a Status filter (All / Pending / Approved / Rejected / Paid). Sta
 | Cost Head | for Income & Expenditure reporting — any Expense category |
 | Description | free text |
 | Line items | one or more rows of: Description, Amount (₦), Account Name, Account Number, Bank — click **+ Add Line** for more than one payment in the same request |
-| Status / Approved By | **only editable if you're an Admin** — everyone else sees these as read-only text: "&lt;Status&gt; — only an Admin can approve or reject a fund request." |
+| Status | **only editable if you're an Admin** — everyone else sees it as read-only text: "&lt;Status&gt; — only an Admin can approve or reject a fund request." |
+| Approved By | not a field you set — it's filled in automatically with whoever actually moves Status to Approved or Rejected, whether that happens here or in the Approvals inbox below, so it can't be mis-attributed to someone else |
 | Receipts / Photos | attach supporting documents |
 
 **Total Amount** is calculated live from the line items as you type.
@@ -688,7 +689,7 @@ Stat cards: Total Pending, Fund Requests, Leave Requests, Fueling Vouchers.
 
 For each row you get **Approve** and **Reject** buttons (Reject asks you to confirm first), plus a **🖨 Print** button for Fund Requests and Fueling Vouchers (Leave Requests have no print document).
 
-> **Only Admin ever sees Fund Requests in this inbox** — a Supervisor's Approvals tab will show pending Leave Requests and Fueling Vouchers from their own project, but never a fund request (even though the tab itself is visible to them). Approving or rejecting here directly updates the underlying record and records **you** (whoever clicks the button) as the decision-maker. There is no "mark as Paid" here — once a fund request is Approved, moving it on to Paid still requires editing it directly on the Requests tab (Admin only).
+> **Only Admin ever sees Fund Requests in this inbox** — a Supervisor's Approvals tab will show pending Leave Requests and Fueling Vouchers from their own project, but never a fund request (even though the tab itself is visible to them). Approving or rejecting here directly updates the underlying record and records **you** (whoever clicks the button) as the decision-maker. There is no "mark as Paid" here — once a fund request is Approved, moving it on to Paid still requires editing it directly on the Requests tab (Admin only), which is also where you can approve/reject a Fund Request directly instead of using this inbox — either way records the same Approved By attribution and sends the same notification.
 
 ---
 
@@ -791,11 +792,11 @@ Two tabs: **Leave Requests, Attendance.**
 
 **Your Leave Balance** stat card shows your remaining days for the year (Entitlement − Used, where "Used" only counts leave requests that are **Approved** and started this calendar year — Pending or Rejected requests never reduce your balance).
 
-**"+ Apply for Leave" fields:** Employee (defaults to you), Leave Type (Annual, Sick, Casual, Compassionate, Unpaid), Start Date, End Date, Reason, Status, Approved By.
+**"+ Apply for Leave" fields:** Employee (defaults to you), Leave Type (Annual, Sick, Casual, Compassionate, Unpaid), Start Date, End Date, Reason, Status, Approved By. Status and Approved By are **only editable by an Admin or Supervisor** — everyone else sees them as read-only text, so you can't approve your own leave request by editing it.
 
 A **Leave Balances table** (visible to Admin/Supervisor only) shows every relevant employee's Entitlement, Used, and Remaining — a Supervisor sees only staff on their own assigned project.
 
-> Normal decisions on a leave request should be made from the [Approvals inbox](#14-fund-requests--approvals), which correctly records who actually approved it. Who can *see* a request follows the same rule as fund requests: Admin/Accounts see all, a Supervisor sees their project's staff, Staff see only their own.
+> Decisions on a leave request can be made either here or from the [Approvals inbox](#14-fund-requests--approvals) — both record who actually approved it. Who can *see* a request follows the same rule as fund requests: Admin/Accounts see all, a Supervisor sees their project's staff, Staff see only their own.
 
 No print button for leave requests.
 

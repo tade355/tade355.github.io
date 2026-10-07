@@ -157,7 +157,7 @@ export function renderFuelCredit(container) {
 
     summarySlot.innerHTML = '';
     summarySlot.appendChild(el('div', { class: 'stats-grid' }, [
-      statCard({ label: 'Total Owed Across All Stations', value: formatCurrency(totalOwed), tone: totalOwed ? 'critical' : 'good' }),
+      statCard({ label: 'Total We Owe Stations', value: formatCurrency(totalOwed), tone: totalOwed ? 'critical' : 'good' }),
       statCard({ label: 'Stations With a Balance', value: String(outstandingCount), tone: outstandingCount ? 'warning' : 'good' }),
     ]));
 
@@ -168,7 +168,7 @@ export function renderFuelCredit(container) {
         { key: 'pmsLitres', label: 'PMS Collected', render: (r) => `${r.pmsLitres.toLocaleString()} L` },
         { key: 'totalCollected', label: 'Total Collected', render: (r) => formatCurrency(r.totalCollected) },
         { key: 'totalPaid', label: 'Total Paid', render: (r) => formatCurrency(r.totalPaid) },
-        { key: 'balance', label: 'Balance Owed', render: (r) => el('strong', { class: r.balance > 0 ? 'text-critical' : 'text-good' }, formatCurrency(r.balance)) },
+        { key: 'balance', label: 'We Owe Station', render: (r) => el('strong', { class: r.balance > 0 ? 'text-critical' : 'text-good' }, formatCurrency(r.balance)) },
         { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
       ],
       rows: balances,

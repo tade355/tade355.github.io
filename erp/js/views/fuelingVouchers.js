@@ -5,6 +5,7 @@ import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confi
 import { FUEL_STATIONS } from '../constants.js';
 import { printFuelingVoucher } from '../print.js';
 import { fleetItems } from './fleet.js';
+import { getCurrentTier } from '../session.js';
 
 function projectOptions() {
   return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
@@ -18,7 +19,20 @@ function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
 }
 
-function voucherFields() {
+function employeeName(id) {
+  return store.get('employees').find((e) => e.id === id)?.name || 'Unknown';
+}
+
+// Status/Approved By can only be set by whoever is actually allowed to
+// decide a voucher (same Admin/Supervisor rule the Approvals inbox uses) —
+// everyone else, including Accounts, sees them as plain text, so a request
+// can't be approved/fulfilled by editing it directly outside that inbox.
+function canApproveVoucher() {
+  return ['Admin', 'Supervisor'].includes(getCurrentTier());
+}
+
+function voucherFields(record) {
+  const canApprove = canApproveVoucher();
   return [
     { name: 'date', label: 'Date', type: 'date', required: true },
     { name: 'station', label: 'Fuel Station', type: 'select', required: true, options: FUEL_STATIONS.map((s) => ({ value: s, label: s })) },
@@ -30,16 +44,20 @@ function voucherFields() {
     { name: 'litresRequested', label: 'Litres Requested', type: 'number', required: true, min: 0 },
     { name: 'estimatedCost', label: 'Estimated Cost (₦)', type: 'number', required: true, min: 0 },
     { name: 'requestedBy', label: 'Requested By', type: 'select', required: true, options: employeeOptions() },
-    { name: 'status', label: 'Status', type: 'select', required: true, options: [
-      { value: 'Pending Approval', label: 'Pending Approval' },
-      { value: 'Approved', label: 'Approved' },
-      { value: 'Rejected', label: 'Rejected' },
-      { value: 'Fulfilled', label: 'Fulfilled' },
-    ] },
-    { name: 'approvedBy', label: 'Approved By', type: 'select', options: [
-      { value: '', label: '— Not yet approved —' },
-      ...employeeOptions(),
-    ] },
+    canApprove
+      ? { name: 'status', label: 'Status', type: 'select', required: true, options: [
+        { value: 'Pending Approval', label: 'Pending Approval' },
+        { value: 'Approved', label: 'Approved' },
+        { value: 'Rejected', label: 'Rejected' },
+        { value: 'Fulfilled', label: 'Fulfilled' },
+      ] }
+      : { name: 'status', label: 'Status', type: 'readonly', displayValue: `${record?.status || 'Pending Approval'} — only an Admin or Supervisor can approve, reject, or fulfill a voucher.` },
+    canApprove
+      ? { name: 'approvedBy', label: 'Approved By', type: 'select', options: [
+        { value: '', label: '— Not yet approved —' },
+        ...employeeOptions(),
+      ] }
+      : { name: 'approvedBy', label: 'Approved By', type: 'readonly', displayValue: record?.approvedBy ? employeeName(record.approvedBy) : '— Not yet approved —' },
     { name: 'notes', label: 'Notes', type: 'textarea' },
     { name: 'attachments', label: 'Receipts / Photos', type: 'attachments' },
   ];
@@ -119,7 +137,7 @@ export function renderFuelingVouchers(container) {
     }
     openModal({
       title: record ? 'Edit Fueling Voucher' : 'New Fueling Voucher',
-      fields: voucherFields(),
+      fields: voucherFields(record),
       initial: record || { date: todayISOString(), status: 'Pending Approval' },
       submitLabel: record ? 'Save Changes' : 'Submit Voucher',
       onSubmit: async (data) => {

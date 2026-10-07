@@ -5,7 +5,7 @@ import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal,
 import { printFundRequest } from '../print.js';
 import { filterFundRequests, getCurrentUserId, getCurrentTier } from '../session.js';
 import { createAttachmentPicker } from '../attachments.js';
-import { notifyNewFundRequest } from '../notifications.js';
+import { notifyNewFundRequest, notifyFundRequestDecision } from '../notifications.js';
 import { EXPENSE_CATEGORIES } from '../constants.js';
 import { renderApprovals } from './approvals.js';
 
@@ -116,10 +116,13 @@ function openRequestForm(record, onSaved) {
           { value: 'Rejected', label: 'Rejected' },
           { value: 'Paid', label: 'Paid' },
         ], record?.status || 'Pending');
-        approvedByField = selectField('approvedBy', 'Approved By', [
-          { value: '', label: '— Not yet approved —' },
-          ...employeeOptions(),
-        ], record?.approvedBy);
+        // Not a dropdown: Approved By is always whoever actually makes the
+        // decision (set automatically on save), the same rule the Approvals
+        // inbox uses — not something this form lets you hand-pick.
+        approvedByField = el('div', { class: 'field' }, [
+          el('span', { class: 'field-label' }, 'Approved By'),
+          el('p', {}, record?.approvedBy ? employeeName(record.approvedBy) : 'Set automatically to you when you approve or reject'),
+        ]);
       } else {
         statusField = el('div', { class: 'field' }, [
           el('span', { class: 'field-label' }, 'Status'),
@@ -153,6 +156,12 @@ function openRequestForm(record, onSaved) {
         if (!dateField.querySelector('input').value) { window.alert('Date is required.'); return; }
         if (!items.length) { window.alert('Add at least one line item.'); return; }
 
+        const newStatus = isAdmin ? statusField.querySelector('select').value : (record?.status || 'Pending');
+        // A "decision" is Admin actually moving it to Approved/Rejected just
+        // now — not re-saving an already-decided request (e.g. later marking
+        // it Paid), which keeps whoever originally decided it as-is.
+        const isNewDecision = isAdmin && (newStatus === 'Approved' || newStatus === 'Rejected') && newStatus !== (record?.status || 'Pending');
+
         const payload = {
           date: dateField.querySelector('input').value,
           project: projectField.querySelector('select').value,
@@ -160,8 +169,8 @@ function openRequestForm(record, onSaved) {
           costHead: costHeadField.querySelector('select').value,
           description: descriptionInput.value,
           items,
-          status: isAdmin ? statusField.querySelector('select').value : (record?.status || 'Pending'),
-          approvedBy: isAdmin ? approvedByField.querySelector('select').value : (record?.approvedBy || ''),
+          status: newStatus,
+          approvedBy: isNewDecision ? getCurrentUserId() : (record?.approvedBy || ''),
           attachments: attachmentPicker.getAttachments(),
         };
 
@@ -170,6 +179,10 @@ function openRequestForm(record, onSaved) {
           submitBtn.textContent = 'Saving…';
           if (record) {
             await store.update('fundRequests', record.id, payload);
+            if (isNewDecision) {
+              notifyFundRequestDecision({ ...record, ...payload }, employeeName(getCurrentUserId()))
+                .catch((err) => console.warn('Fund request decision notification failed:', err));
+            }
           } else {
             const saved = await store.add('fundRequests', payload);
             notifyNewFundRequest(saved).catch((err) => console.warn('Fund request notification failed:', err));

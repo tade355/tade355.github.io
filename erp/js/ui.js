@@ -83,6 +83,15 @@ export function openModal({ title, fields, initial = {}, onSubmit, submitLabel =
       fieldWrap.appendChild(picker.element);
       form.appendChild(fieldWrap);
       return;
+    } else if (f.type === 'readonly') {
+      // Displays the current value as plain text instead of an editable
+      // control, while still submitting it unchanged via a hidden input —
+      // for a field only some tiers are allowed to set (e.g. Status on a
+      // request only an approver can decide).
+      fieldWrap.appendChild(el('p', {}, f.displayValue ?? (initial[f.name] || '—')));
+      fieldWrap.appendChild(el('input', { type: 'hidden', name: f.name, value: initial[f.name] ?? '' }));
+      form.appendChild(fieldWrap);
+      return;
     } else {
       input = el('input', {
         type: f.type || 'text',
