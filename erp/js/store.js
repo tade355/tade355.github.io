@@ -178,24 +178,34 @@ export const store = {
     return (state[collection] || []).find((r) => r.id === id) || null;
   },
 
+  // add/update/remove patch the in-memory cache directly from the record
+  // they already sent to the DB, instead of refetching the whole table —
+  // a full refetch after every single save used to re-download every OTHER
+  // row in the collection too (attachments and all, for the five modules
+  // that embed files as base64 in the row), which is real egress for no
+  // reason: this function already knows exactly what changed. A row with a
+  // server-side default/trigger this doesn't know about stays correct at
+  // the next periodic/visibility refresh, same as it would anyway between
+  // two unrelated people's changes today.
   async add(collection, record) {
     const cfg = CONFIG[collection];
     const id = record.id || (await nextId(cfg.prefix));
     await upsertRow(collection, id, record);
-    await store.refreshCollection(collection);
+    state[collection] = [...(state[collection] || []), { ...record, id }];
     return store.find(collection, id);
   },
   async update(collection, id, patch) {
     const existing = store.find(collection, id) || {};
-    await upsertRow(collection, id, { ...existing, ...patch });
-    await store.refreshCollection(collection);
+    const merged = { ...existing, ...patch, id };
+    await upsertRow(collection, id, merged);
+    state[collection] = (state[collection] || []).map((r) => (r.id === id ? merged : r));
     return store.find(collection, id);
   },
   async remove(collection, id) {
     const cfg = CONFIG[collection];
     const { error } = await supabase.from(cfg.table).delete().eq('id', id);
     if (error) throw new Error(`Could not delete this record (${error.message}).`);
-    await store.refreshCollection(collection);
+    state[collection] = (state[collection] || []).filter((r) => r.id !== id);
   },
 
   all() {
