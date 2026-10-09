@@ -147,11 +147,16 @@ function initApp() {
 
   // This app has no realtime push — data syncs by refetching. Refresh
   // whenever the tab regains focus (someone switching back to check on
-  // something) and on a slow background timer for tabs left open.
+  // something) and on a slow background timer for tabs left open and
+  // visible — but never for a hidden/minimized tab, which has no one
+  // watching it anyway and would otherwise burn Supabase egress
+  // re-fetching all ~36 tables on a timer no one benefits from.
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') silentRefresh();
   });
-  setInterval(silentRefresh, 90000);
+  setInterval(() => {
+    if (document.visibilityState === 'visible') silentRefresh();
+  }, 600000);
 }
 
 async function boot() {
