@@ -347,12 +347,12 @@ Stat cards: Fleet Size, Company Owned, Partnership, Rented, Down / Under Mainten
 | Diesel Consumption — First 8 hrs/day (L/hr) | **leave blank** unless this machine differs from the fleet — blank uses the fleet default of 25 |
 | Diesel Consumption — After 8 hrs/day (L/hr) | **leave blank** unless this machine differs — blank uses the fleet default of 20 |
 | Diesel Consumption — Trekking (L/hr, flat) | **leave blank** unless this machine differs — blank uses the fleet default of 20 |
-
-> These three exist only to override a machine that burns differently from the rest of the fleet. Since every current dozer is a D8K, all three should stay blank and the fleet-wide rates apply automatically — nobody has to configure a dozer before Fuel Used will calculate on a daily report.
 | Current Project | which project it's currently deployed to — feeds the Weekly Report tab's roster (a dozer also appears there for any project it has an operations report against, even without this field set correctly, but keeping it current is what makes an idle dozer show up as a zero-activity row instead of not appearing at all) |
 | Location | required |
 | Acquisition Value (₦) | |
 | Service Interval (engine hours) | default 250 |
+
+> These three exist only to override a machine that burns differently from the rest of the fleet. Since every current dozer is a D8K, all three should stay blank and the fleet-wide rates apply automatically — nobody has to configure a dozer before Fuel Used will calculate on a daily report.
 
 > Saving a new asset, or changing its rates, automatically logs an entry to the **Fleet Rate History** tab (an opening entry on creation; a new entry on edit only if a rate actually changed) — so historical costing always uses the rate that was really in effect at the time, not today's rate applied retroactively.
 
