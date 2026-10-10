@@ -4,7 +4,7 @@ import { formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { LEAVE_TYPES } from '../constants.js';
 import { getCurrentUserId, filterLeaveRequests, getCurrentTier, getAssignedProject } from '../session.js';
-import { notifyNewLeaveRequest } from '../notifications.js';
+import { notifyNewLeaveRequest, notifyLeaveRequestDecision } from '../notifications.js';
 
 function projectOptions() {
   return store.get('projects').map((p) => p.name);
@@ -218,7 +218,16 @@ export function renderLeaveAttendance(container) {
         onSubmit: async (data) => {
           const payload = { ...data, appliedDate: record?.appliedDate || todayIso() };
           if (record) {
+            // A "decision" here is this edit actually moving Pending to
+            // Approved/Rejected (only an Admin/Supervisor can, per
+            // leaveFields()) — not a re-save of an already-decided request,
+            // which shouldn't re-notify everyone every time it's touched.
+            const isNewDecision = record.status === 'Pending' && (payload.status === 'Approved' || payload.status === 'Rejected');
             await store.update('leaveRequests', record.id, payload);
+            if (isNewDecision) {
+              notifyLeaveRequestDecision({ ...record, ...payload }, employeeName(getCurrentUserId()))
+                .catch((err) => console.warn('Leave request decision notification failed:', err));
+            }
           } else {
             const saved = await store.add('leaveRequests', payload);
             notifyNewLeaveRequest(saved).catch((err) => console.warn('Leave request notification failed:', err));

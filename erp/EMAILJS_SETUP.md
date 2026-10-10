@@ -1,9 +1,19 @@
 # Setting up email notifications (EmailJS + Gmail)
 
-This turns on email notifications for approvers: Admins get emailed when a
-new Fund Request is submitted, and Admins + the relevant site Supervisor
-get emailed when a new Leave Request is submitted. Staff don't get emailed
-(no real inbox on file for most), but still see status updates in the app.
+This turns on email notifications for:
+- **Approvers** — Admins get emailed when a new Fund Request is submitted;
+  Admins + the relevant site Supervisor get emailed when a new Leave
+  Request is submitted.
+- **The requester** — whoever submitted a Fund Request or Leave Request
+  gets emailed the moment it's Approved or Rejected (whether the decision
+  was made from the Approvals inbox or by editing the request directly).
+- **A memo/notice recipient** — if a Memo, Notice, Query, or Commendation
+  letter is addressed to one specific person (not "All Staff"), they get
+  emailed directly.
+
+All of this only reaches someone with a real email address filled in on
+their HR record — see "Also needed" below. Nothing is sent until the three
+values in step 5 are filled in; until then every send is a silent no-op.
 
 ## 1. Create an EmailJS account
 
@@ -57,6 +67,8 @@ way Stripe's publishable key works.
 
 ## Also needed: real email addresses
 
-Notifications only go to Admins/Supervisors who have a real email address
-filled in on their HR record. Go to **HR & Employees**, edit each person
-who should get notified, and fill in their **Email** field.
+Notifications only reach someone with a real email address filled in on
+their HR record — this now matters for every staff member, not just
+Admins/Supervisors, since a requester is emailed when their own request is
+decided and a memo recipient is emailed when one is addressed to them. Go
+to **HR & Employees**, edit each person, and fill in their **Email** field.

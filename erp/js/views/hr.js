@@ -5,6 +5,7 @@ import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confi
 import { ACCESS_TIERS, ACCESS_TIER_LABELS } from '../constants.js';
 import { printStaffMemo } from '../print.js';
 import { getCurrentUserId } from '../session.js';
+import { notifyNewMemo } from '../notifications.js';
 import { renderPayroll } from './payroll.js';
 import { renderDozerPayroll } from './dozerPayroll.js';
 import { renderTrainingPrograms } from './trainingPrograms.js';
@@ -360,8 +361,12 @@ export function renderHR(container) {
         initial: record || { date: todayISOString(), type: 'Memo', issuedBy: getCurrentUserId() || '' },
         submitLabel: record ? 'Save Changes' : 'Save',
         onSubmit: async (data) => {
-          if (record) await store.update('staffMemos', record.id, data);
-          else await store.add('staffMemos', data);
+          if (record) {
+            await store.update('staffMemos', record.id, data);
+          } else {
+            const saved = await store.add('staffMemos', data);
+            notifyNewMemo(saved).catch((err) => console.warn('Memo notification failed:', err));
+          }
           refresh();
         },
       });
@@ -374,8 +379,12 @@ export function renderHR(container) {
         initial: record || { date: todayISOString(), type: 'Query Letter', issuedBy: getCurrentUserId() || '' },
         submitLabel: record ? 'Save Changes' : 'Issue',
         onSubmit: async (data) => {
-          if (record) await store.update('staffMemos', record.id, data);
-          else await store.add('staffMemos', data);
+          if (record) {
+            await store.update('staffMemos', record.id, data);
+          } else {
+            const saved = await store.add('staffMemos', data);
+            notifyNewMemo(saved).catch((err) => console.warn('Memo notification failed:', err));
+          }
           refresh();
         },
       });

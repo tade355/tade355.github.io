@@ -80,11 +80,19 @@ export async function notifyNewLeaveRequest(record) {
 
 // Decision notifications go to the same admin group (plus, for leave, the
 // relevant Supervisor) so the whole approving circle stays in sync even
-// when only one of them made the call.
+// when only one of them made the call — AND to the person who submitted
+// it, since a decision is exactly the moment they're waiting to hear
+// about. The submitter only gets this one email (not the "new request"
+// one above, which is approver-only), and only if they have a real
+// address on file.
 export async function notifyFundRequestDecision(record, decidedByName) {
   const submitter = store.find('employees', record.submittedBy);
   const total = (record.items || []).reduce((sum, it) => sum + (it.amount || 0), 0);
-  await sendTo(adminRecipients(), {
+  const recipients = dedupeByEmail([
+    ...adminRecipients(),
+    ...(submitter?.email ? [{ name: submitter.name, email: submitter.email }] : []),
+  ]);
+  await sendTo(recipients, {
     subject: `Fund Request ${record.status} — ${submitter?.name || 'Staff'}`,
     request_type: 'Fund Request',
     submitted_by: submitter?.name || 'Unknown',
@@ -95,11 +103,32 @@ export async function notifyFundRequestDecision(record, decidedByName) {
 
 export async function notifyLeaveRequestDecision(record, decidedByName) {
   const submitter = store.find('employees', record.employeeId);
-  await sendTo(leaveApproverRecipients(record.employeeId), {
+  const recipients = dedupeByEmail([
+    ...leaveApproverRecipients(record.employeeId),
+    ...(submitter?.email ? [{ name: submitter.name, email: submitter.email }] : []),
+  ]);
+  await sendTo(recipients, {
     subject: `Leave Request ${record.status} — ${submitter?.name || 'Staff'}`,
     request_type: 'Leave Request',
     submitted_by: submitter?.name || 'Unknown',
     summary: `${record.status} by ${decidedByName || 'an admin'} — ${record.leaveType} leave, ${record.startDate} to ${record.endDate}`,
     link_url: 'https://tade355.github.io/erp/#/fundRequests',
+  });
+}
+
+// A memo/notice addressed to one specific person (not "All Staff") is
+// worth emailing them directly — unlike a fund/leave request, nobody is
+// otherwise checking a tab waiting to see it show up.
+export async function notifyNewMemo(record) {
+  if (!record.employeeId) return;
+  const recipient = store.find('employees', record.employeeId);
+  const issuedBy = record.issuedBy ? store.find('employees', record.issuedBy) : null;
+  if (!recipient?.email) return;
+  await sendTo([{ name: recipient.name, email: recipient.email }], {
+    subject: `${record.type || 'Memo'} issued to you — ${record.subject || ''}`.trim(),
+    request_type: record.type || 'Memo',
+    submitted_by: issuedBy?.name || 'Management',
+    summary: record.subject || '',
+    link_url: 'https://tade355.github.io/erp/#/hr',
   });
 }
