@@ -4,7 +4,8 @@ import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
 import { sectionHeader, renderTable, statCard, dateRangeFields } from '../ui.js';
 import { OPERATION_TYPES, isHaOperationType } from '../constants.js';
 import { printWeeklyPerformanceReport, printMilestoneTracker } from '../print.js';
-import { provisionalRevenueForRows } from './profitability.js';
+import { provisionalRevenueForRows, computeProjectStats } from './profitability.js';
+import { onDashboardBasis } from '../dashboardBasis.js';
 import { dieselRateAsOf, hourlyRateAsOf } from '../rateHistory.js';
 import { collectEntries } from './incomeExpenditure.js';
 
@@ -255,6 +256,26 @@ function computeTentativeCost(periodOps, rosterNames) {
 // Either way, it's net of the roster's Maintenance Log repair costs this
 // period (Maintenance Incurred below).
 function computeActualWeeklySummary(project, periodStart, periodEnd, dates, periodOps, revenueData, rosterNames) {
+  // Periods on/after 10 Oct 2026 use the Daily Dashboard basis (the same
+  // figures Profitability and the dashboards report); older periods keep
+  // the original ledger-based calculation below.
+  if (onDashboardBasis(periodStart)) {
+    const st = computeProjectStats(project, periodStart, periodEnd);
+    const totalCost = st.totalCost;
+    const actualProfit = revenueData.total - totalCost;
+    const dailyRows = dates.map((date) => {
+      const dayOps = periodOps.filter((o) => o.date === date);
+      const d = computeProjectStats(project, date, date);
+      return { date, label: dayLabel(date), dozers: new Set(dayOps.map((o) => o.equipment)).size, revenue: d.provisionalRevenue, cost: d.totalCost, profit: d.provisionalRevenue - d.totalCost };
+    });
+    return {
+      dieselCost: st.dieselCost, dozerCost: st.dozerCost, logisticsOthersCost: totalCost - st.dieselCost - st.dozerCost, totalCost,
+      actualProfit, actualProfitPct: revenueData.total ? (actualProfit / revenueData.total) * 100 : 0,
+      mcRecovered: st.mcRecovered, maintenanceIncurred: st.maintenanceIncurred,
+      netMcRecovered: st.netMcRecovered, totalMargin: actualProfit + st.netMcRecovered,
+      totalDieselLitres: st.fuelUsed, dailyRows,
+    };
+  }
   const dieselCost = periodOps.reduce((sum, o) => sum + (o.fuelUsed || 0) * dieselRateAsOf(o.date), 0);
   const dozerCost = periodOps.reduce((sum, o) => sum + (o.hoursWorked || 0) * hourlyRateAsOf(o.equipment, o.date), 0);
 
@@ -452,7 +473,7 @@ function renderWeeklyPerformanceTab(container) {
       el('tbody', {}, [
         el('tr', {}, [el('td', {}, 'Diesel Cost'), el('td', {}, 'Fuel Used × the diesel rate in effect that day'), el('td', {}, formatCurrency(actualData.dieselCost)), el('td', {}, pctOfCost(actualData.dieselCost))]),
         el('tr', {}, [el('td', {}, 'Dozer Cost'), el('td', {}, 'Hours Worked × the hourly rate on file for each dozer'), el('td', {}, formatCurrency(actualData.dozerCost)), el('td', {}, pctOfCost(actualData.dozerCost))]),
-        el('tr', {}, [el('td', {}, 'Logistics & Others'), el('td', {}, "This project's Logistics/other expenses this period"), el('td', {}, formatCurrency(actualData.logisticsOthersCost)), el('td', {}, pctOfCost(actualData.logisticsOthersCost))]),
+        el('tr', {}, [el('td', {}, 'Logistics & Others'), el('td', {}, "Logistics, operator and supervisor allowances, PMS (from 10 Oct 2026); logged Logistics/other expenses before that"), el('td', {}, formatCurrency(actualData.logisticsOthersCost)), el('td', {}, pctOfCost(actualData.logisticsOthersCost))]),
         el('tr', { class: 'row-cumulative' }, [el('td', {}, el('strong', {}, 'Total Cost')), el('td', {}, ''), el('td', {}, el('strong', {}, formatCurrency(actualData.totalCost))), el('td', {}, '100%')]),
       ]),
     ])]));

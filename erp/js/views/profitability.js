@@ -7,6 +7,10 @@ import { isHaOperationType } from '../constants.js';
 import { hourlyRateAsOf, dieselRateAsOf, pmsRateAsOf, projectRateAsOf } from '../rateHistory.js';
 import { printProfitabilityReport } from '../print.js';
 import { operatorAllowanceForRows, isOwnedOperatorAllowancePayment } from '../ownedOperatorAllowance.js';
+import {
+  DASHBOARD_BASIS_FROM, onDashboardBasis, dieselLogisticsBasis, supervisorSundayAllowanceBasis,
+  pmsBasis, maintenanceBasis, machineRecoveredBasis,
+} from '../dashboardBasis.js';
 
 export function projectNames() {
   return store.get('projects').map((p) => p.name);
@@ -25,6 +29,16 @@ function dozerCostForRows(rows) {
     total += (o.hoursWorked || 0) * hourlyRateAsOf(o.equipment, o.date);
   });
   return total;
+}
+
+function dozerCostByOwnership(rows) {
+  const out = { Company: 0, Rented: 0, Partnership: 0 };
+  rows.forEach((o) => {
+    const ownership = store.get('inventory').find((i) => i.name === o.equipment)?.ownership || 'Company';
+    if (o.operationType === 'Trekking' && ownership !== 'Rented') return;
+    out[ownership] = (out[ownership] || 0) + (o.hoursWorked || 0) * hourlyRateAsOf(o.equipment, o.date);
+  });
+  return out;
 }
 
 // The slice of Rental/Dozer Cost that's for Company-owned equipment only —
@@ -70,7 +84,7 @@ const COMMERCIAL_BIKE_RATE_PER_LITRE = 50; // ₦1,500 per 30L
 function commercialBikeLogisticsForRows(rows) {
   let total = 0;
   rows.forEach((o) => {
-    if (o.date < COMMERCIAL_BIKE_LOGISTICS_FORMULA_START_DATE) return;
+    if (o.date < COMMERCIAL_BIKE_LOGISTICS_FORMULA_START_DATE || onDashboardBasis(o.date)) return;
     const ownership = store.get('inventory').find((i) => i.name === o.equipment)?.ownership;
     if (ownership === 'Partnership') return;
     total += (o.fuelUsed || 0) * COMMERCIAL_BIKE_RATE_PER_LITRE;
@@ -109,6 +123,7 @@ const TACOMA_REQUEST_BASIS_START_DATE = '2026-10-01';
 function tacomaLogisticsForRows(project, from, to, rows) {
   const partnershipDaysWithWork = new Set();
   rows.forEach((o) => {
+    if (onDashboardBasis(o.date)) return; // PMS is costed from the station records on the dashboard basis
     const ownership = store.get('inventory').find((i) => i.name === o.equipment)?.ownership;
     if (ownership === 'Partnership') partnershipDaysWithWork.add(o.date);
   });
@@ -141,7 +156,7 @@ const MANAGER_SUNDAY_ALLOWANCE_OVERRIDE_DATES = new Set([
 function managerSundayAllowanceForRows(rows, project) {
   const equipmentBySundayDate = {};
   rows.forEach((o) => {
-    if (!isSunday(o.date)) return;
+    if (!isSunday(o.date) || onDashboardBasis(o.date)) return; // dashboard basis: ₦20,000 per supervisor instead
     if (MANAGER_SUNDAY_ALLOWANCE_OVERRIDE_DATES.has(`${project}|${o.date}`)) return;
     if (!equipmentBySundayDate[o.date]) equipmentBySundayDate[o.date] = new Set();
     equipmentBySundayDate[o.date].add(o.equipment);
@@ -171,6 +186,17 @@ function committedFundRequestsFor(project, from, to) {
     r.project === project && dateInRange(r.date, from, to) && (r.status === 'Approved' || r.status === 'Paid'));
 }
 
+// PMS is bought at the station, not per project, so each day's PMS goes to
+// the project that had the most dozer hours that day.
+function pmsProjectForDate(date) {
+  const hoursByProject = {};
+  store.get('operations').filter((o) => o.date === date).forEach((o) => {
+    hoursByProject[o.siteName] = (hoursByProject[o.siteName] || 0) + (o.hoursWorked || 0);
+  });
+  const ranked = Object.entries(hoursByProject).sort((a, b) => b[1] - a[1]);
+  return ranked.length ? ranked[0][0] : null;
+}
+
 export function computeProjectStats(project, from, to) {
   const operations = store.get('operations').filter((o) => o.siteName === project && dateInRange(o.date, from, to));
   const invoices = store.get('invoices').filter((i) => i.project === project && dateInRange(i.date, from, to));
@@ -190,10 +216,28 @@ export function computeProjectStats(project, from, to) {
   const dieselCost = operations.reduce((sum, o) => sum + (o.fuelUsed || 0) * dieselRateAsOf(o.date), 0);
   const operatorAllowanceCost = operatorAllowanceForRows(operations);
 
-  const logisticsCost = expenses.filter((e) => e.category === 'Logistics').reduce((sum, e) => sum + e.amount, 0)
-    + fundRequests.filter((r) => r.costHead === 'Logistics').reduce((sum, r) => sum + fundRequestTotal(r), 0)
+  // Costs dated before DASHBOARD_BASIS_FROM use the rules below as before.
+  // From that date the Daily Dashboard rules apply instead (dashboardBasis.js):
+  // diesel logistics at ₦50 per litre supplied, PMS from the station
+  // collection records, a ₦20,000 supervisor Sunday allowance, no ledger
+  // requests inside Operations Profit, and maintenance reported under Machine
+  // Recovery.
+  const legacyExpenses = expenses.filter((e) => !onDashboardBasis(e.date));
+  const legacyRequests = fundRequests.filter((r) => !onDashboardBasis(r.date));
+  const ownershipByName = new Map(store.get('inventory').map((i) => [i.name, i.ownership]));
+  const distributions = store.get('dieselSiteDistributions').filter((d) => d.project === project && dateInRange(d.date, from, to));
+  const pmsCollections = store.get('fuelCreditCollections')
+    .filter((c) => c.fuelType === 'PMS' && dateInRange(c.date, from, to) && onDashboardBasis(c.date) && pmsProjectForDate(c.date) === project);
+  const pms = pmsBasis(pmsCollections);
+  const dieselLogistics = dieselLogisticsBasis(distributions, ownershipByName);
+  const supervisorSundayAllowance = supervisorSundayAllowanceBasis(operations);
+  const dozerByOwnership = dozerCostByOwnership(operations);
+
+  const logisticsCost = legacyExpenses.filter((e) => e.category === 'Logistics').reduce((sum, e) => sum + e.amount, 0)
+    + legacyRequests.filter((r) => r.costHead === 'Logistics').reduce((sum, r) => sum + fundRequestTotal(r), 0)
     + commercialBikeLogisticsForRows(operations)
-    + tacomaLogisticsForRows(project, from, to, operations);
+    + tacomaLogisticsForRows(project, from, to, operations)
+    + dieselLogistics;
   // Fuel-category expenses/fund requests are excluded here since Diesel Cost above is already
   // derived from actual litres consumed (Daily Operations) x the diesel unit price - counting
   // the fuel purchase too would double-count the same fuel spend. Loan Repayment / Profit
@@ -203,10 +247,18 @@ export function computeProjectStats(project, from, to) {
   // full by Operator Allowance above on the days they actually worked, often weeks before the
   // lump payment date, so counting the payment too would double that same cost. Manager Sunday
   // Allowance is folded in here too — it's a fixed schedule computed from Daily Operations, not a logged Expense.
-  const otherCost = expenses.filter((e) => !NON_OPERATIONS_COST_CATEGORIES.has(e.category) && !isOwnedOperatorAllowancePayment(e.payee, e.category)).reduce((sum, e) => sum + e.amount, 0)
-    + fundRequests.filter((r) => !NON_OPERATIONS_COST_CATEGORIES.has(r.costHead)).reduce((sum, r) => sum + fundRequestTotal(r), 0)
-    + managerSundayAllowanceForRows(operations, project);
-  const totalCost = dozerCost + dieselCost + operatorAllowanceCost + logisticsCost + otherCost;
+  const otherCost = legacyExpenses.filter((e) => !NON_OPERATIONS_COST_CATEGORIES.has(e.category) && !isOwnedOperatorAllowancePayment(e.payee, e.category)).reduce((sum, e) => sum + e.amount, 0)
+    + legacyRequests.filter((r) => !NON_OPERATIONS_COST_CATEGORIES.has(r.costHead)).reduce((sum, r) => sum + fundRequestTotal(r), 0)
+    + managerSundayAllowanceForRows(operations, project)
+    + supervisorSundayAllowance;
+  // PMS (Tacoma + any unexplained litres) on the dashboard basis; PMS used
+  // for maintenance is counted under Maintenance Incurred instead.
+  const pmsCost = pms.tacoma + pms.unexplained;
+  const totalCost = dozerCost + dieselCost + operatorAllowanceCost + logisticsCost + otherCost + pmsCost;
+
+  // Machine Recovery (dashboard basis only).
+  const mcRecovered = machineRecoveredBasis(operations, ownershipByName, hourlyRateAsOf);
+  const maintenanceIncurred = maintenanceBasis({ fundRequests, expenses, fundRequestTotal, pms });
 
   const revenue = invoices.reduce((sum, i) => sum + invoiceTotal(i), 0);
   const profit = revenue - totalCost;
@@ -231,9 +283,25 @@ export function computeProjectStats(project, from, to) {
     operatorAllowanceCost,
     logisticsCost,
     otherCost,
+    dieselLogistics,
+    supervisorSundayAllowance,
+    dozerOwned: dozerByOwnership.Company,
+    dozerRented: dozerByOwnership.Rented,
+    dozerPartnership: dozerByOwnership.Partnership,
+    pmsCost,
+    pmsTacoma: pms.tacoma,
+    pmsUnexplained: pms.unexplained,
     totalCost,
     revenue,
     provisionalRevenue,
+    // Operations Profit on the dashboard basis: Ha reported x contract rate
+    // less every cost above. Net M/c Recovered = M/c Recovered less
+    // Maintenance Incurred; Total Profit adds the two.
+    opsProfit: provisionalRevenue - totalCost,
+    mcRecovered,
+    maintenanceIncurred,
+    netMcRecovered: mcRecovered - maintenanceIncurred,
+    totalProfit: provisionalRevenue - totalCost + mcRecovered - maintenanceIncurred,
     profit,
     margin: revenue ? (profit / revenue) * 100 : null,
     revenuePerHa: areaCleared ? revenue / areaCleared : null,
@@ -509,6 +577,88 @@ function renderAllProjects(body, from, to) {
   body.appendChild(el('p', { class: 'section-subtitle', html: 'Provisional Revenue is quantity x the contract rate in effect that day, straight from Daily Operations reports — a same-day figure, whether or not it has been invoiced yet. Verified Revenue and Logistics/Other costs only include invoices, expenses, and Approved/Paid Fund Requests explicitly tagged to a project (Profit/Margin are based on Verified Revenue only). Dozer Cost, Diesel Cost, and Operator Allowance are computed automatically from Daily Operations logs (hours/litres x the rate in effect that day; Operator Allowance only for the owned EMG fleet) — Logistics Cost also includes a computed Tacoma PMS cost (flat 20L whenever a Partnership dozer works) and, from 4 Oct 2026 onward, a computed commercial-bike diesel-transport cost (litres consumed by Company/Rented dozers x N50/L) replacing manually-logged diesel-transport expenses — earlier dates keep using whatever was logged for them; Other Cost includes a computed Manager Sunday Allowance; Fuel-category expenses are excluded from it to avoid double-counting diesel spend, Loan Repayment / Profit Distribution expenses are excluded since it is financing activity, not operations spend, Maintenance expenses are excluded since that cost belongs to Machine Management Profitability instead, and lump-sum Salary/Allowance payments to the 4 owned-fleet operators are excluded since their pay is already counted via the Operator Allowance formula on the days they actually worked.' }));
 }
 
+// Operations Profit / Machine Recovery / Total Profit exactly as the Daily
+// Operations Dashboards report them (rules in dashboardBasis.js), for the part
+// of the selected range on/after DASHBOARD_BASIS_FROM, with a day-by-day table
+// that reconciles to each day's dashboard.
+function renderDashboardBasis(body, project, from, to) {
+  const effFrom = from && from > DASHBOARD_BASIS_FROM ? from : DASHBOARD_BASIS_FROM;
+  const dates = [...new Set(store.get('operations')
+    .filter((o) => o.siteName === project && dateInRange(o.date, effFrom, to))
+    .map((o) => o.date))].sort();
+  if (!dates.length) return;
+
+  const s = computeProjectStats(project, effFrom, to);
+  const days = dates.map((d) => ({ date: d, ...computeProjectStats(project, d, d) }));
+  const neg = (v) => (v >= 0 ? 'text-good' : 'text-critical');
+  const money = (v) => el('span', { class: neg(v) }, formatCurrency(v));
+
+  body.appendChild(el('h3', { class: 'subsection-title' }, `Operations Profitability — Daily Dashboard Basis (${formatDate(dates[0])} – ${formatDate(dates[dates.length - 1])})`));
+  body.appendChild(el('p', { class: 'section-subtitle' }, 'Same figures as the Daily Operations Dashboards, from Daily Operations, Diesel Distribution, Fuel Credit (PMS) and Fund Request records. Applies from 10 Oct 2026; earlier dates keep the older rules above.'));
+  body.appendChild(el('div', { class: 'stats-grid' }, [
+    statCard({ label: 'Revenue (Ha × contract rate)', value: formatCurrency(s.provisionalRevenue), tone: 'good' }),
+    statCard({ label: 'Total Cost', value: formatCurrency(s.totalCost), tone: 'critical' }),
+    statCard({ label: 'Operations Profit', value: formatCurrency(s.opsProfit), tone: s.opsProfit >= 0 ? 'good' : 'critical' }),
+    statCard({ label: 'Total Profit (Ops + Net M/c Recovered)', value: formatCurrency(s.totalProfit), tone: s.totalProfit >= 0 ? 'good' : 'critical' }),
+  ]));
+
+  const lines = [
+    ['Revenue', s.provisionalRevenue, `${s.areaCleared.toFixed(1)} ha × contract rate`],
+    ['Diesel Cost', s.dieselCost, `${s.fuelUsed.toLocaleString()} L used × diesel price`],
+    ['Diesel Logistics', s.dieselLogistics, '₦50/L supplied to Company and Rented dozers'],
+    ['Operator Allowance', s.operatorAllowanceCost, 'Owned EMG fleet: day rate per 8 hrs (₦50,000 on Sundays)'],
+    ['Supervisor Sunday Allowance', s.supervisorSundayAllowance, '₦20,000 per supervisor per Sunday'],
+    ['Dozer Cost — Owned', s.dozerOwned, 'Hours × hourly rate'],
+    ['Dozer Cost — Rented', s.dozerRented, 'Hours × hourly rate (deal days at the deal rate)'],
+    ['Dozer Cost — Partnership', s.dozerPartnership, 'Hours × hourly rate'],
+    ['PMS — Tacoma', s.pmsTacoma, 'PMS collected at the station'],
+    ['PMS — unexplained', s.pmsUnexplained, 'Flagged litres with no explanation yet'],
+  ];
+  const lineRows = lines.map(([label, amount, basis]) => el('tr', {}, [el('td', {}, label), el('td', {}, formatCurrency(amount)), el('td', {}, basis)]));
+  lineRows.push(el('tr', { class: 'row-cumulative' }, [el('td', {}, el('strong', {}, 'Operations Profit')), el('td', {}, el('strong', {}, money(s.opsProfit))), el('td', {}, 'Revenue less all costs above')]));
+  body.appendChild(el('div', { class: 'table-wrap' }, [el('table', { class: 'data-table' }, [
+    el('thead', {}, [el('tr', {}, [el('th', {}, 'Line'), el('th', {}, 'Amount'), el('th', {}, 'Basis')])]),
+    el('tbody', {}, lineRows),
+  ])]));
+
+  body.appendChild(el('h4', { class: 'subsection-title' }, 'Machine Recovery and Total Profit'));
+  body.appendChild(el('div', { class: 'table-wrap' }, [el('table', { class: 'data-table' }, [
+    el('tbody', {}, [
+      el('tr', {}, [el('td', {}, 'Operations Profit'), el('td', {}, money(s.opsProfit))]),
+      el('tr', {}, [el('td', {}, 'M/c Recovered (Company dozers, cost avoided vs. renting)'), el('td', {}, formatCurrency(s.mcRecovered))]),
+      el('tr', {}, [el('td', {}, 'Maintenance Incurred (Approved/Paid repairs, maintenance PMS)'), el('td', {}, `-${formatCurrency(s.maintenanceIncurred)}`)]),
+      el('tr', { class: 'row-cumulative' }, [el('td', {}, el('strong', {}, 'Net M/c Recovered')), el('td', {}, el('strong', {}, money(s.netMcRecovered)))]),
+      el('tr', { class: 'row-cumulative' }, [el('td', {}, el('strong', {}, 'Total Profit')), el('td', {}, el('strong', {}, money(s.totalProfit)))]),
+    ]),
+  ])]));
+
+  body.appendChild(el('h4', { class: 'subsection-title' }, 'Day by Day'));
+  const dayRows = days.map((d) => el('tr', {}, [
+    el('td', {}, formatDate(d.date)),
+    el('td', {}, d.areaCleared.toFixed(1)),
+    el('td', {}, formatCurrency(d.provisionalRevenue)),
+    el('td', {}, formatCurrency(d.totalCost)),
+    el('td', {}, money(d.opsProfit)),
+    el('td', {}, formatCurrency(d.mcRecovered)),
+    el('td', {}, formatCurrency(d.maintenanceIncurred)),
+    el('td', {}, money(d.totalProfit)),
+  ]));
+  dayRows.push(el('tr', { class: 'row-cumulative' }, [
+    el('td', {}, el('strong', {}, 'Cumulative')),
+    el('td', {}, el('strong', {}, s.areaCleared.toFixed(1))),
+    el('td', {}, el('strong', {}, formatCurrency(s.provisionalRevenue))),
+    el('td', {}, el('strong', {}, formatCurrency(s.totalCost))),
+    el('td', {}, el('strong', {}, money(s.opsProfit))),
+    el('td', {}, el('strong', {}, formatCurrency(s.mcRecovered))),
+    el('td', {}, el('strong', {}, formatCurrency(s.maintenanceIncurred))),
+    el('td', {}, el('strong', {}, money(s.totalProfit))),
+  ]));
+  body.appendChild(el('div', { class: 'table-wrap' }, [el('table', { class: 'data-table' }, [
+    el('thead', {}, [el('tr', {}, ['Date', 'Ha', 'Revenue', 'Total Cost', 'Operations Profit', 'M/c Recovered', 'Maintenance', 'Total Profit'].map((h) => el('th', {}, h)))]),
+    el('tbody', {}, dayRows),
+  ])]));
+}
+
 function renderSingleProject(body, project, from, to) {
   const s = computeProjectStats(project, from, to);
 
@@ -537,9 +687,12 @@ function renderSingleProject(body, project, from, to) {
       { label: 'Operator Allowance', value: s.operatorAllowanceCost, colorVar: CATEGORICAL_COLORS[2] },
       { label: 'Logistics', value: s.logisticsCost, colorVar: CATEGORICAL_COLORS[3] },
       { label: 'Other', value: s.otherCost, colorVar: CATEGORICAL_COLORS[4] },
+      { label: 'PMS', value: s.pmsCost, colorVar: CATEGORICAL_COLORS[5 % CATEGORICAL_COLORS.length] },
     ],
     formatValue: formatCurrency,
   });
+
+  renderDashboardBasis(body, project, from, to);
 
   body.appendChild(el('p', { class: 'section-subtitle', html: 'Provisional Revenue is quantity x the contract rate in effect that day, straight from Daily Operations reports — a same-day figure, whether or not it has been invoiced yet. Verified Revenue and Logistics/Other costs only include invoices, expenses, and Approved/Paid Fund Requests explicitly tagged to this project (Profit/Margin are based on Verified Revenue only). Dozer Cost, Diesel Cost, and Operator Allowance are computed automatically from Daily Operations logs (hours/litres x the rate in effect that day; Operator Allowance only for the owned EMG fleet) — Logistics Cost also includes a computed Tacoma PMS cost (flat 20L whenever a Partnership dozer works) and, from 4 Oct 2026 onward, a computed commercial-bike diesel-transport cost (litres consumed by Company/Rented dozers x N50/L) replacing manually-logged diesel-transport expenses — earlier dates keep using whatever was logged for them; Other Cost includes a computed Manager Sunday Allowance; Fuel-category expenses are excluded from it to avoid double-counting diesel spend, Loan Repayment / Profit Distribution expenses are excluded since it is financing activity, not operations spend, Maintenance expenses are excluded since that cost belongs to Machine Management Profitability instead, and lump-sum Salary/Allowance payments to the 4 owned-fleet operators are excluded since their pay is already counted via the Operator Allowance formula on the days they actually worked.' }));
 
