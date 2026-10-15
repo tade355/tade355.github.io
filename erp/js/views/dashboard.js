@@ -87,6 +87,7 @@ export function renderDashboard(container) {
   navBar.appendChild(prevBtn);
   navBar.appendChild(nextBtn);
   navBar.appendChild(todayBtn);
+  navBar.appendChild(el('a', { class: 'btn btn-primary', href: '#/dailyDashboard' }, 'Daily Operations Dashboard ▸'));
   container.appendChild(navBar);
 
   const body = el('div');

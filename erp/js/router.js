@@ -19,6 +19,7 @@ import { ICONS } from './icons.js';
 export const ROUTES = [
   // Overview
   { path: 'dashboard', label: 'Dashboard', icon: ICONS.dashboard, load: () => import('./views/dashboard.js').then((m) => m.renderDashboard), tiers: ['Admin', 'Accounts'] },
+  { path: 'dailyDashboard', label: 'Daily Operations Dashboard', icon: ICONS.barChart, load: () => import('./views/dailyDashboard.js').then((m) => m.renderDailyDashboard), tiers: ['Admin', 'Accounts', 'Supervisor'] },
   { path: 'noticeBoard', label: 'Documents and Notices', icon: ICONS.documents, load: () => import('./views/noticeBoard.js').then((m) => m.renderNoticeBoard), tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   // Field operations: the job, the work done against it, the equipment doing it
   { path: 'projects', label: 'Projects', icon: ICONS.folder, load: () => import('./views/projects.js').then((m) => m.renderProjects), tiers: ['Admin', 'Accounts', 'Supervisor'] },
