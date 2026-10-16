@@ -330,7 +330,7 @@ export function buildDashboardHtml(d, { expectedHaPer8 = 1.3, idealStart = '7:00
     return `      <tr${r.status === 'Closing restated' ? ' class="flag"' : ''}><td><strong>${esc(r.equipment)}</strong></td><td class="num">${lit(r.opening)}</td><td class="num">${lit(r.distributed)}</td><td class="num">${lit(r.used)}</td><td class="num">${lit(r.closing)}</td><td class="num">${r.efficiency === null ? '—' : fmt(r.efficiency, 1)}</td><td>${badge(cls, text)}</td></tr>`;
   }).join('\n');
   const dieselTiles = [
-    tile('Collected today (AGO)', `${fmt(x.collectedAgo)} L`, { note: x.soldAgo ? `Excludes ${fmt(x.soldAgo)}L sold to the CEO` : 'Station collection report' }),
+    tile('Collected today (AGO)', `${fmt(x.collectedAgo)} L`, { note: x.soldAgo ? `Excludes ${fmt(x.soldAgo)}L sold on, not site diesel` : 'Station collection report' }),
     tile('Collected today (PMS)', `${fmt(x.collectedPms)} L`),
     tile('Distributed to dozers', `${fmt(x.distributedToday)} L`, { note: distNote }),
     tile('Used today (25L/hr)', `${fmt(x.usedToday)} L`, { note: `@${money(x.dieselRate)}/L = ${money(x.usedCost)}` }),
