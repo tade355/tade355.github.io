@@ -6,7 +6,7 @@
 // Pure (no store / DOM imports): everything is passed in through `ctx`, so the
 // figures can be unit-tested and reconciled against the published dashboards.
 import { onDashboardBasis, SUPERVISOR_SUNDAY_ALLOWANCE, DIESEL_LOGISTICS_PER_LITRE } from './dashboardBasis.js';
-import { isSunday } from './dateUtils.js';
+import { isSunday, addDays } from './dateUtils.js';
 
 export const EXPECTED_HA_PER_8HRS = 1.3;
 export const IDEAL_START = '07:00';
@@ -255,17 +255,22 @@ export function buildDailyDashboard(ctx) {
     rows.forEach((o) => { if (o.supervisorId) (bySup[o.supervisorId] = bySup[o.supervisorId] || []).push(o); });
     Object.entries(bySup).forEach(([id, r]) => addPerson(id, 'Supervisor', r, day));
   });
+  // Resumption and productivity trends cover a rolling window: the viewed day
+  // and the two days before it (never earlier than the "since" date). The
+  // ranking figure (Cumulative) still runs over the whole period.
+  const trendDays = [addDays(date, -2), addDays(date, -1), date].filter((day) => day >= since);
   const staff = Object.values(peopleRows).map((p) => {
-    const ds = siteDays.map((day) => p.days[day] || null);
-    const totalHa = sum(ds.filter(Boolean), (d) => d.ha);
-    const totalExp = sum(ds.filter(Boolean), (d) => d.expected);
+    const ds = trendDays.map((day) => p.days[day] || null);
+    const all = siteDays.map((day) => p.days[day]).filter(Boolean);
+    const totalHa = sum(all, (d) => d.ha);
+    const totalExp = sum(all, (d) => d.expected);
     const today = p.days[date] || null;
     const stopT = today && today.stop >= 0 ? today.stop : null;
     return {
       id: p.id, name: p.name, role: p.role,
       resumption: ds.map((d) => (d && d.start !== null ? minutesToClock(d.start).replace(/ AM$/, '') : '—')),
       productivity: ds.map((d) => (d && d.expected > 0 ? pct(d.ha, d.expected) : null)),
-      days: siteDays,
+      days: trendDays,
       lateToday: today ? lateLabel(today.start) : '—',
       lateMinutesToday: today && today.start !== null ? today.start - toMinutes(IDEAL_START) : null,
       hoursToday: today ? (p.role === 'Supervisor' && today.start !== null && stopT !== null ? (stopT - today.start) / 60 : today.hours) : 0,

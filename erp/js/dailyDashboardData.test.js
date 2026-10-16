@@ -105,3 +105,26 @@ test('diesel on ground rolls the last stock count forward with later collections
   assert.equal(d.diesel.onGroundIn, 1000);
   assert.equal(d.diesel.onGroundOut, 240);
 });
+
+test('resumption and productivity trends cover only the last 3 days, while the ranking figure covers the whole period', () => {
+  const d = buildDailyDashboard(ctx({
+    date: '2026-10-13',
+    operations: [
+      op({ date: '2026-10-10', equipment: 'EMG-1', operatorId: 'E1', supervisorId: 'S1', hoursWorked: 8, quantity: 1.3, fuelUsed: 200, timeResumed: '09:00', timeClosed: '17:00' }),
+      op({ date: '2026-10-12', equipment: 'EMG-1', operatorId: 'E1', supervisorId: 'S1', hoursWorked: 8, quantity: 0.65, fuelUsed: 200, timeResumed: '10:00', timeClosed: '18:00' }),
+      op({ date: '2026-10-13', equipment: 'EMG-1', operatorId: 'E1', supervisorId: 'S1', hoursWorked: 8, quantity: 1.3, fuelUsed: 200, timeResumed: '08:00', timeClosed: '16:00' }),
+    ],
+  }));
+  const p = d.staff.find((s) => s.id === 'E1');
+  assert.deepEqual(p.days, ['2026-10-11', '2026-10-12', '2026-10-13']); // 10 Oct has dropped out
+  assert.equal(p.resumption.length, 3);
+  assert.deepEqual(p.resumption.slice(1), ['10:00', '8:00']);
+  assert.equal(p.resumption[0], '—');
+  assert.equal(p.productivity.length, 3);
+  assert.equal(Math.round(p.cumulative), 83); // (1.3 + 0.65 + 1.3) / 3.9 over all three worked days
+});
+
+test('the trend window never starts before the since date', () => {
+  const d = buildDailyDashboard(ctx({ date: '2026-10-11', since: '2026-10-10' }));
+  assert.deepEqual(d.staff[0].days, ['2026-10-10', '2026-10-11']);
+});

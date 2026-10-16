@@ -444,14 +444,14 @@ function staffSection(d) {
   const table = sortableTable([
     { label: 'Rank', num: true, render: (r) => String(d.staff.indexOf(r) + 1), sortValue: (r) => d.staff.indexOf(r) },
     { label: 'Name', render: (r) => el('span', {}, [el('strong', {}, r.name), el('br'), el('span', { class: 'dd-muted' }, r.role)]), text: (r) => r.name },
-    { label: `Resumption (${d.staff[0] ? formatDate(d.staff[0].days[0]) : ''} →)`, sort: false, render: (r) => r.resumption.join(' → ') },
+    { label: `Resumption (last 3 days${d.staff[0] ? `, ${formatDate(d.staff[0].days[0])} →` : ''})`, sort: false, render: (r) => r.resumption.join(' → ') },
     { label: 'Late vs 7:00 AM', render: (r) => r.lateToday, text: (r) => r.lateToday },
     { label: 'Hrs Today', num: true, render: (r) => num(r.hoursToday), sortValue: (r) => r.hoursToday },
-    { label: 'Productivity trend', sort: false, render: (r) => r.productivity.map((p) => (p === null ? '—' : `${p.toFixed(1)}%`)).join(' → ') },
+    { label: 'Productivity trend (last 3 days)', sort: false, render: (r) => r.productivity.map((p) => (p === null ? '—' : `${p.toFixed(1)}%`)).join(' → ') },
     { label: 'Cumulative', num: true, render: (r) => pctText(r.cumulative), sortValue: (r) => r.cumulative ?? -1 },
   ], d.staff, { rowClass: (r) => (r.lateMinutesToday !== null && r.lateMinutesToday >= 60 ? 'row-warning' : undefined) });
   return section('staff', 6, 'Staff Performance', [
-    el('p', { class: 'section-subtitle' }, `Ranked by cumulative productivity since ${formatDate(d.since)} (hectares cleared vs. expected for the hours worked). Ideal resumption is ${IDEAL_START} AM. Resumption and productivity trends list each working day on this site, oldest first.`),
+    el('p', { class: 'section-subtitle' }, `Ranked by cumulative productivity since ${formatDate(d.since)} (hectares cleared vs. expected for the hours worked). Ideal resumption is ${IDEAL_START} AM. Resumption and productivity trends cover the last 3 days (rolling), oldest first.`),
     d.staff.length ? table : el('p', { class: 'section-subtitle' }, 'No operator reports in this period.'),
   ]);
 }

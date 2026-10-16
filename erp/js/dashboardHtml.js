@@ -409,7 +409,7 @@ export function buildDashboardHtml(d, { expectedHaPer8 = 1.3, idealStart = '7:00
 
   // ---------------------------------------------------------- 6 staff
   const first = d.staff[0] && d.staff[0].days[0]; const last = d.staff[0] && d.staff[0].days[d.staff[0].days.length - 1];
-  const rangeLabel = first ? `${parts(first).d} → ${dayMonth(last)}` : '';
+  const rangeLabel = first ? `last 3 days: ${parts(first).d} → ${dayMonth(last)}` : '';
   const staffRows = d.staff.map((s, i) => {
     const late = s.lateMinutesToday !== null && s.lateMinutesToday >= 60;
     const prod = s.productivity.map((p) => (p === null ? '—' : `${p.toFixed(1)}%`)).join(' → ');
