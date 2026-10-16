@@ -233,7 +233,7 @@ export function openGlobalSearch() {
             onClick: () => go(r),
           }, r.isOverflow ? [el('span', {}, r.label)] : [
             el('span', { class: 'global-search-kind' }, r.kind),
-            el('span', { class: 'global-search-label' }, r.label),
+            el('span', { class: 'global-search-label', title: r.label }, r.label.length > 90 ? `${r.label.slice(0, 87)}…` : r.label),
             r.meta ? el('span', { class: 'global-search-meta' }, r.meta) : null,
           ]);
           resultsEl.appendChild(row);
