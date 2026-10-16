@@ -1017,3 +1017,37 @@ export function printStaffMemo(memo, { employeeName, issuedByName }) {
   `;
   render(html);
 }
+
+// AGO planner: the dozer table, the totals and the supply message on one page.
+export function printAgoPlanner(plan, { siteLabel, planDate, closingDate, notes = [], message = '' }) {
+  const L = (n, dp = 1) => Number(n).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+  const rows = plan.rows.map((r) => `
+    <tr${r.active ? '' : ' style="color:#8a8a85"'}>
+      <td>${r.name}${r.operator ? ` (${r.operator})` : ''}${r.active ? '' : ' — not active'}</td>
+      <td style="text-align:right">${L(r.distributed)}</td>
+      <td style="text-align:right">${L(r.closing)}</td>
+      <td style="text-align:right">${r.active ? L(r.need) : ''}</td>
+    </tr>`).join('');
+  const html = `
+    ${letterhead('AGO PLANNER', formatDate(planDate))}
+    <div class="print-block"><p><strong>Diesel @ ${siteLabel} for ${formatDate(planDate)}</strong> (closing diesel as at ${formatDate(closingDate)})</p></div>
+    <table class="print-table">
+      <thead><tr><th>Dozer</th><th style="text-align:right">Distributed on ${formatDate(closingDate)}</th><th style="text-align:right">Closing diesel</th><th style="text-align:right">Balance needed</th></tr></thead>
+      <tbody>${rows}
+        <tr><td><strong>Total</strong></td><td style="text-align:right"><strong>${L(plan.totalDistributed)}</strong></td><td style="text-align:right"><strong>${L(plan.totalClosing)}</strong></td><td style="text-align:right"><strong>${L(plan.totalNeed)}</strong></td></tr>
+      </tbody>
+    </table>
+    <div class="print-meta-grid">
+      <div><strong>Target opening per active dozer:</strong> ${L(plan.target)} L</div>
+      <div><strong>On ground:</strong> ${L(plan.onGround)} L</div>
+      <div><strong>Additional AGO needed:</strong> ${L(plan.additional)} L (${L(plan.kegs)} kegs of ${plan.kegLitres} L)</div>
+      <div><strong>AGO cost:</strong> ${formatCurrency(plan.agoCost)}</div>
+      <div><strong>PMS to supply:</strong> ${L(plan.pmsLitres)} L</div>
+      <div><strong>PMS cost:</strong> ${formatCurrency(plan.pmsCost)}</div>
+      <div><strong>Total cost:</strong> ${formatCurrency(plan.grandCost)}</div>
+    </div>
+    ${message ? `<div class="print-block"><strong>Supply message:</strong><p style="white-space:pre-line">${message}</p></div>` : ''}
+    ${notes.length ? `<div class="print-block"><strong>Notes:</strong>${notes.map((n) => `<p>${n}</p>`).join('')}</div>` : ''}
+  `;
+  render(html);
+}

@@ -6,6 +6,7 @@ import { FUEL_STATIONS } from '../constants.js';
 import { fleetItems } from './fleet.js';
 import { renderDieselTracking } from './dieselTracking.js';
 import { renderFuelingVouchers } from './fuelingVouchers.js';
+import { renderAgoPlanner } from './agoPlanner.js';
 
 function projectOptions() {
   return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
@@ -379,11 +380,13 @@ export function renderDieselManagement(container) {
   const reportTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('report') }, 'Dozer Discrepancy Report');
   const trackingTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('tracking') }, 'Diesel Tracking');
   const vouchersTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('vouchers') }, 'Fueling Vouchers');
+  const plannerTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('planner') }, 'AGO Planner');
   tabBar.appendChild(stationTabBtn);
   tabBar.appendChild(siteTabBtn);
   tabBar.appendChild(reportTabBtn);
   tabBar.appendChild(trackingTabBtn);
   tabBar.appendChild(vouchersTabBtn);
+  tabBar.appendChild(plannerTabBtn);
   container.appendChild(tabBar);
 
   const body = el('div');
@@ -396,10 +399,12 @@ export function renderDieselManagement(container) {
     reportTabBtn.classList.toggle('active', tab === 'report');
     trackingTabBtn.classList.toggle('active', tab === 'tracking');
     vouchersTabBtn.classList.toggle('active', tab === 'vouchers');
+    plannerTabBtn.classList.toggle('active', tab === 'planner');
     if (tab === 'station') renderStationLedgerTab(body);
     else if (tab === 'site') renderSiteDistributionTab(body);
     else if (tab === 'report') renderDiscrepancyReportTab(body);
     else if (tab === 'tracking') renderDieselTracking(body);
+    else if (tab === 'planner') renderAgoPlanner(body);
     else renderFuelingVouchers(body);
   }
 
