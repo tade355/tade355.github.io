@@ -330,12 +330,13 @@ export function buildDashboardHtml(d, { expectedHaPer8 = 1.3, idealStart = '7:00
     return `      <tr${r.status === 'Closing restated' ? ' class="flag"' : ''}><td><strong>${esc(r.equipment)}</strong></td><td class="num">${lit(r.opening)}</td><td class="num">${lit(r.distributed)}</td><td class="num">${lit(r.used)}</td><td class="num">${lit(r.closing)}</td><td class="num">${r.efficiency === null ? '—' : fmt(r.efficiency, 1)}</td><td>${badge(cls, text)}</td></tr>`;
   }).join('\n');
   const dieselTiles = [
-    tile('Collected today (AGO)', `${fmt(x.collectedAgo)} L`, { note: x.soldAgo ? `Excludes ${fmt(x.soldAgo)}L sold on, not site diesel` : 'Station collection report' }),
-    tile('Collected today (PMS)', `${fmt(x.collectedPms)} L`),
+    tile('Supplied today (AGO)', `${fmt(x.collectedAgo)} L`, { note: 'Midejab station, supplied to the farm' }),
+    x.soldAgo ? tile('Sold to CEO', `${fmt(x.soldAgo)} L`, { note: 'Not site diesel; left out of the supply' }) : '',
+    tile('Supplied today (PMS)', `${fmt(x.collectedPms)} L`),
     tile('Distributed to dozers', `${fmt(x.distributedToday)} L`, { note: distNote }),
     tile('Used today (25L/hr)', `${fmt(x.usedToday)} L`, { note: `@${money(x.dieselRate)}/L = ${money(x.usedCost)}` }),
     tile('On ground, undistributed', x.onGround === null ? '—' : `${fmt(x.onGround)} L`, { cls: x.onGround === 0 ? 'crit' : (x.onGround ? 'warn' : ''), note: !x.onGroundDate ? 'No stock count logged' : ((x.onGroundIn || x.onGroundOut) ? `Count of ${onDay(x.onGroundDate)} (${fmt(x.onGroundBase)}L) + ${fmt(x.onGroundIn)}L collected − ${fmt(x.onGroundOut)}L distributed since` : `Stock count of ${onDay(x.onGroundDate)}`) }),
-  ].map((y) => `    ${y}`).join('\n');
+  ].filter(Boolean).map((y) => `    ${y}`).join('\n');
 
   // -------------------------------------------------------------- 3 fleet
   const fleetBadge = (r) => {
