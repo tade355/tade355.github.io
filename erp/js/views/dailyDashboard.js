@@ -252,7 +252,7 @@ function fuelingRequestCard(d) {
   redraw();
   return el('div', { class: 'chart-card' }, [
     el('h4', { class: 'chart-title' }, `Fueling Request — ${formatDate(addDays(d.date, 1))}`),
-    el('p', { class: 'section-subtitle' }, `Need = ${DIESEL_FILL_LITRES}L − closing diesel. Pre-selected: dozers that worked today plus Company dozers listed Active; tick or untick to match tomorrow's list.`),
+    el('p', { class: 'section-subtitle' }, `Need = ${DIESEL_FILL_LITRES}L − closing diesel. Pre-selected: dozers that worked today plus dozers listed Active that have worked since the start date; tick or untick to match tomorrow's list.`),
     list,
     el('label', { class: 'dd-kv-row' }, [el('span', {}, 'On ground (L)'), onGroundInput]),
     totals,

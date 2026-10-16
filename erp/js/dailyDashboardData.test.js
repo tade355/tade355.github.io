@@ -38,12 +38,6 @@ test('diesel chain starts at the since date and skips repair diesel', () => {
   assert.equal(row.closing, 20);
 });
 
-test('flags diesel collected but not at site using the stock counts', () => {
-  const d = buildDailyDashboard(ctx());
-  // collected 1000 − distributed 100 − on-ground change 100 = 800 unaccounted
-  assert.ok(d.flags.some((f) => f.tone === 'critical' && f.text.startsWith('800L')));
-});
-
 test('staff are ranked by cumulative productivity and late starts are labelled', () => {
   const d = buildDailyDashboard(ctx());
   assert.equal(d.staff.length, 2);
@@ -51,12 +45,12 @@ test('staff are ranked by cumulative productivity and late starts are labelled',
   assert.equal(lateLabel(6 * 60), 'On time');
 });
 
-test('fueling request tops dozers up to 200L', () => {
+test('fueling request tops dozers up to the 250L target', () => {
   const d = buildDailyDashboard(ctx());
-  assert.deepEqual(d.diesel.fuelingRequest, [{ equipment: 'EMG-1', closing: 20, need: 180 }]);
+  assert.deepEqual(d.diesel.fuelingRequest, [{ equipment: 'EMG-1', closing: 20, need: 230 }]);
 });
 
-test('diesel sold on is kept out of the collected figure and the not-at-site flag nets it off', () => {
+test('diesel sold on is kept out of the collected figure', () => {
   const d = buildDailyDashboard(ctx({
     fuelCreditCollections: [
       { date: '2026-10-12', fuelType: 'Diesel', litres: 400, unitPrice: 1900, notes: 'Station collection' },
@@ -65,13 +59,20 @@ test('diesel sold on is kept out of the collected figure and the not-at-site fla
   }));
   assert.equal(d.diesel.collectedAgo, 400);
   assert.equal(d.diesel.soldAgo, 600);
-  assert.ok(d.flags.some((f) => f.text.startsWith('200L') && f.text.includes('less 600L sold')));
 });
 
-test('a dozer whose standard use exceeds the diesel it had is flagged and never asks for more than the fill level', () => {
+test('a dozer whose standard use exceeds the diesel it had never asks for more than the fill level', () => {
   const d = buildDailyDashboard(ctx({
     distributions: [{ project: P, date: '2026-10-12', equipment: 'EMG-1', litres: 60 }],
   }));
-  assert.ok(d.flags.some((f) => /does not cover standard use/.test(f.text)));
-  assert.equal(d.diesel.fuelingRequest[0].need, 200);
+  assert.equal(d.diesel.fuelingRequest[0].need, 250);
+});
+
+test('the diesel, shortfall and cumulative-profit flags are not raised', () => {
+  const d = buildDailyDashboard(ctx({
+    fuelCreditCollections: [{ date: '2026-10-12', fuelType: 'Diesel', litres: 1000, unitPrice: 1900 }],
+    distributions: [{ project: P, date: '2026-10-12', equipment: 'EMG-1', litres: 60 }],
+    statsFor: () => ({ opsProfit: -1000, totalProfit: -1000, areaCleared: 1.5, pmsCost: 0, pmsUnexplained: 0, supervisorSundayAllowance: 0, dieselLogistics: 0 }),
+  }));
+  assert.ok(!d.flags.some((f) => /diesel|Cumulative/i.test(f.text)));
 });
