@@ -112,12 +112,17 @@ export function renderAccounting(container) {
       const expenses = store.get('expenses');
       const totalRevenue = invoices.filter((i) => i.status === 'Paid').reduce((sum, i) => sum + invoiceTotal(i), 0);
       const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-      const netPosition = totalRevenue - totalExpenses;
+      // Payments since the last bank-transfer upload are recorded as fund requests
+      // (approved or paid), not as expenses; Income & Expenditure counts both.
+      const requestTotal = store.get('fundRequests').filter((r) => r.status === 'Approved' || r.status === 'Paid').reduce((sum, r) => sum + (r.items || []).reduce((s, it) => s + it.amount, 0), 0);
+      const lastExpenseDate = expenses.reduce((m, e) => (e.date > m ? e.date : m), '');
+      const netPosition = totalRevenue - totalExpenses - requestTotal;
 
       summaryGrid.innerHTML = '';
       summaryGrid.appendChild(statCard({ label: 'Total Revenue (Paid)', value: formatCurrency(totalRevenue), tone: 'good' }));
-      summaryGrid.appendChild(statCard({ label: 'Total Expenses', value: formatCurrency(totalExpenses), tone: 'critical' }));
-      summaryGrid.appendChild(statCard({ label: 'Net Position', value: formatCurrency(netPosition), tone: netPosition >= 0 ? 'good' : 'critical' }));
+      summaryGrid.appendChild(statCard({ label: 'Expenses Logged', value: formatCurrency(totalExpenses), tone: 'critical', hint: lastExpenseDate ? `Up to ${formatDate(lastExpenseDate)}` : undefined }));
+      summaryGrid.appendChild(statCard({ label: 'Approved / Paid Fund Requests', value: formatCurrency(requestTotal), tone: 'critical', hint: 'Not in the list below; see Income & Expenditure' }));
+      summaryGrid.appendChild(statCard({ label: 'Net Position', value: formatCurrency(netPosition), tone: netPosition >= 0 ? 'good' : 'critical', hint: 'Revenue less expenses and fund requests' }));
 
       const categories = [...new Set(expenses.map((e) => e.category))];
       const bars = categories.map((cat, i) => ({

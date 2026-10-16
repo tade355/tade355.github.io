@@ -10,10 +10,21 @@
 // Pure (no store / DOM imports).
 export const isSoldOn = (c) => /sold to/i.test(c.notes || '');
 
-export function mergeDieselReceipts({ receipts, collections, operations }) {
+// "Midejab" (old receipts) and "Midejab Ltd" (Fuel Credit) are the same station:
+// a name that is the start of a longer known station name is treated as it.
+export function canonicalStation(name, known) {
+  if (!name) return name;
+  const n = name.trim().toLowerCase();
+  const hit = known.find((k) => k.toLowerCase() === n) || known.find((k) => k.toLowerCase().startsWith(`${n} `));
+  return hit || name;
+}
+
+export function mergeDieselReceipts({ receipts: saved, collections, operations }) {
+  const known = [...new Set(collections.map((c) => c.station).filter(Boolean))];
+  const receipts = saved.map((r) => (r.station ? { ...r, station: canonicalStation(r.station, known) } : r));
   const cutoff = receipts.reduce((m, r) => (r.date > m ? r.date : m), '');
   const after = collections.filter((c) => c.fuelType === 'Diesel' && c.date > cutoff && !isSoldOn(c));
-  if (!after.length) return receipts;
+  if (!after.length) return saved.length === receipts.length && receipts.every((r, i) => r === saved[i]) ? saved : receipts;
   // The site that has been reporting since the cutoff gets the supply.
   const bySite = {};
   operations.filter((o) => o.date > cutoff && o.siteName).forEach((o) => { bySite[o.siteName] = (bySite[o.siteName] || 0) + 1; });

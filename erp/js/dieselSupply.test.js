@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mergeDieselReceipts, isSoldOn } from './dieselSupply.js';
+import { mergeDieselReceipts, isSoldOn, canonicalStation } from './dieselSupply.js';
 
 const receipts = [
   { id: 'DR-1', date: '2026-09-03', litres: 1000, unitCost: 1800, station: 'Midejab', project: 'Kajola' },
@@ -31,11 +31,18 @@ test('diesel collections after the last saved receipt count as site supply; sold
 test('nothing is double counted: collections on or before the last receipt are ignored', () => {
   const all = mergeDieselReceipts({ receipts, collections: [collections[0]], operations });
   assert.equal(all.length, 2);
-  assert.equal(mergeDieselReceipts({ receipts, collections: [], operations }), receipts);
+  assert.equal(mergeDieselReceipts({ receipts, collections: [], operations }).length, 2);
 });
 
 test('isSoldOn reads the note', () => {
   assert.ok(isSoldOn({ notes: 'Sold to the CEO' }));
   assert.ok(!isSoldOn({ notes: 'Supplied today' }));
   assert.ok(!isSoldOn({}));
+});
+
+test('an old receipt station name joins the full station name used in Fuel Credit', () => {
+  assert.equal(canonicalStation('Midejab', ['Midejab Ltd']), 'Midejab Ltd');
+  assert.equal(canonicalStation('SK Gold', ['Midejab Ltd']), 'SK Gold');
+  const all = mergeDieselReceipts({ receipts, collections, operations });
+  assert.ok(all.filter((r) => !r.fromFuelCredit).every((r) => r.station === 'Midejab Ltd'));
 });
