@@ -128,3 +128,22 @@ test('the trend window never starts before the since date', () => {
   const d = buildDailyDashboard(ctx({ date: '2026-10-11', since: '2026-10-10' }));
   assert.deepEqual(d.staff[0].days, ['2026-10-10', '2026-10-11']);
 });
+
+test('a dozer given tank diesel today joins the fueling request even if it has not worked since the start date', () => {
+  const d = buildDailyDashboard(ctx({
+    inventory: [
+      { name: 'EMG-1', category: 'Heavy Equipment', ownership: 'Company', fleetStatus: 'Active', currentProject: P },
+      { name: 'EMG-4', category: 'Heavy Equipment', ownership: 'Company', fleetStatus: 'Active', currentProject: P },
+      { name: 'EMG-6', category: 'Heavy Equipment', ownership: 'Company', fleetStatus: 'Active', currentProject: P },
+    ],
+    distributions: [
+      { project: P, date: '2026-10-12', equipment: 'EMG-1', litres: 100 },
+      { project: P, date: '2026-10-12', equipment: 'EMG-4', litres: 60 },
+      { project: P, date: '2026-10-12', equipment: 'EMG-6', litres: 60, notes: 'For fixing track, not tank fuel' },
+    ],
+  }));
+  const names = d.diesel.fuelingRequest.map((r) => r.equipment);
+  assert.ok(names.includes('EMG-4'));
+  assert.ok(!names.includes('EMG-6'));
+  assert.equal(d.diesel.fuelingRequest.find((r) => r.equipment === 'EMG-4').need, 190);
+});

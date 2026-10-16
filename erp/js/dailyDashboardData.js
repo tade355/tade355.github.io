@@ -130,9 +130,11 @@ export function buildDailyDashboard(ctx) {
 
   // Fueling request for tomorrow: top each dozer up to DIESEL_FILL_LITRES.
   // Default list = dozers that worked today plus dozers listed Active that
-  // have worked on this site since the cumulative start date.
+  // have worked on this site since the cumulative start date, plus any dozer
+  // that was given tank diesel today (it is going back to work).
   const defaultRequestDozers = new Set([
     ...workingDozers,
+    ...dist.filter((d) => aldDay(d) && !/not tank fuel|maintenance diesel/i.test(d.notes || '')).map((d) => d.equipment),
     ...inv.filter((i) => i.fleetStatus === 'Active' && rangeOps.some((o) => o.equipment === i.name)).map((i) => i.name),
   ]);
   const fuelingRequest = [...defaultRequestDozers].sort().map((name) => {
