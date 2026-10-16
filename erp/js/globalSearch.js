@@ -4,6 +4,33 @@ import { openCustomModal, closeModal } from './ui.js';
 import { fleetItems } from './views/fleet.js';
 import { ROUTES } from './router.js';
 import { canAccess } from './session.js';
+import { canDownloadProfitReports } from './access.js';
+import { searchCatalogue, quickLinks } from './searchCatalogue.js';
+
+const canUse = (perm) => (perm === 'profitReports' ? canDownloadProfitReports() : false);
+
+// Go to a page and, if the target sits on a tab (or a tab inside a tab), click
+// through the tab buttons once the page has drawn them. Tabs are internal view
+// state, so this finds each tab button by its visible text rather than needing
+// every view to expose a deep link.
+const TAB_WAIT_MS = 4000;
+export function openLocation(route, tabs = []) {
+  const target = `#/${route}`;
+  if (window.location.hash === target) window.dispatchEvent(new HashChangeEvent('hashchange'));
+  else window.location.hash = target;
+  const view = document.getElementById('view');
+  const started = Date.now();
+  const clickNext = (i) => {
+    if (i >= tabs.length || !view) return;
+    const tick = () => {
+      const btn = [...view.querySelectorAll('.tab-btn')].find((b) => b.textContent.trim() === tabs[i]);
+      if (btn) { btn.click(); setTimeout(() => clickNext(i + 1), 60); return; }
+      if (Date.now() - started < TAB_WAIT_MS) setTimeout(tick, 80);
+    };
+    setTimeout(tick, 80);
+  };
+  clickNext(0);
+}
 
 // One search across the handful of entities people actually look someone
 // or something up by name/ID for — before this, finding everything tied to
@@ -19,7 +46,7 @@ function searchSources() {
 
   return [
     {
-      route: 'hr', kind: 'Employee',
+      route: 'hr', kind: 'Employee', tabs: ['Employees'],
       items: () => employees.map((e) => ({
         id: e.id,
         label: e.name,
@@ -28,7 +55,7 @@ function searchSources() {
       })),
     },
     {
-      route: 'fleet', kind: 'Equipment',
+      route: 'fleet', kind: 'Equipment', tabs: ['Fleet Roster'],
       items: () => fleetItems().map((i) => ({
         id: i.id,
         label: i.name,
@@ -55,7 +82,7 @@ function searchSources() {
       })),
     },
     {
-      route: 'sales', kind: 'Invoice',
+      route: 'sales', kind: 'Invoice', tabs: ['Invoices'],
       items: () => {
         const customers = store.get('customers');
         return store.get('invoices').map((inv) => ({
@@ -67,7 +94,7 @@ function searchSources() {
       },
     },
     {
-      route: 'sales', kind: 'Customer',
+      route: 'sales', kind: 'Customer', tabs: ['Customers'],
       items: () => store.get('customers').map((c) => ({
         id: c.id,
         label: c.name,
@@ -76,7 +103,7 @@ function searchSources() {
       })),
     },
     {
-      route: 'purchasing', kind: 'Supplier',
+      route: 'purchasing', kind: 'Supplier', tabs: ['Suppliers'],
       items: () => store.get('suppliers').map((s) => ({
         id: s.id,
         label: s.name,
@@ -85,7 +112,7 @@ function searchSources() {
       })),
     },
     {
-      route: 'accounting', kind: 'Expense',
+      route: 'accounting', kind: 'Expense', tabs: ['Expenses'],
       items: () => store.get('expenses').map((ex) => ({
         id: ex.id,
         label: ex.description || ex.id,
@@ -94,7 +121,7 @@ function searchSources() {
       })),
     },
     {
-      route: 'accounting', kind: 'Loan',
+      route: 'accounting', kind: 'Loan', tabs: ['Loans'],
       items: () => store.get('loans').map((l) => ({
         id: l.id,
         label: l.lender || l.id,
@@ -103,12 +130,39 @@ function searchSources() {
       })),
     },
     {
-      route: 'fundRequests', kind: 'Fund Request',
+      route: 'fundRequests', kind: 'Fund Request', tabs: ['Requests'],
       items: () => store.get('fundRequests').map((f) => ({
         id: f.id,
         label: f.description || f.id,
         meta: [f.project, f.costHead].filter(Boolean).join(' · '),
         searchText: `${f.id} ${f.description || ''} ${f.project || ''} ${f.costHead || ''}`,
+      })),
+    },
+    {
+      route: 'fleet', tabs: ['Inventory & Equipment'], kind: 'Inventory item',
+      items: () => store.get('inventory').map((i) => ({
+        id: i.id,
+        label: i.name,
+        meta: [i.category, i.location, i.currentProject].filter(Boolean).join(' · '),
+        searchText: `${i.id} ${i.name} ${i.category || ''} ${i.sku || ''} ${i.location || ''} ${i.currentProject || ''}`,
+      })),
+    },
+    {
+      route: 'fleet', tabs: ['Maintenance Log'], kind: 'Maintenance',
+      items: () => store.get('maintenanceLogs').map((m) => ({
+        id: m.id,
+        label: `${m.equipment || m.equipmentName || m.id} — ${m.date ? formatDate(m.date) : 'no date'}`,
+        meta: [m.type, m.description].filter(Boolean).join(' · '),
+        searchText: `${m.id} ${m.equipment || ''} ${m.equipmentName || ''} ${m.description || ''} ${m.type || ''} ${m.date || ''}`,
+      })),
+    },
+    {
+      route: 'purchasing', tabs: ['Fuel Credit'], kind: 'Fuel credit',
+      items: () => store.get('fuelCreditCollections').map((c) => ({
+        id: c.id,
+        label: `${c.litres || 0} L ${c.fuelType || ''} — ${c.date ? formatDate(c.date) : 'no date'}`,
+        meta: [c.station, c.notes].filter(Boolean).join(' · '),
+        searchText: `${c.id} ${c.date || ''} ${c.fuelType || ''} ${c.station || ''} ${c.notes || ''}`,
       })),
     },
   ];
@@ -118,17 +172,22 @@ const MAX_PER_KIND = 6;
 
 function runSearch(query) {
   const q = query.trim().toLowerCase();
-  if (q.length < 2) return [];
+  if (q.length < 1) return [];
 
-  const results = [];
+  // Pages, tabs and features first — they answer "where is X?".
+  const results = searchCatalogue(q, { routes: ROUTES, canAccess, canUse }).map((e) => ({
+    ...e, isLocation: true, meta: e.kind === 'Page' ? '' : `in ${e.routeLabel}${e.tabs && e.tabs.length > 1 ? ` › ${e.tabs.slice(0, -1).join(' › ')}` : ''}`,
+  }));
+  if (q.length < 2) return results;
+
   searchSources().forEach((source) => {
     const route = ROUTES.find((r) => r.path === source.route);
     if (route && !canAccess(route.tiers)) return;
     const matches = source.items().filter((item) => item.searchText.toLowerCase().includes(q));
-    matches.slice(0, MAX_PER_KIND).forEach((item) => results.push({ ...item, kind: source.kind, route: source.route }));
+    matches.slice(0, MAX_PER_KIND).forEach((item) => results.push({ ...item, kind: source.kind, route: source.route, tabs: source.tabs }));
     if (matches.length > MAX_PER_KIND) {
       results.push({
-        kind: source.kind, route: source.route, isOverflow: true,
+        kind: source.kind, route: source.route, tabs: source.tabs, isOverflow: true,
         label: `+${matches.length - MAX_PER_KIND} more ${source.kind.toLowerCase()} match${matches.length - MAX_PER_KIND === 1 ? '' : 'es'} — open ${route?.label || source.route} to see all`,
       });
     }
@@ -141,9 +200,9 @@ export function openGlobalSearch() {
     title: 'Search',
     wide: true,
     build: (body) => {
-      const input = el('input', { type: 'text', class: 'global-search-input', placeholder: 'Search employees, equipment, projects, operations, invoices…' });
+      const input = el('input', { type: 'text', class: 'global-search-input', placeholder: 'Search pages, tabs, features, people, dozers, invoices…' });
       const resultsEl = el('div', { class: 'global-search-results' });
-      const hint = el('p', { class: 'section-subtitle' }, 'Type at least 2 characters. Results open the page that holds that record — some live on a tab inside it.');
+      const hint = el('p', { class: 'section-subtitle' }, 'Find any page, tab or feature (try "fuel credit", "ask", "profitability", "download"), or look up a person, dozer, project, invoice or record. Picking a result takes you straight to it.');
       body.appendChild(input);
       body.appendChild(hint);
       body.appendChild(resultsEl);
@@ -152,20 +211,19 @@ export function openGlobalSearch() {
       let current = [];
 
       function go(result) {
-        if (result.isOverflow) {
-          window.location.hash = `#/${result.route}`;
-          closeModal();
-          return;
-        }
-        window.location.hash = `#/${result.route}`;
         closeModal();
+        openLocation(result.route, result.tabs || []);
       }
 
       function renderResults() {
         resultsEl.innerHTML = '';
+        if (!current.length && !input.value.trim()) {
+          resultsEl.appendChild(el('p', { class: 'dd-muted' }, 'Quick links'));
+          current = quickLinks({ routes: ROUTES, canAccess, canUse }).map((e) => ({ ...e, isLocation: true, meta: '' }));
+        }
         if (!current.length) {
           const q = input.value.trim();
-          resultsEl.appendChild(el('p', { class: 'table-empty' }, q.length < 2 ? 'Keep typing…' : `No matches for "${q}".`));
+          resultsEl.appendChild(el('p', { class: 'table-empty' }, `No matches for "${q}".`));
           return;
         }
         current.forEach((r, i) => {
@@ -183,7 +241,7 @@ export function openGlobalSearch() {
       }
 
       input.addEventListener('input', () => {
-        current = runSearch(input.value);
+        current = input.value.trim() ? runSearch(input.value) : [];
         selected = 0;
         renderResults();
       });
@@ -206,6 +264,7 @@ export function openGlobalSearch() {
       });
 
       renderResults();
+      setTimeout(() => input.focus(), 0);
     },
   });
 }

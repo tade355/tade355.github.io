@@ -240,6 +240,8 @@ button { font-family: inherit; }
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  min-width: min(22rem, 46vw);
+  justify-content: space-between;
   font-size: 0.85rem;
   font-weight: 500;
   color: var(--text-secondary);
@@ -249,6 +251,7 @@ button { font-family: inherit; }
   padding: 0.4rem 0.75rem;
   cursor: pointer;
 }
+.topbar-search-label { flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topbar-search-btn:hover { background: var(--surface-1); color: var(--text-primary); }
 .topbar-search-key {
   font-size: 0.72rem;
@@ -260,6 +263,7 @@ button { font-family: inherit; }
   line-height: 1.4;
 }
 @media (max-width: 640px) {
+  .topbar-search-btn { min-width: 0; }
   .topbar-search-label { display: none; }
 }
 
