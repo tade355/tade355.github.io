@@ -89,6 +89,16 @@ function flagsBanner(flags) {
   ]);
 }
 
+// Prints the dashboard page itself: body.print-page keeps the page content and
+// drops the app chrome (see the @media print rules), and is removed again once
+// the print dialog closes.
+function printPage() {
+  document.body.classList.add('print-page');
+  const done = () => { document.body.classList.remove('print-page'); window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  window.print();
+}
+
 export function renderDailyDashboard(container) {
   container.innerHTML = '';
   const realToday = todayISOString();
@@ -102,7 +112,7 @@ export function renderDailyDashboard(container) {
   const prevBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '◀ Prev Day');
   const nextBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Next Day ▶');
   const todayBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Today');
-  const printBtn = el('button', { type: 'button', class: 'btn btn-ghost', onClick: () => window.print() }, '🖨 Print');
+  const printBtn = el('button', { type: 'button', class: 'btn btn-ghost', onClick: printPage }, '🖨 Print');
 
   container.appendChild(el('div', { class: 'section-header' }, [el('div', {}, [
     el('h2', {}, 'Daily Operations Dashboard'),

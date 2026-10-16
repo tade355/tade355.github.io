@@ -846,18 +846,36 @@ button { font-family: inherit; }
 #printArea { display: none; }
 
 @media print {
-  body * { visibility: hidden; }
-  #printArea, #printArea * { visibility: visible; }
-  #printArea {
+  /* Print documents (receipts, statements, reports) are rendered into
+     #printArea. The rest of the app is taken out of the layout entirely with
+     display:none — hiding it with visibility:hidden left its full height in
+     the flow and printed a run of blank pages after the document. */
+  body:not(.print-page) > *:not(#printArea) { display: none !important; }
+  body:not(.print-page) #printArea {
     display: block;
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: static;
     width: 100%;
+    margin: 0;
     padding: 0;
     color: #000;
     background: #fff;
   }
+  body:not(.print-page) .print-table tr,
+  body:not(.print-page) .print-block,
+  body:not(.print-page) .print-signatures { break-inside: avoid; }
+
+  /* Printing the page itself (e.g. the Daily Operations Dashboard's Print
+     button sets body.print-page): keep the content, drop the app chrome. */
+  body.print-page #printArea,
+  body.print-page .sidebar,
+  body.print-page .topbar,
+  body.print-page #modalRoot,
+  body.print-page #toastRoot,
+  body.print-page #userGate { display: none !important; }
+  body.print-page .app-shell,
+  body.print-page .app-main { display: block; min-height: 0; height: auto; }
+  body.print-page .table-wrap { overflow: visible; }
+  body.print-page .data-table tr { break-inside: avoid; }
 }
 
 .print-header {
