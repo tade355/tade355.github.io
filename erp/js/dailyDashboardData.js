@@ -96,6 +96,13 @@ export function buildDailyDashboard(ctx) {
   const dieselRate = ctx.dieselRateAsOf(date);
   const counts = ctx.dieselStockCounts.filter((c) => c.date <= date).sort((a, b) => (a.date < b.date ? 1 : -1));
   const latestCount = counts[0] || null;
+  // The last stock count rolled forward to the viewed day: plus site diesel
+  // collected since, minus diesel distributed to dozers since. (A count made on
+  // the viewed day itself is used as it is.)
+  const afterCount = (x) => !!latestCount && x.date > latestCount.date && x.date <= date;
+  const rolledIn = latestCount ? sum(ctx.fuelCreditCollections.filter((c) => afterCount(c) && ago(c) && !soldNote(c)), (c) => c.litres) : 0;
+  const rolledOut = latestCount ? sum(dist.filter(afterCount), (d) => d.litres) : 0;
+  const onGround = latestCount ? Math.max(0, latestCount.countedLitres + rolledIn - rolledOut) : null;
   // The diesel chain starts on the "since" date with each dozer at zero, the
   // way the dashboards track it (opening = previous closing + diesel
   // distributed, used = standard litres, closing = opening − used). Diesel
@@ -286,7 +293,7 @@ export function buildDailyDashboard(ctx) {
   return {
     project, date, since,
     operations: { rows: operations, reporting: operations.filter((o) => o.reported).length, fleetCount: operations.length, todayHa, todayHours, cumulativeHa: cumStats.areaCleared },
-    diesel: { collectedAgo, soldAgo, collectedPms, distributedToday, usedToday, usedCost: usedToday * dieselRate, dieselRate, onGround: latestCount ? latestCount.countedLitres : null, onGroundDate: latestCount?.date || null, rows: diesel, fuelingRequest, stationBalance, distributionChart: dist.filter(aldDay).map((d) => ({ label: d.equipment, value: d.litres })) },
+    diesel: { collectedAgo, soldAgo, collectedPms, distributedToday, usedToday, usedCost: usedToday * dieselRate, dieselRate, onGround, onGroundDate: latestCount?.date || null, onGroundBase: latestCount ? latestCount.countedLitres : null, onGroundIn: rolledIn, onGroundOut: rolledOut, rows: diesel, fuelingRequest, stationBalance, distributionChart: dist.filter(aldDay).map((d) => ({ label: d.equipment, value: d.litres })) },
     fleet, vendorAccrual, requests,
     profit: { today: todayStats, cumulative: cumStats, contribution, extraRows },
     staff, flags,

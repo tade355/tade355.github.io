@@ -89,3 +89,19 @@ test('the downloadable dashboard is a complete report with all six sections', as
   assert.ok(!/undefined|NaN(?!\()/.test(html.replace(/isNaN/g, '')), 'no undefined/NaN values in the markup');
   assert.equal(dashboardFileName('2026-10-15'), 'Daily_Dashboard_15Oct2026.html');
 });
+
+test('diesel on ground rolls the last stock count forward with later collections and distributions', () => {
+  const d = buildDailyDashboard(ctx({
+    dieselStockCounts: [{ date: '2026-10-11', countedLitres: 300 }],
+    fuelCreditCollections: [
+      { date: '2026-10-11', fuelType: 'Diesel', litres: 999, unitPrice: 1900 }, // inside the count already
+      { date: '2026-10-12', fuelType: 'Diesel', litres: 1000, unitPrice: 1900 },
+      { date: '2026-10-12', fuelType: 'Diesel', litres: 500, unitPrice: 1900, notes: 'Sold to the CEO' }, // not site diesel
+    ],
+    distributions: [{ project: P, date: '2026-10-12', equipment: 'EMG-1', litres: 240 }],
+  }));
+  assert.equal(d.diesel.onGround, 300 + 1000 - 240);
+  assert.equal(d.diesel.onGroundBase, 300);
+  assert.equal(d.diesel.onGroundIn, 1000);
+  assert.equal(d.diesel.onGroundOut, 240);
+});

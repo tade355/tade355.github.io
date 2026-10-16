@@ -116,6 +116,13 @@ function printPage() {
   window.print();
 }
 
+function onGroundNote(x, fmtDate) {
+  if (!x.onGroundDate) return 'No stock count logged';
+  const base = `Stock count of ${fmtDate(x.onGroundDate)}`;
+  if (!x.onGroundIn && !x.onGroundOut) return base;
+  return `${base} (${Math.round(x.onGroundBase)} L) + ${Math.round(x.onGroundIn)} L collected − ${Math.round(x.onGroundOut)} L distributed since`;
+}
+
 export function renderDailyDashboard(container) {
   container.innerHTML = '';
   const realToday = todayISOString();
@@ -225,7 +232,7 @@ function dieselSection(d) {
     statCard({ label: 'Collected today (PMS)', value: `${num(x.collectedPms, 0)} L` }),
     statCard({ label: 'Distributed to dozers', value: `${num(x.distributedToday, 0)} L` }),
     statCard({ label: 'Used today', value: `${num(x.usedToday, 0)} L`, hint: `@ ${money(x.dieselRate)}/L = ${money(x.usedCost)}` }),
-    statCard({ label: 'On ground, undistributed', value: x.onGround === null ? '—' : `${num(x.onGround, 0)} L`, tone: x.onGround === 0 ? 'critical' : undefined, hint: x.onGroundDate ? `Stock count of ${formatDate(x.onGroundDate)}` : 'No stock count logged' }),
+    statCard({ label: 'On ground, undistributed', value: x.onGround === null ? '—' : `${num(x.onGround, 0)} L`, tone: x.onGround === 0 ? 'critical' : undefined, hint: onGroundNote(x, formatDate) }),
   ]);
 
   const chartBox = el('div', { class: 'chart-card' });
