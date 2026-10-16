@@ -14,6 +14,7 @@ import { canDownloadProfitReports } from '../access.js';
 import { DASHBOARD_BASIS_FROM } from '../dashboardBasis.js';
 import { projectNames } from './profitability.js';
 import { store } from '../store.js';
+import { ICONS } from '../icons.js';
 
 function answerBlock(question, answer) {
   const box = el('div', { class: 'dd-chat-item' }, [el('div', { class: 'dd-chat-q' }, question)]);
@@ -110,7 +111,7 @@ export function reportBuilderCard(getProject) {
     const a = el('a', { href: url, download: profitReportFileName(built.report.from, built.report.to) });
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
-  } }, '⬇ Download report (HTML)');
+  } }, [el('span', { html: ICONS.download }), 'Download report (HTML)']);
   const previewBtn = el('button', { type: 'button', class: 'btn btn-ghost', onClick: () => {
     const built = build();
     if (!built) return;

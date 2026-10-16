@@ -13,6 +13,7 @@ import { computeProjectStats, projectNames } from './profitability.js';
 import { stationBalances } from './fuelCredit.js';
 import { DASHBOARD_BASIS_FROM } from '../dashboardBasis.js';
 import { buildDashboardHtml, dashboardFileName } from '../dashboardHtml.js';
+import { ICONS } from '../icons.js';
 import { askCard, reportBuilderCard } from './ddTools.js';
 import {
   buildDailyDashboard, minutesToClock, EXPECTED_HA_PER_8HRS, IDEAL_START, DIESEL_FILL_LITRES,
@@ -125,12 +126,12 @@ export function renderDailyDashboard(container) {
   projectSelect.value = defaultProject;
   const dateInput = el('input', { type: 'date', max: realToday, value: realToday });
   const sinceInput = el('input', { type: 'date', value: DASHBOARD_BASIS_FROM });
-  const prevBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '◀ Prev Day');
-  const nextBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Next Day ▶');
+  const prevBtn = el('button', { type: 'button', class: 'btn btn-ghost', title: 'Previous day' }, [el('span', { html: ICONS.chevronLeft }), 'Prev day']);
+  const nextBtn = el('button', { type: 'button', class: 'btn btn-ghost', title: 'Next day' }, ['Next day', el('span', { html: ICONS.chevronRight })]);
   const todayBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Today');
-  const printBtn = el('button', { type: 'button', class: 'btn btn-ghost', onClick: printPage }, '🖨 Print');
+  const printBtn = el('button', { type: 'button', class: 'btn btn-ghost', onClick: printPage }, [el('span', { html: ICONS.printer }), 'Print']);
   let current = null;
-  const downloadBtn = el('button', { type: 'button', class: 'btn btn-primary', title: 'Download this dashboard as a single HTML file (same format as the daily dashboard report)', onClick: () => downloadHtml(current) }, '⬇ Download HTML');
+  const downloadBtn = el('button', { type: 'button', class: 'btn btn-primary', title: 'Download this dashboard as a single HTML file (same format as the daily dashboard report)', onClick: () => downloadHtml(current) }, [el('span', { html: ICONS.download }), 'Download HTML']);
 
   container.appendChild(el('div', { class: 'section-header' }, [el('div', {}, [
     el('h2', {}, 'Daily Operations Dashboard'),
@@ -139,9 +140,9 @@ export function renderDailyDashboard(container) {
   container.appendChild(el('div', { class: 'filter-bar' }, [
     el('label', { class: 'filter-field' }, [el('span', {}, 'Site'), projectSelect]),
     el('label', { class: 'filter-field' }, [el('span', {}, 'Viewing'), dateInput]),
-    prevBtn, nextBtn, todayBtn,
+    el('div', { class: 'seg', role: 'group', 'aria-label': 'Change day' }, [prevBtn, todayBtn, nextBtn]),
     el('label', { class: 'filter-field' }, [el('span', {}, 'Cumulative since'), sinceInput]),
-    downloadBtn, printBtn,
+    el('div', { class: 'filter-actions' }, [printBtn, downloadBtn]),
   ]));
   // Ask the ERP is open to everyone who can see this page; the profitability
   // report builder/download is shown to Olumide only.
