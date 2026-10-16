@@ -76,3 +76,16 @@ test('the diesel, shortfall and cumulative-profit flags are not raised', () => {
   }));
   assert.ok(!d.flags.some((f) => /diesel|Cumulative/i.test(f.text)));
 });
+
+test('the downloadable dashboard is a complete report with all six sections', async () => {
+  const { buildDashboardHtml, dashboardFileName } = await import('./dashboardHtml.js');
+  const full = { provisionalRevenue: 1000, dieselCost: 1, logisticsCost: 1, operatorAllowanceCost: 1, supervisorSundayAllowance: 0, dozerOwned: 1, dozerRented: 0, dozerPartnership: 0, pmsTacoma: 0, pmsUnexplained: 0, otherCost: 0, totalCost: 5, opsProfit: 995, mcRecovered: 1, maintenanceIncurred: 0, netMcRecovered: 1, totalProfit: 996, areaCleared: 1.5, pmsCost: 0, dieselLogistics: 1 };
+  const d = buildDailyDashboard(ctx({ statsFor: () => full }));
+  d.diesel.fuelingState = { rows: d.diesel.fuelingRequest, onGround: 0 };
+  const html = buildDashboardHtml(d, { fueling: d.diesel.fuelingState });
+  assert.ok(html.startsWith('<!doctype html>'));
+  ['operations', 'diesel', 'fleet', 'requests', 'profitability', 'staff'].forEach((id) => assert.ok(html.includes(`<section id="${id}">`), id));
+  assert.ok(html.includes('Prepared by ERP Software'));
+  assert.ok(!/undefined|NaN(?!\()/.test(html.replace(/isNaN/g, '')), 'no undefined/NaN values in the markup');
+  assert.equal(dashboardFileName('2026-10-15'), 'Daily_Dashboard_15Oct2026.html');
+});

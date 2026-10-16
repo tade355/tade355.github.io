@@ -12,6 +12,7 @@ import { operatorAllowanceForRows } from '../ownedOperatorAllowance.js';
 import { computeProjectStats, projectNames } from './profitability.js';
 import { stationBalances } from './fuelCredit.js';
 import { DASHBOARD_BASIS_FROM } from '../dashboardBasis.js';
+import { buildDashboardHtml, dashboardFileName } from '../dashboardHtml.js';
 import {
   buildDailyDashboard, minutesToClock, EXPECTED_HA_PER_8HRS, IDEAL_START, DIESEL_FILL_LITRES,
 } from '../dailyDashboardData.js';
@@ -92,6 +93,20 @@ function flagsBanner(flags) {
 // Prints the dashboard page itself: body.print-page keeps the page content and
 // drops the app chrome (see the @media print rules), and is removed again once
 // the print dialog closes.
+// Saves the dashboard as the same single-file HTML report that is shared daily:
+// the current Fueling Request selection and on-ground figure are included.
+function downloadHtml(d) {
+  if (!d) return;
+  const html = buildDashboardHtml(d, { fueling: d.diesel.fuelingState });
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = el('a', { href: url, download: dashboardFileName(d.date) });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
 function printPage() {
   document.body.classList.add('print-page');
   const done = () => { document.body.classList.remove('print-page'); window.removeEventListener('afterprint', done); };
@@ -113,6 +128,8 @@ export function renderDailyDashboard(container) {
   const nextBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Next Day ▶');
   const todayBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Today');
   const printBtn = el('button', { type: 'button', class: 'btn btn-ghost', onClick: printPage }, '🖨 Print');
+  let current = null;
+  const downloadBtn = el('button', { type: 'button', class: 'btn btn-primary', title: 'Download this dashboard as a single HTML file (same format as the daily dashboard report)', onClick: () => downloadHtml(current) }, '⬇ Download HTML');
 
   container.appendChild(el('div', { class: 'section-header' }, [el('div', {}, [
     el('h2', {}, 'Daily Operations Dashboard'),
@@ -123,7 +140,7 @@ export function renderDailyDashboard(container) {
     el('label', { class: 'filter-field' }, [el('span', {}, 'Viewing'), dateInput]),
     prevBtn, nextBtn, todayBtn,
     el('label', { class: 'filter-field' }, [el('span', {}, 'Cumulative since'), sinceInput]),
-    printBtn,
+    downloadBtn, printBtn,
   ]));
   const body = el('div', { class: 'dd-body' });
   container.appendChild(body);
@@ -150,6 +167,7 @@ export function renderDailyDashboard(container) {
       stationBalance: balance,
     });
 
+    current = d;
     body.appendChild(el('p', { class: 'section-subtitle' }, `${project} — ${formatDate(date)}. Expected output ${EXPECTED_HA_PER_8HRS} ha per 8 hrs; ideal start ${IDEAL_START} AM; cumulative figures since ${formatDate(since)}.`));
     body.appendChild(flagsBanner(d.flags));
     body.appendChild(el('div', { class: 'dd-jump' }, ['operations:1. Operations', 'diesel:2. Diesel', 'fleet:3. Fleet', 'requests:4. Requests & Expenses', 'profit:5. Profitability', 'staff:6. Staff Performance']
@@ -254,6 +272,7 @@ function fuelingRequestCard(d) {
     });
     const onGround = Number(onGroundInput.value) || 0;
     const actual = Math.max(0, total - onGround);
+    d.diesel.fuelingState = { rows: names.filter((n) => chosen.has(n)).map((n) => ({ equipment: n, closing: closingOf(n), need: Math.max(0, DIESEL_FILL_LITRES - closingOf(n)) })), onGround };
     totals.innerHTML = '';
     [['Total to balance', `${lit(total)} L`], ['Less on ground', `${lit(onGround)} L`], ['Actually needed', `${lit(actual)} L (${money(actual * x.dieselRate)})`]]
       .forEach(([k, v], i) => totals.appendChild(el('div', { class: 'dd-kv-row' }, [el('span', {}, k), el('strong', {}, v)])));
