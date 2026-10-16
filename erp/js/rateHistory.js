@@ -1,4 +1,5 @@
 import { store } from './store.js';
+import { allDieselReceipts } from './dieselSupplyStore.js';
 
 // The most recent dozer_rate_history entry for an equipment name at or
 // before `date`. Falls back to the equipment's own current inventory
@@ -27,7 +28,7 @@ export function hourlyRateAsOf(equipment, date) {
 // to the "Diesel (AGO)" inventory item's current unit cost if no receipt
 // has been logged yet.
 export function dieselRateAsOf(date) {
-  const receipts = store.get('dieselReceipts')
+  const receipts = allDieselReceipts()
     .filter((r) => r.date <= date)
     .sort((a, b) => (a.date < b.date ? 1 : -1));
   if (receipts.length) return receipts[0].unitCost || 0;

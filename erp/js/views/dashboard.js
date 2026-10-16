@@ -1,6 +1,7 @@
 import { store } from '../store.js';
 import { formatCurrency, formatDate, invoiceTotal, monthKey, monthLabel, el, ico } from '../utils.js';
 import { ICONS } from '../icons.js';
+import { allDieselReceipts } from '../dieselSupplyStore.js';
 import { todayISOString, addDays, lastNDayKeys, lastNMonthKeys, monthBounds } from '../dateUtils.js';
 import { amountOutstanding } from '../invoicePayments.js';
 import { amountOutstanding as loanAmountOutstanding, agingDays as loanAgingDays } from '../loanPayments.js';
@@ -61,7 +62,7 @@ function buildDayTimeline(dayISO, daysOps) {
     if (o.timeClosed) timed.push({ time: o.timeClosed, icon: 'stop', text: `Work Closed — ${o.equipment}`, meta: o.siteName });
     if (!o.timeResumed && !o.timeClosed) untimed.push({ icon: 'documents', text: `Report Submitted — ${o.equipment}`, meta: o.siteName });
   });
-  store.get('dieselReceipts').filter((r) => r.date === dayISO).forEach((r) => {
+  allDieselReceipts().filter((r) => r.date === dayISO).forEach((r) => {
     untimed.push({ icon: 'fuelCan', text: `Diesel Delivered — ${(r.litres || 0).toLocaleString()} L`, meta: r.station || r.project || 'Company-wide' });
   });
   store.get('maintenanceLogs').filter((m) => m.date === dayISO).forEach((m) => {

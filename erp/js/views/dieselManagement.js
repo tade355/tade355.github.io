@@ -7,6 +7,8 @@ import { fleetItems } from './fleet.js';
 import { renderDieselTracking } from './dieselTracking.js';
 import { renderFuelingVouchers } from './fuelingVouchers.js';
 import { renderAgoPlanner } from './agoPlanner.js';
+import { allDieselReceipts } from '../dieselSupplyStore.js';
+import { stationBalances as creditBalances } from './fuelCredit.js';
 
 function projectOptions() {
   return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
@@ -50,7 +52,7 @@ function prepaymentFields() {
 // owes diesel/funds, not the company.
 export function stationPrepayBalances() {
   const prepayments = store.get('dieselStationPrepayments');
-  const receipts = store.get('dieselReceipts').filter((r) => r.station);
+  const receipts = allDieselReceipts().filter((r) => r.station);
   const stations = [...new Set([...prepayments.map((p) => p.station), ...receipts.map((r) => r.station)])];
 
   return stations.map((station) => {
@@ -62,10 +64,14 @@ export function stationPrepayBalances() {
     const fundsValueSupplied = ownReceipts.reduce((sum, r) => sum + (r.litres || 0) * (r.unitCost || 0), 0);
     const balanceDiesel = litresPurchased - litresSupplied;
     const balanceFunds = totalPrepaid - fundsValueSupplied;
+    // A station that supplies on credit (Midejab) is not prepaid: what matters
+    // is what the company owes it, from Fuel Credit.
+    const creditOwed = Math.max(0, creditBalances().find((c) => c.station === station)?.balance || 0);
     let status = 'Outstanding';
-    if (balanceDiesel <= 0) status = 'Fully Settled';
+    if (totalPrepaid === 0 && creditOwed > 0) status = 'On Credit';
+    else if (balanceDiesel <= 0) status = 'Fully Settled';
     else if (litresSupplied > 0) status = 'Partially Settled';
-    return { station, totalPrepaid, litresPurchased, litresSupplied, fundsValueSupplied, balanceDiesel, balanceFunds, status };
+    return { station, totalPrepaid, litresPurchased, litresSupplied, fundsValueSupplied, balanceDiesel: Math.max(0, balanceDiesel), balanceFunds: Math.max(0, balanceFunds), creditOwed, status };
   }).sort((a, b) => b.balanceDiesel - a.balanceDiesel);
 }
 
@@ -74,7 +80,7 @@ function renderStationLedgerTab(container) {
   const actionSlot = el('div');
   container.appendChild(sectionHeader(
     'Station Ledger — Level 1',
-    'Diesel prepaid to a filling station, drawn down as diesel receipts arrive tagged to that station (Fleet Management → Diesel Tracking)',
+    'Diesel prepaid to a filling station, drawn down as diesel arrives from it — plus what the company owes a station that supplies on credit (Midejab), from Fuel Credit',
     actionSlot,
   ));
   actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openPrepaymentForm() }, '+ Log Prepayment'));
@@ -91,12 +97,14 @@ function renderStationLedgerTab(container) {
     const balances = stationPrepayBalances();
     const totalDieselOwed = balances.reduce((sum, b) => sum + Math.max(0, b.balanceDiesel), 0);
     const totalFundsOwed = balances.reduce((sum, b) => sum + Math.max(0, b.balanceFunds), 0);
+    const totalCreditOwed = balances.reduce((sum, b) => sum + b.creditOwed, 0);
     const outstandingCount = balances.filter((b) => b.status !== 'Fully Settled').length;
 
     summarySlot.innerHTML = '';
     summarySlot.appendChild(el('div', { class: 'stats-grid' }, [
       statCard({ label: 'Diesel Owed by Stations', value: `${totalDieselOwed.toLocaleString()} L`, tone: totalDieselOwed ? 'warning' : 'good' }),
       statCard({ label: 'Funds Value Still Owed', value: formatCurrency(totalFundsOwed), tone: totalFundsOwed ? 'warning' : 'good' }),
+      statCard({ label: 'We Owe Stations (on credit)', value: formatCurrency(totalCreditOwed), tone: totalCreditOwed ? 'critical' : 'good', hint: 'From Fuel Credit (Purchasing)' }),
       statCard({ label: 'Stations With a Balance', value: String(outstandingCount), tone: outstandingCount ? 'warning' : 'good' }),
     ]));
 
@@ -108,6 +116,7 @@ function renderStationLedgerTab(container) {
         { key: 'litresSupplied', label: 'Litres Supplied', render: (r) => `${r.litresSupplied.toLocaleString()} L` },
         { key: 'balanceDiesel', label: 'Station Owes Us (Diesel)', render: (r) => el('strong', { class: r.balanceDiesel > 0 ? 'text-critical' : 'text-good' }, `${r.balanceDiesel.toLocaleString()} L`) },
         { key: 'balanceFunds', label: 'Station Owes Us (Funds)', render: (r) => el('strong', { class: r.balanceFunds > 0 ? 'text-critical' : 'text-good' }, formatCurrency(r.balanceFunds)) },
+        { key: 'creditOwed', label: 'We Owe Station (Credit)', render: (r) => el('strong', { class: r.creditOwed > 0 ? 'text-critical' : 'text-good' }, formatCurrency(r.creditOwed)) },
         { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
       ],
       rows: balances,
@@ -189,7 +198,7 @@ function distributionFields() {
 // report; summing diesel_site_distributions on top of that would count it
 // twice.
 function siteDieselLedger(from, to) {
-  const receipts = store.get('dieselReceipts').filter((r) => r.project);
+  const receipts = allDieselReceipts().filter((r) => r.project);
   const operations = store.get('operations').filter((o) => o.siteName);
   return store.get('projects').map((p) => {
     const openingReceipts = from ? receipts.filter((r) => r.project === p.name && r.date < from).reduce((sum, r) => sum + r.litres, 0) : 0;

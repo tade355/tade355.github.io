@@ -67,7 +67,7 @@ export function statusPillClass(status) {
     Pending: 'pill-warning', Ongoing: 'pill-warning', 'On Leave': 'pill-warning', Suspended: 'pill-warning',
     'Under Maintenance': 'pill-warning', Scheduled: 'pill-warning', 'In Progress': 'pill-warning', Partnership: 'pill-warning', Rented: 'pill-warning', 'Pending Approval': 'pill-warning', Business: 'pill-warning',
     Office: 'pill-good',
-    'Fully Settled': 'pill-good', 'Partially Settled': 'pill-warning', Outstanding: 'pill-critical',
+    'Fully Settled': 'pill-good', 'On Credit': 'pill-warning', 'Partially Settled': 'pill-warning', Outstanding: 'pill-critical',
     Commendation: 'pill-good', Query: 'pill-warning', Deployed: 'pill-good', Returned: 'pill-neutral', Damaged: 'pill-warning', Lost: 'pill-critical',
     OK: 'pill-good', Variance: 'pill-critical', 'Minor Variance': 'pill-warning',
     'Partially Paid': 'pill-warning', 'No Invoice Yet': 'pill-neutral',

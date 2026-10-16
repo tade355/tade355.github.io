@@ -5,6 +5,7 @@ import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confi
 import { FUEL_STATIONS } from '../constants.js';
 import { printDieselReplenishmentRequest, printDieselStationReport } from '../print.js';
 import { fleetItems } from './fleet.js';
+import { allDieselReceipts } from '../dieselSupplyStore.js';
 
 function projectOptions() {
   return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
@@ -57,7 +58,7 @@ function latestClosingDieselFor(name) {
 }
 
 function dieselBalanceAsOf(date) {
-  const received = store.get('dieselReceipts').filter((r) => r.date <= date).reduce((sum, r) => sum + r.litres, 0);
+  const received = allDieselReceipts().filter((r) => r.date <= date).reduce((sum, r) => sum + r.litres, 0);
   const issued = store.get('operations').filter((o) => o.date <= date).reduce((sum, o) => sum + o.fuelUsed, 0);
   return received - issued;
 }
@@ -96,7 +97,7 @@ export function renderDieselTracking(container) {
   const actionSlot = el('div');
   container.appendChild(sectionHeader(
     'Diesel Tracking',
-    'Company-wide diesel deliveries and stock reconciliation — tag a receipt with a station or site to feed the Station Ledger and Site Distribution tabs',
+    'Company-wide diesel deliveries and stock reconciliation — saved receipts plus every Midejab diesel collection logged in Fuel Credit since (diesel sold on is left out). Tag a receipt with a station or site to feed the Station Ledger and Site Distribution tabs',
     actionSlot,
   ));
   actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openReceiptForm() }, '+ Log Diesel Receipt'));
@@ -108,7 +109,7 @@ export function renderDieselTracking(container) {
   container.appendChild(body);
 
   function refresh() {
-    const receipts = store.get('dieselReceipts');
+    const receipts = allDieselReceipts();
     const counts = store.get('dieselStockCounts').slice().sort((a, b) => (a.date < b.date ? 1 : -1));
     const totalReceived = receipts.reduce((sum, r) => sum + r.litres, 0);
     const totalIssued = store.get('operations').reduce((sum, o) => sum + o.fuelUsed, 0);
@@ -177,7 +178,7 @@ export function renderDieselTracking(container) {
         {
           key: 'actions',
           label: '',
-          render: (r) => actionButtons({
+          render: (r) => (r.fromFuelCredit ? el('span', { class: 'dd-muted', title: 'Comes from Fuel Credit; edit it there' }, 'From Fuel Credit') : actionButtons({
             onEdit: () => openReceiptForm(r),
             onDelete: async () => {
               if (!confirmDelete(`Receipt on ${formatDate(r.date)}`)) return;
@@ -188,7 +189,7 @@ export function renderDieselTracking(container) {
                 window.alert(err.message || 'Could not delete this receipt.');
               }
             },
-          }),
+          })),
         },
       ],
         rows: filteredReceipts(),
