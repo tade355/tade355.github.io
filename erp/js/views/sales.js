@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { renderWorkOrderInvoices } from './workOrderInvoices.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, invoiceTotal, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, openCustomModal, closeModal, confirmDelete, showToast } from '../ui.js';
@@ -261,8 +262,10 @@ export function renderSales(container) {
   const tabBar = el('div', { class: 'tab-bar' });
   const invoicesTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('invoices') }, 'Invoices');
   const customersTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('customers') }, 'Customers');
+  const workOrdersTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('workOrders') }, 'Work Order Invoices');
   tabBar.appendChild(invoicesTabBtn);
   tabBar.appendChild(customersTabBtn);
+  tabBar.appendChild(workOrdersTabBtn);
 
   const actionSlot = el('div');
   container.appendChild(sectionHeader('Sales & Invoicing', 'Customers, invoices, and revenue', actionSlot));
@@ -275,8 +278,16 @@ export function renderSales(container) {
     tab = next;
     invoicesTabBtn.classList.toggle('active', tab === 'invoices');
     customersTabBtn.classList.toggle('active', tab === 'customers');
+    workOrdersTabBtn.classList.toggle('active', tab === 'workOrders');
     if (tab === 'invoices') renderInvoicesTab();
+    else if (tab === 'workOrders') renderWorkOrdersTab();
     else renderCustomersTab();
+  }
+
+  function renderWorkOrdersTab() {
+    actionSlot.innerHTML = '';
+    body.innerHTML = '';
+    renderWorkOrderInvoices(body);
   }
 
   function renderInvoicesTab() {

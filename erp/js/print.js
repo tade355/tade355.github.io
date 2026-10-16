@@ -1051,3 +1051,8 @@ export function printAgoPlanner(plan, { siteLabel, planDate, closingDate, notes 
   `;
   render(html);
 }
+
+// Print an already-built HTML document (e.g. the Rex Forestry payment letter).
+export function printHtmlDocument(html) {
+  render(html);
+}

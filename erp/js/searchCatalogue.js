@@ -61,6 +61,7 @@ export const CATALOGUE = [
   { kind: 'Tab', route: 'purchasing', tabs: ['Fuel Credit'], label: 'Fuel Credit', words: 'fuel credit station midejab collections payments balance owed' },
   { kind: 'Tab', route: 'sales', tabs: ['Invoices'], label: 'Invoices', words: 'invoice bill' },
   { kind: 'Tab', route: 'sales', tabs: ['Customers'], label: 'Customers', words: 'customer client' },
+  { kind: 'Tab', route: 'sales', tabs: ['Work Order Invoices'], label: 'Work Order Invoices', words: 'work order rex forestry invoice letter payment request upload pdf wo print' },
   { kind: 'Tab', route: 'fundRequests', tabs: ['Requests'], label: 'Requests', words: 'request fund' },
   { kind: 'Tab', route: 'fundRequests', tabs: ['Approvals'], label: 'Approvals', words: 'approve approvals pending' },
   { kind: 'Tab', route: 'hr', tabs: ['Employees'], label: 'Employees', words: 'employee staff list' },
@@ -90,6 +91,7 @@ export const CATALOGUE = [
   { kind: 'Feature', route: 'accounting', tabs: ['Expenses'], label: 'Record an expense', words: 'add expense record spend' },
   { kind: 'Feature', route: 'dataImport', label: 'Upload an Excel file to update the ERP', words: 'upload excel import daily reports payments diesel supply end of day load data from spreadsheet' },
   { kind: 'Feature', route: 'dataImport', label: 'Download the Excel upload template', words: 'template xlsx format download blank spreadsheet' },
+  { kind: 'Feature', route: 'sales', tabs: ['Work Order Invoices'], label: 'Generate and print the Rex Forestry invoice from work orders', words: 'rex forestry invoice work order upload pdf print letter diesel machine service charge vat site security' },
   { kind: 'Feature', route: 'mySalary', label: 'View my payslip', words: 'payslip salary my pay' },
 ];
 

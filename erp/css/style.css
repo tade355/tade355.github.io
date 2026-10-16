@@ -1516,3 +1516,48 @@ a.btn { text-decoration: none; }
 .dd-small-input { height: 2.2rem; box-sizing: border-box; width: 6.5rem; padding: 0 0.65rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--page-plane); color: var(--text-primary); font: inherit; font-size: 0.9rem; text-align: right; font-variant-numeric: tabular-nums; }
 .dd-small-input:focus { outline: none; background: var(--surface-1); border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent); }
 .dd-kv .dd-kv-row { max-width: 30rem; }
+
+/* Rex Forestry payment-request letter (A4, letterhead behind the text) */
+.rex-letter { page: rexletter; position: relative; width: 210mm; height: 297mm; overflow: hidden; background: #fff; color: #000; font-family: Arial, Helvetica, sans-serif; font-size: 10.2pt; line-height: 1.36; box-sizing: border-box; }
+.rex-bg { position: absolute; left: 0; top: 0; width: 210mm; height: 297mm; display: block; }
+.rex-body { position: absolute; left: 25mm; right: 26mm; top: 44mm; }
+.rex-body p { margin: 0 0 3.4mm; }
+.rex-date { font-weight: 700; font-size: 9.2pt; margin-bottom: 5.5mm !important; }
+.rex-addr { margin-bottom: 5mm !important; }
+.rex-intro { text-align: justify; margin-bottom: 2.2mm !important; }
+.rex-phase { font-weight: 700; text-decoration: underline; font-size: 9.4pt; margin: 3mm 0 1.2mm !important; }
+.rex-table { border-collapse: collapse; width: 146mm; margin-bottom: 3mm; font-weight: 700; font-size: 9.6pt; table-layout: fixed; }
+.rex-table th, .rex-table td { border: 1px solid #8a8a8a; padding: 0.9mm 2.4mm; line-height: 1.25; }
+.rex-table th { background: #28482b; color: #fff; text-align: center; font-weight: 700; }
+.rex-table th.rex-plain { background: #fff; color: #000; }
+.rex-table th.rex-l, .rex-table td.rex-l { text-align: left; }
+.rex-table td.rex-l { padding-left: 5mm; }
+.rex-table th.rex-r, .rex-table td.rex-r { text-align: right; }
+.rex-table td.rex-c { text-align: center; }
+
+.rex-table tr.rex-sub td { background: #c5dec0; }
+.rex-table tr.rex-sub td.rex-l { padding-left: 2.4mm; }
+.rex-sec { font-weight: 400; margin-top: 2mm; }
+.rex-sec th.rex-l { padding-left: 2.4mm; }
+.rex-sec td.rex-l { padding-left: 2.4mm; }
+.rex-sec tr.rex-sub td { background: #dbe5db; font-weight: 700; }
+.rex-sec td.rex-n { font-weight: 400; }
+.rex-bank { margin-top: 4mm !important; }
+.rex-indent { display: inline-block; margin-left: 11mm; }
+.rex-sign { display: flex; align-items: flex-end; flex-direction: column; align-items: flex-start; margin-top: 1mm; }
+.rex-sign img { width: 26mm; height: auto; display: block; margin-bottom: -1.2mm; }
+.rex-sign div { font-size: 9.6pt; }
+@page rexletter { size: A4; margin: 0; }
+@media print {
+  body:not(.print-page) #printArea .rex-letter { margin: 0; page-break-after: avoid; break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .rex-table th, .rex-table tr.rex-sub td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+/* On screen the letter sits in a scrollable frame, scaled to fit. */
+.rex-preview { overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-lg); background: #eceeea; padding: 1rem; margin-bottom: 1rem; max-height: 75vh; }
+.rex-preview-inner { width: 210mm; margin: 0 auto; box-shadow: 0 6px 24px rgba(11, 11, 11, 0.18); }
+.wo-table input[type=text], .wo-table input[type=number], .wo-table select { height: 2.1rem; box-sizing: border-box; padding: 0 0.55rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--page-plane); color: var(--text-primary); font: inherit; font-size: 0.88rem; }
+.wo-table input[type=number] { width: 6.5rem; text-align: right; }
+.wo-table input[type=text] { width: 7rem; }
+.wo-table select { max-width: 17rem; }
+.wo-note { font-size: 0.8rem; margin: 0.15rem 0 0; }
+.wo-note.warn { color: var(--warning); } .wo-note.bad { color: var(--critical); } .wo-note.ok { color: var(--good); }
