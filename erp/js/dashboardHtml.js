@@ -8,7 +8,7 @@
 
 import { DIESEL_FILL_LITRES } from './dailyDashboardData.js';
 
-const DASHBOARD_CSS = String.raw`  :root {
+export const DASHBOARD_CSS = String.raw`  :root {
     color-scheme: light;
     --brand: #166534;
     --brand-dark: #14261c;
@@ -214,7 +214,7 @@ const SCRIPT_HEAD = String.raw`(function() {
   }
 
 `;
-const SCRIPT_TAIL = String.raw`  document.querySelectorAll('table').forEach(function(table) {
+export const SCRIPT_TAIL = String.raw`  document.querySelectorAll('table').forEach(function(table) {
     var thead = table.querySelector('thead');
     if (!thead) return;
     var ths = Array.prototype.slice.call(thead.querySelectorAll('th[data-type]'));

@@ -13,6 +13,7 @@ import { computeProjectStats, projectNames } from './profitability.js';
 import { stationBalances } from './fuelCredit.js';
 import { DASHBOARD_BASIS_FROM } from '../dashboardBasis.js';
 import { buildDashboardHtml, dashboardFileName } from '../dashboardHtml.js';
+import { askCard, reportBuilderCard } from './ddTools.js';
 import {
   buildDailyDashboard, minutesToClock, EXPECTED_HA_PER_8HRS, IDEAL_START, DIESEL_FILL_LITRES,
 } from '../dailyDashboardData.js';
@@ -142,6 +143,12 @@ export function renderDailyDashboard(container) {
     el('label', { class: 'filter-field' }, [el('span', {}, 'Cumulative since'), sinceInput]),
     downloadBtn, printBtn,
   ]));
+  // Ask the ERP is open to everyone who can see this page; the profitability
+  // report builder/download is shown to Olumide only.
+  const askPanel = askCard(() => projectSelect.value);
+  container.appendChild(askPanel);
+  const reportPanel = reportBuilderCard(() => projectSelect.value);
+  if (reportPanel) container.appendChild(reportPanel);
   const body = el('div', { class: 'dd-body' });
   container.appendChild(body);
 

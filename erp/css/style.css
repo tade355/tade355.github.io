@@ -1312,3 +1312,20 @@ button { font-family: inherit; }
 .dd-table tr.dd-missing td { color: var(--text-muted, #6b7a72); font-style: italic; }
 .dd-footer { text-align: center; color: var(--text-muted, #6b7a72); font-size: 0.8rem; margin-top: 30px; }
 @media print { .dd-jump, .filter-bar { display: none; } }
+
+
+/* Daily Operations Dashboard tools: Ask the ERP and the report builder */
+.dd-tool { border: 1px solid var(--border, #d8ded9); border-radius: 10px; padding: 10px 14px; margin: 12px 0; background: var(--surface, #fff); }
+.dd-tool > summary { cursor: pointer; font-weight: 700; }
+.dd-ask-row { display: flex; gap: 8px; margin: 10px 0; }
+.dd-ask-input { flex: 1; min-width: 0; padding: 9px 11px; border: 1px solid var(--border, #c9d1cb); border-radius: 8px; font: inherit; }
+.dd-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.dd-chip { border: 1px solid var(--border, #c9d1cb); background: transparent; border-radius: 999px; padding: 4px 10px; font-size: 0.8rem; cursor: pointer; color: inherit; }
+.dd-chip:hover { background: color-mix(in srgb, var(--brand, #166534) 10%, transparent); }
+.dd-chat-item { margin: 10px 0; border-top: 1px solid var(--border, #d8ded9); padding-top: 10px; }
+.dd-chat-q { font-weight: 700; margin-bottom: 4px; }
+.dd-chat-a p { margin: 4px 0; font-size: 0.9rem; white-space: pre-line; }
+.dd-checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 4px 16px; margin: 10px 0; font-size: 0.88rem; }
+.dd-check { display: flex; gap: 4px; align-items: flex-start; }
+.dd-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+@media print { .dd-tool { display: none; } }
