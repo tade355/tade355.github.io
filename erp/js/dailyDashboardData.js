@@ -83,7 +83,13 @@ export function buildDailyDashboard(ctx) {
   const dist = ctx.distributions.filter((d) => d.project === project);
   const aldDay = (d) => d.date === date;
   const ago = (c) => c.fuelType === 'Diesel';
-  const collectedAgo = sum(ctx.fuelCreditCollections.filter((c) => c.date === date && ago(c)), (c) => c.litres);
+  // Diesel collected at the station and then sold on (e.g. to the CEO) is
+  // recorded as its own collection row whose notes say "sold to"; it is not
+  // site diesel, so it is shown separately and left out of the site figures.
+  const soldNote = (c) => /sold to/i.test(c.notes || '');
+  const dayAgo = ctx.fuelCreditCollections.filter((c) => c.date === date && ago(c));
+  const collectedAgo = sum(dayAgo.filter((c) => !soldNote(c)), (c) => c.litres);
+  const soldAgo = sum(dayAgo.filter(soldNote), (c) => c.litres);
   const collectedPms = sum(ctx.fuelCreditCollections.filter((c) => c.date === date && c.fuelType === 'PMS'), (c) => c.litres);
   const distributedToday = sum(dist.filter(aldDay), (d) => d.litres);
   const usedToday = sum(dayOps, (o) => o.fuelUsed);
@@ -122,7 +128,7 @@ export function buildDailyDashboard(ctx) {
     ...inv.filter((i) => (i.ownership || 'Company') === 'Company' && i.fleetStatus === 'Active' && (i.currentProject === project || workingDozers.includes(i.name))).map((i) => i.name),
   ]);
   const fuelingRequest = [...defaultRequestDozers].sort().map((name) => {
-    const closing = diesel.find((d) => d.equipment === name)?.closing ?? 0;
+    const closing = Math.max(0, diesel.find((d) => d.equipment === name)?.closing ?? 0);
     return { equipment: name, closing, need: Math.max(0, DIESEL_FILL_LITRES - closing) };
   });
   const stationBalance = ctx.stationBalance;
@@ -269,7 +275,7 @@ export function buildDailyDashboard(ctx) {
       // on-ground stock + whatever never reached the site.
       const unaccounted = collectedAgo - distributedToday - (latestCount.countedLitres - prevCount.countedLitres);
       if (unaccounted > 0.5) {
-        flags.push({ tone: 'critical', text: `${unaccounted.toLocaleString()}L of diesel (${fmt(unaccounted * dieselRate)}) collected at the station today is not at site: ${collectedAgo.toLocaleString()}L collected, ${distributedToday.toLocaleString()}L distributed, on-ground stock ${prevCount.countedLitres.toLocaleString()}L → ${latestCount.countedLitres.toLocaleString()}L.`, action: 'Station and site manager to account for the difference.' });
+        flags.push({ tone: 'critical', text: `${unaccounted.toLocaleString()}L of diesel (${fmt(unaccounted * dieselRate)}) collected at the station today is not at site: ${(collectedAgo + soldAgo).toLocaleString()}L collected${soldAgo ? `, less ${soldAgo.toLocaleString()}L sold`: ''}, ${distributedToday.toLocaleString()}L distributed, on-ground stock ${prevCount.countedLitres.toLocaleString()}L → ${latestCount.countedLitres.toLocaleString()}L.`, action: 'Station and site manager to account for the difference.' });
       }
     } else if (collectedAgo > distributedToday) {
       flags.push({ tone: 'critical', text: `${collectedAgo.toLocaleString()}L of diesel was collected at the station but only ${distributedToday.toLocaleString()}L was distributed to dozers (${(collectedAgo - distributedToday).toLocaleString()}L difference, ${fmt((collectedAgo - distributedToday) * dieselRate)}). No on-ground stock count for today.`, action: 'Log the on-ground stock count (Diesel Tracking → Log Stock Count).' });
@@ -281,6 +287,10 @@ export function buildDailyDashboard(ctx) {
   }
   const late = staff.filter((s) => s.role !== 'Supervisor' && s.lateMinutesToday !== null && s.lateMinutesToday >= LATE_FLAG_MINUTES);
   if (late.length) flags.push({ tone: 'warning', text: `Late starts (ideal ${IDEAL_START} AM): ${late.map((s) => `${s.name} ${s.lateToday} late`).join(', ')}.` });
+  const short = diesel.filter((r) => r.worked && r.closing < -0.5);
+  if (short.length) {
+    flags.push({ tone: 'critical', text: `Diesel supplied does not cover standard use: ${short.map((r) => `${r.equipment} had ${(r.opening).toLocaleString()}L but used ${(r.used).toLocaleString()}L (${(-r.closing).toLocaleString()}L short)`).join('; ')}.`, action: 'Check the litres actually supplied and the hours reported.' });
+  }
   const silent = inv.filter((i) => i.fleetStatus === 'Active' && i.currentProject === project && !workingDozers.includes(i.name) && (i.ownership || 'Company') === 'Company');
   if (dayOps.length && silent.length) flags.push({ tone: 'warning', text: `${silent.map((i) => i.name).join(', ')} listed active but no report today.`, action: 'Send the end-of-day report, or confirm the machine did not work.' });
   const corrections = dayOps.filter((o) => (o.hoursWorked || 0) > 0 && !(o.quantity > 0));
@@ -293,7 +303,7 @@ export function buildDailyDashboard(ctx) {
   return {
     project, date, since,
     operations: { rows: operations, reporting: operations.filter((o) => o.reported).length, fleetCount: operations.length, todayHa, todayHours, cumulativeHa: cumStats.areaCleared },
-    diesel: { collectedAgo, collectedPms, distributedToday, usedToday, usedCost: usedToday * dieselRate, dieselRate, onGround: latestCount ? latestCount.countedLitres : null, onGroundDate: latestCount?.date || null, rows: diesel, fuelingRequest, stationBalance, distributionChart: dist.filter(aldDay).map((d) => ({ label: d.equipment, value: d.litres })) },
+    diesel: { collectedAgo, soldAgo, collectedPms, distributedToday, usedToday, usedCost: usedToday * dieselRate, dieselRate, onGround: latestCount ? latestCount.countedLitres : null, onGroundDate: latestCount?.date || null, rows: diesel, fuelingRequest, stationBalance, distributionChart: dist.filter(aldDay).map((d) => ({ label: d.equipment, value: d.litres })) },
     fleet, vendorAccrual, requests,
     profit: { today: todayStats, cumulative: cumStats, contribution, extraRows },
     staff, flags,

@@ -55,3 +55,23 @@ test('fueling request tops dozers up to 200L', () => {
   const d = buildDailyDashboard(ctx());
   assert.deepEqual(d.diesel.fuelingRequest, [{ equipment: 'EMG-1', closing: 20, need: 180 }]);
 });
+
+test('diesel sold on is kept out of the collected figure and the not-at-site flag nets it off', () => {
+  const d = buildDailyDashboard(ctx({
+    fuelCreditCollections: [
+      { date: '2026-10-12', fuelType: 'Diesel', litres: 400, unitPrice: 1900, notes: 'Station collection' },
+      { date: '2026-10-12', fuelType: 'Diesel', litres: 600, unitPrice: 1900, notes: 'Sold to the CEO - not site diesel' },
+    ],
+  }));
+  assert.equal(d.diesel.collectedAgo, 400);
+  assert.equal(d.diesel.soldAgo, 600);
+  assert.ok(d.flags.some((f) => f.text.startsWith('200L') && f.text.includes('less 600L sold')));
+});
+
+test('a dozer whose standard use exceeds the diesel it had is flagged and never asks for more than the fill level', () => {
+  const d = buildDailyDashboard(ctx({
+    distributions: [{ project: P, date: '2026-10-12', equipment: 'EMG-1', litres: 60 }],
+  }));
+  assert.ok(d.flags.some((f) => /does not cover standard use/.test(f.text)));
+  assert.equal(d.diesel.fuelingRequest[0].need, 200);
+});
