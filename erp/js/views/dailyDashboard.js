@@ -240,12 +240,12 @@ function fuelingRequestCard(d) {
       box.checked = chosen.has(name);
       box.addEventListener('change', () => { if (box.checked) chosen.add(name); else chosen.delete(name); redraw(); });
       if (chosen.has(name)) total += need;
-      list.appendChild(el('label', { class: 'dd-kv-row' }, [el('span', {}, [box, ` ${name}`]), el('span', {}, `closing ${num(closing, 0)}L → needs ${num(need, 0)}L`)]));
+      list.appendChild(el('label', { class: 'dd-kv-row' }, [el('span', {}, [box, ` ${name}`]), el('span', {}, `closing ${lit(closing)}L → needs ${lit(need)}L`)]));
     });
     const onGround = Number(onGroundInput.value) || 0;
     const actual = Math.max(0, total - onGround);
     totals.innerHTML = '';
-    [['Total to balance', `${num(total, 0)} L`], ['Less on ground', `${num(onGround, 0)} L`], ['Actually needed', `${num(actual, 0)} L (${money(actual * x.dieselRate)})`]]
+    [['Total to balance', `${lit(total)} L`], ['Less on ground', `${lit(onGround)} L`], ['Actually needed', `${lit(actual)} L (${money(actual * x.dieselRate)})`]]
       .forEach(([k, v], i) => totals.appendChild(el('div', { class: 'dd-kv-row' }, [el('span', {}, k), el('strong', {}, v)])));
   }
   onGroundInput.addEventListener('input', redraw);
