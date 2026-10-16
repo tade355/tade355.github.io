@@ -5,6 +5,7 @@ import { hourlyRateAsOf, dieselRateAsOf, projectRateAsOf } from './rateHistory.j
 import { operatorAllowanceForRows } from './ownedOperatorAllowance.js';
 import { computeProjectStats } from './views/profitability.js';
 import { stationBalances } from './views/fuelCredit.js';
+import { getCurrentTier } from './session.js';
 
 export function liveContext(project) {
   return {
@@ -18,6 +19,16 @@ export function liveContext(project) {
     fundRequests: store.get('fundRequests'),
     expenses: store.get('expenses'),
     maintenanceLogs: store.get('maintenanceLogs'),
+    projects: store.get('projects'),
+    invoices: store.get('invoices'),
+    customers: store.get('customers'),
+    suppliers: store.get('suppliers'),
+    purchaseOrders: store.get('purchaseOrders'),
+    loans: store.get('loans'),
+    leaveRequests: store.get('leaveRequests'),
+    assets: store.get('assets'),
+    // Staff records are HR data: only Admin accounts can open them in the ERP.
+    canViewStaffRecords: getCurrentTier() === 'Admin',
     dieselStockCounts: store.get('dieselStockCounts'),
     hourlyRateAsOf,
     dieselRateAsOf,

@@ -8,6 +8,7 @@ import { el, formatDate } from '../utils.js';
 import { todayISOString, addDays, mondayOf } from '../dateUtils.js';
 import { liveContext } from '../reportContext.js';
 import { answerQuestion, EXAMPLE_QUESTIONS } from '../askErp.js';
+import { FACT_EXAMPLES } from '../askErpFacts.js';
 import { buildProfitReport, REPORT_SECTIONS } from '../profitReportData.js';
 import { buildProfitReportHtml, profitReportFileName } from '../profitReportHtml.js';
 import { canDownloadProfitReports } from '../access.js';
@@ -54,10 +55,10 @@ export function askCard(getProject) {
   submit.addEventListener('click', () => ask());
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') ask(); });
 
-  const chips = el('div', { class: 'dd-chips' }, EXAMPLE_QUESTIONS.slice(0, 8).map((q) => el('button', { type: 'button', class: 'dd-chip', onClick: () => ask(q) }, q)));
+  const chips = el('div', { class: 'dd-chips' }, [...EXAMPLE_QUESTIONS.slice(0, 6), ...FACT_EXAMPLES.slice(0, 5)].map((q) => el('button', { type: 'button', class: 'dd-chip', onClick: () => ask(q) }, q)));
   const card = el('details', { class: 'dd-tool' }, [
     el('summary', {}, 'Ask the ERP'),
-    el('p', { class: 'section-subtitle' }, 'Ask in plain English. Answers are worked out only from the data already loaded in the ERP (operations, diesel, requests, fuel credit, fleet, profit and staff). It does not use outside information, and if it cannot match a question it says so.'),
+    el('p', { class: 'section-subtitle' }, 'Ask in plain English. Answers are worked out only from the data already loaded in the ERP (operations, diesel, requests, fuel credit, fleet, sites, staff and profit). It does not use outside information, and if it cannot match a question it says so.'),
     el('div', { class: 'dd-ask-row' }, [input, submit]),
     chips, history,
   ]);

@@ -13,6 +13,7 @@ import { economicsByOp, expectedHa, toMinutes, EXPECTED_HA_PER_8HRS } from './op
 import { buildDailyDashboard, DIESEL_FILL_LITRES } from './dailyDashboardData.js';
 import { IDEAL_START_MINUTES, LATE_MINUTES } from './profitReportData.js';
 import { DASHBOARD_BASIS_FROM } from './dashboardBasis.js';
+import { answerFacts, FACT_EXAMPLES } from './askErpFacts.js';
 
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -142,6 +143,7 @@ export const EXAMPLE_QUESTIONS = [
   'Which dozers are down?',
   'How many hectares must each dozer clear for 20% profit?',
   'Compare the supervisors',
+  ...FACT_EXAMPLES,
 ];
 
 export function answerQuestion(question, ctx, { today, project }) {
@@ -159,8 +161,14 @@ export function answerQuestion(question, ctx, { today, project }) {
   const has = (re) => re.test(text);
 
   if (has(/\b(help|what can you|how do i use|what do you know|examples?)\b/)) {
-    return reply('I answer questions from the data already loaded in the ERP: profit and costs, hectares and hours, output by dozer, operator or supervisor, start times, diesel, fund requests, fuel credit (Midejab), fleet status and profit targets. Give a date or range (for example "yesterday", "15 Oct", "10 to 15 Oct", "this week") and, if you like, a dozer or person. Try:\n• ' + EXAMPLE_QUESTIONS.join('\n• '));
+    return reply('I answer questions from the data already loaded in the ERP: profit and costs, hectares and hours, output by dozer, operator or supervisor, start times, diesel, fund requests, fuel credit (Midejab), fleet status (and since when a dozer has been down), sites, staff (who someone is, how many are suspended) and profit targets. Give a date or range (for example "yesterday", "15 Oct", "10 to 15 Oct", "this week") and, if you like, a dozer or person. Try:\n• ' + EXAMPLE_QUESTIONS.join('\n• '));
   }
+
+  // ------------------------------------------- the organisation itself
+  // Who a person is, headcount and suspensions, sites, fleet status and how long
+  // a dozer has been down, counts of records (see askErpFacts.js).
+  const facts = answerFacts(q, ctx, { today });
+  if (facts) return facts;
 
   // ---------------------------------------------------------------- targets
   if (has(/(target|break.?even|must (each )?(dozer|machine)|need to clear|required hectares|to (reach|make|achieve|hit) \d+ ?%)/)) {
