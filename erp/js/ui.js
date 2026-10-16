@@ -1,4 +1,5 @@
-import { el, statusPillClass } from './utils.js';
+import { el, ico, statusPillClass } from './utils.js';
+import { ICONS } from './icons.js';
 import { createAttachmentPicker } from './attachments.js';
 import { renderSparkline } from './charts.js';
 import { todayISOString, addDays, mondayOf } from './dateUtils.js';
@@ -173,7 +174,7 @@ export function renderTable(container, { columns, rows, emptyText = 'No records 
     class: 'btn btn-ghost btn-sm table-export-btn',
     title: 'Download this table as a CSV file (opens in Excel)',
     onClick: () => downloadCSV(exportFilename || `emagrims-export-${todayISOString()}`, columns, rows),
-  }, '⬇ Export CSV');
+  }, [ico('download'), 'Export CSV']);
   container.appendChild(el('div', { class: 'table-toolbar' }, [exportBtn]));
 
   const table = el('table', { class: 'data-table' });
@@ -194,10 +195,10 @@ export function renderTable(container, { columns, rows, emptyText = 'No records 
 
 export function actionButtons({ onEdit, onDelete, onPrint, onPayment }) {
   return el('div', { class: 'row-actions' }, [
-    onPrint ? el('button', { class: 'icon-btn', type: 'button', title: 'Print', onClick: onPrint }, '🖨') : null,
-    onPayment ? el('button', { class: 'icon-btn', type: 'button', title: 'Log Payment', onClick: onPayment }, '💰') : null,
-    el('button', { class: 'icon-btn', type: 'button', title: 'Edit', onClick: onEdit }, '✎'),
-    el('button', { class: 'icon-btn icon-btn-danger', type: 'button', title: 'Delete', onClick: onDelete }, '🗑'),
+    onPrint ? el('button', { class: 'icon-btn', type: 'button', title: 'Print', onClick: onPrint }, [ico('printer')]) : null,
+    onPayment ? el('button', { class: 'icon-btn', type: 'button', title: 'Log Payment', onClick: onPayment }, [ico('banknote')]) : null,
+    el('button', { class: 'icon-btn', type: 'button', title: 'Edit', onClick: onEdit }, [ico('edit')]),
+    el('button', { class: 'icon-btn icon-btn-danger', type: 'button', title: 'Delete', onClick: onDelete }, [ico('trash')]),
   ]);
 }
 
@@ -210,13 +211,20 @@ export function actionButtons({ onEdit, onDelete, onPrint, onPayment }) {
 // string shown under the value (e.g. "Target: 85%").
 export function statCard({ label, value, hint, tone, href, trend, icon, sparkline, target }) {
   const sparklineSvg = sparkline ? renderSparkline({ values: sparkline, colorVar: tone ? `var(--${tone})` : undefined }) : null;
-  const content = [
-    icon ? el('span', { class: 'stat-icon' }, icon) : null,
-    el('span', { class: 'stat-label' }, label),
-    el('span', { class: 'stat-value' }, value),
+  // Fixed zones so every card in a row lines up: heading (icon + label, two
+  // lines reserved) / figure / supporting lines / sparkline pinned to the bottom.
+  const meta = [
     trend ? el('span', { class: `stat-trend stat-trend-${trend.tone || 'neutral'}` }, `${trend.direction === 'up' ? '▲' : trend.direction === 'down' ? '▼' : '▬'} ${trend.label}`) : null,
     target ? el('span', { class: 'stat-target' }, target) : null,
     hint ? el('span', { class: 'stat-hint' }, hint) : null,
+  ].filter(Boolean);
+  const content = [
+    el('span', { class: 'stat-head' }, [
+      icon && ICONS[icon] ? el('span', { class: 'stat-icon', html: ICONS[icon] }) : null,
+      el('span', { class: 'stat-label' }, label),
+    ]),
+    el('span', { class: 'stat-value' }, value),
+    meta.length ? el('span', { class: 'stat-meta' }, meta) : null,
     sparklineSvg ? el('span', { class: 'stat-sparkline' }, [sparklineSvg]) : null,
   ];
   const classes = `stat-card${tone ? ' stat-' + tone : ''}${href ? ' stat-card-link' : ''}`;

@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
-import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
+import { formatCurrency, formatDate, el, dateInRange, ico } from '../utils.js';
 import { sectionHeader, statCard, statusPill, renderTable, actionButtons, openModal, confirmDelete, dateRangeFields } from '../ui.js';
 import { FUEL_STATIONS, FUEL_TYPES } from '../constants.js';
 import { printFuelCreditStatement } from '../print.js';
@@ -123,7 +123,7 @@ export function renderFuelCredit(container) {
   });
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Station'), stationSelect]));
   statementRangeElements.forEach((e) => filterBar.appendChild(e));
-  const printStatementBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '🖨 Print Statement');
+  const printStatementBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, [ico('printer'), 'Print Statement']);
   printStatementBtn.addEventListener('click', () => {
     if (!stationSelect.value) {
       window.alert('Choose a specific station first — a statement (with a Brought Forward balance) only makes sense for one station at a time.');

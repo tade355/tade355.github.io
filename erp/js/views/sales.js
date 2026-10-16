@@ -134,7 +134,7 @@ function openInvoiceForm(record, onSaved) {
         const items = currentItems();
         totalDisplay.textContent = formatCurrency(items.reduce((sum, it) => sum + it.qty * it.price, 0));
         const preview = computeInvoiceStatus({ id: record?.id, items });
-        statusPreview.textContent = `Status: ${preview} — computed automatically from payments logged against this invoice (use the 💰 button on the invoice list to log one).`;
+        statusPreview.textContent = `Status: ${preview} — computed automatically from payments logged against this invoice (use the payment button on the invoice list to log one).`;
       }
 
       function projectIsSet() {

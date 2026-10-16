@@ -284,8 +284,8 @@ export function renderSparkline({ values, colorVar = 'var(--brand)', width = 100
   const coords = values.map((v, i) => ({ x: i * step, y: height - ((v - min) / range) * height }));
   const linePath = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
 
-  const chart = svg('svg', { viewBox: `0 0 ${width} ${height}`, class: 'sparkline-svg', role: 'img', 'aria-hidden': 'true' });
-  chart.appendChild(svg('path', { d: linePath, fill: 'none', stroke: colorVar, 'stroke-width': 1.75, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+  const chart = svg('svg', { viewBox: `0 0 ${width} ${height}`, class: 'sparkline-svg', role: 'img', 'aria-hidden': 'true', preserveAspectRatio: 'none' });
+  chart.appendChild(svg('path', { d: linePath, fill: 'none', stroke: colorVar, 'stroke-width': 1.75, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'vector-effect': 'non-scaling-stroke' }));
   const last = coords[coords.length - 1];
   chart.appendChild(svg('circle', { cx: last.x, cy: last.y, r: 2.25, fill: colorVar }));
   return chart;

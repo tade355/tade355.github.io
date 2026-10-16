@@ -1,5 +1,5 @@
 import { store } from '../store.js';
-import { formatCurrency, formatDate, el } from '../utils.js';
+import { formatCurrency, formatDate, el, ico } from '../utils.js';
 import { renderTable, sectionHeader, statCard } from '../ui.js';
 import { getCurrentTier, getCurrentUserId, filterFundRequests, filterByProject, filterLeaveRequests } from '../session.js';
 import { printFundRequest, printFuelingVoucher } from '../print.js';
@@ -17,7 +17,7 @@ function daysBetween(start, end) {
 
 function decisionButtons({ onPrint, onApprove, onReject }) {
   return el('div', { class: 'row-actions' }, [
-    onPrint ? el('button', { class: 'icon-btn', type: 'button', title: 'Print', onClick: onPrint }, '🖨') : null,
+    onPrint ? el('button', { class: 'icon-btn', type: 'button', title: 'Print', onClick: onPrint }, [ico('printer')]) : null,
     el('button', { class: 'btn btn-primary btn-sm', type: 'button', onClick: onApprove }, 'Approve'),
     el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onClick: onReject }, 'Reject'),
   ]);

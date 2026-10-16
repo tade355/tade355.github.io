@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
-import { formatCurrency, formatDate, el } from '../utils.js';
+import { formatCurrency, formatDate, el, ico } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { FUEL_STATIONS } from '../constants.js';
 import { printFuelingVoucher } from '../print.js';
@@ -102,7 +102,7 @@ export function renderFuelingVouchers(container) {
         { key: 'estimatedCost', label: 'Est. Cost', render: (r) => formatCurrency(r.estimatedCost) },
         { key: 'requestedBy', label: 'Requested By', render: (r) => employees.find((e) => e.id === r.requestedBy)?.name || 'Unknown' },
         { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
-        { key: 'attachments', label: 'Files', render: (r) => (r.attachments?.length ? `📎 ${r.attachments.length}` : '—') },
+        { key: 'attachments', label: 'Files', render: (r) => (r.attachments?.length ? el('span', { class: 'attach-count' }, [ico('paperclip'), String(r.attachments.length)]) : '—') },
         {
           key: 'actions',
           label: '',

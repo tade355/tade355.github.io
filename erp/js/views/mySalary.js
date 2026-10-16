@@ -1,4 +1,4 @@
-import { formatCurrency, formatMonthLong, el } from '../utils.js';
+import { formatCurrency, formatMonthLong, el, ico } from '../utils.js';
 import { sectionHeader, statCard, renderTable } from '../ui.js';
 import { getCurrentUser } from '../session.js';
 import { printPayslip, printSalaryStatement } from '../print.js';
@@ -19,7 +19,7 @@ export function renderMySalary(container) {
     return;
   }
 
-  const printAllBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '🖨 Print Salary Statement');
+  const printAllBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, [ico('printer'), 'Print Salary Statement']);
   container.appendChild(el('div', { class: 'filter-bar' }, [printAllBtn]));
 
   const rows = salaryStatementRows(employee.id);
@@ -52,7 +52,7 @@ export function renderMySalary(container) {
         render: (r) => el('button', {
           type: 'button', class: 'icon-btn', title: 'Print payslip',
           onClick: () => printPayslip({ id: r.runId, month: r.month, status: r.status }, { baseSalary: r.baseSalary, bonus: r.bonus, deductions: r.deductions, amountPaid: r.amountPaid }, employee.name),
-        }, '🖨'),
+        }, [ico('printer')]),
       },
     ],
     rows,

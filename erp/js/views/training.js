@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { supabase } from '../supabaseClient.js';
-import { el } from '../utils.js';
+import { el, ico } from '../utils.js';
 import { renderTable, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, showToast } from '../ui.js';
 import { getCurrentUser, getCurrentUserId, getCurrentTier, filterTrainingSubmissions } from '../session.js';
 
@@ -136,7 +136,7 @@ function viewSubmission(record, refresh) {
       const when = record.submittedAt ? new Date(record.submittedAt).toLocaleString('en-GB') : '—';
       modalContainer.appendChild(el('p', { class: 'section-subtitle' }, `Submitted ${when}${record.timedOut ? ' · timed out before finishing' : ''} · ${recordedVideoCount(record, questions)}/${videoQuestionCount} video answers recorded`));
       if (record.tabSwitchCount) {
-        modalContainer.appendChild(el('p', { class: 'section-subtitle', style: 'color: var(--warning);' }, `⚠ Left the tab ${record.tabSwitchCount} time${record.tabSwitchCount === 1 ? '' : 's'} during the quiz (${record.tabAwaySeconds || 0}s away total). Not proof of anything on its own — worth a look alongside the answers.`));
+        modalContainer.appendChild(el('p', { class: 'section-subtitle', style: 'color: var(--warning);' }, `Left the tab ${record.tabSwitchCount} time${record.tabSwitchCount === 1 ? '' : 's'} during the quiz (${record.tabAwaySeconds || 0}s away total). Not proof of anything on its own — worth a look alongside the answers.`));
       }
       if (record.score != null || record.outcome) {
         modalContainer.appendChild(el('div', { class: 'quiz-summary-block' }, [
@@ -246,7 +246,7 @@ export function renderTraining(container) {
     } else {
       block.appendChild(el('div', { style: 'margin-top: 0.3rem; display: flex; flex-wrap: wrap; gap: 0.5rem;' }, list.map((att) => el('a', {
         class: 'notice-attachment-file', href: att.dataUrl, target: '_blank', rel: 'noopener',
-      }, `📄 ${att.name}`))));
+      }, [ico('file'), att.name]))));
     }
     return block;
   }
@@ -323,7 +323,7 @@ export function renderTraining(container) {
             return statusPill(`${n}/${total}`);
           },
         },
-        { key: 'tabSwitchCount', label: 'Left Tab', render: (r) => (r.tabSwitchCount ? `⚠ ${r.tabSwitchCount}×` : '—') },
+        { key: 'tabSwitchCount', label: 'Left Tab', render: (r) => (r.tabSwitchCount ? `${r.tabSwitchCount}×` : '—') },
         {
           key: 'score',
           label: 'Score',
@@ -336,7 +336,7 @@ export function renderTraining(container) {
           key: 'actions',
           label: '',
           render: (r) => el('div', { class: 'row-actions' }, [
-            el('button', { class: 'icon-btn', type: 'button', title: 'View answers', onClick: () => viewSubmission(r, renderListBody) }, '👁'),
+            el('button', { class: 'icon-btn', type: 'button', title: 'View answers', onClick: () => viewSubmission(r, renderListBody) }, [ico('eye')]),
             el('button', {
               class: 'icon-btn icon-btn-danger',
               type: 'button',
@@ -350,7 +350,7 @@ export function renderTraining(container) {
                   window.alert(err.message || 'Could not delete this submission.');
                 }
               },
-            }, '🗑'),
+            }, [ico('trash')]),
           ]),
         },
       ],
@@ -664,7 +664,7 @@ export function renderTraining(container) {
         const block = el('div', { class: 'quiz-summary-block' }, [el('div', { class: 'field-label' }, `Question ${q.num} — ${q.label}`)]);
         if (q.video) {
           const seconds = state.videoSeconds[q.num] || 0;
-          block.appendChild(el('p', { style: 'margin: 0.4rem 0 0;' }, state.videoBlobs[q.num] ? `✓ Video recorded (${seconds}s)` : 'No video recorded'));
+          block.appendChild(el('p', { style: 'margin: 0.4rem 0 0;' }, state.videoBlobs[q.num] ? `Video recorded (${seconds}s)` : 'No video recorded'));
         } else {
           const val = (state.answers[q.key] || '').trim();
           block.appendChild(el('p', { style: 'white-space: pre-wrap; margin: 0.4rem 0 0;' }, val || 'No answer provided'));

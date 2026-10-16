@@ -1,5 +1,5 @@
 import { store } from '../store.js';
-import { formatCurrency, formatDate, el, dateInRange, invoiceTotal } from '../utils.js';
+import { formatCurrency, formatDate, el, dateInRange, invoiceTotal, ico } from '../utils.js';
 import { weekOf, isSunday } from '../dateUtils.js';
 import { sectionHeader, statCard, renderTable, dateRangeFields } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
@@ -489,7 +489,7 @@ export function renderProfitability(container) {
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Project'), projectSelect]));
   elements.forEach((e) => filterBar.appendChild(e));
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Group By'), groupBySelect]));
-  const printBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '🖨 Print Report');
+  const printBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, [ico('printer'), 'Print Report']);
   filterBar.appendChild(printBtn);
   container.appendChild(filterBar);
 

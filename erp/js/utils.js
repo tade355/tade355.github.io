@@ -35,6 +35,13 @@ export function poTotal(po) {
   return po.items.reduce((sum, it) => sum + it.qty * it.price, 0);
 }
 
+import { ICONS } from './icons.js';
+
+// Line icon as an inline element (replaces emoji so every glyph matches).
+export function ico(name) {
+  return el('span', { class: 'ico', html: ICONS[name] || '' });
+}
+
 export function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
   Object.entries(attrs).forEach(([key, value]) => {

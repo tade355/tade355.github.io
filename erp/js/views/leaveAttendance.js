@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
-import { formatDate, el } from '../utils.js';
+import { formatDate, el, ico } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
 import { LEAVE_TYPES } from '../constants.js';
 import { getCurrentUserId, filterLeaveRequests, getCurrentTier, getAssignedProject } from '../session.js';
@@ -90,7 +90,7 @@ function getLocation() {
 
 function mapLink(lat, lng) {
   if (lat === null || lat === undefined || lng === null || lng === undefined) return null;
-  return el('a', { href: `https://www.google.com/maps?q=${lat},${lng}`, target: '_blank', rel: 'noopener', class: 'map-link', title: 'View location on map' }, '📍');
+  return el('a', { href: `https://www.google.com/maps?q=${lat},${lng}`, target: '_blank', rel: 'noopener', class: 'map-link', title: 'View location on map' }, [ico('mapPin')]);
 }
 
 function todayIso() {

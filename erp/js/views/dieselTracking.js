@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
-import { formatCurrency, formatDate, el, statusPillClass, dateInRange } from '../utils.js';
+import { formatCurrency, formatDate, el, statusPillClass, dateInRange, ico } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete, statCard, dateRangeFields } from '../ui.js';
 import { FUEL_STATIONS } from '../constants.js';
 import { printDieselReplenishmentRequest, printDieselStationReport } from '../print.js';
@@ -144,7 +144,7 @@ export function renderDieselTracking(container) {
     const { fromInput: receiptsFrom, toInput: receiptsTo, elements: receiptsRangeElements } = dateRangeFields({ onChange: () => refreshReceiptsTable() });
     receiptsFilterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Station'), receiptsStationSelect]));
     receiptsRangeElements.forEach((e) => receiptsFilterBar.appendChild(e));
-    const printReceiptsBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '🖨 Print Report');
+    const printReceiptsBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, [ico('printer'), 'Print Report']);
     receiptsFilterBar.appendChild(printReceiptsBtn);
     body.appendChild(receiptsFilterBar);
 
@@ -352,7 +352,7 @@ export function renderDieselTracking(container) {
             requestedByName: store.get('employees').find((e) => e.id === requestBySelect.value)?.name || '',
           });
         },
-      }, '🖨 Print Request'));
+      }, [ico('printer'), 'Print Request']));
     }
 
     [tomorrowHoursInput, nextDayHoursInput, requestStationSelect, requestBySelect].forEach((input) => {

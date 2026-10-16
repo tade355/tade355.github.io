@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
-import { formatDate, el } from '../utils.js';
+import { formatDate, el, ico } from '../utils.js';
 import { sectionHeader, openModal, openCustomModal, actionButtons, confirmDelete } from '../ui.js';
 import { getCurrentTier, getCurrentUserId } from '../session.js';
 
@@ -47,7 +47,7 @@ function attachmentChip(att) {
     thumb.addEventListener('click', () => openLightbox(att));
     return thumb;
   }
-  const link = el('a', { class: 'notice-attachment-file', href: att.dataUrl, target: '_blank', rel: 'noopener' }, `📄 ${att.name}`);
+  const link = el('a', { class: 'notice-attachment-file', href: att.dataUrl, target: '_blank', rel: 'noopener' }, [ico('file'), att.name]);
   return link;
 }
 
@@ -56,7 +56,7 @@ function noticeCard(post, canManage, refresh) {
 
   const header = el('div', { class: 'notice-card-header' }, [
     el('span', { class: 'pill pill-neutral' }, post.category),
-    post.pinned ? el('span', { class: 'notice-pin', title: 'Pinned' }, '📌') : null,
+    post.pinned ? el('span', { class: 'notice-pin', title: 'Pinned' }, [ico('pin')]) : null,
   ]);
   card.appendChild(header);
 

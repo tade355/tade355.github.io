@@ -1,7 +1,7 @@
 import { ROUTES, initRouter } from './router.js';
 import { initModalRoot, initToastRoot, openModal } from './ui.js';
 import { store } from './store.js';
-import { el } from './utils.js';
+import { el, ico } from './utils.js';
 import { getCurrentUser, getCurrentTier, canAccess } from './session.js';
 import { showLoginForm } from './userGate.js';
 import { restoreSession, logout, changePassword } from './auth.js';
@@ -142,7 +142,7 @@ function initApp() {
     await silentRefresh();
     await router.render();
     refreshBtn.disabled = false;
-    refreshBtn.textContent = '↻ Refresh Data';
+    refreshBtn.replaceChildren(ico('refresh'), 'Refresh Data');
   });
 
   // This app has no realtime push — data syncs by refetching. Refresh

@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
-import { formatCurrency, formatMonthLong, el } from '../utils.js';
+import { formatCurrency, formatMonthLong, el, ico } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
 import { printPayslip, printPayrollRegister, printSalaryStatement } from '../print.js';
 
@@ -77,7 +77,7 @@ function buildLineRow(line, onChange, getRunContext) {
   const paid = el('input', { type: 'number', class: 'li-paid', min: 0 });
   paid.value = line.amountPaid ?? 0;
   const netSpan = el('strong', {}, formatCurrency(netPay(line)));
-  const printBtn = el('button', { type: 'button', class: 'icon-btn', title: 'Print payslip' }, '🖨');
+  const printBtn = el('button', { type: 'button', class: 'icon-btn', title: 'Print payslip' }, [ico('printer')]);
   const removeBtn = el('button', { type: 'button', class: 'icon-btn icon-btn-danger', title: 'Remove' }, '✕');
 
   const row = el('div', { class: 'payroll-line-row', 'data-employee-id': line.employeeId }, [
@@ -302,7 +302,7 @@ export function renderPayroll(container) {
           render: (r) => el('button', {
             type: 'button', class: 'icon-btn', title: 'Print salary statement',
             onClick: () => printSalaryStatement(employeeNameOnly(r.id), salaryStatementRows(r.id)),
-          }, '🖨'),
+          }, [ico('printer')]),
         },
       ],
       rows: balances,

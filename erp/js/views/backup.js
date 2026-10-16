@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
-import { el, formatDate } from '../utils.js';
+import { el, formatDate, ico } from '../utils.js';
 import { sectionHeader, statCard } from '../ui.js';
 
 function daysSince(iso) {
@@ -30,7 +30,7 @@ export function renderBackup(container) {
   }
 
   container.appendChild(el('div', { class: 'backup-warning' }, [
-    el('strong', {}, '⚠ Data now lives in a shared database, not just this browser.'),
+    el('strong', {}, 'Data now lives in a shared database, not just this browser.'),
     el('p', {}, 'Everyone with access sees and edits the same records in real time. Restoring a backup here replaces data for the whole company, not just this device — export regularly as a safety copy, and only restore one if you know exactly what you\'re doing.'),
   ]));
 
@@ -38,7 +38,7 @@ export function renderBackup(container) {
     el('h3', {}, 'Export a Backup'),
     el('p', {}, 'Downloads every record in the system as a single JSON file.'),
   ]);
-  const exportBtn = el('button', { class: 'btn btn-primary', type: 'button' }, '⬇ Download Backup');
+  const exportBtn = el('button', { class: 'btn btn-primary', type: 'button' }, [ico('download'), 'Download Backup']);
   exportCard.appendChild(exportBtn);
   container.appendChild(exportCard);
 

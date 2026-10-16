@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
-import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
+import { formatCurrency, formatDate, el, dateInRange, ico } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
 import { DOZER_OVERTIME_RATE_DEFAULT } from '../constants.js';
 import { printDozerPayslip, printDozerPayrollRegister } from '../print.js';
@@ -157,7 +157,7 @@ function buildLineRow(line, onChange, getPeriod, getOvertimeRate, getRunContext)
   const paid = el('input', { type: 'number', class: 'dl-paid', min: 0 });
   paid.value = line.amountPaid ?? 0;
   const netSpan = el('strong', { class: 'dl-net' }, formatCurrency(0));
-  const printBtn = el('button', { type: 'button', class: 'icon-btn', title: 'Print payslip' }, '🖨');
+  const printBtn = el('button', { type: 'button', class: 'icon-btn', title: 'Print payslip' }, [ico('printer')]);
   const removeBtn = el('button', { type: 'button', class: 'icon-btn icon-btn-danger', title: 'Remove' }, '✕');
 
   let businessEarnings = line.businessEarnings || 0;
@@ -297,7 +297,7 @@ function openRunForm(record, onSaved) {
         addSelect.value = '';
       });
 
-      const recomputeAllBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '↻ Recompute All from Records');
+      const recomputeAllBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, [ico('refresh'), 'Recompute All from Records']);
       recomputeAllBtn.addEventListener('click', () => {
         itemsContainer.querySelectorAll('.dozer-line-row').forEach((row) => row.recomputeFromRecords());
         recomputeTotal();

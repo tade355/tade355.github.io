@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
-import { formatCurrency, formatDate, el } from '../utils.js';
+import { formatCurrency, formatDate, el, ico } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
 import { printFundRequest } from '../print.js';
 import { filterFundRequests, getCurrentUserId, getCurrentTier } from '../session.js';
@@ -294,7 +294,7 @@ function renderRequestsTab(container) {
         { key: 'description', label: 'Description', render: (r) => r.description || `${r.items.length} item(s)` },
         { key: 'total', label: 'Total', render: (r) => formatCurrency(totalOf(r)) },
         { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
-        { key: 'attachments', label: 'Files', render: (r) => (r.attachments?.length ? `📎 ${r.attachments.length}` : '—') },
+        { key: 'attachments', label: 'Files', render: (r) => (r.attachments?.length ? el('span', { class: 'attach-count' }, [ico('paperclip'), String(r.attachments.length)]) : '—') },
         {
           key: 'actions',
           label: '',

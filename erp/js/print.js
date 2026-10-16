@@ -520,7 +520,7 @@ export function printDieselReplenishmentRequest(forDate, rows, { station, reques
     <div class="print-block"><p><strong>FOR TOMORROW'S OPERATION — ${formatDate(forDate)}</strong></p></div>
     <div class="print-block">
       ${rows.map((r) => `<p>${r.name} — ${r.litres.toLocaleString()} Litre's</p>`).join('')}
-      <p><strong>▪️ TOTAL — ${totalLitres.toLocaleString()} Litre's</strong></p>
+      <p><strong>TOTAL — ${totalLitres.toLocaleString()} Litre's</strong></p>
     </div>
     <div class="print-meta-grid">
       <div><strong>Station:</strong> ${station || '—'}</div>

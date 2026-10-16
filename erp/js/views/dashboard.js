@@ -1,5 +1,6 @@
 import { store } from '../store.js';
-import { formatCurrency, formatDate, invoiceTotal, monthKey, monthLabel, el } from '../utils.js';
+import { formatCurrency, formatDate, invoiceTotal, monthKey, monthLabel, el, ico } from '../utils.js';
+import { ICONS } from '../icons.js';
 import { todayISOString, addDays, lastNDayKeys, lastNMonthKeys, monthBounds } from '../dateUtils.js';
 import { amountOutstanding } from '../invoicePayments.js';
 import { amountOutstanding as loanAmountOutstanding, agingDays as loanAgingDays } from '../loanPayments.js';
@@ -56,15 +57,15 @@ function buildDayTimeline(dayISO, daysOps) {
   const untimed = [];
 
   daysOps.forEach((o) => {
-    if (o.timeResumed) timed.push({ time: o.timeResumed, icon: '▶️', text: `Machine Started — ${o.equipment}`, meta: o.siteName });
-    if (o.timeClosed) timed.push({ time: o.timeClosed, icon: '⏹️', text: `Work Closed — ${o.equipment}`, meta: o.siteName });
-    if (!o.timeResumed && !o.timeClosed) untimed.push({ icon: '📝', text: `Report Submitted — ${o.equipment}`, meta: o.siteName });
+    if (o.timeResumed) timed.push({ time: o.timeResumed, icon: 'play', text: `Machine Started — ${o.equipment}`, meta: o.siteName });
+    if (o.timeClosed) timed.push({ time: o.timeClosed, icon: 'stop', text: `Work Closed — ${o.equipment}`, meta: o.siteName });
+    if (!o.timeResumed && !o.timeClosed) untimed.push({ icon: 'documents', text: `Report Submitted — ${o.equipment}`, meta: o.siteName });
   });
   store.get('dieselReceipts').filter((r) => r.date === dayISO).forEach((r) => {
-    untimed.push({ icon: '⛽', text: `Diesel Delivered — ${(r.litres || 0).toLocaleString()} L`, meta: r.station || r.project || 'Company-wide' });
+    untimed.push({ icon: 'fuelCan', text: `Diesel Delivered — ${(r.litres || 0).toLocaleString()} L`, meta: r.station || r.project || 'Company-wide' });
   });
   store.get('maintenanceLogs').filter((m) => m.date === dayISO).forEach((m) => {
-    untimed.push({ icon: '🔧', text: `${m.type} — ${m.equipment}`, meta: m.status });
+    untimed.push({ icon: 'wrench', text: `${m.type} — ${m.equipment}`, meta: m.status });
   });
 
   timed.sort((a, b) => (a.time < b.time ? -1 : 1));
@@ -80,14 +81,12 @@ export function renderDashboard(container) {
   // ("yesterday", "the day before", etc.) instead of always showing today.
   const navBar = el('div', { class: 'filter-bar' });
   const dateInput = el('input', { type: 'date', max: realTodayISO });
-  const prevBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '◀ Prev Day');
-  const nextBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Next Day ▶');
+  const prevBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, [ico('chevronLeft'), 'Prev day']);
+  const nextBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, ['Next day', ico('chevronRight')]);
   const todayBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Today');
   navBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Viewing'), dateInput]));
-  navBar.appendChild(prevBtn);
-  navBar.appendChild(nextBtn);
-  navBar.appendChild(todayBtn);
-  navBar.appendChild(el('a', { class: 'btn btn-primary', href: '#/dailyDashboard' }, 'Daily Operations Dashboard ▸'));
+  navBar.appendChild(el('div', { class: 'seg', role: 'group', 'aria-label': 'Change day' }, [prevBtn, todayBtn, nextBtn]));
+  navBar.appendChild(el('div', { class: 'filter-actions-inline' }, [el('a', { class: 'btn btn-primary', href: '#/dailyDashboard' }, ['Daily Operations Dashboard', ico('chevronRight')])]));
   container.appendChild(navBar);
 
   const body = el('div');
@@ -223,37 +222,37 @@ export function renderDashboard(container) {
     // worse than no number.
     const kpiGrid = el('div', { class: 'kpi-grid' }, [
       statCard({
-        icon: '🚜', label: 'Machine Availability', value: machineAvailability === null ? '—' : `${machineAvailability.toFixed(0)}%`,
+        icon: 'gauge', label: 'Machine Availability', value: machineAvailability === null ? '—' : `${machineAvailability.toFixed(0)}%`,
         hint: `${dozers.length} in fleet`, target: 'Target: 85%', tone: machineAvailability !== null && machineAvailability < 85 ? 'warning' : 'good', href: '#/fleet',
       }),
-      statCard({ icon: '✅', label: 'Active Machines', value: String(activeFleetCount), tone: 'good', href: '#/fleet' }),
-      statCard({ icon: '🔧', label: 'Machines Under Repair', value: String(downFleetCount), tone: downFleetCount ? 'warning' : 'good', href: '#/fleet' }),
+      statCard({ icon: 'checkCircle', label: 'Active Machines', value: String(activeFleetCount), tone: 'good', href: '#/fleet' }),
+      statCard({ icon: 'wrench', label: 'Machines Under Repair', value: String(downFleetCount), tone: downFleetCount ? 'warning' : 'good', href: '#/fleet' }),
       statCard({
-        icon: '💰', label: `${dayLabel}'s Revenue (Tentative)`, value: formatCurrency(viewStats.provisionalRevenue), href: '#/projects',
+        icon: 'banknote', label: `${dayLabel}'s Revenue (Tentative)`, value: formatCurrency(viewStats.provisionalRevenue), href: '#/projects',
         hint: `${dayLabel}'s submitted reports x contract rate — not yet invoiced`,
         trend: trendFor(viewStats.provisionalRevenue, prevDayStats.provisionalRevenue, { periodLabel: 'previous day' }),
         sparkline: dailyStats.map((d) => d.provisionalRevenue),
       }),
       statCard({
-        icon: '💸', label: `${dayLabel}'s Cost`, value: formatCurrency(viewStats.totalCost), href: '#/accounting',
+        icon: 'wallet', label: `${dayLabel}'s Cost`, value: formatCurrency(viewStats.totalCost), href: '#/accounting',
         trend: trendFor(viewStats.totalCost, prevDayStats.totalCost, { invert: true, periodLabel: 'previous day' }),
         sparkline: dailyStats.map((d) => d.totalCost),
       }),
       statCard({
-        icon: '📈', label: `${dayLabel}'s Profit (Tentative)`, value: formatCurrency(viewStats.tentativeProfit), href: '#/projects',
+        icon: 'trendUp', label: `${dayLabel}'s Profit (Tentative)`, value: formatCurrency(viewStats.tentativeProfit), href: '#/projects',
         hint: `Tentative Revenue minus Cost, ${isToday ? 'today' : dayLabel}`,
         trend: trendFor(viewStats.tentativeProfit, prevDayStats.tentativeProfit, { periodLabel: 'previous day' }),
         sparkline: dailyStats.map((d) => d.tentativeProfit),
       }),
       statCard({
-        icon: '📊', label: 'ROI', value: viewROI === null ? '—' : `${viewROI.toFixed(0)}%`, hint: `Tentative Profit ÷ Cost, ${isToday ? 'today' : dayLabel}`,
+        icon: 'percent', label: 'ROI', value: viewROI === null ? '—' : `${viewROI.toFixed(0)}%`, hint: `Tentative Profit ÷ Cost, ${isToday ? 'today' : dayLabel}`,
         trend: viewROI !== null && prevDayROI !== null ? trendFor(viewROI, prevDayROI, { periodLabel: 'previous day' }) : undefined,
         href: '#/accounting',
       }),
-      statCard({ icon: '⛽', label: `${dayLabel}'s Diesel`, value: `${viewDiesel.toLocaleString()} L`, href: '#/resourceManagement', sparkline: dailyDiesel }),
-      statCard({ icon: '🌾', label: `${dayLabel}'s Hectares`, value: `${viewHectares.toFixed(1)} ha`, href: '#/operations', sparkline: dailyHectares }),
-      statCard({ icon: '👥', label: 'Active Staff', value: String(employees.filter((e) => e.status === 'Active').length), hint: `${employees.length} total`, href: '#/hr' }),
-      statCard({ icon: '📋', label: 'Outstanding Approvals', value: String(outstandingApprovals), tone: outstandingApprovals ? 'warning' : 'good', href: '#/fundRequests' }),
+      statCard({ icon: 'fuelCan', label: `${dayLabel}'s Diesel`, value: `${viewDiesel.toLocaleString()} L`, href: '#/resourceManagement', sparkline: dailyDiesel }),
+      statCard({ icon: 'leaf', label: `${dayLabel}'s Hectares`, value: `${viewHectares.toFixed(1)} ha`, href: '#/operations', sparkline: dailyHectares }),
+      statCard({ icon: 'users', label: 'Active Staff', value: String(employees.filter((e) => e.status === 'Active').length), hint: `${employees.length} total`, href: '#/hr' }),
+      statCard({ icon: 'clipboard', label: 'Outstanding Approvals', value: String(outstandingApprovals), tone: outstandingApprovals ? 'warning' : 'good', href: '#/fundRequests' }),
     ]);
     body.appendChild(kpiGrid);
 
@@ -264,24 +263,24 @@ export function renderDashboard(container) {
     // now" regardless of which day is being viewed — only the "reports
     // submitted" info item below is scoped to the viewed day.
     const actionItems = [];
-    if (overdueServiceCount) actionItems.push({ tone: 'critical', icon: '🔧', text: `${overdueServiceCount} dozer${overdueServiceCount > 1 ? 's' : ''} overdue for service`, href: '#/fleet' });
-    if (unpaid.length) actionItems.push({ tone: 'critical', icon: '🧾', text: `${unpaid.length} unpaid invoice${unpaid.length > 1 ? 's' : ''} — ${formatCurrency(unpaidTotal)} outstanding`, href: '#/sales' });
-    if (overdueLoans.length) actionItems.push({ tone: 'critical', icon: '🏦', text: `${overdueLoans.length} loan repayment${overdueLoans.length > 1 ? 's' : ''} overdue — ${formatCurrency(overdueLoansTotal)} outstanding`, href: '#/accounting' });
-    if (outOfStock.length) actionItems.push({ tone: 'critical', icon: '📦', text: `${outOfStock.length} item${outOfStock.length > 1 ? 's' : ''} out of stock`, href: '#/fleet' });
-    if (lowStock.length - outOfStock.length > 0) actionItems.push({ tone: 'warning', icon: '📦', text: `${lowStock.length - outOfStock.length} item${lowStock.length - outOfStock.length > 1 ? 's' : ''} at or below reorder level`, href: '#/fleet' });
-    if (downFleetCount) actionItems.push({ tone: 'warning', icon: '🚧', text: `${downFleetCount} dozer${downFleetCount > 1 ? 's' : ''} down or under maintenance`, href: '#/fleet' });
-    if (dueSoonServiceCount) actionItems.push({ tone: 'warning', icon: '🔧', text: `${dueSoonServiceCount} dozer${dueSoonServiceCount > 1 ? 's' : ''} due soon for service`, href: '#/fleet' });
-    if (fuelCreditOwed) actionItems.push({ tone: 'warning', icon: '⛽', text: `${formatCurrency(fuelCreditOwed)} fuel credit owed to stations`, href: '#/purchasing' });
-    if (ownerSettlementsOwed) actionItems.push({ tone: 'warning', icon: '🤝', text: `${formatCurrency(ownerSettlementsOwed)} owed to dozer owners`, href: '#/resourceManagement' });
-    if (pendingFundRequests) actionItems.push({ tone: 'warning', icon: '📋', text: `${pendingFundRequests} fund request${pendingFundRequests > 1 ? 's' : ''} awaiting approval`, href: '#/fundRequests' });
-    if (pendingLeave) actionItems.push({ tone: 'warning', icon: '📋', text: `${pendingLeave} leave request${pendingLeave > 1 ? 's' : ''} awaiting approval`, href: '#/leave' });
-    if (pendingVouchers) actionItems.push({ tone: 'warning', icon: '📋', text: `${pendingVouchers} fueling voucher${pendingVouchers > 1 ? 's' : ''} awaiting approval`, href: '#/resourceManagement' });
-    if (!lastBackup) actionItems.push({ tone: 'warning', icon: '💾', text: "You've never backed up this data — everything lives only in this browser", href: '#/backup' });
-    else if (daysSinceBackup > 7) actionItems.push({ tone: 'warning', icon: '💾', text: `It's been ${daysSinceBackup} days since your last backup`, href: '#/backup' });
-    if (daysOps.length) actionItems.push({ tone: 'info', icon: '📝', text: `${daysOps.length} daily report${daysOps.length > 1 ? 's' : ''} submitted ${isToday ? 'today' : `on ${dayLabel}`}`, href: '#/operations' });
+    if (overdueServiceCount) actionItems.push({ tone: 'critical', icon: 'wrench', text: `${overdueServiceCount} dozer${overdueServiceCount > 1 ? 's' : ''} overdue for service`, href: '#/fleet' });
+    if (unpaid.length) actionItems.push({ tone: 'critical', icon: 'receipt', text: `${unpaid.length} unpaid invoice${unpaid.length > 1 ? 's' : ''} — ${formatCurrency(unpaidTotal)} outstanding`, href: '#/sales' });
+    if (overdueLoans.length) actionItems.push({ tone: 'critical', icon: 'bank', text: `${overdueLoans.length} loan repayment${overdueLoans.length > 1 ? 's' : ''} overdue — ${formatCurrency(overdueLoansTotal)} outstanding`, href: '#/accounting' });
+    if (outOfStock.length) actionItems.push({ tone: 'critical', icon: 'bag', text: `${outOfStock.length} item${outOfStock.length > 1 ? 's' : ''} out of stock`, href: '#/fleet' });
+    if (lowStock.length - outOfStock.length > 0) actionItems.push({ tone: 'warning', icon: 'bag', text: `${lowStock.length - outOfStock.length} item${lowStock.length - outOfStock.length > 1 ? 's' : ''} at or below reorder level`, href: '#/fleet' });
+    if (downFleetCount) actionItems.push({ tone: 'warning', icon: 'alert', text: `${downFleetCount} dozer${downFleetCount > 1 ? 's' : ''} down or under maintenance`, href: '#/fleet' });
+    if (dueSoonServiceCount) actionItems.push({ tone: 'warning', icon: 'wrench', text: `${dueSoonServiceCount} dozer${dueSoonServiceCount > 1 ? 's' : ''} due soon for service`, href: '#/fleet' });
+    if (fuelCreditOwed) actionItems.push({ tone: 'warning', icon: 'fuelCan', text: `${formatCurrency(fuelCreditOwed)} fuel credit owed to stations`, href: '#/purchasing' });
+    if (ownerSettlementsOwed) actionItems.push({ tone: 'warning', icon: 'users', text: `${formatCurrency(ownerSettlementsOwed)} owed to dozer owners`, href: '#/resourceManagement' });
+    if (pendingFundRequests) actionItems.push({ tone: 'warning', icon: 'clipboard', text: `${pendingFundRequests} fund request${pendingFundRequests > 1 ? 's' : ''} awaiting approval`, href: '#/fundRequests' });
+    if (pendingLeave) actionItems.push({ tone: 'warning', icon: 'clipboard', text: `${pendingLeave} leave request${pendingLeave > 1 ? 's' : ''} awaiting approval`, href: '#/leave' });
+    if (pendingVouchers) actionItems.push({ tone: 'warning', icon: 'clipboard', text: `${pendingVouchers} fueling voucher${pendingVouchers > 1 ? 's' : ''} awaiting approval`, href: '#/resourceManagement' });
+    if (!lastBackup) actionItems.push({ tone: 'warning', icon: 'database', text: "You've never backed up this data — everything lives only in this browser", href: '#/backup' });
+    else if (daysSinceBackup > 7) actionItems.push({ tone: 'warning', icon: 'database', text: `It's been ${daysSinceBackup} days since your last backup`, href: '#/backup' });
+    if (daysOps.length) actionItems.push({ tone: 'info', icon: 'documents', text: `${daysOps.length} daily report${daysOps.length > 1 ? 's' : ''} submitted ${isToday ? 'today' : `on ${dayLabel}`}`, href: '#/operations' });
 
     body.appendChild(el('h3', { class: 'subsection-title' }, 'Executive Alert Center'));
-    const tierMeta = { critical: { label: '🔴 Critical' }, warning: { label: '🟠 Important' }, info: { label: '🟢 Info' } };
+    const tierMeta = { critical: { label: 'Critical' }, warning: { label: 'Important' }, info: { label: 'Info' } };
     const grouped = { critical: [], warning: [], info: [] };
     actionItems.forEach((item) => grouped[item.tone].push(item));
 
@@ -289,16 +288,16 @@ export function renderDashboard(container) {
       ['critical', 'warning', 'info'].forEach((tier) => {
         if (!grouped[tier].length) return;
         body.appendChild(el('div', { class: 'alert-tier' }, [
-          el('p', { class: 'alert-tier-label' }, tierMeta[tier].label),
+          el('p', { class: `alert-tier-label alert-tier-label-${tier}` }, tierMeta[tier].label),
           el('div', { class: 'action-feed' }, grouped[tier].map((item) => el('a', { class: `action-item action-item-${tier}`, href: item.href }, [
-            el('span', { class: 'action-icon' }, item.icon),
+            el('span', { class: 'action-icon', html: ICONS[item.icon] || '' }),
             el('span', { class: 'action-text' }, item.text),
             el('span', { class: 'action-chevron' }, '→'),
           ]))),
         ]));
       });
     } else {
-      body.appendChild(el('div', { class: 'action-feed-empty' }, '✅ All caught up — nothing needs attention right now.'));
+      body.appendChild(el('div', { class: 'action-feed-empty' }, 'All caught up — nothing needs attention right now.'));
     }
 
     // Leaderboards / live activity — top sites, operators, and machines for
@@ -371,7 +370,7 @@ export function renderDashboard(container) {
     if (timelineEvents.length) {
       body.appendChild(el('div', { class: 'timeline' }, timelineEvents.map((ev) => el('div', { class: 'timeline-row' }, [
         el('span', { class: 'timeline-time' }, ev.time || '—'),
-        el('span', { class: 'timeline-icon' }, ev.icon),
+        el('span', { class: 'timeline-icon', html: ICONS[ev.icon] || '' }),
         el('span', { class: 'timeline-body' }, [
           ev.text,
           ev.meta ? el('span', { class: 'timeline-meta' }, ` · ${ev.meta}`) : null,

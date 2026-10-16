@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
-import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
+import { formatCurrency, formatDate, el, dateInRange, ico } from '../utils.js';
 import { sectionHeader, statCard, renderTable, actionButtons, openCustomModal, closeModal, confirmDelete } from '../ui.js';
 import { printDozerSettlement } from '../print.js';
 import { dozerRatesAsOf } from '../rateHistory.js';
@@ -84,7 +84,7 @@ function openSettlementForm(record, refresh) {
       }
       [daysField, rentalField, feeField, repairsField, paidField].forEach((f) => f.querySelector('input').addEventListener('input', recomputeBalance));
 
-      const recomputeBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '↻ Fill Days, Repairs & Rates from Records');
+      const recomputeBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, [ico('refresh'), 'Fill Days, Repairs & Rates from Records']);
       recomputeBtn.addEventListener('click', () => {
         const equipment = equipmentField.querySelector('select').value;
         const from = periodStartField.querySelector('input').value;

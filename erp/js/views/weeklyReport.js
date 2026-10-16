@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { todayISOString, mondayOf, addDays } from '../dateUtils.js';
-import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
+import { formatCurrency, formatDate, el, dateInRange, ico } from '../utils.js';
 import { sectionHeader, renderTable, statCard, dateRangeFields } from '../ui.js';
 import { OPERATION_TYPES, isHaOperationType } from '../constants.js';
 import { printWeeklyPerformanceReport, printMilestoneTracker } from '../print.js';
@@ -332,7 +332,7 @@ function renderWeeklyPerformanceTab(container) {
   const { fromInput: startInput, toInput: endInput, elements } = dateRangeFields({
     from: mondayOf(today), to: addDays(mondayOf(today), 6), onChange: () => refresh(),
   });
-  const printBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '🖨 Print Report');
+  const printBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, [ico('printer'), 'Print Report']);
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Project'), projectSelect]));
   elements.forEach((e) => filterBar.appendChild(e));
   filterBar.appendChild(printBtn);
@@ -547,7 +547,7 @@ function computeMilestoneTracker(project) {
 function renderMilestoneTab(container) {
   const filterBar = el('div', { class: 'filter-bar' });
   const projectSelect = el('select', {}, projectOptions().map((p) => el('option', { value: p }, p)));
-  const printBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '🖨 Print Tracker');
+  const printBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, [ico('printer'), 'Print Tracker']);
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Project'), projectSelect]));
   filterBar.appendChild(printBtn);
   container.appendChild(filterBar);

@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
-import { formatDate, el } from '../utils.js';
+import { formatDate, el, ico } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
 import { OPERATION_TYPES, unitForOperationType, isHaOperationType, dieselUsedFor, DEFAULT_DIESEL_RATES } from '../constants.js';
 import { filterByProject, getAssignedProject, getCurrentUserId } from '../session.js';
@@ -495,7 +495,7 @@ export function renderOperations(container) {
         { key: 'closingDiesel', label: 'C. Diesel', render: (r) => (r.closingDiesel === null || r.closingDiesel === undefined ? '—' : `${r.closingDiesel} L`) },
         { key: 'workType', label: 'Work Type', render: (r) => (r.workType ? statusPill(r.workType) : '—') },
         { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
-        { key: 'attachments', label: 'Files', render: (r) => (r.attachments?.length ? `📎 ${r.attachments.length}` : '—') },
+        { key: 'attachments', label: 'Files', render: (r) => (r.attachments?.length ? el('span', { class: 'attach-count' }, [ico('paperclip'), String(r.attachments.length)]) : '—') },
         {
           key: 'actions',
           label: '',

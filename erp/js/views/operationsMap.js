@@ -1,5 +1,5 @@
 import { store } from '../store.js';
-import { formatDate, el, dateInRange } from '../utils.js';
+import { formatDate, el, dateInRange, ico } from '../utils.js';
 import { dateRangeFields } from '../ui.js';
 import { colorForOperationType, unitForOperationType } from '../constants.js';
 import { filterByProject } from '../session.js';
@@ -69,7 +69,7 @@ export function renderOperationsMap(container) {
   const { fromInput, toInput, elements } = dateRangeFields({ onChange: () => { if (map) draw(); } });
   filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Site'), siteSelect]));
   elements.forEach((e) => filterBar.appendChild(e));
-  const printBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '🖨 Print Map (PDF)');
+  const printBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, [ico('printer'), 'Print Map (PDF)']);
   filterBar.appendChild(printBtn);
   container.appendChild(filterBar);
 
@@ -179,7 +179,7 @@ export function renderOperationsMap(container) {
       await printOperationsMap(entries, { from: fromInput.value, to: toInput.value, site: siteSelect.value });
     } finally {
       printBtn.disabled = false;
-      printBtn.textContent = '🖨 Print Map (PDF)';
+      printBtn.replaceChildren(ico('printer'), 'Print Map (PDF)');
     }
   });
 }
