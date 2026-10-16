@@ -2,6 +2,7 @@ import { closeModal } from './ui.js';
 import { el } from './utils.js';
 import { canAccess, getCurrentTier, defaultRouteForTier } from './session.js';
 import { ICONS } from './icons.js';
+import { canImportData } from './access.js';
 
 // Each route's view module loads on demand (dynamic import), not upfront —
 // so a problem loading one view's code (a network hiccup, something
@@ -21,6 +22,8 @@ export const ROUTES = [
   { path: 'dashboard', label: 'Dashboard', icon: ICONS.dashboard, load: () => import('./views/dashboard.js').then((m) => m.renderDashboard), tiers: ['Admin', 'Accounts'] },
   { path: 'dailyDashboard', label: 'Daily Operations Dashboard', icon: ICONS.barChart, load: () => import('./views/dailyDashboard.js').then((m) => m.renderDailyDashboard), tiers: ['Admin', 'Accounts', 'Supervisor'] },
   { path: 'askErp', label: 'Ask the ERP', icon: ICONS.chat, load: () => import('./views/askErpPage.js').then((m) => m.renderAskErp), tiers: ['Admin', 'Accounts', 'Supervisor'] },
+  // Excel upload: Olumide's account only (`guard` is checked wherever routes are listed or opened).
+  { path: 'dataImport', label: 'Data Import', icon: ICONS.upload, load: () => import('./views/dataImport.js').then((m) => m.renderDataImport), tiers: ['Admin'], guard: canImportData },
   { path: 'noticeBoard', label: 'Documents and Notices', icon: ICONS.documents, load: () => import('./views/noticeBoard.js').then((m) => m.renderNoticeBoard), tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   // Field operations: the job, the work done against it, the equipment doing it
   { path: 'projects', label: 'Projects', icon: ICONS.folder, load: () => import('./views/projects.js').then((m) => m.renderProjects), tiers: ['Admin', 'Accounts', 'Supervisor'] },
@@ -47,7 +50,7 @@ export function initRouter(viewContainer, onRouteChange) {
   function currentPath() {
     const hash = window.location.hash.replace('#/', '');
     const route = ROUTES.find((r) => r.path === hash);
-    if (route && canAccess(route.tiers)) return hash;
+    if (route && canAccess(route.tiers) && (!route.guard || route.guard())) return hash;
     return defaultRouteForTier(getCurrentTier());
   }
 

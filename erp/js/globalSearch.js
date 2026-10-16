@@ -182,7 +182,7 @@ function runSearch(query) {
 
   searchSources().forEach((source) => {
     const route = ROUTES.find((r) => r.path === source.route);
-    if (route && !canAccess(route.tiers)) return;
+    if (route && (!canAccess(route.tiers) || (route.guard && !route.guard()))) return;
     const matches = source.items().filter((item) => item.searchText.toLowerCase().includes(q));
     matches.slice(0, MAX_PER_KIND).forEach((item) => results.push({ ...item, kind: source.kind, route: source.route, tabs: source.tabs }));
     if (matches.length > MAX_PER_KIND) {

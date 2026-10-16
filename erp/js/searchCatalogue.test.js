@@ -64,3 +64,10 @@ test('quick links list the key pages the user can open', () => {
 test('catalogue entries have a label and route', () => {
   CATALOGUE.forEach((e) => { assert.ok(e.label && e.route && e.kind); });
 });
+
+test('Data Import is found only where the route guard allows it', () => {
+  const r = [...routes, { path: 'dataImport', label: 'Data Import', tiers: ['Admin'], guard: () => false }];
+  assert.equal(searchCatalogue('upload excel', { routes: r, canAccess: () => true }).length, 0);
+  const open = [...routes, { path: 'dataImport', label: 'Data Import', tiers: ['Admin'], guard: () => true }];
+  assert.equal(searchCatalogue('upload excel', { routes: open, canAccess: () => true })[0].route, 'dataImport');
+});

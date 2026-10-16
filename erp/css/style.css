@@ -1493,3 +1493,15 @@ button { font-family: inherit; }
 a.btn { text-decoration: none; }
 .filter-actions-inline { margin-left: auto; display: flex; align-items: flex-end; }
 .sparkline-svg path { vector-effect: non-scaling-stroke; }
+
+/* Data Import */
+.dd-static { padding: 1.1rem 1.25rem; }
+.dd-static > * { margin-left: 0; margin-right: 0; }
+.dd-static-title { margin: 0 0 0.35rem; font-size: 0.98rem; }
+.imp-row { margin: 0.4rem 0 0.8rem; }
+.imp-file { font: inherit; font-size: 0.9rem; max-width: 100%; }
+.imp-file::file-selector-button { height: 2.5rem; padding: 0 1.05rem; margin-right: 0.8rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-1); font: inherit; font-weight: 600; cursor: pointer; }
+.imp-file::file-selector-button:hover { background: var(--page-plane); }
+.dd-import-done { font-weight: 700; color: var(--good); }
+.pill-neutral { background: var(--page-plane); color: var(--text-secondary); }
+.dd-check { font-size: 0.88rem; }

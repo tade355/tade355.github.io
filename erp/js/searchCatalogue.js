@@ -12,6 +12,7 @@ export const CATALOGUE = [
   { kind: 'Page', route: 'dashboard', label: 'Dashboard', words: 'overview home headline profit kpi' },
   { kind: 'Page', route: 'dailyDashboard', label: 'Daily Operations Dashboard', words: 'daily dashboard html flags fueling diesel start times output daily report' },
   { kind: 'Page', route: 'askErp', label: 'Ask the ERP', words: 'ask question assistant ai chat prompt query answer' },
+  { kind: 'Page', route: 'dataImport', label: 'Data Import', words: 'upload excel xlsx import load data template spreadsheet bulk' },
   { kind: 'Page', route: 'noticeBoard', label: 'Documents and Notices', words: 'notice board documents memo announcements' },
   { kind: 'Page', route: 'projects', label: 'Projects', words: 'project site contract rate' },
   { kind: 'Page', route: 'operations', label: 'Daily Operations', words: 'operations report hectares hours worked log dozer output' },
@@ -84,6 +85,8 @@ export const CATALOGUE = [
   { kind: 'Feature', route: 'operations', label: 'Add a daily operation report', words: 'add new operation report log hours hectares' },
   { kind: 'Feature', route: 'fundRequests', tabs: ['Requests'], label: 'Raise a fund request', words: 'new fund request raise payment cash' },
   { kind: 'Feature', route: 'accounting', tabs: ['Expenses'], label: 'Record an expense', words: 'add expense record spend' },
+  { kind: 'Feature', route: 'dataImport', label: 'Upload an Excel file to update the ERP', words: 'upload excel import daily reports payments diesel supply end of day load data from spreadsheet' },
+  { kind: 'Feature', route: 'dataImport', label: 'Download the Excel upload template', words: 'template xlsx format download blank spreadsheet' },
   { kind: 'Feature', route: 'mySalary', label: 'View my payslip', words: 'payslip salary my pay' },
 ];
 
@@ -113,7 +116,7 @@ export function searchCatalogue(query, { routes, canAccess, canUse = () => false
   if (!q) return [];
   const routeBy = Object.fromEntries(routes.map((r) => [r.path, r]));
   return CATALOGUE
-    .filter((e) => routeBy[e.route] && canAccess(routeBy[e.route].tiers))
+    .filter((e) => routeBy[e.route] && canAccess(routeBy[e.route].tiers) && (!routeBy[e.route].guard || routeBy[e.route].guard()))
     .filter((e) => !e.perm || canUse(e.perm))
     .map((e) => ({ e, s: score(e, q) }))
     .filter((x) => x.s > 0)
@@ -125,7 +128,7 @@ export function searchCatalogue(query, { routes, canAccess, canUse = () => false
 // Pages shown before the user types anything.
 export function quickLinks({ routes, canAccess, canUse = () => false }) {
   const routeBy = Object.fromEntries(routes.map((r) => [r.path, r]));
-  return ['askErp', 'dailyDashboard', 'dashboard', 'operations', 'fleet', 'fundRequests']
+  return ['askErp', 'dailyDashboard', 'dashboard', 'dataImport', 'operations', 'fleet', 'fundRequests']
     .map((p) => CATALOGUE.find((e) => e.kind === 'Page' && e.route === p))
     .filter((e) => e && routeBy[e.route] && canAccess(routeBy[e.route].tiers))
     .map((e) => ({ ...e, routeLabel: routeBy[e.route].label }));
