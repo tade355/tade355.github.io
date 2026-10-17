@@ -268,7 +268,8 @@ function dieselSection(d) {
 function fuelingRequestCard(d) {
   const x = d.diesel;
   const chosen = new Set(x.fuelingRequest.map((r) => r.equipment));
-  const closingOf = (name) => Math.max(0, x.rows.find((r) => r.equipment === name)?.closing ?? 0);
+  // A closing reported by the site is the physical tank level, so it wins over the calculated one.
+  const closingOf = (name) => { const r = x.rows.find((row) => row.equipment === name); return Math.max(0, r?.reportedClosing ?? r?.closing ?? 0); };
   const names = [...new Set([...x.rows.map((r) => r.equipment), ...x.fuelingRequest.map((r) => r.equipment)])].sort();
   const onGroundInput = el('input', { type: 'number', min: '0', step: '1', value: x.onGround ?? 0, class: 'dd-small-input' });
   const list = el('div', { class: 'dd-kv' });
