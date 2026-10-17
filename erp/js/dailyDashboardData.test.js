@@ -147,3 +147,15 @@ test('a dozer given tank diesel today joins the fueling request even if it has n
   assert.ok(!names.includes('EMG-6'));
   assert.equal(d.diesel.fuelingRequest.find((r) => r.equipment === 'EMG-4').need, 190);
 });
+
+test('a reported closing that differs from the calculated one is flagged and drives the fueling request', () => {
+  const base = ctx();
+  const d = buildDailyDashboard(ctx({
+    operations: base.operations.map((o) => (o.date === '2026-10-12' ? { ...o, closingDiesel: 10 } : o)),
+  }));
+  const row = d.diesel.rows.find((r) => r.equipment === 'EMG-1');
+  assert.equal(row.status, 'Closing restated');
+  assert.equal(row.closing, 20);
+  assert.ok(d.flags.some((f) => /reported 10 L vs calculated 20 L/.test(f.text)));
+  assert.equal(d.diesel.fuelingRequest.find((r) => r.equipment === 'EMG-1').closing, 10);
+});

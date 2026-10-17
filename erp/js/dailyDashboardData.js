@@ -138,7 +138,9 @@ export function buildDailyDashboard(ctx) {
     ...inv.filter((i) => i.fleetStatus === 'Active' && rangeOps.some((o) => o.equipment === i.name)).map((i) => i.name),
   ]);
   const fuelingRequest = [...defaultRequestDozers].sort().map((name) => {
-    const closing = Math.max(0, diesel.find((d) => d.equipment === name)?.closing ?? 0);
+    const row = diesel.find((d) => d.equipment === name);
+    // A closing reported by the site is the physical tank level, so it wins over the calculated one.
+    const closing = Math.max(0, row?.reportedClosing ?? row?.closing ?? 0);
     return { equipment: name, closing, need: Math.max(0, DIESEL_FILL_LITRES - closing) };
   });
   const stationBalance = ctx.stationBalance;
@@ -294,6 +296,8 @@ export function buildDailyDashboard(ctx) {
   if (dayOps.length && silent.length) flags.push({ tone: 'warning', text: `${silent.map((i) => i.name).join(', ')} listed active but no report today.`, action: 'Send the end-of-day report, or confirm the machine did not work.' });
   const corrections = dayOps.filter((o) => (o.hoursWorked || 0) > 0 && !(o.quantity > 0));
   if (corrections.length) flags.push({ tone: 'warning', text: `Zero output despite hours worked (correction day): ${corrections.map((o) => `${o.equipment} ${o.hoursWorked} hrs`).join(', ')}.` });
+  const restated = diesel.filter((r) => r.status === 'Closing restated');
+  if (restated.length) flags.push({ tone: 'warning', text: `Closing diesel differs from the reported closing: ${restated.map((r) => `${r.equipment} reported ${r.reportedClosing} L vs calculated ${Math.round(r.closing * 10) / 10} L (${r.reportedClosing - r.closing > 0 ? '+' : '−'}${Math.round(Math.abs(r.reportedClosing - r.closing) * 10) / 10} L)`).join(', ')}.`, action: 'Confirm the physical tank levels; the fueling request uses the reported closing.' });
   const down = fleet.filter((f) => f.fleetStatus === 'Down' || f.fleetStatus === 'Under Maintenance');
   if (down.length) flags.push({ tone: 'warning', text: `Not available: ${down.map((f) => `${f.equipment} (${f.fleetStatus})`).join(', ')}.` });
   if (todayStats.pmsUnexplained) flags.push({ tone: 'warning', text: `${fmt(todayStats.pmsUnexplained)} of PMS is unexplained.`, action: 'Explain it or reclassify it.' });
