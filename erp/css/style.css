@@ -751,6 +751,7 @@ button { font-family: inherit; }
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
+.data-table td.cell-wrap { white-space: normal; min-width: 20rem; max-width: 38rem; line-height: 1.45; }
 .data-table th {
   color: var(--text-muted);
   font-weight: 600;

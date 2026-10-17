@@ -489,7 +489,7 @@ export function renderFleet(container) {
           { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
           { key: 'equipment', label: 'Dozer' },
           { key: 'type', label: 'Type' },
-          { key: 'description', label: 'Description' },
+          { key: 'description', label: 'Description', wrap: true },
           { key: 'partsCost', label: 'Parts', render: (r) => formatCurrency(r.partsCost || 0) },
           { key: 'laborCost', label: 'Labor', render: (r) => formatCurrency(r.laborCost || 0) },
           { key: 'cost', label: 'Total Cost', render: (r) => formatCurrency(r.cost) },

@@ -182,7 +182,7 @@ export function renderTable(container, { columns, rows, emptyText = 'No records 
     el('tr', {}, columns.map((c) => el('th', {}, c.label))),
   ]);
   const tbody = el('tbody', {}, rows.map((row) => el('tr', { class: rowClass ? rowClass(row) : undefined }, columns.map((c) => {
-    const cell = el('td', {});
+    const cell = el('td', c.wrap ? { class: 'cell-wrap' } : {});
     const content = c.render ? c.render(row) : row[c.key];
     if (content instanceof Node) cell.appendChild(content);
     else cell.textContent = content ?? '—';
