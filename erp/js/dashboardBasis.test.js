@@ -65,3 +65,12 @@ test('machine recovered: Company dozers only, deal days excluded', () => {
   ];
   assert.equal(machineRecoveredBasis(rows, owners, rate), 7 * 46250);
 });
+
+test('a deal day on a hired dozer costs the amount paid, not hours x rate', async () => {
+  const { dozerCostFor } = await import('./dashboardBasis.js');
+  const deal = { hoursWorked: 10, workType: 'Business', businessAmount: 220000 };
+  assert.equal(dozerCostFor(deal, 'Rented', 50000), 220000);
+  assert.equal(dozerCostFor({ ...deal, workType: 'Office' }, 'Rented', 50000), 500000);
+  assert.equal(dozerCostFor(deal, 'Company', 46250), 462500);
+  assert.equal(dozerCostFor({ hoursWorked: 4, operationType: 'Trekking' }, 'Company', 46250), 0);
+});

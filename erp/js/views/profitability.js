@@ -9,7 +9,7 @@ import { printProfitabilityReport } from '../print.js';
 import { operatorAllowanceForRows, isOwnedOperatorAllowancePayment } from '../ownedOperatorAllowance.js';
 import {
   DASHBOARD_BASIS_FROM, onDashboardBasis, dieselLogisticsBasis, supervisorSundayAllowanceBasis,
-  pmsBasis, maintenanceBasis, machineRecoveredBasis,
+  pmsBasis, maintenanceBasis, machineRecoveredBasis, dozerCostFor,
 } from '../dashboardBasis.js';
 
 export function projectNames() {
@@ -25,8 +25,7 @@ function dozerCostForRows(rows) {
   let total = 0;
   rows.forEach((o) => {
     const ownership = store.get('inventory').find((i) => i.name === o.equipment)?.ownership;
-    if (o.operationType === 'Trekking' && ownership !== 'Rented') return;
-    total += (o.hoursWorked || 0) * hourlyRateAsOf(o.equipment, o.date);
+    total += dozerCostFor(o, ownership, hourlyRateAsOf(o.equipment, o.date));
   });
   return total;
 }
@@ -35,8 +34,7 @@ function dozerCostByOwnership(rows) {
   const out = { Company: 0, Rented: 0, Partnership: 0 };
   rows.forEach((o) => {
     const ownership = store.get('inventory').find((i) => i.name === o.equipment)?.ownership || 'Company';
-    if (o.operationType === 'Trekking' && ownership !== 'Rented') return;
-    out[ownership] = (out[ownership] || 0) + (o.hoursWorked || 0) * hourlyRateAsOf(o.equipment, o.date);
+    out[ownership] = (out[ownership] || 0) + dozerCostFor(o, ownership, hourlyRateAsOf(o.equipment, o.date));
   });
   return out;
 }

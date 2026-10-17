@@ -3,7 +3,7 @@
 // reports can group them by dozer, operator, supervisor or day.
 //
 // Pure: everything comes in through `ctx` (see reportContext.js).
-import { onDashboardBasis, DIESEL_LOGISTICS_PER_LITRE } from './dashboardBasis.js';
+import { onDashboardBasis, dozerCostFor, DIESEL_LOGISTICS_PER_LITRE } from './dashboardBasis.js';
 
 export const EXPECTED_HA_PER_8HRS = 1.3;
 
@@ -27,7 +27,7 @@ export function economicsByOp(ctx, project, ops) {
     const ownership = ownershipByName.get(o.equipment) || 'Company';
     const rate = ctx.projectRateAsOf(project, o.operationType, o.date).rate || 0;
     const revenue = o.operationType === 'Trekking' ? 0 : (o.quantity || 0) * rate;
-    const dozer = (o.operationType === 'Trekking' && ownership !== 'Rented') ? 0 : (o.hoursWorked || 0) * ctx.hourlyRateAsOf(o.equipment, o.date);
+    const dozer = dozerCostFor(o, ownership, ctx.hourlyRateAsOf(o.equipment, o.date));
     const diesel = (o.fuelUsed || 0) * ctx.dieselRateAsOf(o.date);
     let logistics = 0;
     const key = `${o.date}|${o.equipment}`;

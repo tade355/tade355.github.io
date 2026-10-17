@@ -5,7 +5,7 @@
 //
 // Pure (no store / DOM imports): everything is passed in through `ctx`, so the
 // figures can be unit-tested and reconciled against the published dashboards.
-import { onDashboardBasis, SUPERVISOR_SUNDAY_ALLOWANCE, DIESEL_LOGISTICS_PER_LITRE } from './dashboardBasis.js';
+import { onDashboardBasis, dozerCostFor, SUPERVISOR_SUNDAY_ALLOWANCE, DIESEL_LOGISTICS_PER_LITRE } from './dashboardBasis.js';
 import { isSunday, addDays } from './dateUtils.js';
 
 export const EXPECTED_HA_PER_8HRS = 1.3;
@@ -174,7 +174,8 @@ export function buildDailyDashboard(ctx) {
     const key = i.ownerName || i.ownership;
     if (!vendors[key]) vendors[key] = { vendor: key, dozers: new Set(), accrued: 0 };
     vendors[key].dozers.add(o.equipment);
-    vendors[key].accrued += (o.operationType === 'Trekking' && i.ownership !== 'Rented') ? 0 : (o.hoursWorked || 0) * ctx.hourlyRateAsOf(o.equipment, o.date);
+    // Deal ("Business") days are paid to the operator directly, not accrued to the owner.
+    if (o.workType !== 'Business') vendors[key].accrued += dozerCostFor(o, i.ownership, ctx.hourlyRateAsOf(o.equipment, o.date));
   });
   const vendorAccrual = Object.values(vendors).map((v) => ({ ...v, dozers: [...v.dozers].sort() }));
 
@@ -208,7 +209,7 @@ export function buildDailyDashboard(ctx) {
   const contribution = dayOps.map((o) => {
     const ownership = ownedNames(o.equipment);
     const revenue = rev(o);
-    const dozer = (o.operationType === 'Trekking' && ownership !== 'Rented') ? 0 : (o.hoursWorked || 0) * ctx.hourlyRateAsOf(o.equipment, o.date);
+    const dozer = dozerCostFor(o, ownership, ctx.hourlyRateAsOf(o.equipment, o.date));
     const dsl = (o.fuelUsed || 0) * ctx.dieselRateAsOf(o.date);
     const litres = sum(dist.filter((d) => d.date === date && d.equipment === o.equipment), (d) => d.litres);
     // Diesel logistics is charged on the diesel distributed to the dozer, once per dozer per day.

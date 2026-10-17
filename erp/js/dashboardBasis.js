@@ -72,6 +72,15 @@ export function maintenanceBasis({ fundRequests, expenses, fundRequestTotal, pms
   return fromRequests + fromExpenses + pms.maintenance;
 }
 
+// Rental / dozer cost of one operation. Trekking is free for Company and
+// Partnership dozers. A deal ("Business") day on a hired dozer costs what was
+// actually paid for the deal, not hours x hourly rate.
+export function dozerCostFor(o, ownership, hourlyRate) {
+  if (o.operationType === 'Trekking' && ownership !== 'Rented') return 0;
+  if (o.workType === 'Business' && o.businessAmount && ownership && ownership !== 'Company') return o.businessAmount;
+  return (o.hoursWorked || 0) * hourlyRate;
+}
+
 // Machine Recovery: hours worked by Company-owned dozers × their hourly rate
 // (cost avoided by not renting). Deal ("Business") days are excluded.
 export function machineRecoveredBasis(rows, ownershipByName, hourlyRateAsOf) {
