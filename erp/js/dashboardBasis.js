@@ -5,7 +5,7 @@
 //
 // Kept free of store/Supabase imports (everything is passed in) so the
 // figures can be unit-tested and reconciled against the dashboards.
-import { isSunday } from './dateUtils.js';
+import { isSunday, addDays } from './dateUtils.js';
 
 export const DASHBOARD_BASIS_FROM = '2026-10-10';
 export const onDashboardBasis = (date) => !!date && date >= DASHBOARD_BASIS_FROM;
@@ -16,8 +16,6 @@ export const onDashboardBasis = (date) => !!date && date >= DASHBOARD_BASIS_FROM
 // Diesel logistics: ₦50 per litre supplied to Company-owned and Rented
 // dozers (Partnership/Chizon dozers are excluded).
 export const DIESEL_LOGISTICS_PER_LITRE = 50;
-// Supervisor Sunday allowance: ₦20,000 per supervisor on duty that Sunday.
-export const SUPERVISOR_SUNDAY_ALLOWANCE = 20000;
 
 // Sum of ₦50/L over the diesel distributed to non-Partnership dozers.
 export function dieselLogisticsBasis(distributions, ownershipByName) {
@@ -26,14 +24,35 @@ export function dieselLogisticsBasis(distributions, ownershipByName) {
     .reduce((sum, d) => sum + (d.litres || 0) * DIESEL_LOGISTICS_PER_LITRE, 0);
 }
 
-export function supervisorSundayAllowanceBasis(rows) {
-  const supervisorsByDate = {};
+// Sunday bonus policy for supervisors, on the dashboard basis. Per supervisor
+// per Sunday: 3 or more dozers worked at least 6 hrs = ₦20,000, 2 = ₦10,000,
+// 1 = ₦5,000; then by the days that supervisor worked Monday to Saturday of
+// that week: 5 or more = full, 3 to 4 = 50%, 2 or fewer = nothing.
+// `rows` are the operations being costed; `weekRows` (default: the same rows)
+// must hold the operations of the preceding six days for the weekly rule.
+export const SUNDAY_BONUS_BASIS_TEXT = 'Sunday bonus policy: ₦20,000 / ₦10,000 / ₦5,000 for 3 / 2 / 1 dozers at 6 hrs or more; halved for 3 to 4 days worked that week';
+const SUNDAY_BONUS_MIN_HOURS = 6;
+
+export function sundayBonusFor(dozersAtMinHours, daysWorkedInWeek) {
+  const tier = dozersAtMinHours >= 3 ? 20000 : dozersAtMinHours === 2 ? 10000 : dozersAtMinHours === 1 ? 5000 : 0;
+  const factor = daysWorkedInWeek >= 5 ? 1 : daysWorkedInWeek >= 3 ? 0.5 : 0;
+  return tier * factor;
+}
+
+export function supervisorSundayAllowanceBasis(rows, weekRows = rows) {
+  const hoursBySupervisorDateDozer = {};
   rows.forEach((o) => {
-    if (!isSunday(o.date) || !o.supervisorId || !(o.hoursWorked > 0)) return;
-    if (!supervisorsByDate[o.date]) supervisorsByDate[o.date] = new Set();
-    supervisorsByDate[o.date].add(o.supervisorId);
+    if (!onDashboardBasis(o.date) || !isSunday(o.date) || !o.supervisorId || !(o.hoursWorked > 0)) return;
+    const key = `${o.date}|${o.supervisorId}`;
+    if (!hoursBySupervisorDateDozer[key]) hoursBySupervisorDateDozer[key] = {};
+    hoursBySupervisorDateDozer[key][o.equipment] = (hoursBySupervisorDateDozer[key][o.equipment] || 0) + o.hoursWorked;
   });
-  return Object.values(supervisorsByDate).reduce((sum, s) => sum + s.size * SUPERVISOR_SUNDAY_ALLOWANCE, 0);
+  return Object.entries(hoursBySupervisorDateDozer).reduce((sum, [key, byDozer]) => {
+    const [date, supervisorId] = key.split('|');
+    const qualifying = Object.values(byDozer).filter((h) => h >= SUNDAY_BONUS_MIN_HOURS).length;
+    const days = new Set(weekRows.filter((o) => o.supervisorId === supervisorId && o.hoursWorked > 0 && o.date >= addDays(date, -6) && o.date < date).map((o) => o.date)).size;
+    return sum + sundayBonusFor(qualifying, days);
+  }, 0);
 }
 
 // PMS collected at the station, priced as recorded. A collection whose notes

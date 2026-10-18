@@ -11,7 +11,7 @@ import { hourlyRateAsOf, dieselRateAsOf, projectRateAsOf } from '../rateHistory.
 import { operatorAllowanceForRows } from '../ownedOperatorAllowance.js';
 import { computeProjectStats, projectNames } from './profitability.js';
 import { stationBalances } from './fuelCredit.js';
-import { DASHBOARD_BASIS_FROM } from '../dashboardBasis.js';
+import { DASHBOARD_BASIS_FROM, SUNDAY_BONUS_BASIS_TEXT } from '../dashboardBasis.js';
 import { buildDashboardHtml, dashboardFileName } from '../dashboardHtml.js';
 import { ICONS } from '../icons.js';
 import { askCard, reportBuilderCard } from './ddTools.js';
@@ -368,7 +368,7 @@ function profitSection(d) {
     ['Diesel Cost', 'dieselCost', 'Litres used × diesel price'],
     ['Logistics', 'logisticsCost', '₦50/L of diesel supplied to Company and Rented dozers'],
     ['Operator Allowance', 'operatorAllowanceCost', 'Owned EMG operators, day rate per 8 hrs'],
-    ['Supervisor Sunday Allowance', 'supervisorSundayAllowance', '₦20,000 per supervisor per Sunday'],
+    ['Supervisor Sunday Allowance', 'supervisorSundayAllowance', SUNDAY_BONUS_BASIS_TEXT],
     ['Dozer Cost — Owned', 'dozerOwned', 'Hours × hourly rate'],
     ['Dozer Cost — Rented', 'dozerRented', 'Hours × hourly rate'],
     ['Dozer Cost — Partnership', 'dozerPartnership', 'Hours × hourly rate'],

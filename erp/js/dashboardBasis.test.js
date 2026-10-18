@@ -21,13 +21,18 @@ test('diesel logistics: ₦50/L, Partnership dozers excluded', () => {
   assert.equal(dieselLogisticsBasis(d, owners), 380 * 50);
 });
 
-test('supervisor Sunday allowance: ₦20,000 per supervisor per Sunday', () => {
-  const rows = [
-    { date: '2026-10-11', supervisorId: 'EMP-1', hoursWorked: 8 },
-    { date: '2026-10-11', supervisorId: 'EMP-1', hoursWorked: 8 },
-    { date: '2026-10-12', supervisorId: 'EMP-1', hoursWorked: 8 },
-  ];
-  assert.equal(supervisorSundayAllowanceBasis(rows), 20000);
+test('supervisor Sunday allowance follows the Sunday bonus policy', () => {
+  const day = (date, equipment, hoursWorked, supervisorId = 'EMP-1') => ({ date, equipment, hoursWorked, supervisorId });
+  // 11 Oct: 2 dozers at 6 hrs or more = ₦10,000, halved for 3 days worked Mon-Sat = ₦5,000
+  const week = [day('2026-10-05', 'A', 8), day('2026-10-07', 'A', 8), day('2026-10-09', 'A', 8), day('2026-10-11', 'A', 8), day('2026-10-11', 'B', 8), day('2026-10-11', 'C', 4)];
+  assert.equal(supervisorSundayAllowanceBasis(week.filter((o) => o.date === '2026-10-11'), week), 5000);
+  // 18 Oct: 3 dozers at 6 hrs or more, 6 days worked = ₦20,000; a dozer under 6 hrs does not count
+  const full = ['12', '13', '14', '15', '16', '17'].map((d) => day(`2026-10-${d}`, 'A', 8));
+  const sunday = [day('2026-10-18', 'A', 8), day('2026-10-18', 'B', 6), day('2026-10-18', 'C', 8), day('2026-10-18', 'D', 4)];
+  assert.equal(supervisorSundayAllowanceBasis(sunday, [...full, ...sunday]), 20000);
+  // fewer than 3 days worked, or before the dashboard basis date: nothing
+  assert.equal(supervisorSundayAllowanceBasis(sunday, sunday), 0);
+  assert.equal(supervisorSundayAllowanceBasis([day('2026-10-04', 'A', 8)]), 0);
 });
 
 test('PMS is split into Tacoma, unexplained and maintenance by its notes', () => {

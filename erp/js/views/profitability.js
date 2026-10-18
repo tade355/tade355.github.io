@@ -9,7 +9,7 @@ import { printProfitabilityReport } from '../print.js';
 import { operatorAllowanceForRows, isOwnedOperatorAllowancePayment } from '../ownedOperatorAllowance.js';
 import {
   DASHBOARD_BASIS_FROM, onDashboardBasis, dieselLogisticsBasis, supervisorSundayAllowanceBasis,
-  pmsBasis, maintenanceBasis, machineRecoveredBasis, dozerCostFor,
+  pmsBasis, maintenanceBasis, machineRecoveredBasis, dozerCostFor, SUNDAY_BONUS_BASIS_TEXT,
 } from '../dashboardBasis.js';
 
 export function projectNames() {
@@ -154,7 +154,7 @@ const MANAGER_SUNDAY_ALLOWANCE_OVERRIDE_DATES = new Set([
 function managerSundayAllowanceForRows(rows, project) {
   const equipmentBySundayDate = {};
   rows.forEach((o) => {
-    if (!isSunday(o.date) || onDashboardBasis(o.date)) return; // dashboard basis: ₦20,000 per supervisor instead
+    if (!isSunday(o.date) || onDashboardBasis(o.date)) return; // dashboard basis: Sunday bonus policy instead
     if (MANAGER_SUNDAY_ALLOWANCE_OVERRIDE_DATES.has(`${project}|${o.date}`)) return;
     if (!equipmentBySundayDate[o.date]) equipmentBySundayDate[o.date] = new Set();
     equipmentBySundayDate[o.date].add(o.equipment);
@@ -228,7 +228,7 @@ export function computeProjectStats(project, from, to) {
     .filter((c) => c.fuelType === 'PMS' && dateInRange(c.date, from, to) && onDashboardBasis(c.date) && pmsProjectForDate(c.date) === project);
   const pms = pmsBasis(pmsCollections);
   const dieselLogistics = dieselLogisticsBasis(distributions, ownershipByName);
-  const supervisorSundayAllowance = supervisorSundayAllowanceBasis(operations);
+  const supervisorSundayAllowance = supervisorSundayAllowanceBasis(operations, store.get('operations').filter((o) => o.siteName === project));
   const dozerByOwnership = dozerCostByOwnership(operations);
 
   const logisticsCost = legacyExpenses.filter((e) => e.category === 'Logistics').reduce((sum, e) => sum + e.amount, 0)
@@ -606,7 +606,7 @@ function renderDashboardBasis(body, project, from, to) {
     ['Diesel Cost', s.dieselCost, `${s.fuelUsed.toLocaleString()} L used × diesel price`],
     ['Diesel Logistics', s.dieselLogistics, '₦50/L supplied to Company and Rented dozers'],
     ['Operator Allowance', s.operatorAllowanceCost, 'Owned EMG fleet: day rate per 8 hrs (₦50,000 on Sundays)'],
-    ['Supervisor Sunday Allowance', s.supervisorSundayAllowance, '₦20,000 per supervisor per Sunday'],
+    ['Supervisor Sunday Allowance', s.supervisorSundayAllowance, SUNDAY_BONUS_BASIS_TEXT],
     ['Dozer Cost — Owned', s.dozerOwned, 'Hours × hourly rate'],
     ['Dozer Cost — Rented', s.dozerRented, 'Hours × hourly rate (deal days at the deal rate)'],
     ['Dozer Cost — Partnership', s.dozerPartnership, 'Hours × hourly rate'],

@@ -4,6 +4,7 @@
 // were selected. Pure: takes the object from buildProfitReport().
 import { DASHBOARD_CSS, SCRIPT_TAIL } from './dashboardHtml.js';
 import { IDEAL_START_MINUTES } from './profitReportData.js';
+import { SUNDAY_BONUS_BASIS_TEXT } from './dashboardBasis.js';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -73,7 +74,7 @@ export function buildProfitReportHtml(r, { title = 'Operations Profitability Rep
       ['Diesel Cost', t.dieselCost, `${fmt(t.fuelUsed)} L used`],
       ['Logistics', t.logisticsCost, '₦50/L of diesel supplied to Company and Rented dozers'],
       ['Operator Allowance', t.operatorAllowanceCost, 'Owned EMG operators'],
-      ['Supervisor Sunday Allowance', t.supervisorSundayAllowance, '₦20,000 per supervisor per Sunday'],
+      ['Supervisor Sunday Allowance', t.supervisorSundayAllowance, SUNDAY_BONUS_BASIS_TEXT],
       ['Dozer Cost — Owned', t.dozerOwned, 'Hours × hourly rate'],
       ['Dozer Cost — Rented', t.dozerRented, 'Hours × hourly rate'],
       ['Dozer Cost — Partnership', t.dozerPartnership, 'Hours × hourly rate'],

@@ -7,6 +7,7 @@
 // chart/sort script are the report template, kept verbatim.
 
 import { DIESEL_FILL_LITRES } from './dailyDashboardData.js';
+import { SUNDAY_BONUS_BASIS_TEXT } from './dashboardBasis.js';
 
 export const DASHBOARD_CSS = String.raw`  :root {
     color-scheme: light;
@@ -380,7 +381,7 @@ export function buildDashboardHtml(d, { expectedHaPer8 = 1.3, idealStart = '7:00
     ['Diesel Cost', 'dieselCost', 'Litres used × diesel price'],
     ['Diesel Logistics', 'logisticsCost', '₦50/L supplied (Company and Rented dozers)'],
     ['Operator Allowance', 'operatorAllowanceCost', 'Owned EMG operators, day rate per 8 hrs'],
-    ['Supervisor Sunday Allowance', 'supervisorSundayAllowance', '₦20,000 per supervisor per Sunday'],
+    ['Supervisor Sunday Allowance', 'supervisorSundayAllowance', SUNDAY_BONUS_BASIS_TEXT],
     ['Dozer Cost — Owned', 'dozerOwned', 'Hours × hourly rate'],
     ['Dozer Cost — Rented', 'dozerRented', 'Hours × hourly rate'],
     ['Dozer Cost — Partnership', 'dozerPartnership', 'Hours × hourly rate'],

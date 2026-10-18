@@ -5,7 +5,7 @@
 //
 // Pure (no store / DOM imports): everything is passed in through `ctx`, so the
 // figures can be unit-tested and reconciled against the published dashboards.
-import { onDashboardBasis, dozerCostFor, SUPERVISOR_SUNDAY_ALLOWANCE, DIESEL_LOGISTICS_PER_LITRE } from './dashboardBasis.js';
+import { onDashboardBasis, dozerCostFor, DIESEL_LOGISTICS_PER_LITRE } from './dashboardBasis.js';
 import { isSunday, addDays } from './dateUtils.js';
 
 export const EXPECTED_HA_PER_8HRS = 1.3;
