@@ -27,6 +27,11 @@ export function liveContext(project) {
     loans: store.get('loans'),
     leaveRequests: store.get('leaveRequests'),
     assets: store.get('assets'),
+    invoicePayments: store.get('invoicePayments'),
+    fuelingVouchers: store.get('fuelingVouchers'),
+    noticeBoardPosts: store.get('noticeBoardPosts'),
+    trainingPrograms: store.get('trainingPrograms'),
+    tier: getCurrentTier(),
     // Staff records are HR data: only Admin accounts can open them in the ERP.
     canViewStaffRecords: getCurrentTier() === 'Admin',
     dieselStockCounts: store.get('dieselStockCounts'),

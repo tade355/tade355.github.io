@@ -9,7 +9,7 @@ This repository is a static website (GitHub Pages) plus the Emagrims Ltd ERP in 
 | Live ERP | https://tade355.github.io/erp/ |
 | Repo | `tade355/tade355.github.io`, GitHub Pages is served from `master` (pushing to `master` deploys in about a minute) |
 | Working branch | `claude/emagrims-erp-build-v7cfod`; it is merged or pushed to `master` after every change |
-| Tests | `npm test` (`node --test erp/js/*.test.js`, about 123 tests, no dependencies) |
+| Tests | `npm test` (`node --test erp/js/*.test.js`, about 140 tests, no dependencies) |
 | Database | Supabase project URL and anon key are in `erp/js/supabaseClient.js`; row level security allows signed-in users only |
 | ERP login used for scripts | user `olumide` (email `olumide@emagrims-erp.app`), password from the `ERP_PW` environment variable |
 | Manual | `erp/MANUAL.md` |

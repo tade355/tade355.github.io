@@ -14,6 +14,7 @@ import { buildDailyDashboard, DIESEL_FILL_LITRES } from './dailyDashboardData.js
 import { IDEAL_START_MINUTES, LATE_MINUTES } from './profitReportData.js';
 import { DASHBOARD_BASIS_FROM } from './dashboardBasis.js';
 import { answerFacts, FACT_EXAMPLES } from './askErpFacts.js';
+import { answerMore, MORE_EXAMPLES } from './askErpMore.js';
 
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -144,6 +145,7 @@ export const EXAMPLE_QUESTIONS = [
   'How many hectares must each dozer clear for 20% profit?',
   'Compare the supervisors',
   ...FACT_EXAMPLES,
+  ...MORE_EXAMPLES,
 ];
 
 export function answerQuestion(question, ctx, { today, project }) {
@@ -167,6 +169,11 @@ export function answerQuestion(question, ctx, { today, project }) {
   // ------------------------------------------- the organisation itself
   // Who a person is, headcount and suspensions, sites, fleet status and how long
   // a dozer has been down, counts of records (see askErpFacts.js).
+  // ----------------------------------- how things work, requests, payments, diesel
+  // history, machine history, who worked, daily brief, stock, notices (askErpMore.js)
+  const more = answerMore(q, ctx, { today, project, range, ent });
+  if (more) return more;
+
   const facts = answerFacts(q, ctx, { today });
   if (facts) return facts;
 
