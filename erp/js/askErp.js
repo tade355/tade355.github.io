@@ -163,7 +163,7 @@ export function answerQuestion(question, ctx, { today, project }) {
   const has = (re) => re.test(text);
 
   if (has(/\b(help|what can you|how do i use|what do you know|examples?)\b/)) {
-    return reply('I answer questions from the data already loaded in the ERP: profit and costs, hectares and hours, output by dozer, operator or supervisor, start times, diesel, fund requests, fuel credit (Midejab), fleet status (and since when a dozer has been down), sites, staff (who someone is, how many are suspended) and profit targets. Give a date or range (for example "yesterday", "15 Oct", "10 to 15 Oct", "this week") and, if you like, a dozer or person. Try:\n• ' + EXAMPLE_QUESTIONS.join('\n• '));
+    return reply('I answer questions from the data already loaded in the ERP: profit and costs, hectares and hours, output by dozer, operator or supervisor, start times, diesel, fund requests, fuel credit (Midejab), fleet status (and since when a dozer has been down), sites, staff (who someone is, how many are suspended), profit targets, company policies (Sunday bonus, extra hours, diesel norms, report and request formats), payments and spending, invoices, diesel history, maintenance history, who worked, a daily summary and what needs attention, and where to find things in the ERP. Give a date or range (for example "yesterday", "15 Oct", "10 to 15 Oct", "this week") and, if you like, a dozer or person. Try:\n• ' + EXAMPLE_QUESTIONS.join('\n• '));
   }
 
   // ------------------------------------------- the organisation itself
