@@ -141,7 +141,7 @@ test('oil: last oil purchase per machine, matched by operator name or machine co
   assert.match(r.text, /EMG-006 \(Jessie\): last oil 13 Oct 2026, 3 days ago/);
   assert.match(r.text, /EMG-007 \(Adebayo\): no oil purchase on record/);
   assert.equal(r.table.rows.length, 2);
-  assert.match(r.table.rows.find((x) => x[0].startsWith('EMG-007'))[5], /FR-78/);
+  assert.match(r.table.rows.find((x) => x[0].startsWith('EMG-007'))[6], /FR-78/);
   assert.ok(!JSON.stringify(r.table).includes('Oil seal'));
 });
 

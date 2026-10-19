@@ -291,7 +291,7 @@ const COUNT_WORDS = /how many|number of|count|total number|list|which|what are|s
 // request that is still waiting.
 const OIL = /\boil\b/;
 const NOT_OIL = /oil seals?|oil filters?|oil pump|oil cooler|oil pressure|oil leak|pumping into|oil (and|&) gas|midejab/g;
-const hasOil = (text) => OIL.test(text.toLowerCase().replace(NOT_OIL, ' '));
+const hasOil = (text) => /\boil\b|topping|top-up/.test(text.toLowerCase().replace(NOT_OIL, ' '));
 // Names are spelt several ways in the chats (Jassie, Jessy, Jessie), so also compare them without vowels.
 const skeleton = (w) => w[0] + w.slice(1).replace(/[aeiouy]/g, '');
 const sameName = (a, b) => a === b || (a.length >= 4 && b.length >= 4 && (a.startsWith(b.slice(0, 4)) || b.startsWith(a.slice(0, 4)) || (skeleton(a).length >= 3 && skeleton(a) === skeleton(b))));
@@ -349,12 +349,13 @@ function oilAnswer(text, ctx, today) {
     const waiting = recs.filter((r) => r.status === 'Pending' || r.status === 'Approved');
     const operator = ctx.employees.find((e) => e.id === ctx.operations.filter((o) => o.equipment === item.name && o.operatorId).sort((a, b) => (a.date < b.date ? 1 : -1))[0]?.operatorId);
     const label = operator ? `${item.name} (${operator.name.split(' ')[0]})` : item.name;
-    rows.push([label, done ? dmy(done.date) : 'none on record', done ? `${ago(done.date, today)}` : '—', done ? done.what : '—', done ? money(done.amount) : '—', waiting.length ? `${waiting.slice(0, 3).map((w) => `${w.ref} ${dmy(w.date)} ${money(w.amount)} (${w.status.toLowerCase()})`).join('; ')}${waiting.length > 3 ? `; and ${waiting.length - 3} older` : ''}` : '—']);
+    const earlier = recs.filter((r) => (r.status === 'Paid' || r.status === 'Completed') && r !== done).slice(0, 2);
+    rows.push([label, done ? dmy(done.date) : 'none on record', done ? `${ago(done.date, today)}` : '—', done ? done.what : '—', done ? money(done.amount) : '—', earlier.length ? earlier.map((e) => `${dmy(e.date)} ${e.what.slice(0, 40)} ${money(e.amount)}`).join('; ') : '—', waiting.length ? `${waiting.slice(0, 3).map((w) => `${w.ref} ${dmy(w.date)} ${money(w.amount)} (${w.status.toLowerCase()})`).join('; ')}${waiting.length > 3 ? `; and ${waiting.length - 3} older` : ''}` : '—']);
     lines.push(done ? `${label}: last oil ${dmy(done.date)}, ${ago(done.date, today)}` : `${label}: no oil purchase on record`);
   });
-  const head = ['Machine', 'Last oil (paid or logged)', 'How long ago', 'Item', 'Amount', 'Waiting requests'];
+  const head = ['Machine', 'Last oil (paid or logged)', 'How long ago', 'Item', 'Amount', 'Before that', 'Waiting requests'];
   return reply(`${asked ? 'Last oil for the machines asked about' : 'Last oil purchase for each company dozer'}: ${lines.join('; ')}.`, { head, rows },
-    ['Oil is matched by machine code, operator name and the maintenance logs. A request that only names the operator and not the machine is counted for that operator\'s machine.',
+    ['Oil includes topping and top-up records. It is matched by machine code, operator name and the maintenance logs; a request that names only the operator is counted for that operator\'s machine.',
      'Records marked waiting are requests not yet paid.']);
 }
 
