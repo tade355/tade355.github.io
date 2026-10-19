@@ -290,7 +290,8 @@ const COUNT_WORDS = /how many|number of|count|total number|list|which|what are|s
 // asked about, or for every owned dozer when none is named, and shows any oil
 // request that is still waiting.
 const OIL = /\boil\b/;
-const NOT_OIL = /oil seal|oil filter|oil pump|oil cooler|oil pressure|oil leak|pumping into/;
+const NOT_OIL = /oil seals?|oil filters?|oil pump|oil cooler|oil pressure|oil leak|pumping into|oil (and|&) gas|midejab/g;
+const hasOil = (text) => OIL.test(text.toLowerCase().replace(NOT_OIL, ' '));
 // Names are spelt several ways in the chats (Jassie, Jessy, Jessie), so also compare them without vowels.
 const skeleton = (w) => w[0] + w.slice(1).replace(/[aeiouy]/g, '');
 const sameName = (a, b) => a === b || (a.length >= 4 && b.length >= 4 && (a.startsWith(b.slice(0, 4)) || b.startsWith(a.slice(0, 4)) || (skeleton(a).length >= 3 && skeleton(a) === skeleton(b))));
@@ -300,8 +301,9 @@ function oilKeywords(ctx, item) {
   const num = (code.match(/-(\d{3})$/) || [])[1];
   const keys = new Set([code, code.replace('-', ' '), code.replace('-', '')]);
   if (num) { keys.add(`emg${num}`); }
-  const operators = new Set(ctx.operations.filter((o) => o.equipment === item.name && o.operatorId).map((o) => o.operatorId));
-  ctx.employees.filter((e) => operators.has(e.id) || (e.role || '').toLowerCase().replace(/[^a-z0-9/]/g, '') === `operator/${code.replace('-', '')}`)
+  // The machine's operator is the person whose role names it, or whoever ran it most recently.
+  const latest = ctx.operations.filter((o) => o.equipment === item.name && o.operatorId).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+  ctx.employees.filter((e) => e.id === latest?.operatorId || (e.role || '').toLowerCase().replace(/[^a-z0-9/]/g, '') === `operator/${code.replace('-', '')}`)
     .forEach((e) => cleanTokens(e.name).forEach((t) => { if (t.length >= 4) keys.add(`~${t}`); }));
   return [...keys];
 }
@@ -317,15 +319,15 @@ function oilRecords(ctx, item, today) {
   const out = [];
   ctx.fundRequests.forEach((r) => {
     const text = `${r.description || ''} ${(r.items || []).map((i) => i.description).join(' ')}`;
-    if (OIL.test(text.toLowerCase()) && !NOT_OIL.test(text.toLowerCase()) && mentions(text, keys) && r.date <= today) out.push({ date: r.date, what: (r.items?.[0]?.description || r.description || '').slice(0, 70), amount: total(r), status: r.status, ref: r.id, kind: 'request' });
+    if (hasOil(text) && mentions(text, keys) && r.date <= today) out.push({ date: r.date, what: (r.items?.[0]?.description || r.description || '').slice(0, 70), amount: total(r), status: r.status, ref: r.id, kind: 'request' });
   });
   ctx.maintenanceLogs.forEach((m) => {
     const text = m.description || '';
-    if (m.equipment === item.name && OIL.test(text.toLowerCase()) && !NOT_OIL.test(text.toLowerCase()) && m.date <= today) out.push({ date: m.date, what: text.slice(0, 70), amount: m.cost || 0, status: m.status, ref: m.id, kind: 'log' });
+    if (m.equipment === item.name && hasOil(text) && m.date <= today) out.push({ date: m.date, what: text.slice(0, 70), amount: m.cost || 0, status: m.status, ref: m.id, kind: 'log' });
   });
   (ctx.expenses || []).forEach((e) => {
     const text = `${e.description || ''}`;
-    if (OIL.test(text.toLowerCase()) && !NOT_OIL.test(text.toLowerCase()) && (e.equipment === item.name || mentions(text, keys)) && e.date <= today) out.push({ date: e.date, what: text.slice(0, 70), amount: e.amount || 0, status: 'Paid', ref: e.id, kind: 'expense' });
+    if (hasOil(text) && (e.equipment === item.name || mentions(text, keys)) && e.date <= today) out.push({ date: e.date, what: text.slice(0, 70), amount: e.amount || 0, status: 'Paid', ref: e.id, kind: 'expense' });
   });
   return out.sort((a, b) => (a.date < b.date ? 1 : -1));
 }
@@ -347,7 +349,7 @@ function oilAnswer(text, ctx, today) {
     const waiting = recs.filter((r) => r.status === 'Pending' || r.status === 'Approved');
     const operator = ctx.employees.find((e) => e.id === ctx.operations.filter((o) => o.equipment === item.name && o.operatorId).sort((a, b) => (a.date < b.date ? 1 : -1))[0]?.operatorId);
     const label = operator ? `${item.name} (${operator.name.split(' ')[0]})` : item.name;
-    rows.push([label, done ? dmy(done.date) : 'none on record', done ? `${ago(done.date, today)}` : '—', done ? done.what : '—', done ? money(done.amount) : '—', waiting.length ? waiting.map((w) => `${w.ref} ${dmy(w.date)} ${money(w.amount)} (${w.status.toLowerCase()})`).join('; ') : '—']);
+    rows.push([label, done ? dmy(done.date) : 'none on record', done ? `${ago(done.date, today)}` : '—', done ? done.what : '—', done ? money(done.amount) : '—', waiting.length ? `${waiting.slice(0, 3).map((w) => `${w.ref} ${dmy(w.date)} ${money(w.amount)} (${w.status.toLowerCase()})`).join('; ')}${waiting.length > 3 ? `; and ${waiting.length - 3} older` : ''}` : '—']);
     lines.push(done ? `${label}: last oil ${dmy(done.date)}, ${ago(done.date, today)}` : `${label}: no oil purchase on record`);
   });
   const head = ['Machine', 'Last oil (paid or logged)', 'How long ago', 'Item', 'Amount', 'Waiting requests'];

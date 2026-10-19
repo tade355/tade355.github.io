@@ -144,3 +144,17 @@ test('oil: last oil purchase per machine, matched by operator name or machine co
   assert.match(r.table.rows.find((x) => x[0].startsWith('EMG-007'))[5], /FR-78/);
   assert.ok(!JSON.stringify(r.table).includes('Oil seal'));
 });
+
+test('oil: a servicing record that mentions an oil filter still counts, and "Oil and Gas" supplier names do not', () => {
+  const c = ctx({
+    employees: [{ id: 'EMP-11', name: 'Adebayo Tope', role: 'Operator/EMG007', status: 'Active' }, { id: 'EMP-12', name: 'Paul Joshua', role: 'Operator/EMG008', status: 'Active' }],
+    inventory: [{ name: 'EMG-007', category: 'Heavy Equipment', fleetStatus: 'Active', ownership: 'Company' }, { name: 'EMG-008', category: 'Heavy Equipment', fleetStatus: 'Active', ownership: 'Company' }],
+    operations: [{ equipment: 'EMG-007', operatorId: 'EMP-11', date: '2026-10-15', hoursWorked: 8 }, { equipment: 'EMG-008', operatorId: 'EMP-12', date: '2026-10-15', hoursWorked: 8 }],
+    maintenanceLogs: [{ id: 'MNT-161', equipment: 'EMG-007', date: '2026-09-21', status: 'Completed', description: '15-day servicing: oil filter x2, engine oil, air filter', cost: 188000 }],
+    fundRequests: [{ id: 'FR-1', date: '2026-10-10', status: 'Paid', description: 'Diesel from Midejab Oil And Gas for Tope', items: [{ description: 'Diesel', amount: 456000 }] }],
+    expenses: [],
+  });
+  const r = ask('when did we last give Tope oil', c);
+  assert.match(r.text, /EMG-007 \(Adebayo\): last oil 21 Sep 2026/);
+  assert.equal(r.table.rows.length, 1, 'only the machine asked about');
+});
