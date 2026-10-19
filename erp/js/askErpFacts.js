@@ -283,11 +283,87 @@ function counterAnswer(text, ctx, today) {
 const OPS_WORDS = /hectare|\bha\b|profit|revenue|\bcost\b|diesel|litre|liter|\bhours?\b|output|late\b|started|resum|target|break.?even|margin|request|midejab|\bowe|payment|worked|working yesterday|reported|cleared|perform|best|worst|rank|compare|expense|spent/;
 const COUNT_WORDS = /how many|number of|count|total number|list|which|what are|show|names? of|who are|how much staff|headcount/;
 
+
+// ---------------------------------------------------------------------- oil
+// "When did we last give Tope, Joshua and Jessy oil?" Looks for oil in paid or
+// logged records (fund requests, maintenance logs, expenses) for each machine
+// asked about, or for every owned dozer when none is named, and shows any oil
+// request that is still waiting.
+const OIL = /\boil\b/;
+const NOT_OIL = /oil seal|oil filter|oil pump|oil cooler|oil pressure|oil leak|pumping into/;
+// Names are spelt several ways in the chats (Jassie, Jessy, Jessie), so also compare them without vowels.
+const skeleton = (w) => w[0] + w.slice(1).replace(/[aeiouy]/g, '');
+const sameName = (a, b) => a === b || (a.length >= 4 && b.length >= 4 && (a.startsWith(b.slice(0, 4)) || b.startsWith(a.slice(0, 4)) || (skeleton(a).length >= 3 && skeleton(a) === skeleton(b))));
+
+function oilKeywords(ctx, item) {
+  const code = item.name.toLowerCase();
+  const num = (code.match(/-(\d{3})$/) || [])[1];
+  const keys = new Set([code, code.replace('-', ' '), code.replace('-', '')]);
+  if (num) { keys.add(`emg${num}`); }
+  const operators = new Set(ctx.operations.filter((o) => o.equipment === item.name && o.operatorId).map((o) => o.operatorId));
+  ctx.employees.filter((e) => operators.has(e.id) || (e.role || '').toLowerCase().replace(/[^a-z0-9/]/g, '') === `operator/${code.replace('-', '')}`)
+    .forEach((e) => cleanTokens(e.name).forEach((t) => { if (t.length >= 4) keys.add(`~${t}`); }));
+  return [...keys];
+}
+const mentions = (text, keys) => {
+  const t = text.toLowerCase();
+  const words = cleanTokens(t);
+  return keys.some((k) => (k.startsWith('~') ? words.some((w) => sameName(w, k.slice(1))) : t.includes(k)));
+};
+
+function oilRecords(ctx, item, today) {
+  const keys = oilKeywords(ctx, item);
+  const total = (r) => (r.items || []).reduce((n, i) => n + (i.amount || 0), 0);
+  const out = [];
+  ctx.fundRequests.forEach((r) => {
+    const text = `${r.description || ''} ${(r.items || []).map((i) => i.description).join(' ')}`;
+    if (OIL.test(text.toLowerCase()) && !NOT_OIL.test(text.toLowerCase()) && mentions(text, keys) && r.date <= today) out.push({ date: r.date, what: (r.items?.[0]?.description || r.description || '').slice(0, 70), amount: total(r), status: r.status, ref: r.id, kind: 'request' });
+  });
+  ctx.maintenanceLogs.forEach((m) => {
+    const text = m.description || '';
+    if (m.equipment === item.name && OIL.test(text.toLowerCase()) && !NOT_OIL.test(text.toLowerCase()) && m.date <= today) out.push({ date: m.date, what: text.slice(0, 70), amount: m.cost || 0, status: m.status, ref: m.id, kind: 'log' });
+  });
+  (ctx.expenses || []).forEach((e) => {
+    const text = `${e.description || ''}`;
+    if (OIL.test(text.toLowerCase()) && !NOT_OIL.test(text.toLowerCase()) && (e.equipment === item.name || mentions(text, keys)) && e.date <= today) out.push({ date: e.date, what: text.slice(0, 70), amount: e.amount || 0, status: 'Paid', ref: e.id, kind: 'expense' });
+  });
+  return out.sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
+function oilAnswer(text, ctx, today) {
+  let items = findEquipment(text, ctx);
+  // Operators named instead of machines ("Tope", "Joshua", "Jessy").
+  const words = cleanTokens(text);
+  heavyOf(ctx).forEach((item) => {
+    if (items.some((i) => i.name === item.name)) return;
+    if (words.some((w) => w.length >= 4 && oilKeywords(ctx, item).some((k) => k.startsWith('~') && sameName(w, k.slice(1))))) items = [...items, item];
+  });
+  const asked = items.length > 0;
+  if (!asked) items = heavyOf(ctx).filter((i) => i.ownership === 'Company');
+  const rows = []; const lines = [];
+  items.forEach((item) => {
+    const recs = oilRecords(ctx, item, today);
+    const done = recs.find((r) => r.status === 'Paid' || r.status === 'Completed');
+    const waiting = recs.filter((r) => r.status === 'Pending' || r.status === 'Approved');
+    const operator = ctx.employees.find((e) => e.id === ctx.operations.filter((o) => o.equipment === item.name && o.operatorId).sort((a, b) => (a.date < b.date ? 1 : -1))[0]?.operatorId);
+    const label = operator ? `${item.name} (${operator.name.split(' ')[0]})` : item.name;
+    rows.push([label, done ? dmy(done.date) : 'none on record', done ? `${ago(done.date, today)}` : '—', done ? done.what : '—', done ? money(done.amount) : '—', waiting.length ? waiting.map((w) => `${w.ref} ${dmy(w.date)} ${money(w.amount)} (${w.status.toLowerCase()})`).join('; ') : '—']);
+    lines.push(done ? `${label}: last oil ${dmy(done.date)}, ${ago(done.date, today)}` : `${label}: no oil purchase on record`);
+  });
+  const head = ['Machine', 'Last oil (paid or logged)', 'How long ago', 'Item', 'Amount', 'Waiting requests'];
+  return reply(`${asked ? 'Last oil for the machines asked about' : 'Last oil purchase for each company dozer'}: ${lines.join('; ')}.`, { head, rows },
+    ['Oil is matched by machine code, operator name and the maintenance logs. A request that only names the operator and not the machine is counted for that operator\'s machine.',
+     'Records marked waiting are requests not yet paid.']);
+}
+
 export function answerFacts(question, ctx, { today }) {
   const text = ` ${(question || '').toLowerCase().replace(/god'?s\s*time/g, 'godstime')} `;
   const staffOk = !!ctx.canViewStaffRecords;
   const noStaff = () => reply('Staff records (who is who, headcount and suspensions) are HR information that only Admin accounts can see in the ERP, so I cannot answer that from this account.');
   const sensitive = /salary|salaries|\bpay\b|paid per|wage|phone|email|e-mail|password|username|login|bank account|account number/;
+
+  // --- oil purchases ---------------------------------------------------------------
+  if (OIL.test(text) && /\b(last|when|history|purchase[ds]?|bought|buy|gave|give|given|supplied|topped|recent|latest|since)\b/.test(text)) return oilAnswer(text, ctx, today);
 
   // --- a specific dozer / machine ------------------------------------------------
   const equipment = findEquipment(text, ctx);
@@ -353,4 +429,5 @@ export const FACT_EXAMPLES = [
   'Who are the site managers?',
   'How many dozers are rented?',
   'Which dozers are on Kangidi?',
+  'When did we last give Tope, Joshua and Jessy oil?',
 ];

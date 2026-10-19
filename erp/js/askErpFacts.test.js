@@ -113,3 +113,34 @@ test('answerQuestion routes these through the facts first', () => {
   const r = answerQuestion('How many staff are on suspension?', full, { today: TODAY, project: 'Site A' });
   assert.match(r.text, /^2 suspended staff members/);
 });
+
+
+test('oil: last oil purchase per machine, matched by operator name or machine code, with waiting requests', () => {
+  const c = ctx({
+    employees: [
+      { id: 'EMP-11', name: 'Adebayo Tope', role: 'Operator/EMG007', status: 'Active' },
+      { id: 'EMP-20', name: 'Jessie Daniel Jenom', role: 'Operator/EMG006', status: 'Active' },
+    ],
+    inventory: [
+      { name: 'EMG-006', category: 'Heavy Equipment', fleetStatus: 'Active', ownership: 'Company' },
+      { name: 'EMG-007', category: 'Heavy Equipment', fleetStatus: 'Active', ownership: 'Company' },
+    ],
+    operations: [
+      { equipment: 'EMG-007', operatorId: 'EMP-11', date: '2026-10-15', hoursWorked: 8 },
+      { equipment: 'EMG-006', operatorId: 'EMP-20', date: '2026-10-15', hoursWorked: 6 },
+    ],
+    maintenanceLogs: [{ id: 'MNT-171', equipment: 'EMG-006', date: '2026-10-12', type: 'Service', status: 'Completed', description: 'Engine oil purchase (1 keg)', cost: 100000 }],
+    fundRequests: [
+      { id: 'FR-85', date: '2026-10-13', status: 'Paid', description: 'Oil purchase for Jassie', items: [{ description: 'Oil purchase for Jassie', amount: 100000 }] },
+      { id: 'FR-78', date: '2026-10-11', status: 'Pending', description: 'Oil purchase for Tope', items: [{ description: 'Oil purchase for Tope', amount: 100000 }] },
+      { id: 'FR-9', date: '2026-10-14', status: 'Paid', description: 'Oil seal for bike', items: [{ description: 'Oil seal', amount: 7500 }] },
+    ],
+    expenses: [],
+  });
+  const r = ask('When did we last give Tope and Jessy oil?', c);
+  assert.match(r.text, /EMG-006 \(Jessie\): last oil 13 Oct 2026, 3 days ago/);
+  assert.match(r.text, /EMG-007 \(Adebayo\): no oil purchase on record/);
+  assert.equal(r.table.rows.length, 2);
+  assert.match(r.table.rows.find((x) => x[0].startsWith('EMG-007'))[5], /FR-78/);
+  assert.ok(!JSON.stringify(r.table).includes('Oil seal'));
+});
