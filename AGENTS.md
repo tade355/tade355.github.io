@@ -49,6 +49,7 @@ Dashboard basis starts **10 Oct 2026** (`DASHBOARD_BASIS_FROM`). Dates before it
 - A closing reported by the site (`operations.closing_diesel`) is the physical tank level. The dashboard flags a difference ("Closing restated") and builds the next fueling request from the reported closing.
 - Fueling request for tomorrow: 250 L target (8 hrs x 25 L + 50 L reserve) less closing, for the dozers working tomorrow, less diesel on ground.
 - Diesel on ground = latest stock count + diesel collected since (excluding collections whose notes say sold) - diesel distributed since.
+- Diesel moved from one machine to another (drilled out of one tank into another): book it in `diesel_site_distributions` as a positive row for the receiving machine and a negative row (litres below zero) for the donor, both with a note. The site total then shows only what came from site stock.
 - Station collections: a collection whose notes start "Sold to the CEO" is not site diesel. When part of a collection is sold, split it into two rows (supplied and sold).
 - Station price history is in `rateHistory.js`; the Midejab station is `Midejab Ltd`.
 - Station ledger and tracker: collections minus payments; the Excel tracker must agree with the ERP station balance.
