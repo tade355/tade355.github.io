@@ -13,6 +13,9 @@ import { stationBalances } from './fuelCredit.js';
 import { ownerSettlementBalances } from './dozerRentPayments.js';
 import { projectNames, computeProjectStats, companyWideStats } from './profitability.js';
 import { getCurrentUser } from '../session.js';
+import { dailyDashboardFor } from '../reportContext.js';
+import { buildAttention } from '../attention.js';
+import { DASHBOARD_BASIS_FROM } from '../rules.js';
 
 // `invert` flips which direction counts as "good" — e.g. Expenses rising
 // is bad, so invert: true there, while Revenue rising is good by default.
@@ -197,7 +200,6 @@ export function renderDashboard(container) {
     const pendingVouchers = store.get('fuelingVouchers').filter((r) => r.status === 'Pending Approval').length;
     const outstandingApprovals = pendingFundRequests + pendingLeave + pendingVouchers;
     const lastBackup = store.getLastBackupAt();
-    const daysSinceBackup = lastBackup ? Math.floor((Date.now() - new Date(lastBackup).getTime()) / 86400000) : null;
 
     // Greeting — a personal, time-of-day touch only makes sense when the
     // viewed day is actually today; a past day gets a plain "Viewing"
@@ -214,6 +216,7 @@ export function renderDashboard(container) {
       headerSubtitle = `Viewing how Emagrims Ltd was doing on ${dateLabel}.`;
     }
     body.appendChild(sectionHeader('Dashboard', headerSubtitle));
+    body.appendChild(el('p', { class: 'section-subtitle' }, `Same rules as the Daily Operations Dashboard: diesel, operator allowance, deal days, Sunday bonus and alerts follow the dashboard basis from ${formatDate(DASHBOARD_BASIS_FROM)}; earlier dates keep the older Profitability rules.`));
 
     // KPI row — the Executive Command Centre's headline numbers, same-day
     // where a same-day figure exists, each with a 7-day sparkline (the
@@ -276,8 +279,18 @@ export function renderDashboard(container) {
     if (pendingFundRequests) actionItems.push({ tone: 'warning', icon: 'clipboard', text: `${pendingFundRequests} fund request${pendingFundRequests > 1 ? 's' : ''} awaiting approval`, href: '#/fundRequests' });
     if (pendingLeave) actionItems.push({ tone: 'warning', icon: 'clipboard', text: `${pendingLeave} leave request${pendingLeave > 1 ? 's' : ''} awaiting approval`, href: '#/leave' });
     if (pendingVouchers) actionItems.push({ tone: 'warning', icon: 'clipboard', text: `${pendingVouchers} fueling voucher${pendingVouchers > 1 ? 's' : ''} awaiting approval`, href: '#/resourceManagement' });
-    if (!lastBackup) actionItems.push({ tone: 'warning', icon: 'database', text: "You've never backed up this data — everything lives only in this browser", href: '#/backup' });
-    else if (daysSinceBackup > 7) actionItems.push({ tone: 'warning', icon: 'database', text: `It's been ${daysSinceBackup} days since your last backup`, href: '#/backup' });
+    // The same flags the Daily Operations Dashboard shows (late starts, closing diesel
+    // differences, silent dozers, requests waiting too long, duplicates, old stock count),
+    // read from the same builder so both pages follow the same rules (rules.js).
+    const projectsReporting = projects.filter((p) => operations.some((o) => o.siteName === p && o.date === viewISO));
+    projectsReporting.forEach((p) => {
+      dailyDashboardFor(p, viewISO).flags.filter((f) => f.scope !== 'company').forEach((f) => {
+        actionItems.push({ tone: f.tone === 'critical' ? 'critical' : 'warning', icon: 'alert', text: `${projectsReporting.length > 1 ? `${p}: ` : ''}${f.text}${f.action ? ` ${f.action}` : ''}`, href: '#/dailyDashboard' });
+      });
+    });
+    buildAttention({ ...store.all(), project: null }, { date: viewISO, lastBackupAt: lastBackup || null }).forEach((f) => {
+      actionItems.push({ tone: f.tone === 'critical' ? 'critical' : 'warning', icon: /backup/i.test(f.text) ? 'database' : 'clipboard', text: `${f.text}${f.action ? ` ${f.action}` : ''}`, href: /backup/i.test(f.text) ? '#/backup' : '#/dailyDashboard' });
+    });
     if (daysOps.length) actionItems.push({ tone: 'info', icon: 'documents', text: `${daysOps.length} daily report${daysOps.length > 1 ? 's' : ''} submitted ${isToday ? 'today' : `on ${dayLabel}`}`, href: '#/operations' });
 
     body.appendChild(el('h3', { class: 'subsection-title' }, 'Executive Alert Center'));

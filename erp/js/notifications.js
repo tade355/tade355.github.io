@@ -1,4 +1,4 @@
-import emailjs from 'https://esm.sh/@emailjs/browser@4.4.1';
+import emailjs from '../vendor/emailjs.min.js';
 import { store } from './store.js';
 
 // Filled in once the EmailJS account is set up — see erp/EMAILJS_SETUP.md.

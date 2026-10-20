@@ -5,9 +5,12 @@ import { getCurrentUser } from './session.js';
 
 export const REPORT_DOWNLOAD_EMPLOYEE_IDS = ['EMP-26']; // Olumide Davidson
 
+// The owner flag lives on the employee record (employees.is_owner, migration 0041);
+// until that column exists the fixed ids above are used.
+const isOwnerAccount = (user, ids) => !!user && (typeof user.isOwner === 'boolean' ? user.isOwner : ids.includes(user.id));
+
 export function canDownloadProfitReports() {
-  const user = getCurrentUser();
-  return !!user && REPORT_DOWNLOAD_EMPLOYEE_IDS.includes(user.id);
+  return isOwnerAccount(getCurrentUser(), REPORT_DOWNLOAD_EMPLOYEE_IDS);
 }
 
 // Who may upload Excel data into the ERP (Data Import page). Same UI-level gate
@@ -16,6 +19,5 @@ export function canDownloadProfitReports() {
 export const DATA_IMPORT_EMPLOYEE_IDS = ['EMP-26']; // Olumide Davidson
 
 export function canImportData() {
-  const user = getCurrentUser();
-  return !!user && DATA_IMPORT_EMPLOYEE_IDS.includes(user.id);
+  return isOwnerAccount(getCurrentUser(), DATA_IMPORT_EMPLOYEE_IDS);
 }

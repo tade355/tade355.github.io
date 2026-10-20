@@ -7,7 +7,7 @@
 // corrected to his real ₦25,000).
 import { store } from './store.js';
 import { isSunday } from './dateUtils.js';
-import { DOZER_OVERTIME_RATE_DEFAULT } from './constants.js';
+import { DOZER_OVERTIME_RATE_DEFAULT, SUNDAY_FLAT_DAY_RATE } from './rules.js';
 
 // Owned dozers eligible for Operator Allowance — Partnership/Rented dozer
 // operators are paid by their own side arrangement, not this one.
@@ -15,7 +15,7 @@ export const ALLOWANCE_EQUIPMENT = new Set(['EMG-004', 'EMG-006', 'EMG-007', 'EM
 
 // Only used if an operator's own employee record has no Day Rate set at all.
 const ALLOWANCE_DAY_RATE_FALLBACK = 30000;
-const ALLOWANCE_SUNDAY_FLAT_RATE = 50000;
+const ALLOWANCE_SUNDAY_FLAT_RATE = SUNDAY_FLAT_DAY_RATE;
 
 function dayRateFor(operatorId) {
   return store.get('employees').find((e) => e.id === operatorId)?.dayRate || ALLOWANCE_DAY_RATE_FALLBACK;

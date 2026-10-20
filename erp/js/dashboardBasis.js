@@ -7,7 +7,9 @@
 // figures can be unit-tested and reconciled against the dashboards.
 import { isSunday, addDays } from './dateUtils.js';
 
-export const DASHBOARD_BASIS_FROM = '2026-10-10';
+import { DASHBOARD_BASIS_FROM, DIESEL_LOGISTICS_PER_LITRE, SUNDAY_BONUS_MIN_HOURS, SUNDAY_BONUS_TIERS, SUNDAY_BONUS_DAYS } from './rules.js';
+
+export { DASHBOARD_BASIS_FROM, DIESEL_LOGISTICS_PER_LITRE };
 export const onDashboardBasis = (date) => !!date && date >= DASHBOARD_BASIS_FROM;
 
 // Operator allowance is unchanged (ownedOperatorAllowance.js): the shared rule
@@ -15,7 +17,6 @@ export const onDashboardBasis = (date) => !!date && date >= DASHBOARD_BASIS_FROM
 // Rate otherwise.
 // Diesel logistics: ₦50 per litre supplied to Company-owned and Rented
 // dozers (Partnership/Chizon dozers are excluded).
-export const DIESEL_LOGISTICS_PER_LITRE = 50;
 
 // Sum of ₦50/L over the diesel distributed to non-Partnership dozers.
 export function dieselLogisticsBasis(distributions, ownershipByName) {
@@ -31,11 +32,10 @@ export function dieselLogisticsBasis(distributions, ownershipByName) {
 // `rows` are the operations being costed; `weekRows` (default: the same rows)
 // must hold the operations of the preceding six days for the weekly rule.
 export const SUNDAY_BONUS_BASIS_TEXT = 'Sunday bonus policy: ₦20,000 / ₦10,000 / ₦5,000 for 3 / 2 / 1 dozers at 6 hrs or more; halved for 3 to 4 days worked that week';
-const SUNDAY_BONUS_MIN_HOURS = 6;
 
 export function sundayBonusFor(dozersAtMinHours, daysWorkedInWeek) {
-  const tier = dozersAtMinHours >= 3 ? 20000 : dozersAtMinHours === 2 ? 10000 : dozersAtMinHours === 1 ? 5000 : 0;
-  const factor = daysWorkedInWeek >= 5 ? 1 : daysWorkedInWeek >= 3 ? 0.5 : 0;
+  const tier = (SUNDAY_BONUS_TIERS.find(([dozers]) => dozersAtMinHours >= dozers) || [0, 0])[1];
+  const factor = (SUNDAY_BONUS_DAYS.find(([days]) => daysWorkedInWeek >= days) || [0, 0])[1];
   return tier * factor;
 }
 

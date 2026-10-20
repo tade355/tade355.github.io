@@ -24,6 +24,8 @@ export const ROUTES = [
   { path: 'askErp', label: 'Ask the ERP', icon: ICONS.chat, load: () => import('./views/askErpPage.js').then((m) => m.renderAskErp), tiers: ['Admin', 'Accounts', 'Supervisor'] },
   // Excel upload: Olumide's account only (`guard` is checked wherever routes are listed or opened).
   { path: 'dataImport', label: 'Data Import', icon: ICONS.upload, load: () => import('./views/dataImport.js').then((m) => m.renderDataImport), tiers: ['Admin'], guard: canImportData },
+  // Paste a WhatsApp message, review the rows it makes, then confirm (nothing saves before that).
+  { path: 'pasteEntry', label: 'Paste Entry', icon: ICONS.clipboard, load: () => import('./views/pasteEntry.js').then((m) => m.renderPasteEntry), tiers: ['Admin', 'Supervisor'] },
   { path: 'noticeBoard', label: 'Documents and Notices', icon: ICONS.documents, load: () => import('./views/noticeBoard.js').then((m) => m.renderNoticeBoard), tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   // Field operations: the job, the work done against it, the equipment doing it
   { path: 'projects', label: 'Projects', icon: ICONS.folder, load: () => import('./views/projects.js').then((m) => m.renderProjects), tiers: ['Admin', 'Accounts', 'Supervisor'] },

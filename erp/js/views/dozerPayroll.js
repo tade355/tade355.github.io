@@ -77,7 +77,7 @@ function operatorStatsFor(employeeId, from, to) {
   return { daysWorked, overtimeHours, businessEarnings, equipment };
 }
 
-function netPay(line) {
+export function netPay(line) {
   return (line.daysWorked || 0) * (line.dayRate || 0)
     + (line.overtimeHours || 0) * (line.overtimeRate || 0)
     + (line.businessEarnings || 0)

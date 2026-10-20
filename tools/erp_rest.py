@@ -3,7 +3,7 @@
 Reads the project URL and anon key from erp/js/supabaseClient.js and logs in as
 the ERP user with the password in the ERP_PW environment variable.
 
-    from erp_rest import get, req, nid, ins, upd
+    from erp_rest import get, get_all, req, nid, ins, upd
     rows = get('/rest/v1/fund_requests?status=eq.Pending&select=id,date,description')
 """
 import json, os, re, urllib.request, urllib.error
@@ -42,6 +42,20 @@ def req(method, path, body=None, prefer=None):
 
 def get(path):
     return req('GET', path)
+
+
+def get_all(path, page=1000):
+    """Every row of a query. PostgREST returns at most 1000 rows per request, so read in pages
+    (the path must not already contain limit or offset). Add an order for a stable paging,
+    e.g. '/rest/v1/operations?select=*&order=id'."""
+    rows, offset = [], 0
+    sep = '&' if '?' in path else '?'
+    while True:
+        chunk = get(f'{path}{sep}limit={page}&offset={offset}')
+        rows.extend(chunk)
+        if len(chunk) < page:
+            return rows
+        offset += page
 
 
 def ins(table, row):

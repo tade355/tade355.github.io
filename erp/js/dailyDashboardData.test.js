@@ -159,3 +159,10 @@ test('a reported closing that differs from the calculated one is flagged and dri
   assert.ok(d.flags.some((f) => /reported 10 L vs calculated 20 L/.test(f.text)));
   assert.equal(d.diesel.fuelingRequest.find((r) => r.equipment === 'EMG-1').closing, 10);
 });
+
+test('diesel against work is reported per dozer for the period', () => {
+  const d = buildDailyDashboard(ctx({}));
+  assert.ok(Array.isArray(d.diesel.efficiency));
+  assert.ok(Math.abs(d.diesel.normLitresPerHa - 153.846) < 0.01);
+  d.diesel.efficiency.forEach((r) => assert.ok('litresPerHa' in r && 'high' in r));
+});

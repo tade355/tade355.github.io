@@ -24,7 +24,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.worksheet.properties import PageSetupProperties
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from erp_rest import get  # noqa: E402
+from erp_rest import get, get_all
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--date', required=True)
@@ -41,10 +41,10 @@ day = datetime.date.fromisoformat
 dates = [(day(a.start) + datetime.timedelta(days=i)).isoformat() for i in range((day(a.date) - day(a.start)).days + 1)]
 nxt = (day(a.date) + datetime.timedelta(days=1)).strftime('%d %b').lstrip('0')
 
-ops = get(f'/rest/v1/operations?date=gte.{a.start}&date=lte.{a.date}&select=date,equipment,fuel_used,closing_diesel')
-dist = get(f'/rest/v1/diesel_site_distributions?date=gte.{a.start}&date=lte.{a.date}&select=date,equipment,litres,notes')
-coll = get(f'/rest/v1/fuel_credit_collections?date=gte.{a.start}&date=lte.{a.date}&fuel_type=eq.Diesel&select=date,litres,notes')
-counts = {c['date']: c['counted_litres'] for c in get(f'/rest/v1/diesel_stock_counts?date=gte.{a.start}&select=date,counted_litres')}
+ops = get_all(f'/rest/v1/operations?date=gte.{a.start}&date=lte.{a.date}&select=date,equipment,fuel_used,closing_diesel&order=id')
+dist = get_all(f'/rest/v1/diesel_site_distributions?date=gte.{a.start}&date=lte.{a.date}&select=date,equipment,litres,notes&order=id')
+coll = get_all(f'/rest/v1/fuel_credit_collections?date=gte.{a.start}&date=lte.{a.date}&fuel_type=eq.Diesel&select=date,litres,notes&order=id')
+counts = {c['date']: c['counted_litres'] for c in get_all(f'/rest/v1/diesel_stock_counts?date=gte.{a.start}&select=date,counted_litres&order=id')}
 tank = [d for d in dist if not re.search('not tank fuel|maintenance diesel', d['notes'] or '', re.I)]
 
 # ---- per-dozer chain (opening = previous closing + supplied; used = fuel_used on the reports)

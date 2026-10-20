@@ -180,7 +180,7 @@ export const OWNERSHIP_CATEGORIES = ['Company', 'Partnership', 'Rented'];
 
 // Default overtime rate for day-rate dozer operators (₦/hr after the first
 // 8 hours in a day) — editable per payroll line for exceptions.
-export const DOZER_OVERTIME_RATE_DEFAULT = 10000;
+export { DOZER_OVERTIME_RATE_DEFAULT } from './rules.js';
 
 export const INCOME_CATEGORIES = [
   'Invoicing / Sales',

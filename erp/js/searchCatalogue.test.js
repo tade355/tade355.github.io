@@ -71,3 +71,10 @@ test('Data Import is found only where the route guard allows it', () => {
   const open = [...routes, { path: 'dataImport', label: 'Data Import', tiers: ['Admin'], guard: () => true }];
   assert.equal(searchCatalogue('upload excel', { routes: open, canAccess: () => true })[0].route, 'dataImport');
 });
+
+test('Person History is found as an HR tab and as a feature, for Admin only', () => {
+  const r = searchCatalogue('person history', admin);
+  assert.ok(r.some((x) => x.kind === 'Tab' && x.route === 'hr' && x.tabs[0] === 'Person History'));
+  assert.ok(searchCatalogue('mechanic jobs', admin).some((x) => x.kind === 'Feature' && x.route === 'hr' && x.tabs[0] === 'Person History'));
+  assert.equal(searchCatalogue('person history', supervisor).length, 0);
+});

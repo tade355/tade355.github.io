@@ -1,7 +1,9 @@
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { el, formatDate, ico } from '../utils.js';
-import { sectionHeader, statCard } from '../ui.js';
+import { sectionHeader, statCard, renderTable } from '../ui.js';
+import { supabase } from '../supabaseClient.js';
+import { auditSummary } from '../auditLog.js';
 
 function daysSince(iso) {
   if (!iso) return null;
@@ -88,6 +90,53 @@ export function renderBackup(container) {
     reader.onerror = () => window.alert('Could not read that file.');
     reader.readAsText(file);
   });
+
+  // Change history: who changed what, kept by the database (migration 0041).
+  const historyCard = el('div', { class: 'backup-card' }, [
+    el('h3', {}, 'Change History'),
+    el('p', {}, 'Every create, edit and delete on money, diesel, reports, requests and staff records, with who made it. Use it to find out how a figure changed.'),
+  ]);
+  const historyFilters = el('div', { class: 'filter-bar' });
+  const tableInput = el('input', { type: 'text', placeholder: 'Table, e.g. fund_requests' });
+  const recordInput = el('input', { type: 'text', placeholder: 'Record id, e.g. FR-114' });
+  const loadBtn = el('button', { class: 'btn btn-primary', type: 'button' }, 'Show history');
+  historyFilters.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Table'), tableInput]));
+  historyFilters.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Record'), recordInput]));
+  historyFilters.appendChild(el('div', { class: 'filter-actions-inline' }, [loadBtn]));
+  const historySlot = el('div');
+  historyCard.appendChild(historyFilters);
+  historyCard.appendChild(historySlot);
+  container.appendChild(historyCard);
+
+  async function loadHistory() {
+    historySlot.innerHTML = '';
+    historySlot.appendChild(el('p', {}, 'Loading…'));
+    let q = supabase.from('audit_log').select('*').order('at', { ascending: false }).limit(300);
+    if (tableInput.value.trim()) q = q.eq('table_name', tableInput.value.trim());
+    if (recordInput.value.trim()) q = q.eq('record_id', recordInput.value.trim());
+    const { data, error } = await q;
+    historySlot.innerHTML = '';
+    if (error) {
+      historySlot.appendChild(el('p', {}, /relation|does not exist|schema cache/i.test(error.message) ? 'The change history is not switched on yet: run migration 0041_data_safety.sql in the Supabase SQL editor.' : `Could not load the history (${error.message}).`));
+      return;
+    }
+    const names = new Map(store.get('employees').map((e) => [e.id, e.name]));
+    const tableSlot = el('div');
+    historySlot.appendChild(tableSlot);
+    renderTable(tableSlot, {
+      columns: [
+        { key: 'at', label: 'When', render: (r) => new Date(r.at).toLocaleString('en-GB') },
+        { key: 'who', label: 'Who', render: (r) => names.get(r.employee_id) || r.employee_id || 'System / import' },
+        { key: 'table_name', label: 'Table' },
+        { key: 'record_id', label: 'Record' },
+        { key: 'what', label: 'What changed', wrap: true, render: (r) => auditSummary(r) },
+      ],
+      rows: data,
+      emptyText: 'No changes recorded for that filter.',
+      exportFilename: `emagrims-change-history-${todayISOString()}`,
+    });
+  }
+  loadBtn.addEventListener('click', loadHistory);
 
   refreshSummary();
 }

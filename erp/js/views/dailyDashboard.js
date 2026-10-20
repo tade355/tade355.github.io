@@ -2,21 +2,18 @@
 // 1 Operations, 2 Diesel, 3 Fleet, 4 Requests & Expenses, 5 Profitability,
 // 6 Staff Performance, with the Actions/Flags list on top. Everything is
 // derived live from ERP records (see dailyDashboardData.js).
-import { store } from '../store.js';
 import { el, formatCurrency, formatDate } from '../utils.js';
 import { statCard, statusPill } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { todayISOString, addDays } from '../dateUtils.js';
-import { hourlyRateAsOf, dieselRateAsOf, projectRateAsOf } from '../rateHistory.js';
-import { operatorAllowanceForRows } from '../ownedOperatorAllowance.js';
-import { computeProjectStats, projectNames } from './profitability.js';
-import { stationBalances } from './fuelCredit.js';
+import { projectNames } from './profitability.js';
 import { DASHBOARD_BASIS_FROM, SUNDAY_BONUS_BASIS_TEXT } from '../dashboardBasis.js';
 import { buildDashboardHtml, dashboardFileName } from '../dashboardHtml.js';
 import { ICONS } from '../icons.js';
 import { askCard, reportBuilderCard } from './ddTools.js';
+import { dailyDashboardFor } from '../reportContext.js';
 import {
-  buildDailyDashboard, minutesToClock, EXPECTED_HA_PER_8HRS, IDEAL_START, DIESEL_FILL_LITRES,
+  minutesToClock, EXPECTED_HA_PER_8HRS, IDEAL_START, DIESEL_FILL_LITRES,
 } from '../dailyDashboardData.js';
 
 const money = (n) => `${n < 0 ? '−' : ''}₦${Math.round(Math.abs(n)).toLocaleString()}`;
@@ -83,7 +80,7 @@ function section(id, number, title, children) {
 }
 
 function flagsBanner(flags) {
-  const items = flags.slice(0, 7).map((f) => el('li', { class: `dd-flag dd-flag-${f.tone}` }, [
+  const items = flags.slice(0, 12).map((f) => el('li', { class: `dd-flag dd-flag-${f.tone}` }, [
     f.text, f.action ? el('span', {}, [' ', el('strong', {}, 'Action:'), ` ${f.action}`]) : null,
   ]));
   return el('div', { class: 'dd-banner' }, [
@@ -171,16 +168,7 @@ export function renderDailyDashboard(container) {
     const project = projectSelect.value;
     const date = dateInput.value || realToday;
     const since = sinceInput.value && sinceInput.value <= date ? sinceInput.value : date;
-    const balance = stationBalances().reduce((s, st) => s + Math.max(0, st.balance), 0);
-    const d = buildDailyDashboard({
-      project, date, since,
-      operations: store.get('operations'), inventory: store.get('inventory'), employees: store.get('employees'),
-      distributions: store.get('dieselSiteDistributions'), fuelCreditCollections: store.get('fuelCreditCollections'),
-      fundRequests: store.get('fundRequests'), maintenanceLogs: store.get('maintenanceLogs'), dieselStockCounts: store.get('dieselStockCounts'),
-      hourlyRateAsOf, dieselRateAsOf, projectRateAsOf, operatorAllowanceForRows,
-      statsFor: (a, b) => computeProjectStats(project, a, b),
-      stationBalance: balance,
-    });
+    const d = dailyDashboardFor(project, date, since);
 
     current = d;
     body.appendChild(el('p', { class: 'section-subtitle' }, `${project} — ${formatDate(date)}. Expected output ${EXPECTED_HA_PER_8HRS} ha per 8 hrs; ideal start ${IDEAL_START} AM; cumulative figures since ${formatDate(since)}.`));
@@ -260,6 +248,17 @@ function dieselSection(d) {
     el('div', { class: 'dd-grid-2' }, [chartBox, fuelBox]),
     el('p', { class: 'section-subtitle' }, `Opening = previous closing + diesel distributed; used = standard litres from the daily reports; chain starts ${formatDate(d.since)}.`),
     table,
+    el('h4', { class: 'subsection-title' }, 'Diesel Against Work'),
+    el('p', { class: 'section-subtitle' }, `${formatDate(d.since)} to ${formatDate(d.date)}. Norm ${num(x.normLitresPerHa, 0)} L per hectare (8 hrs x 25 L for 1.3 ha); flagged above 125% of it. Needs at least 1 ha in the period.`),
+    sortableTable([
+      { label: 'Dozer', render: (r) => el('strong', {}, r.equipment), text: (r) => r.equipment },
+      { label: 'Hours', num: true, render: (r) => num(r.hours), sortValue: (r) => r.hours },
+      { label: 'Hectares', num: true, render: (r) => num(r.ha, 2), sortValue: (r) => r.ha },
+      { label: 'Diesel used (L)', num: true, render: (r) => lit(r.litres), sortValue: (r) => r.litres },
+      { label: 'L per hour', num: true, render: (r) => num(r.litresPerHour), sortValue: (r) => r.litresPerHour ?? -1 },
+      { label: 'L per hectare', num: true, render: (r) => num(r.litresPerHa, 0), sortValue: (r) => r.litresPerHa ?? -1 },
+      { label: '% of norm', num: true, render: (r) => pctText(r.vsNorm), sortValue: (r) => r.vsNorm ?? -1 },
+    ], x.efficiency, { rowClass: (r) => (r.high ? 'row-warning' : undefined) }),
     el('h4', { class: 'subsection-title' }, 'Diesel Balance at Stations'),
     el('p', { class: 'section-subtitle' }, `Owed to stations (fuel credit) — ${money(x.stationBalance)}`),
   ]);

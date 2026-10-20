@@ -9,6 +9,7 @@ import { notifyNewMemo } from '../notifications.js';
 import { renderPayroll } from './payroll.js';
 import { renderDozerPayroll } from './dozerPayroll.js';
 import { renderTrainingPrograms } from './trainingPrograms.js';
+import { renderPersonHistory } from './personHistory.js';
 
 const MEMO_TYPES = ['Memo', 'Notice', 'Warning Letter', 'Query Letter', 'Commendation Letter', 'Confirmation Letter', 'Other'];
 
@@ -136,15 +137,17 @@ export function renderHR(container) {
   const payrollTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('payroll') }, 'Payroll');
   const operatorAllowanceTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('operatorAllowance') }, 'Operator Allowance');
   const trainingProgramsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('trainingPrograms') }, 'Training Programs');
+  const personHistoryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('personHistory') }, 'Person History');
   tabBar.appendChild(employeesTabBtn);
   tabBar.appendChild(memosTabBtn);
   tabBar.appendChild(assetsTabBtn);
   tabBar.appendChild(payrollTabBtn);
   tabBar.appendChild(operatorAllowanceTabBtn);
   tabBar.appendChild(trainingProgramsTabBtn);
+  tabBar.appendChild(personHistoryTabBtn);
 
   const actionSlot = el('div');
-  container.appendChild(sectionHeader('HR & Employees', 'Staff records, roles, memos/letters, payroll, operator allowance, and training programs', actionSlot));
+  container.appendChild(sectionHeader('HR & Employees', 'Staff records, roles, memos/letters, payroll, operator allowance, training programs, and person history', actionSlot));
   container.appendChild(tabBar);
 
   const body = el('div');
@@ -158,11 +161,13 @@ export function renderHR(container) {
     payrollTabBtn.classList.toggle('active', tab === 'payroll');
     operatorAllowanceTabBtn.classList.toggle('active', tab === 'operatorAllowance');
     trainingProgramsTabBtn.classList.toggle('active', tab === 'trainingPrograms');
+    personHistoryTabBtn.classList.toggle('active', tab === 'personHistory');
     if (tab === 'employees') renderEmployeesTab();
     else if (tab === 'memos') renderMemosTab();
     else if (tab === 'assets') renderAssetsTab();
     else if (tab === 'payroll') renderPayrollTab();
     else if (tab === 'operatorAllowance') renderOperatorAllowanceTab();
+    else if (tab === 'personHistory') renderPersonHistoryTab();
     else renderTrainingProgramsTab();
   }
 
@@ -170,6 +175,12 @@ export function renderHR(container) {
     actionSlot.innerHTML = '';
     body.innerHTML = '';
     renderPayroll(body);
+  }
+
+  function renderPersonHistoryTab() {
+    actionSlot.innerHTML = '';
+    body.innerHTML = '';
+    renderPersonHistory(body);
   }
 
   function renderTrainingProgramsTab() {

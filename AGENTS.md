@@ -9,7 +9,7 @@ This repository is a static website (GitHub Pages) plus the Emagrims Ltd ERP in 
 | Live ERP | https://tade355.github.io/erp/ |
 | Repo | `tade355/tade355.github.io`, GitHub Pages is served from `master` (pushing to `master` deploys in about a minute) |
 | Working branch | `claude/emagrims-erp-build-v7cfod`; it is merged or pushed to `master` after every change |
-| Tests | `npm test` (`node --test erp/js/*.test.js`, about 140 tests, no dependencies) |
+| Tests | `npm test` (`node --test erp/js/*.test.js`, about 220 tests, no dependencies); `node tools/smoke_test.cjs` opens every page offline at desktop and phone width |
 | Database | Supabase project URL and anon key are in `erp/js/supabaseClient.js`; row level security allows signed-in users only |
 | ERP login used for scripts | user `olumide` (email `olumide@emagrims-erp.app`), password from the `ERP_PW` environment variable |
 | Manual | `erp/MANUAL.md` |
@@ -20,14 +20,20 @@ Always verify after a push: wait for the deploy (`curl -s https://tade355.github
 
 - Never write the ERP password, tokens or bank details into any file, commit, test or log. Read the password only from `ERP_PW`.
 - The repo is public. Do not commit staff pay details, account numbers or private business notes. Private context lives outside the repo.
-- Olumide-only features (report download, Data Import) are hidden in the UI (`erp/js/access.js`) but are not enforced by the database.
+- Olumide-only features (report download, Data Import) are hidden in the UI (`erp/js/access.js`, owner flag `employees.is_owner` once migration 0041 is run) but are not enforced by the database. What the database does enforce after 0041: only Admin can set a fund request Approved or Rejected, only Admin or Accounts can set it Paid, and every change on money, diesel, reports and staff tables is written to `audit_log` (Admin read only).
+- Backups: `python tools/backup_erp.py <folder outside the repo> --keep 12` writes a full JSON backup. The repo is public, so never schedule a backup that publishes data (for example a CI artifact).
 
 ## Code layout (`erp/js`)
 
 - `main.js` boots the app, `router.js` lists every page in `ROUTES` (path, label, icon, allowed `tiers`, optional `guard`). `views/*.js` are the pages; tabs are built inside each view.
 - `store.js` holds every collection in `CONFIG` (collection name, Supabase table, id prefix, child table). It maps camelCase fields to snake_case columns automatically, so a new column needs a migration in `erp/supabase/` and nothing else.
 - `ui.js` (`renderTable`, `statCard`, buttons), `utils.js` (`el()`, formatters, `ico()`), `icons.js` (line icons, no emojis), `css/style.css` (design system: filter bars, `.stat-*` cards, `.dd-*` dashboard classes, `.table-wrap`).
-- Logic that needs tests is kept pure (no store or DOM imports; a `ctx` object is passed in): `dailyDashboardData.js`, `dashboardBasis.js`, `opEconomics.js`, `agoPlanData.js`, `importPlan.js`, `dieselSupply.js`, `askErp.js` and `askErpFacts.js`, `rexInvoice.js`, `workOrderParse.js`, `searchCatalogue.js`. `reportContext.js` builds the `ctx` from the live store.
+- `rules.js` holds every number the business counts by (basis date, 25 L per hour, 250 L target, expected output, overtime, Sunday rates and bonus tiers, alert limits). Change a rule there, not in the module that uses it.
+- Both dashboards read the same builder: `reportContext.js: dailyDashboardFor(project, date)` feeds the Daily Operations Dashboard, the downloadable HTML and the main Dashboard's alert centre; `attention.js` is the shared list of what needs attention (requests waiting, duplicates, vouchers, old stock count, missing reports, backup).
+- `store.js` loads every table in pages of 1,000 (`storeHelpers.js`), saves a record with its line items through the database function `save_record_with_items` (migration 0041; falls back to the old two-step save until it is run) and refuses an update when the row changed after it was loaded (`updated_at`).
+- `whatsappParse.js` + `views/pasteEntry.js` (Paste Entry page): paste a WhatsApp message, preview rows, confirm to save. `personHistory.js` is the HR > Person History tab. `auditLog.js` reads the audit trail shown in Backup & Data.
+- Libraries are served from `erp/vendor/` (no CDN). Rebuild steps are in `erp/vendor/README.md`.
+- Logic that needs tests is kept pure (no store or DOM imports; a `ctx` object is passed in): `rules.js`, `attention.js`, `requestDuplicates.js`, `whatsappParse.js`, `personHistory.js`, `auditLog.js`, `storeHelpers.js`, `dailyDashboardData.js`, `dashboardBasis.js`, `opEconomics.js`, `agoPlanData.js`, `importPlan.js`, `dieselSupply.js`, `askErp.js` and `askErpFacts.js`, `rexInvoice.js`, `workOrderParse.js`, `searchCatalogue.js`. `reportContext.js` builds the `ctx` from the live store.
 - `dashboardHtml.js` produces the downloadable dashboard HTML; `views/dailyDashboard.js` is the on-screen version. They must show the same numbers.
 - Adding a page or tab: add the route or tab, then add it to `searchCatalogue.js` so the global search finds it. Keep the filter-bar and card styles uniform.
 
@@ -72,6 +78,10 @@ Dashboard basis starts **10 Oct 2026** (`DASHBOARD_BASIS_FROM`). Dates before it
 - PMS (petrol) is collected at the station, priced as recorded, and costed under "PMS - Tacoma" unless the note says maintenance or unexplained.
 - Diesel logistics: 50 per litre supplied to company-owned and rented dozers.
 - Rex work-order invoices, letterhead and CEO signature live in `rexInvoice*.js`, `views/workOrderInvoices.js` and `erp/assets`.
+
+## Migrations
+
+SQL files in `erp/supabase/` (index in `INDEX.md`) are run by hand in the Supabase SQL editor. Shipping a migration file is not running it: after adding one, tell the owner to run it, and write the app code so it still works until then. `0041_data_safety.sql` (atomic save, audit log, approval guard, owner flag) is waiting to be run unless the owner says otherwise.
 
 ## Daily runbook
 

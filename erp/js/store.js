@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient.js';
+import { fetchAllPages, isStale } from './storeHelpers.js';
 
 const LAST_BACKUP_KEY = 'emagrims_erp_last_backup';
 
@@ -107,31 +108,65 @@ async function nextId(prefix) {
 async function fetchCollection(key) {
   const cfg = CONFIG[key];
   const selectCols = cfg.child ? `*, ${cfg.child.table}(*)` : '*';
-  const { data, error } = await supabase.from(cfg.table).select(selectCols);
-  if (error) throw new Error(`Could not load ${key} (${error.message}).`);
-  return (data || []).map((row) => mapRowFromDb(row, cfg));
+  const data = await fetchAllPages(async (from, to) => {
+    const { data: page, error } = await supabase.from(cfg.table).select(selectCols).order('id').range(from, to);
+    if (error) throw new Error(`Could not load ${key} (${error.message}).`);
+    return page || [];
+  });
+  return data.map((row) => mapRowFromDb(row, cfg));
 }
+
+// True when the 0041 migration (save_record_with_items) has not been run yet;
+// saves then use the older two-step path instead of failing.
+let atomicSaveMissing = false;
+const isMissingFunction = (error) => error && (error.code === 'PGRST202' || error.code === '42883' || /could not find the function|does not exist/i.test(error.message || ''));
 
 async function upsertRow(key, id, record) {
   const cfg = CONFIG[key];
   const childItems = cfg.child ? record[cfg.child.key] : undefined;
   const rest = { ...record };
   if (cfg.child) delete rest[cfg.child.key];
+  delete rest.updatedAt; // set by the database trigger, never written back
 
   const payload = rowToDb({ ...rest, id });
+  const items = (childItems || []).filter(Boolean).map((it, idx) => ({ ...rowToDb(it), sort_order: idx }));
+
+  if (!atomicSaveMissing) {
+    const { error } = await supabase.rpc('save_record_with_items', {
+      p_table: cfg.table,
+      p_row: payload,
+      p_child_table: cfg.child ? cfg.child.table : null,
+      p_fk: cfg.child ? cfg.child.fk : null,
+      p_items: items.map(({ sort_order, ...it }) => it),
+    });
+    if (!error) return;
+    if (!isMissingFunction(error)) throw new Error(`Could not save this record (${error.message}).`);
+    atomicSaveMissing = true;
+  }
+
   const { error } = await supabase.from(cfg.table).upsert(payload);
   if (error) throw new Error(`Could not save this record (${error.message}).`);
 
   if (cfg.child) {
     const { error: delErr } = await supabase.from(cfg.child.table).delete().eq(cfg.child.fk, id);
     if (delErr) throw new Error(`Could not save the line items (${delErr.message}).`);
-    const items = (childItems || []).filter(Boolean);
     if (items.length) {
-      const rows = items.map((it, idx) => ({ ...rowToDb(it), [cfg.child.fk]: id, sort_order: idx }));
+      const rows = items.map((it) => ({ ...it, [cfg.child.fk]: id }));
       const { error: insErr } = await supabase.from(cfg.child.table).insert(rows);
       if (insErr) throw new Error(`Could not save the line items (${insErr.message}).`);
     }
   }
+}
+
+// Two people editing the same record: the save is refused when the row changed
+// in the database after this browser loaded it (compared by updated_at), instead
+// of the last save silently winning. Tables without an updated_at column skip it.
+const noStamp = new Set();
+async function serverStamp(key, id) {
+  if (noStamp.has(key)) return null;
+  const { data, error } = await supabase.from(CONFIG[key].table).select('updated_at').eq('id', id).maybeSingle();
+  if (error) { noStamp.add(key); return null; }
+  return data ? data.updated_at : null;
 }
 
 let state = COLLECTIONS.reduce((acc, key) => ({ ...acc, [key]: [] }), {});
@@ -196,8 +231,13 @@ export const store = {
   },
   async update(collection, id, patch) {
     const existing = store.find(collection, id) || {};
+    if (isStale(existing.updatedAt, await serverStamp(collection, id))) {
+      throw new Error('This record was changed by someone else after you opened it. Reload the page (or wait a few seconds for it to refresh) and make your change again.');
+    }
     const merged = { ...existing, ...patch, id };
     await upsertRow(collection, id, merged);
+    const updatedAt = await serverStamp(collection, id);
+    if (updatedAt) merged.updatedAt = updatedAt;
     state[collection] = (state[collection] || []).map((r) => (r.id === id ? merged : r));
     return store.find(collection, id);
   },
@@ -225,14 +265,21 @@ export const store = {
     if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.employees)) {
       throw new Error('This file does not look like a valid Emagrims ERP backup.');
     }
+    // Rows are written first and only rows that are not in the backup are deleted
+    // afterwards, so a failure part-way leaves the data in place (the old way
+    // emptied each table before refilling it).
     for (const key of COLLECTIONS) {
       const rows = Array.isArray(parsed[key]) ? parsed[key] : [];
       const cfg = CONFIG[key];
-      // eslint-disable-next-line no-await-in-loop
-      await supabase.from(cfg.table).delete().neq('id', '__none__');
       for (const row of rows) {
         // eslint-disable-next-line no-await-in-loop
         await upsertRow(key, row.id, row);
+      }
+      const keep = new Set(rows.map((r) => r.id));
+      const extra = (state[key] || []).map((r) => r.id).filter((rid) => !keep.has(rid));
+      for (let i = 0; i < extra.length; i += 100) {
+        // eslint-disable-next-line no-await-in-loop
+        await supabase.from(cfg.table).delete().in('id', extra.slice(i, i + 100));
       }
     }
     await store.refreshAll();

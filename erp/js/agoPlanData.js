@@ -6,9 +6,10 @@
 // Pure (no store / DOM imports); `ctx` comes from reportContext.js.
 import { buildDailyDashboard } from './dailyDashboardData.js';
 import { DASHBOARD_BASIS_FROM } from './dashboardBasis.js';
+import { TARGET_HOURS, LITRES_PER_HOUR, LITRES_PER_HOUR_AFTER_HOURS, DIESEL_RESERVE_LITRES, KEG_LITRES } from './rules.js';
 import { addDays } from './dateUtils.js';
 
-export const DEFAULTS = { targetHours: 8, litresPerHour: 25, afterHoursRate: 20, reserve: 50, kegLitres: 30 };
+export const DEFAULTS = { targetHours: TARGET_HOURS, litresPerHour: LITRES_PER_HOUR, afterHoursRate: LITRES_PER_HOUR_AFTER_HOURS, reserve: DIESEL_RESERVE_LITRES, kegLitres: KEG_LITRES };
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const dmy = (iso) => { const [y, m, d] = iso.split('-').map(Number); return `${d} ${MONTHS[m - 1]} ${y}`; };
 const fmt = (n, dp = 0) => Number(n).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });

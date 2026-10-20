@@ -330,6 +330,7 @@ export function buildDashboardHtml(d, { expectedHaPer8 = 1.3, idealStart = '7:00
     const text = r.status === 'Closing restated' ? `Closing restated (reported ${lit(r.reportedClosing)}L)` : r.status;
     return `      <tr${r.status === 'Closing restated' ? ' class="flag"' : ''}><td><strong>${esc(r.equipment)}</strong></td><td class="num">${lit(r.opening)}</td><td class="num">${lit(r.distributed)}</td><td class="num">${lit(r.used)}</td><td class="num">${lit(r.closing)}</td><td class="num">${r.efficiency === null ? '—' : fmt(r.efficiency, 1)}</td><td>${badge(cls, text)}</td></tr>`;
   }).join('\n');
+  const efficiencyRows = (x.efficiency || []).map((r) => `      <tr${r.high ? ' class="flag"' : ''}><td><strong>${esc(r.equipment)}</strong></td><td class="num">${fmt(r.hours, 1)}</td><td class="num">${fmt(r.ha, 2)}</td><td class="num">${lit(r.litres)}</td><td class="num">${r.litresPerHour === null ? '—' : fmt(r.litresPerHour, 1)}</td><td class="num">${r.litresPerHa === null ? '—' : fmt(r.litresPerHa, 0)}</td><td class="num">${pct(r.vsNorm)}</td></tr>`).join('\n');
   const dieselTiles = [
     tile('Supplied today (AGO)', `${fmt(x.collectedAgo)} L`, { note: 'Midejab station, supplied to the farm' }),
     x.soldAgo ? tile('Sold to CEO', `${fmt(x.soldAgo)} L`, { note: 'Not site diesel; left out of the supply' }) : '',
@@ -527,6 +528,25 @@ ${frLines}
     </thead>
     <tbody>
 ${dieselRows}
+    </tbody>
+  </table></div>
+
+  <h3 class="sub-h">Diesel Against Work</h3>
+  <p class="lead" style="margin:0 0 8px">${onDay(d.since)} to ${onDay(d.date)}. Norm ${fmt(x.normLitresPerHa, 0)} L per hectare (8 hrs x 25 L for 1.3 ha); flagged above 125% of it. Needs at least 1 ha in the period.</p>
+  <div class="table-wrap"><table id="tbl-effic">
+    <thead>
+      <tr>
+        <th data-type="text">Dozer</th>
+        <th data-type="num">Hours</th>
+        <th data-type="num">Hectares</th>
+        <th data-type="num">Diesel used (L)</th>
+        <th data-type="num">L per hour</th>
+        <th data-type="num">L per hectare</th>
+        <th data-type="num">% of norm</th>
+      </tr>
+    </thead>
+    <tbody>
+${efficiencyRows}
     </tbody>
   </table></div>
 

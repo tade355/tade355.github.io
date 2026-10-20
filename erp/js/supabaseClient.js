@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.110.3';
+import { createClient } from '../vendor/supabase-js.min.js';
 
 // This is the "anon" public key — it's meant to be embedded in client-side
 // code like this. It only works within the RLS policies defined in

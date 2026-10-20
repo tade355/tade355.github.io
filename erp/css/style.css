@@ -721,7 +721,8 @@ button { font-family: inherit; }
 }
 
 /* Tabs */
-.tab-bar { display: flex; gap: 0.4rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border); }
+.tab-bar { display: flex; gap: 0.4rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: thin; }
+.tab-bar .tab-btn { flex-shrink: 0; white-space: nowrap; }
 .tab-btn {
   background: none;
   border: none;
@@ -896,7 +897,8 @@ button { font-family: inherit; }
 .global-search-label { font-weight: 600; }
 .global-search-meta { color: var(--text-muted); font-size: 0.85rem; margin-left: auto; }
 .global-search-result-overflow { color: var(--text-muted); font-style: italic; }
-.field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.85rem; }
+.field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.85rem; min-width: 0; }
+.field input, .field select, .field textarea { min-width: 0; max-width: 100%; }
 .field-label { font-weight: 600; color: var(--text-secondary); }
 .field input, .field select, .field textarea {
   padding: 0.55rem 0.65rem;
@@ -1562,3 +1564,11 @@ a.btn { text-decoration: none; }
 .wo-table select { max-width: 17rem; }
 .wo-note { font-size: 0.8rem; margin: 0.15rem 0 0; }
 .wo-note.warn { color: var(--warning); } .wo-note.bad { color: var(--critical); } .wo-note.ok { color: var(--good); }
+
+/* Paste Entry */
+.paste-box { width: 100%; min-height: 14rem; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.85rem; line-height: 1.45; }
+.paste-flags { display: grid; gap: 0.25rem; }
+.paste-flag { font-size: 0.82rem; line-height: 1.4; color: var(--text-secondary); }
+.paste-flag-check { color: var(--warning); }
+.paste-flag-block { color: var(--critical); font-weight: 600; }
+.paste-recon { list-style: none; padding: 0; margin: 0 0 0.9rem; display: grid; gap: 0.5rem; font-size: 0.88rem; }

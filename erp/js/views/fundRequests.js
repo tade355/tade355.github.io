@@ -8,6 +8,7 @@ import { createAttachmentPicker } from '../attachments.js';
 import { notifyNewFundRequest, notifyFundRequestDecision } from '../notifications.js';
 import { EXPENSE_CATEGORIES } from '../constants.js';
 import { renderApprovals } from './approvals.js';
+import { findDuplicateRequests, requestTotal } from '../requestDuplicates.js';
 
 function costHeadOptions() {
   return [{ value: '', label: '— Not categorized —' }, ...EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }))];
@@ -155,6 +156,16 @@ function openRequestForm(record, onSaved) {
 
         if (!dateField.querySelector('input').value) { window.alert('Date is required.'); return; }
         if (!items.length) { window.alert('Add at least one line item.'); return; }
+
+        if (!record) {
+          // The site manager resends requests: ask before adding one that matches an existing request.
+          const candidate = { date: dateField.querySelector('input').value, description: descriptionInput.value || items[0].description, items };
+          const dups = findDuplicateRequests(candidate, store.get('fundRequests'));
+          if (dups.length) {
+            const lines = dups.slice(0, 3).map((r) => `${r.id}: ${r.description || r.items?.[0]?.description || ''}, ${formatDate(r.date)}, ${r.status}, ${formatCurrency(requestTotal(r))}`).join('\n');
+            if (!window.confirm(`An existing request looks the same:\n\n${lines}\n\nSubmit this one anyway?`)) return;
+          }
+        }
 
         const newStatus = isAdmin ? statusField.querySelector('select').value : (record?.status || 'Pending');
         // A "decision" is Admin actually moving it to Approved/Rejected just

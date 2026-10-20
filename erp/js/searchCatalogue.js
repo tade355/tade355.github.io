@@ -13,6 +13,7 @@ export const CATALOGUE = [
   { kind: 'Page', route: 'dailyDashboard', label: 'Daily Operations Dashboard', words: 'daily dashboard html flags fueling diesel start times output daily report' },
   { kind: 'Page', route: 'askErp', label: 'Ask the ERP', words: 'ask question assistant ai chat prompt query answer' },
   { kind: 'Page', route: 'dataImport', label: 'Data Import', words: 'upload excel xlsx import load data template spreadsheet bulk' },
+  { kind: 'Page', route: 'pasteEntry', label: 'Paste Entry', words: 'paste whatsapp message report diesel distribution fund request midejab station analysis preview confirm save' },
   { kind: 'Page', route: 'noticeBoard', label: 'Documents and Notices', words: 'notice board documents memo announcements' },
   { kind: 'Page', route: 'projects', label: 'Projects', words: 'project site contract rate' },
   { kind: 'Page', route: 'operations', label: 'Daily Operations', words: 'operations report hectares hours worked log dozer output' },
@@ -70,6 +71,7 @@ export const CATALOGUE = [
   { kind: 'Tab', route: 'hr', tabs: ['Payroll'], label: 'Payroll', words: 'payroll salaries wages' },
   { kind: 'Tab', route: 'hr', tabs: ['Operator Allowance'], label: 'Operator Allowance', words: 'operator allowance 30000 per 8 hrs sunday' },
   { kind: 'Tab', route: 'hr', tabs: ['Training Programs'], label: 'Training Programs', words: 'training programs' },
+  { kind: 'Tab', route: 'hr', tabs: ['Person History'], label: 'Person History', words: 'person history operator supervisor mechanic employee record days worked hours overtime sunday hectares allowance requests' },
   { kind: 'Tab', route: 'leave', tabs: ['Leave Requests'], label: 'Leave Requests', words: 'leave request' },
   { kind: 'Tab', route: 'leave', tabs: ['Attendance'], label: 'Attendance', words: 'attendance sign in' },
 
@@ -91,7 +93,9 @@ export const CATALOGUE = [
   { kind: 'Feature', route: 'accounting', tabs: ['Expenses'], label: 'Record an expense', words: 'add expense record spend' },
   { kind: 'Feature', route: 'dataImport', label: 'Upload an Excel file to update the ERP', words: 'upload excel import daily reports payments diesel supply end of day load data from spreadsheet' },
   { kind: 'Feature', route: 'dataImport', label: 'Download the Excel upload template', words: 'template xlsx format download blank spreadsheet' },
+  { kind: 'Feature', route: 'pasteEntry', label: 'Paste a WhatsApp message to add ERP rows', words: 'paste whatsapp end of day report diesel distributed list fund request grands total analysis midejab preview confirm duplicate' },
   { kind: 'Feature', route: 'sales', tabs: ['Work Order Invoices'], label: 'Generate and print the Rex Forestry invoice from work orders', words: 'rex forestry invoice work order upload pdf print letter diesel machine service charge vat site security' },
+  { kind: 'Feature', route: 'hr', tabs: ['Person History'], label: 'See what one operator, supervisor or mechanic worked and was paid', words: 'person history staff record days worked hours per machine overtime sunday bonus hectares allowance fund requests naming maintenance mechanic jobs' },
   { kind: 'Feature', route: 'mySalary', label: 'View my payslip', words: 'payslip salary my pay' },
 ];
 

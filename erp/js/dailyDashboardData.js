@@ -7,12 +7,12 @@
 // figures can be unit-tested and reconciled against the published dashboards.
 import { onDashboardBasis, dozerCostFor, DIESEL_LOGISTICS_PER_LITRE } from './dashboardBasis.js';
 import { isSunday, addDays } from './dateUtils.js';
+import { buildAttention } from './attention.js';
+import { fuelEfficiency, NORM_LITRES_PER_HA } from './fuelEfficiency.js';
 
-export const EXPECTED_HA_PER_8HRS = 1.3;
-export const IDEAL_START = '07:00';
-export const DIESEL_FILL_LITRES = 250;
-// A start this much past the ideal time is called out as a late start.
-export const LATE_FLAG_MINUTES = 60;
+import { EXPECTED_HA_PER_8HRS, IDEAL_START, DIESEL_FILL_LITRES, LATE_FLAG_MINUTES } from './rules.js';
+
+export { EXPECTED_HA_PER_8HRS, IDEAL_START, DIESEL_FILL_LITRES, LATE_FLAG_MINUTES };
 
 const toMinutes = (hhmm) => {
   if (!hhmm) return null;
@@ -298,14 +298,18 @@ export function buildDailyDashboard(ctx) {
   if (corrections.length) flags.push({ tone: 'warning', text: `Zero output despite hours worked (correction day): ${corrections.map((o) => `${o.equipment} ${o.hoursWorked} hrs`).join(', ')}.` });
   const restated = diesel.filter((r) => r.status === 'Closing restated');
   if (restated.length) flags.push({ tone: 'warning', text: `Closing diesel differs from the reported closing: ${restated.map((r) => `${r.equipment} reported ${r.reportedClosing} L vs calculated ${Math.round(r.closing * 10) / 10} L (${r.reportedClosing - r.closing > 0 ? '+' : '−'}${Math.round(Math.abs(r.reportedClosing - r.closing) * 10) / 10} L)`).join(', ')}.`, action: 'Confirm the physical tank levels; the fueling request uses the reported closing.' });
+  // Diesel against work over the whole period (not just today). Shown as a table with the high burners highlighted; no flag is raised for diesel (see the test).
+  const efficiency = fuelEfficiency(rangeOps);
   const down = fleet.filter((f) => f.fleetStatus === 'Down' || f.fleetStatus === 'Under Maintenance');
   if (down.length) flags.push({ tone: 'warning', text: `Not available: ${down.map((f) => `${f.equipment} (${f.fleetStatus})`).join(', ')}.` });
   if (todayStats.pmsUnexplained) flags.push({ tone: 'warning', text: `${fmt(todayStats.pmsUnexplained)} of PMS is unexplained.`, action: 'Explain it or reclassify it.' });
+  // Requests waiting too long, duplicates, vouchers, old stock count, missing reports, backup: same list the main Dashboard uses.
+  flags.push(...buildAttention(ctx, { date })); // no backup flag here: that lives in the browser, and a downloaded dashboard has none
 
   return {
     project, date, since,
     operations: { rows: operations, reporting: operations.filter((o) => o.reported).length, fleetCount: operations.length, todayHa, todayHours, cumulativeHa: cumStats.areaCleared },
-    diesel: { collectedAgo, soldAgo, collectedPms, distributedToday, usedToday, usedCost: usedToday * dieselRate, dieselRate, onGround, onGroundDate: latestCount?.date || null, onGroundBase: latestCount ? latestCount.countedLitres : null, onGroundIn: rolledIn, onGroundOut: rolledOut, rows: diesel, fuelingRequest, stationBalance, distributionChart: dist.filter(aldDay).map((d) => ({ label: d.equipment, value: d.litres })) },
+    diesel: { efficiency, normLitresPerHa: NORM_LITRES_PER_HA, collectedAgo, soldAgo, collectedPms, distributedToday, usedToday, usedCost: usedToday * dieselRate, dieselRate, onGround, onGroundDate: latestCount?.date || null, onGroundBase: latestCount ? latestCount.countedLitres : null, onGroundIn: rolledIn, onGroundOut: rolledOut, rows: diesel, fuelingRequest, stationBalance, distributionChart: dist.filter(aldDay).map((d) => ({ label: d.equipment, value: d.litres })) },
     fleet, vendorAccrual, requests,
     profit: { today: todayStats, cumulative: cumStats, contribution, extraRows },
     staff, flags,

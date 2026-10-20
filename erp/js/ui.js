@@ -190,7 +190,8 @@ export function renderTable(container, { columns, rows, emptyText = 'No records 
   }))));
   table.appendChild(thead);
   table.appendChild(tbody);
-  container.appendChild(table);
+  // A wide table scrolls inside its own box instead of pushing the whole page sideways on a phone.
+  container.appendChild(el('div', { class: 'table-wrap' }, [table]));
 }
 
 export function actionButtons({ onEdit, onDelete, onPrint, onPayment }) {
