@@ -24,8 +24,19 @@ test('diesel collections after the last saved receipt count as site supply; sold
   assert.deepEqual(synthetic.map((r) => [r.id, r.litres]), [['FCC-2', 2725], ['FCC-5', 700]]);
   assert.equal(synthetic[0].unitCost, 1900);
   assert.equal(synthetic[0].station, 'Midejab Ltd');
-  assert.equal(synthetic[0].project, 'Kangidi'); // the site reporting since the cutoff
+  assert.equal(synthetic[0].project, ''); // no inferred delivery destination
   assert.equal(all.reduce((s, r) => s + r.litres, 0), 1000 + 450 + 2725 + 700);
+});
+
+test('a later ordinary receipt cannot remove earlier credit supply', () => {
+  const base = mergeDieselReceipts({ receipts, collections, operations });
+  const added = mergeDieselReceipts({ receipts: [...receipts, { id: 'DR-NEW', date: '2026-11-01', litres: 20 }], collections, operations });
+  assert.equal(added.reduce((s, r) => s + r.litres, 0), base.reduce((s, r) => s + r.litres, 0) + 20);
+});
+
+test('explicit receipt links exclude their collection without suppressing other supply', () => {
+  const all = mergeDieselReceipts({ receipts: [...receipts, { id: 'DR-3', date: '2026-10-14', litres: 2725, fuelCreditCollectionId: 'FCC-2' }], collections, operations });
+  assert.deepEqual(all.filter((r) => r.fromFuelCredit).map((r) => r.id), ['FCC-5']);
 });
 
 test('nothing is double counted: collections on or before the last receipt are ignored', () => {

@@ -3,6 +3,7 @@ import { el } from './utils.js';
 import { canAccess, getCurrentTier, defaultRouteForTier } from './session.js';
 import { ICONS } from './icons.js';
 import { canImportData } from './access.js';
+import { store } from './store.js';
 
 // Each route's view module loads on demand (dynamic import), not upfront —
 // so a problem loading one view's code (a network hiccup, something
@@ -62,6 +63,10 @@ export function initRouter(viewContainer, onRouteChange) {
 
   async function render() {
     closeModal();
+    try { store.assertComplete(); } catch (error) {
+      viewContainer.replaceChildren(el('p', { role: 'alert', class: 'backup-warning' }, error.message));
+      return;
+    }
     const path = currentPath();
     if (window.location.hash.replace('#/', '') !== path) {
       window.location.hash = `#/${path}`;
@@ -83,8 +88,9 @@ export function initRouter(viewContainer, onRouteChange) {
       console.error(`Failed to load the "${route.label}" page.`, err);
       viewContainer.innerHTML = '';
       viewContainer.appendChild(el('div', { class: 'table-empty' }, [
-        el('p', {}, `Couldn't load the "${route.label}" page. This is usually a network hiccup, not a data problem — your data is safe.`),
+        el('p', {}, `Couldn't load the "${route.label}" page. Reload the application to fetch current files. If it continues, contact the administrator.`),
         el('button', { type: 'button', class: 'btn btn-primary', onClick: () => render() }, 'Retry'),
+        el('button', { type: 'button', class: 'btn btn-ghost', onClick: () => window.location.reload() }, 'Reload Application'),
       ]));
     }
   }

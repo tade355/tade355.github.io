@@ -70,7 +70,7 @@ function operatorStatsFor(employeeId, from, to) {
     daysWorked += Math.min(hours, 8) / 8;
     overtimeHours += Math.max(0, hours - 8);
   });
-  daysWorked = Math.round(daysWorked * 100) / 100;
+  // Preserve fractional hours in pay calculations; round currency, not days.
 
   const businessEarnings = allRows.filter((o) => o.workType === 'Business').reduce((sum, o) => sum + (o.businessAmount || 0), 0);
   const equipment = [...new Set(allRows.map((o) => o.equipment))].join(', ');

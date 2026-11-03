@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient.js';
 import { fetchAllPages, isStale } from './storeHelpers.js';
+import { applyRefreshResults, validateSnapshot } from './backupSafety.js';
 
 const LAST_BACKUP_KEY = 'emagrims_erp_last_backup';
 
@@ -105,6 +106,17 @@ async function nextId(prefix) {
   return data;
 }
 
+async function unusedId(key) {
+  const cfg = CONFIG[key];
+  for (let attempt = 0; attempt < 10000; attempt += 1) {
+    const id = await nextId(cfg.prefix);
+    const { data, error } = await supabase.from(cfg.table).select('id').eq('id', id).maybeSingle();
+    if (error) throw new Error(`Could not verify the new record ID (${error.message}).`);
+    if (!data) return id;
+  }
+  throw new Error('The record counter needs repair. No existing record was overwritten.');
+}
+
 async function fetchCollection(key) {
   const cfg = CONFIG[key];
   const selectCols = cfg.child ? `*, ${cfg.child.table}(*)` : '*';
@@ -116,10 +128,10 @@ async function fetchCollection(key) {
   return data.map((row) => mapRowFromDb(row, cfg));
 }
 
-// True when the 0041 migration (save_record_with_items) has not been run yet;
-// saves then use the older two-step path instead of failing.
+// Compatibility with the currently deployed database; transactional version
+// checks and insert-only creation are supplied by the separate 0042 release.
 let atomicSaveMissing = false;
-const isMissingFunction = (error) => error && (error.code === 'PGRST202' || error.code === '42883' || /could not find the function|does not exist/i.test(error.message || ''));
+const isMissingFunction = (error) => error && (error.code === 'PGRST202' || error.code === '42883' || /could not find the function|function .*does not exist/i.test(error.message || ''));
 
 async function upsertRow(key, id, record) {
   const cfg = CONFIG[key];
@@ -165,14 +177,31 @@ const noStamp = new Set();
 async function serverStamp(key, id) {
   if (noStamp.has(key)) return null;
   const { data, error } = await supabase.from(CONFIG[key].table).select('updated_at').eq('id', id).maybeSingle();
-  if (error) { noStamp.add(key); return null; }
+  if (error) {
+    if (error.code === '42703' || /column .*updated_at.*does not exist/i.test(error.message || '')) { noStamp.add(key); return null; }
+    throw new Error(`Could not check the record version (${error.message}). Try again before saving.`);
+  }
   return data ? data.updated_at : null;
 }
 
 let state = COLLECTIONS.reduce((acc, key) => ({ ...acc, [key]: [] }), {});
+let health = {};
+
+async function readAfterSave(key, id, fallback) {
+  const cfg = CONFIG[key];
+  const columns = cfg.child ? `*, ${cfg.child.table}(*)` : '*';
+  const { data, error } = await supabase.from(cfg.table).select(columns).eq('id', id).maybeSingle();
+  if (!error && data) return mapRowFromDb(data, cfg);
+  // The write already committed. Retain its ID and avoid inviting a duplicate
+  // create retry when the follow-up read fails. Require refresh before reporting.
+  health[key] = { ok: false, checkedAt: new Date().toISOString(), error: 'Saved; refresh required to load the server result.' };
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('erp-data-health'));
+  return fallback;
+}
 
 export const store = {
   async init() {
+    await supabase.auth?.getSession();
     await store.refreshAll();
   },
 
@@ -184,6 +213,10 @@ export const store = {
         return { key, data: [], error: err };
       }
     }));
+    const refreshed = applyRefreshResults(state, results);
+    state = refreshed.state;
+    health = refreshed.health;
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('erp-data-health'));
     const failures = results.filter((r) => r.error);
     // A handful of failures usually means a table from a recent migration
     // hasn't been run in Supabase yet (see 5 Oct 2026: shipping the Daily
@@ -199,11 +232,21 @@ export const store = {
       throw failures[0].error;
     }
     failures.forEach((f) => console.error(`[store] ${f.key} failed to load, continuing without it: ${f.error.message}`));
-    state = Object.fromEntries(results.map((r) => [r.key, r.data]));
   },
 
   async refreshCollection(key) {
-    state[key] = await fetchCollection(key);
+    try {
+      state[key] = await fetchCollection(key);
+      health[key] = { ok: true, checkedAt: new Date().toISOString(), error: null };
+    } catch (error) {
+      health[key] = { ok: false, checkedAt: new Date().toISOString(), error: error.message };
+      throw error;
+    }
+  },
+  getHealth() { return { ...health }; },
+  assertComplete() {
+    const failed = COLLECTIONS.filter((key) => !health[key]?.ok);
+    if (failed.length) throw new Error(`Data is incomplete: ${failed.join(', ')}. Refresh successfully before reporting, exporting or restoring.`);
   },
 
   get(collection) {
@@ -224,9 +267,10 @@ export const store = {
   // two unrelated people's changes today.
   async add(collection, record) {
     const cfg = CONFIG[collection];
-    const id = record.id || (await nextId(cfg.prefix));
-    await upsertRow(collection, id, record);
-    state[collection] = [...(state[collection] || []), { ...record, id }];
+    const id = record.id || (await unusedId(collection));
+    await upsertRow(collection, id, record, { create: true });
+    const saved = await readAfterSave(collection, id, { ...record, id });
+    state[collection] = [...(state[collection] || []).filter((r) => r.id !== id), saved];
     return store.find(collection, id);
   },
   async update(collection, id, patch) {
@@ -235,10 +279,9 @@ export const store = {
       throw new Error('This record was changed by someone else after you opened it. Reload the page (or wait a few seconds for it to refresh) and make your change again.');
     }
     const merged = { ...existing, ...patch, id };
-    await upsertRow(collection, id, merged);
-    const updatedAt = await serverStamp(collection, id);
-    if (updatedAt) merged.updatedAt = updatedAt;
-    state[collection] = (state[collection] || []).map((r) => (r.id === id ? merged : r));
+    await upsertRow(collection, id, merged, { expectedUpdatedAt: existing.updatedAt || null });
+    const saved = await readAfterSave(collection, id, merged);
+    state[collection] = (state[collection] || []).map((r) => (r.id === id ? saved : r));
     return store.find(collection, id);
   },
   async remove(collection, id) {
@@ -252,8 +295,12 @@ export const store = {
     return state;
   },
   exportSnapshot() {
+    store.assertComplete();
     localStorage.setItem(LAST_BACKUP_KEY, new Date().toISOString());
-    return JSON.stringify(state, null, 2);
+    return JSON.stringify({ ...state, _backup: { version: 1, exportedAt: new Date().toISOString(),
+      scope: 'Application data only; excludes Auth, database schema and external Storage files',
+      counts: Object.fromEntries(COLLECTIONS.map((key) => [key, state[key].length])),
+    } }, null, 2);
   },
   async importSnapshot(json) {
     let parsed;
@@ -262,27 +309,10 @@ export const store = {
     } catch (e) {
       throw new Error('That file is not valid JSON.');
     }
-    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.employees)) {
-      throw new Error('This file does not look like a valid Emagrims ERP backup.');
-    }
-    // Rows are written first and only rows that are not in the backup are deleted
-    // afterwards, so a failure part-way leaves the data in place (the old way
-    // emptied each table before refilling it).
-    for (const key of COLLECTIONS) {
-      const rows = Array.isArray(parsed[key]) ? parsed[key] : [];
-      const cfg = CONFIG[key];
-      for (const row of rows) {
-        // eslint-disable-next-line no-await-in-loop
-        await upsertRow(key, row.id, row);
-      }
-      const keep = new Set(rows.map((r) => r.id));
-      const extra = (state[key] || []).map((r) => r.id).filter((rid) => !keep.has(rid));
-      for (let i = 0; i < extra.length; i += 100) {
-        // eslint-disable-next-line no-await-in-loop
-        await supabase.from(cfg.table).delete().in('id', extra.slice(i, i + 100));
-      }
-    }
-    await store.refreshAll();
+    validateSnapshot(parsed, COLLECTIONS);
+    // Replacement spans foreign keys and many tables. Never attempt it through
+    // independent REST calls: a failed restore must not partly replace a company.
+    throw new Error('Backup validated. Browser replacement is disabled; restore into a separate database and reconcile it before switching production.');
   },
   getLastBackupAt() {
     return localStorage.getItem(LAST_BACKUP_KEY);
