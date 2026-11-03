@@ -125,15 +125,20 @@ async function fetchCollection(key) {
     if (error) throw new Error(`Could not load ${key} (${error.message}).`);
     return page || [];
   });
+  if (key === 'employees') {
+    const { data: directory, error } = await supabase.from('employee_directory').select('*');
+    if (error && !['42P01', 'PGRST205'].includes(error.code)) throw new Error(`Could not load employee directory (${error.message}).`);
+    const merged = new Map((directory || []).map((row) => [row.id, row]));
+    data.forEach((row) => merged.set(row.id, row));
+    return [...merged.values()].map((row) => mapRowFromDb(row, cfg));
+  }
   return data.map((row) => mapRowFromDb(row, cfg));
 }
 
-// Compatibility with the currently deployed database; transactional version
-// checks and insert-only creation are supplied by the separate 0042 release.
-let atomicSaveMissing = false;
+// Missing safety RPCs fail closed; never replace children in separate calls.
 const isMissingFunction = (error) => error && (error.code === 'PGRST202' || error.code === '42883' || /could not find the function|function .*does not exist/i.test(error.message || ''));
 
-async function upsertRow(key, id, record) {
+async function upsertRow(key, id, record, { create = false, expectedUpdatedAt = null } = {}) {
   const cfg = CONFIG[key];
   const childItems = cfg.child ? record[cfg.child.key] : undefined;
   const rest = { ...record };
@@ -143,31 +148,16 @@ async function upsertRow(key, id, record) {
   const payload = rowToDb({ ...rest, id });
   const items = (childItems || []).filter(Boolean).map((it, idx) => ({ ...rowToDb(it), sort_order: idx }));
 
-  if (!atomicSaveMissing) {
-    const { error } = await supabase.rpc('save_record_with_items', {
-      p_table: cfg.table,
-      p_row: payload,
-      p_child_table: cfg.child ? cfg.child.table : null,
-      p_fk: cfg.child ? cfg.child.fk : null,
-      p_items: items.map(({ sort_order, ...it }) => it),
-    });
-    if (!error) return;
-    if (!isMissingFunction(error)) throw new Error(`Could not save this record (${error.message}).`);
-    atomicSaveMissing = true;
-  }
+  // The v2 command checks versions and inserts new records without upserting.
+  const { error: v2Error } = await supabase.rpc('save_record_checked', {
+    p_table: cfg.table, p_row: payload, p_child_table: cfg.child ? cfg.child.table : null,
+    p_fk: cfg.child ? cfg.child.fk : null, p_items: items.map(({ sort_order, ...it }) => it),
+    p_create: create, p_expected_updated_at: expectedUpdatedAt,
+  });
+  if (!v2Error) return;
+  if (!isMissingFunction(v2Error)) throw new Error(`Could not save this record (${v2Error.message}).`);
 
-  const { error } = await supabase.from(cfg.table).upsert(payload);
-  if (error) throw new Error(`Could not save this record (${error.message}).`);
-
-  if (cfg.child) {
-    const { error: delErr } = await supabase.from(cfg.child.table).delete().eq(cfg.child.fk, id);
-    if (delErr) throw new Error(`Could not save the line items (${delErr.message}).`);
-    if (items.length) {
-      const rows = items.map((it) => ({ ...it, [cfg.child.fk]: id }));
-      const { error: insErr } = await supabase.from(cfg.child.table).insert(rows);
-      if (insErr) throw new Error(`Could not save the line items (${insErr.message}).`);
-    }
-  }
+  throw new Error('Database safety migration 0042 is required before saving. No data was changed.');
 }
 
 // Two people editing the same record: the save is refused when the row changed

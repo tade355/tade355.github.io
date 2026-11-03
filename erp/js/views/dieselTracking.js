@@ -6,6 +6,7 @@ import { FUEL_STATIONS } from '../constants.js';
 import { printDieselReplenishmentRequest, printDieselStationReport } from '../print.js';
 import { fleetItems } from './fleet.js';
 import { allDieselReceipts } from '../dieselSupplyStore.js';
+import { getCurrentTier } from '../session.js';
 
 function projectOptions() {
   return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
@@ -69,7 +70,7 @@ function receiptFields() {
     { name: 'litres', label: 'Litres Received', type: 'number', required: true, min: 0 },
     { name: 'unitCost', label: 'Unit Cost (₦/litre)', type: 'number', required: true, min: 0 },
     { name: 'supplier', label: 'Supplier', type: 'select', options: supplierOptions() },
-    { name: 'station', label: 'Filling Station (optional — draws down a prepayment balance, see the Station Ledger tab)', type: 'select', options: [
+    { name: 'station', label: 'Filling Station', type: 'select', options: [
       { value: '', label: '— Not against a station prepayment —' },
       ...FUEL_STATIONS.map((s) => ({ value: s, label: s })),
     ] },
@@ -77,6 +78,8 @@ function receiptFields() {
       { value: '', label: '— Company-wide pool —' },
       ...projectOptions(),
     ] },
+    { name: 'prepaymentId', label: 'Apply delivery to prepayment', type: 'select', options: [{ value: '', label: '— Unallocated / supplied on credit —' }, ...store.get('dieselStationPrepayments').map((p) => ({ value: p.id, label: `${p.id} — ${p.station} — ${p.date}` }))] },
+    { name: 'fuelCreditCollectionId', label: 'Same delivery already recorded as Fuel Credit', type: 'select', options: [{ value: '', label: '— Separate delivery —' }, ...store.get('fuelCreditCollections').filter((c) => c.fuelType === 'Diesel').map((c) => ({ value: c.id, label: `${c.id} — ${c.date} — ${c.litres} L` }))] },
     { name: 'reference', label: 'Reference (PO #, waybill, etc.)' },
     { name: 'notes', label: 'Notes', type: 'textarea' },
   ];
@@ -366,7 +369,7 @@ export function renderDieselTracking(container) {
   function openReceiptForm(record) {
     openModal({
       title: record ? 'Edit Diesel Receipt' : 'Log Diesel Receipt',
-      fields: receiptFields(),
+      fields: receiptFields().filter((field) => ['Admin', 'Accounts'].includes(getCurrentTier()) || !['prepaymentId','fuelCreditCollectionId'].includes(field.name)),
       initial: record || { date: todayISOString() },
       submitLabel: record ? 'Save Changes' : 'Log Receipt',
       onSubmit: async (data) => {

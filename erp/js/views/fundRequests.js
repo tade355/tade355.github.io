@@ -72,6 +72,7 @@ function openRequestForm(record, onSaved) {
     build: (container) => {
       const today = todayISOString();
       const dateField = textField('date', 'Date', 'date', record?.date || today, true);
+      const paidDateField = textField('paidAt', 'Payment Date (required when Paid)', 'date', record?.paidAt || '', false);
       const projectField = selectField('project', 'Project', [
         { value: '', label: '— Not specified —' },
         ...projectOptions(),
@@ -82,7 +83,7 @@ function openRequestForm(record, onSaved) {
       descriptionInput.value = record?.description || '';
       const descriptionField = el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Description'), descriptionInput]);
 
-      const topGrid = el('div', { class: 'form-grid-2' }, [dateField, projectField, submittedByField, costHeadField]);
+      const topGrid = el('div', { class: 'form-grid-2' }, [dateField, paidDateField, projectField, submittedByField, costHeadField]);
 
       const itemsHeader = el('div', { class: 'line-items-header' }, [
         el('span', {}, 'Description'), el('span', {}, 'Amount (₦)'), el('span', {}, 'Account Name'), el('span', {}, 'Account Number'), el('span', {}, 'Bank'), el('span', {}, ''),
@@ -175,6 +176,7 @@ function openRequestForm(record, onSaved) {
 
         const payload = {
           date: dateField.querySelector('input').value,
+          paidAt: paidDateField.querySelector('input').value || null,
           project: projectField.querySelector('select').value,
           submittedBy: submittedByField.querySelector('select').value,
           costHead: costHeadField.querySelector('select').value,
@@ -299,6 +301,7 @@ function renderRequestsTab(container) {
     renderTable(tableContainer, {
       columns: [
         { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
+        { key: 'paidAt', label: 'Payment Date', render: (r) => r.paidAt ? formatDate(r.paidAt) : '—' },
         { key: 'project', label: 'Project', render: (r) => r.project || '—' },
         { key: 'submittedBy', label: 'Submitted By', render: (r) => employeeName(r.submittedBy) },
         { key: 'costHead', label: 'Cost Head', render: (r) => r.costHead || '—' },

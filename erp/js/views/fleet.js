@@ -195,6 +195,7 @@ function fleetFields() {
 function maintenanceFields() {
   return [
     { name: 'date', label: 'Date', type: 'date', required: true },
+    { name: 'project', label: 'Project (required for supervisor access)', type: 'select', options: [{ value: '', label: '— Unassigned —' }, ...projectOptions()] },
     { name: 'equipment', label: 'Dozer / Equipment', type: 'select', required: true, options: fleetOptions() },
     { name: 'type', label: 'Type', type: 'select', required: true, options: [
       { value: 'Service', label: 'Service' },

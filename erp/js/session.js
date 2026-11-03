@@ -43,8 +43,9 @@ export function defaultRouteForTier(tier) {
 export function filterByProject(rows, projectKey) {
   const tier = getCurrentTier();
   if (tier === 'Admin' || tier === 'Accounts') return rows;
+  if (tier === 'Supervisor' && getCurrentUser()?.canManageAllProjects) return rows;
   const project = getAssignedProject();
-  if (!project) return rows;
+  if (!project) return [];
   return rows.filter((r) => r[projectKey] === project);
 }
 
@@ -52,9 +53,10 @@ export function filterByProject(rows, projectKey) {
 export function filterFundRequests(rows) {
   const tier = getCurrentTier();
   if (tier === 'Admin' || tier === 'Accounts') return rows;
+  if (tier === 'Supervisor' && getCurrentUser()?.canManageAllProjects) return rows;
   if (tier === 'Supervisor') {
     const project = getAssignedProject();
-    return project ? rows.filter((r) => r.project === project) : rows;
+    return rows.filter((r) => r.submittedBy === getCurrentUserId() || (project && r.project === project));
   }
   const userId = getCurrentUserId();
   return rows.filter((r) => r.submittedBy === userId);
@@ -64,9 +66,10 @@ export function filterFundRequests(rows) {
 export function filterLeaveRequests(rows) {
   const tier = getCurrentTier();
   if (tier === 'Admin' || tier === 'Accounts') return rows;
+  if (tier === 'Supervisor' && getCurrentUser()?.canManageAllProjects) return rows;
   if (tier === 'Supervisor') {
     const project = getAssignedProject();
-    if (!project) return rows;
+    if (!project) return rows.filter((r) => r.employeeId === getCurrentUserId());
     const employees = store.get('employees');
     return rows.filter((r) => employees.find((e) => e.id === r.employeeId)?.assignedProject === project);
   }
@@ -79,9 +82,10 @@ export function filterLeaveRequests(rows) {
 export function filterTrainingSubmissions(rows) {
   const tier = getCurrentTier();
   if (tier === 'Admin' || tier === 'Accounts') return rows;
+  if (tier === 'Supervisor' && getCurrentUser()?.canManageAllProjects) return rows;
   if (tier === 'Supervisor') {
     const project = getAssignedProject();
-    if (!project) return rows;
+    if (!project) return rows.filter((r) => r.employeeId === getCurrentUserId());
     const employees = store.get('employees');
     return rows.filter((r) => employees.find((e) => e.id === r.employeeId)?.assignedProject === project);
   }
