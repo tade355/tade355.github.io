@@ -93,6 +93,17 @@ function renderUserBadge() {
 }
 
 function initApp() {
+  const healthBanner = el('div', { role: 'alert', class: 'backup-warning' });
+  viewContainer.before(healthBanner);
+  function showHealth() {
+    const failed = Object.entries(store.getHealth()).filter(([, value]) => !value.ok).map(([key]) => key);
+    healthBanner.hidden = failed.length === 0;
+    healthBanner.textContent = failed.length ? `Data incomplete (${failed.join(', ')}). Reports and backup exports are blocked. Refresh Data to retry; cached records may be out of date.` : '';
+    // Do not leave previously rendered totals visible after a passive failure.
+    viewContainer.hidden = failed.length > 0;
+  }
+  window.addEventListener('erp-data-health', showHealth);
+  showHealth();
   renderUserBadge();
   globalSearchBtn.addEventListener('click', openGlobalSearch);
   initGlobalSearchShortcut();
