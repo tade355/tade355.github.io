@@ -3,6 +3,7 @@
 // 6 Staff Performance, with the Actions/Flags list on top. Everything is
 // derived live from ERP records (see dailyDashboardData.js).
 import { el, formatCurrency, formatDate } from '../utils.js';
+import { getCurrentTier } from '../session.js';
 import { statCard, statusPill } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { todayISOString, addDays } from '../dateUtils.js';
@@ -171,6 +172,12 @@ export function renderDailyDashboard(container) {
     const d = dailyDashboardFor(project, date, since);
 
     current = d;
+    if (!['Admin', 'Accounts'].includes(getCurrentTier())) {
+      body.appendChild(el('p', { class: 'backup-warning' }, 'Project operations view. Financial, payroll and stock reconciliation summaries require Admin or Accounts access and are omitted because your data is scoped.'));
+      body.appendChild(operationsSection(d));
+      body.appendChild(staffSection(d));
+      return;
+    }
     body.appendChild(el('p', { class: 'section-subtitle' }, `${project} — ${formatDate(date)}. Expected output ${EXPECTED_HA_PER_8HRS} ha per 8 hrs; ideal start ${IDEAL_START} AM; cumulative figures since ${formatDate(since)}.`));
     body.appendChild(flagsBanner(d.flags));
     body.appendChild(el('div', { class: 'dd-jump' }, ['operations:1. Operations', 'diesel:2. Diesel', 'fleet:3. Fleet', 'requests:4. Requests & Expenses', 'profit:5. Profitability', 'staff:6. Staff Performance']

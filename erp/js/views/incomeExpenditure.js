@@ -4,7 +4,7 @@ import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
 import { sectionHeader, statCard, statusPill, renderTable, actionButtons, openModal, confirmDelete, dateRangeFields } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../constants.js';
-import { amountReceived } from '../invoicePayments.js';
+import { financialActivity } from '../financialActivity.js';
 
 function projectNames() {
   return store.get('projects').map((p) => p.name);
@@ -32,46 +32,7 @@ function manualEntryFields() {
   ];
 }
 
-// Merges the four sources of cash movement into one flat list: Paid and
-// Partially Paid invoices (income — only the amount actually received, not
-// the full invoice total, now that partial payments exist), Expenses
-// (expenditure), Fund Requests that are Approved or Paid (expenditure —
-// "approved/disbursed"), and manual entries the accountant records
-// directly for anything else.
-export function collectEntries() {
-  const rows = [];
-
-  store.get('invoices').filter((i) => i.status === 'Paid' || i.status === 'Partially Paid').forEach((i) => {
-    rows.push({
-      date: i.date, project: i.project || '', type: 'Income', costHead: 'Invoicing / Sales',
-      description: i.items?.[0]?.description || `Invoice ${i.id}`, amount: amountReceived(i), source: 'Invoice',
-    });
-  });
-
-  store.get('expenses').forEach((e) => {
-    rows.push({
-      date: e.date, project: e.project || '', type: 'Expenditure', costHead: e.category || 'Other',
-      description: e.description, amount: e.amount, source: 'Expense',
-    });
-  });
-
-  store.get('fundRequests').filter((r) => r.status === 'Approved' || r.status === 'Paid').forEach((r) => {
-    rows.push({
-      date: r.date, project: r.project || '', type: 'Expenditure', costHead: r.costHead || 'Uncategorized',
-      description: r.description || `Fund request — ${r.items.length} item(s)`,
-      amount: r.items.reduce((sum, it) => sum + it.amount, 0), source: 'Fund Request',
-    });
-  });
-
-  store.get('financialEntries').forEach((f) => {
-    rows.push({
-      date: f.date, project: f.project || '', type: f.type, costHead: f.costHead,
-      description: f.description, amount: f.amount, source: 'Manual', record: f,
-    });
-  });
-
-  return rows;
-}
+export function collectEntries(basis = 'cash') { return financialActivity(store.all(), basis); }
 
 export function renderIncomeExpenditure(container) {
   container.innerHTML = '';
@@ -79,11 +40,15 @@ export function renderIncomeExpenditure(container) {
   const addBtn = el('button', { class: 'btn btn-primary', onClick: () => openForm() }, '+ Add Manual Entry');
   container.appendChild(sectionHeader(
     'Income & Expenditure',
-    'Company cash flow by project, period, and cost head — auto-populated from Paid invoices, Expenses, and Approved/Paid fund requests, plus manual entries',
+    'Recorded cash activity and approved unpaid commitments, shown separately by project and period',
     addBtn,
   ));
 
+  container.appendChild(el('p', { class: 'backup-warning' }, 'Legacy cash records may overlap across expenses, paid requests and manual entries. Only explicitly linked entries are deduplicated. Reconcile historical payments before treating this as a finalized cashbook.'));
+  const basisSelect = el('select', {}, [el('option', { value: 'cash' }, 'Recorded Cash Activity'), el('option', { value: 'commitments' }, 'Approved Unpaid Commitments')]);
+  basisSelect.addEventListener('change', refresh);
   const filterBar = el('div', { class: 'filter-bar' });
+  filterBar.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Basis'), basisSelect]));
   const projectSelect = el('select', { name: 'project' }, [
     el('option', { value: '' }, 'All Projects'),
     ...projectNames().map((p) => el('option', { value: p }, p)),
@@ -124,7 +89,7 @@ export function renderIncomeExpenditure(container) {
     const from = fromInput.value;
     const to = toInput.value;
 
-    let rows = collectEntries().filter((r) =>
+    let rows = collectEntries(basisSelect.value).filter((r) =>
       (!project || r.project === project)
       && (!type || r.type === type)
       && (!costHead || r.costHead === costHead)
@@ -137,8 +102,8 @@ export function renderIncomeExpenditure(container) {
 
     summaryGrid.innerHTML = '';
     summaryGrid.appendChild(statCard({ label: 'Total Income', value: formatCurrency(totalIncome), tone: 'good' }));
-    summaryGrid.appendChild(statCard({ label: 'Total Expenditure', value: formatCurrency(totalExpenditure), tone: 'critical' }));
-    summaryGrid.appendChild(statCard({ label: 'Net Position', value: formatCurrency(net), tone: net >= 0 ? 'good' : 'critical' }));
+    summaryGrid.appendChild(statCard({ label: basisSelect.value === 'cash' ? 'Recorded Cash Outflow' : 'Unpaid Commitments', value: formatCurrency(totalExpenditure), tone: 'critical' }));
+    summaryGrid.appendChild(statCard({ label: basisSelect.value === 'cash' ? 'Recorded Cash Net' : 'Commitment Impact', value: formatCurrency(net), tone: net >= 0 ? 'good' : 'critical' }));
 
     const incomeByHead = [...new Set(rows.filter((r) => r.type === 'Income').map((r) => r.costHead))];
     renderBarChart(incomeChartContainer, {
