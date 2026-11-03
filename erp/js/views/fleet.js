@@ -111,7 +111,7 @@ function avgWorkRateFor(name) {
 export function equipmentUnderRepair(asOfDate) {
   return new Set(
     store.get('maintenanceLogs')
-      .filter((m) => m.status !== 'Completed' && m.date <= asOfDate)
+      .filter((m) => m.status === 'In Progress' && m.date <= asOfDate)
       .map((m) => m.equipment),
   );
 }

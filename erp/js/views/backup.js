@@ -4,6 +4,7 @@ import { el, formatDate, ico } from '../utils.js';
 import { sectionHeader, statCard, renderTable } from '../ui.js';
 import { supabase } from '../supabaseClient.js';
 import { auditSummary } from '../auditLog.js';
+import { validateSnapshot } from '../backupSafety.js';
 
 function daysSince(iso) {
   if (!iso) return null;
@@ -23,7 +24,7 @@ export function renderBackup(container) {
     summarySlot.innerHTML = '';
     summarySlot.appendChild(el('div', { class: 'stats-grid' }, [
       statCard({
-        label: 'Last Backup',
+        label: 'Last Export on This Browser',
         value: lastBackup ? formatDate(lastBackup.slice(0, 10)) : 'Never',
         hint: lastBackup ? `${days} day(s) ago` : 'Download one now to protect your data',
         tone: (!lastBackup || days > 7) ? 'critical' : (days > 2 ? 'warning' : 'good'),
@@ -33,29 +34,32 @@ export function renderBackup(container) {
 
   container.appendChild(el('div', { class: 'backup-warning' }, [
     el('strong', {}, 'Data now lives in a shared database, not just this browser.'),
-    el('p', {}, 'Everyone with access sees and edits the same records in real time. Restoring a backup here replaces data for the whole company, not just this device — export regularly as a safety copy, and only restore one if you know exactly what you\'re doing.'),
+    el('p', {}, 'Changes affect the shared company database. Keep application exports and tested database/file backups. This page validates backup files without replacing production data.'),
   ]));
 
   const exportCard = el('div', { class: 'backup-card' }, [
     el('h3', {}, 'Export a Backup'),
-    el('p', {}, 'Downloads every record in the system as a single JSON file.'),
+    el('p', {}, 'Downloads loaded application records with a count manifest. This excludes database schema, Auth accounts and external Storage files; maintain database and file backups separately.'),
   ]);
   const exportBtn = el('button', { class: 'btn btn-primary', type: 'button' }, [ico('download'), 'Download Backup']);
   exportCard.appendChild(exportBtn);
   container.appendChild(exportCard);
 
   const importCard = el('div', { class: 'backup-card' }, [
-    el('h3', {}, 'Restore from a Backup'),
-    el('p', {}, 'Replaces every record in the shared database — for everyone, on every device — with the contents of a backup file. This cannot be undone.'),
+    el('h3', {}, 'Validate a Backup'),
+    el('p', {}, 'Check collection coverage, IDs and record counts without changing data. Whole-company replacement must be restored and verified in a separate database first.'),
   ]);
   const fileInput = el('input', { type: 'file', accept: 'application/json' });
-  const importBtn = el('button', { class: 'btn btn-ghost', type: 'button' }, 'Restore This File');
+  const importBtn = el('button', { class: 'btn btn-ghost', type: 'button' }, 'Validate This File');
+  const previewSlot = el('div', { role: 'status' });
   importCard.appendChild(fileInput);
   importCard.appendChild(importBtn);
+  importCard.appendChild(previewSlot);
   container.appendChild(importCard);
 
   exportBtn.addEventListener('click', () => {
-    const json = store.exportSnapshot();
+    let json;
+    try { json = store.exportSnapshot(); } catch (error) { window.alert(error.message); return; }
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -71,20 +75,19 @@ export function renderBackup(container) {
   importBtn.addEventListener('click', () => {
     const file = fileInput.files[0];
     if (!file) { window.alert('Choose a backup file first.'); return; }
-    if (!window.confirm('This will replace EVERY record in the shared database — for the whole company, on every device — with the contents of this file. This cannot be undone. Continue?')) return;
-    if (!window.confirm('Are you absolutely sure? Type OK in the next box only if you want to proceed.')) return;
     const reader = new FileReader();
     reader.onload = async (e) => {
       importBtn.disabled = true;
-      importBtn.textContent = 'Restoring…';
+      importBtn.textContent = 'Validating…';
       try {
-        await store.importSnapshot(e.target.result);
-        window.alert('Backup restored. The page will now reload.');
-        window.location.reload();
+        const parsed = JSON.parse(e.target.result);
+        const summary = validateSnapshot(parsed, Object.keys(store.all()));
+        previewSlot.textContent = `Valid application data structure: ${summary.length} collections, ${summary.reduce((s, r) => s + r.records, 0)} records. No data changed. This does not validate database schema, Auth or external files.`;
       } catch (err) {
         window.alert(err.message);
+      } finally {
         importBtn.disabled = false;
-        importBtn.textContent = 'Restore This File';
+        importBtn.textContent = 'Validate This File';
       }
     };
     reader.onerror = () => window.alert('Could not read that file.');
