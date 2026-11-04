@@ -101,7 +101,9 @@ function downloadHtml(d) {
   const html = buildDashboardHtml(d, { fueling: d.diesel.fuelingState });
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
-  const a = el('a', { href: url, download: dashboardFileName(d.date) });
+  // Keep the download attribute, but also open the generated file in a tab as
+  // a fallback for in-app browsers that block downloads from blob URLs.
+  const a = el('a', { href: url, download: dashboardFileName(d.date), target: '_blank', rel: 'noopener' });
   document.body.appendChild(a);
   a.click();
   a.remove();
