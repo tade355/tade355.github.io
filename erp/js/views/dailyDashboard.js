@@ -4,6 +4,7 @@
 // derived live from ERP records (see dailyDashboardData.js).
 import { el, formatCurrency, formatDate } from '../utils.js';
 import { getCurrentTier } from '../session.js';
+import { store } from '../store.js';
 import { statCard, statusPill } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { todayISOString, addDays } from '../dateUtils.js';
@@ -186,7 +187,7 @@ export function renderDailyDashboard(container) {
     body.appendChild(operationsSection(d));
     body.appendChild(dieselSection(d));
     body.appendChild(fleetSection(d));
-    body.appendChild(requestsSection(d));
+    body.appendChild(requestsSection(d, refresh));
     body.appendChild(profitSection(d));
     body.appendChild(staffSection(d));
     body.appendChild(el('p', { class: 'dd-footer' }, 'Prepared by ERP Software'));
@@ -334,20 +335,41 @@ function fleetSection(d) {
 }
 
 // -------------------------------------------------------- 4 Requests & Expenses
-function requestsSection(d) {
+function requestsSection(d, onRefresh) {
   const r = d.requests;
   const tiles = el('div', { class: 'stats-grid' }, [
-    statCard({ label: 'Requested today', value: money(r.requestedToday), hint: `${money(r.requestedCumulative)} since ${formatDate(d.since)}` }),
+    statCard({ label: 'Requested today', value: money(r.requestedToday), hint: `${money(r.requestedCumulative)} since ${formatDate(r.since > d.since ? r.since : d.since)}` }),
     statCard({ label: 'Paid today', value: money(r.paidToday), tone: r.paidToday ? 'good' : undefined, hint: `${money(r.paidCumulative)} cumulative` }),
     statCard({ label: 'Pending', value: money(r.pending), tone: 'warning' }),
     statCard({ label: 'Approved, payment unconfirmed', value: money(r.approved), tone: 'warning' }),
   ]);
-  const table = sortableTable([
+  const columns = [
+    { label: 'Date', render: (x) => formatDate(x.date), text: (x) => x.date },
     { label: 'Description', render: (x) => el('span', {}, [x.description, x.isNew ? el('span', { class: 'dd-muted' }, ' · new today') : null]), text: (x) => x.description },
     { label: 'Category', render: (x) => x.category, text: (x) => x.category },
     { label: 'Amount (₦)', num: true, render: (x) => num(x.amount, 0), sortValue: (x) => x.amount },
     { label: 'Status', render: (x) => statusPill(x.status), text: (x) => x.status },
-  ], r.rows);
+  ];
+  if (getCurrentTier() === 'Admin') columns.push({
+    label: 'Action', sort: false, render: (x) => {
+      if (!['Pending', 'Approved'].includes(x.status)) return '—';
+      const button = el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onClick: async () => {
+        if (getCurrentTier() !== 'Admin' || !window.confirm(`Reject/cancel request ${x.id}?`)) return;
+        button.disabled = true;
+        try {
+          const current = store.get('fundRequests').find((row) => row.id === x.id);
+          if (!current || !['Pending', 'Approved'].includes(current.status)) throw new Error('This request is no longer available to cancel. Refresh the dashboard.');
+          await store.update('fundRequests', x.id, { status: 'Rejected' });
+          onRefresh();
+        } catch (err) {
+          window.alert(err.message || 'Could not cancel the request.');
+          button.disabled = false;
+        }
+      } }, 'Reject / Cancel');
+      return button;
+    },
+  });
+  const table = sortableTable(columns, r.rows);
   const chartBox = el('div', { class: 'chart-card' });
   if (r.paidByCategory.length) {
     renderBarChart(chartBox, { title: `Paid today, by category (${money(r.paidToday)})`, bars: r.paidByCategory.map((b) => ({ label: b.label, value: b.value, colorVar: CATEGORICAL_COLORS[1] })), formatValue: money });
@@ -356,7 +378,7 @@ function requestsSection(d) {
     chartBox.appendChild(el('p', { class: 'section-subtitle' }, 'No payments made today.'));
   }
   return section('requests', 4, 'Requests & Expenses', [
-    el('p', { class: 'section-subtitle' }, `Unresolved (Pending / Approved) requests since ${formatDate(d.since)} plus today's new requests.`),
+    el('p', { class: 'section-subtitle' }, `Requests: ${formatDate(r.since)} – ${formatDate(d.date)}.`),
     tiles, el('div', { class: 'dd-grid-2' }, [table, chartBox]),
   ]);
 }
