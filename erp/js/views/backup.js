@@ -13,7 +13,7 @@ function daysSince(iso) {
 
 export function renderBackup(container) {
   container.innerHTML = '';
-  container.appendChild(sectionHeader('Backup & Data', 'Everything here lives in the shared Emagrims database — export a backup regularly as a safety copy.'));
+  container.appendChild(sectionHeader('Backup & Data', "Export your records and view change history."));
 
   const summarySlot = el('div');
   container.appendChild(summarySlot);
@@ -33,13 +33,13 @@ export function renderBackup(container) {
   }
 
   container.appendChild(el('div', { class: 'backup-warning' }, [
-    el('strong', {}, 'Data now lives in a shared database, not just this browser.'),
-    el('p', {}, 'Changes affect the shared company database. Keep application exports and tested database/file backups. This page validates backup files without replacing production data.'),
+    el('strong', {}, "Protect your company records."),
+    el('p', {}, "Download backups regularly. Validating a file does not change company records."),
   ]));
 
   const exportCard = el('div', { class: 'backup-card' }, [
     el('h3', {}, 'Export a Backup'),
-    el('p', {}, 'Downloads loaded application records with a count manifest. This excludes database schema, Auth accounts and external Storage files; maintain database and file backups separately.'),
+    el('p', {}, "Download company records. Account access and attached files are backed up separately."),
   ]);
   const exportBtn = el('button', { class: 'btn btn-primary', type: 'button' }, [ico('download'), 'Download Backup']);
   exportCard.appendChild(exportBtn);
@@ -47,7 +47,7 @@ export function renderBackup(container) {
 
   const importCard = el('div', { class: 'backup-card' }, [
     el('h3', {}, 'Validate a Backup'),
-    el('p', {}, 'Check collection coverage, IDs and record counts without changing data. Whole-company replacement must be restored and verified in a separate database first.'),
+    el('p', {}, "Check a backup file without changing company records."),
   ]);
   const fileInput = el('input', { type: 'file', accept: 'application/json' });
   const importBtn = el('button', { class: 'btn btn-ghost', type: 'button' }, 'Validate This File');
@@ -82,7 +82,7 @@ export function renderBackup(container) {
       try {
         const parsed = JSON.parse(e.target.result);
         const summary = validateSnapshot(parsed, Object.keys(store.all()));
-        previewSlot.textContent = `Valid application data structure: ${summary.length} collections, ${summary.reduce((s, r) => s + r.records, 0)} records. No data changed. This does not validate database schema, Auth or external files.`;
+        previewSlot.textContent = `Valid application data structure: ${summary.length} collections, ${summary.reduce((s, r) => s + r.records, 0)} records. No data changed. Account access and attached files are not included.`;
       } catch (err) {
         window.alert(err.message);
       } finally {
@@ -120,7 +120,7 @@ export function renderBackup(container) {
     const { data, error } = await q;
     historySlot.innerHTML = '';
     if (error) {
-      historySlot.appendChild(el('p', {}, /relation|does not exist|schema cache/i.test(error.message) ? 'The change history is not switched on yet: run migration 0041_data_safety.sql in the Supabase SQL editor.' : `Could not load the history (${error.message}).`));
+      historySlot.appendChild(el('p', {}, /relation|does not exist|schema cache/i.test(error.message) ? "Change history is unavailable. Contact your administrator." : `Could not load the history (${error.message}).`));
       return;
     }
     const names = new Map(store.get('employees').map((e) => [e.id, e.name]));
