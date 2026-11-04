@@ -83,7 +83,6 @@ export function buildProfitReportHtml(r, { title = 'Operations Profitability Rep
     const other = t.otherCost - t.supervisorSundayAllowance;
     const lineRows = lines.map(([l, v, b]) => `      <tr><td>${l}</td><td class="num">${fmt(v)}</td><td>${b}</td></tr>`);
     if (Math.abs(other) > 0.5) lineRows.splice(4, 0, `      <tr><td>Other costs (earlier rules)</td><td class="num">${fmt(other)}</td><td>Requests, manager Sunday allowance (before 10 Oct 2026)</td></tr>`);
-    if (t.pmsUnexplained) lineRows.push(`      <tr class="flag"><td>PMS — unexplained</td><td class="num">${fmt(t.pmsUnexplained)}</td><td>Not yet explained</td></tr>`);
     lineRows.push(`      <tr style="font-weight:700;background:var(--serious-bg)"><td>Operations Profit</td><td class="num">${signed(t.opsProfit)}</td><td>Revenue less all costs above</td></tr>`);
     out.push(`<section id="summary">
   <h2><span class="n">1.</span> Summary</h2>

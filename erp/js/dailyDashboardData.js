@@ -238,7 +238,7 @@ export function buildDailyDashboard(ctx) {
     };
   }).sort((a, b) => a.net - b.net);
   const extraRows = [];
-  if (todayStats.pmsCost) extraRows.push({ label: 'PMS (Tacoma + unexplained)', cost: todayStats.pmsCost });
+  if (todayStats.pmsCost) extraRows.push({ label: 'PMS cost', cost: todayStats.pmsCost });
   if (todayStats.supervisorSundayAllowance) extraRows.push({ label: 'Supervisor Sunday allowance', cost: todayStats.supervisorSundayAllowance });
   const unattributedLogistics = todayStats.dieselLogistics - logisticsAttributed;
   if (unattributedLogistics > 0.5) extraRows.push({ label: 'Diesel logistics for non-working dozers', cost: unattributedLogistics });
@@ -308,7 +308,6 @@ export function buildDailyDashboard(ctx) {
   const efficiency = fuelEfficiency(rangeOps);
   const down = fleet.filter((f) => f.fleetStatus === 'Down' || f.fleetStatus === 'Under Maintenance');
   if (down.length) flags.push({ tone: 'warning', text: `Not available: ${down.map((f) => `${f.equipment} (${f.fleetStatus})`).join(', ')}.` });
-  if (todayStats.pmsUnexplained) flags.push({ tone: 'warning', text: `${fmt(todayStats.pmsUnexplained)} of PMS is unexplained.`, action: 'Explain it or reclassify it.' });
   // Requests waiting too long, duplicates, vouchers, old stock count, missing reports, backup: same list the main Dashboard uses.
   flags.push(...buildAttention({ ...ctx, fundRequests: recentRequests }, { date })); // no backup flag here: that lives in the browser, and a downloaded dashboard has none
 
