@@ -222,7 +222,7 @@ export function buildDailyDashboard(ctx) {
     const litres = sum(dist.filter((d) => d.date === date && d.equipment === o.equipment), (d) => d.litres);
     // Diesel logistics is charged on the diesel distributed to the dozer, once per dozer per day.
     let logistics = 0;
-    if (onDashboardBasis(o.date) && ownership !== 'Partnership' && !logisticsAssigned.has(o.equipment)) {
+    if (onDashboardBasis(o.date) && ownership !== 'Partnership' && !todayStats.actualDieselTransport && !logisticsAssigned.has(o.equipment)) {
       logistics = litres * DIESEL_LOGISTICS_PER_LITRE;
       logisticsAssigned.add(o.equipment);
       logisticsAttributed += logistics;
@@ -242,6 +242,8 @@ export function buildDailyDashboard(ctx) {
   if (todayStats.supervisorSundayAllowance) extraRows.push({ label: 'Supervisor Sunday allowance', cost: todayStats.supervisorSundayAllowance });
   const unattributedLogistics = todayStats.dieselLogistics - logisticsAttributed;
   if (unattributedLogistics > 0.5) extraRows.push({ label: 'Diesel logistics for non-working dozers', cost: unattributedLogistics });
+  if (todayStats.actualOperatorTransport) extraRows.push({ label: 'Operator transportation', cost: todayStats.actualOperatorTransport });
+  if (todayStats.actualDieselTransport) extraRows.push({ label: 'Diesel transportation', cost: todayStats.actualDieselTransport });
 
   // ----------------------------------------------------------------- staff
   const siteDays = datesBetween(rangeOps);

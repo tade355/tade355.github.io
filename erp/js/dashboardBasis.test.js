@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  onDashboardBasis, dieselLogisticsBasis, supervisorSundayAllowanceBasis,
+  onDashboardBasis, dieselLogisticsBasis, rollingTransportCosts, supervisorSundayAllowanceBasis,
   pmsBasis, maintenanceBasis, machineRecoveredBasis,
 } from './dashboardBasis.js';
 
@@ -19,6 +19,22 @@ test('diesel logistics: ₦50/L, Partnership dozers excluded', () => {
     { date: '2026-10-09', equipment: 'EMG-007', litres: 100 }, // before the basis date
   ];
   assert.equal(dieselLogisticsBasis(d, owners), 380 * 50);
+});
+
+test('rolling transport request costs daily services once, excluding carried balance', () => {
+  const old = { date: '2026-11-03', costHead: 'Logistics', status: 'Pending', description: 'Hiring bike and diesel transportation', items: [
+    { description: 'Operator transportation 3 Nov', amount: 24000 },
+    { description: 'Diesel transport 3 Nov: 18 kegs', amount: 36000 },
+    { description: 'Outstanding carried balance', amount: 154500 },
+  ] };
+  const latest = { ...old, date: '2026-11-04', items: [...old.items,
+    { description: 'Operator transportation 4 Nov', amount: 24000 },
+    { description: 'Diesel transport 4 Nov: 22 kegs', amount: 44000 },
+  ] };
+  assert.deepEqual(rollingTransportCosts([old, latest], '2026-11-04', '2026-11-04'),
+    { operator: 24000, diesel: 44000, datesWithDiesel: new Set(['2026-11-04']) });
+  assert.deepEqual(rollingTransportCosts([old, latest], '2026-11-03', '2026-11-04'),
+    { operator: 48000, diesel: 80000, datesWithDiesel: new Set(['2026-11-03', '2026-11-04']) });
 });
 
 test('supervisor Sunday allowance follows the Sunday bonus policy', () => {

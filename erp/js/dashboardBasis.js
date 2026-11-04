@@ -25,6 +25,36 @@ export function dieselLogisticsBasis(distributions, ownershipByName) {
     .reduce((sum, d) => sum + (d.litres || 0) * DIESEL_LOGISTICS_PER_LITRE, 0);
 }
 
+// Rolling transport requests contain a previously owed balance and repeat earlier
+// daily charges. Only the dated, itemised services are operating costs. The
+// newest rolling request replaces earlier versions; payment of its balance is
+// settlement, not a second cost.
+export function rollingTransportCosts(requests, from, to) {
+  const candidates = (requests || []).filter((r) => r.costHead === 'Logistics'
+    && ['Pending', 'Approved', 'Paid'].includes(r.status)
+    && /(?:operator|bike).*(?:diesel|transport)|diesel.*transport/i.test(r.description || '')
+    && (r.items || []).some((i) => /carried balance|outstanding carried/i.test(i.description || '')));
+  candidates.sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))
+    || String(b.createdAt || b.created_at || '').localeCompare(String(a.createdAt || a.created_at || '')));
+  const latest = candidates[0];
+  const byDate = new Map();
+  for (const item of latest?.items || []) {
+    const label = String(item.description || '');
+    const match = label.match(/\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)(?:\s+(\d{4}))?\b/i);
+    if (!match || !/transport/i.test(label)) continue;
+    const month = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(match[2].toLowerCase()) + 1;
+    const day = `${match[3] || latest.date?.slice(0, 4) || ''}-${String(month).padStart(2, '0')}-${match[1].padStart(2, '0')}`;
+    if (day < from || day > to) continue;
+    const amount = Number(item.amount) || 0;
+    const row = byDate.get(day) || { operator: 0, diesel: 0 };
+    if (/operator/i.test(label)) row.operator += amount;
+    else if (/diesel/i.test(label)) row.diesel += amount;
+    byDate.set(day, row);
+  }
+  return { operator: [...byDate.values()].reduce((n, r) => n + r.operator, 0),
+    diesel: [...byDate.values()].reduce((n, r) => n + r.diesel, 0), datesWithDiesel: new Set([...byDate].filter(([, r]) => r.diesel > 0).map(([d]) => d)) };
+}
+
 // Sunday bonus policy for supervisors, on the dashboard basis. Per supervisor
 // per Sunday: 3 or more dozers worked at least 6 hrs = ₦20,000, 2 = ₦10,000,
 // 1 = ₦5,000; then by the days that supervisor worked Monday to Saturday of
