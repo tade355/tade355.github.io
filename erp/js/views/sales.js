@@ -264,8 +264,8 @@ export function renderSales(container) {
   const customersTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('customers') }, 'Customers');
   const workOrdersTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('workOrders') }, 'Work Order Invoices');
   tabBar.appendChild(invoicesTabBtn);
-  tabBar.appendChild(customersTabBtn);
   tabBar.appendChild(workOrdersTabBtn);
+  tabBar.appendChild(customersTabBtn);
 
   const actionSlot = el('div');
   container.appendChild(sectionHeader('Sales & Invoicing', 'Customers, invoices, and revenue', actionSlot));
