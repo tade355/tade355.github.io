@@ -100,7 +100,7 @@ function initApp() {
   function showHealth() {
     const failed = Object.entries(store.getHealth()).filter(([, value]) => !value.ok).map(([key]) => key);
     healthBanner.hidden = failed.length === 0;
-    healthBanner.textContent = failed.length ? `Data incomplete (${failed.join(', ')}). Reports and backup exports are blocked. Refresh Data to retry; cached records may be out of date.` : '';
+    healthBanner.textContent = failed.length ? 'Some data could not be loaded. Refresh Data before using reports or backups.' : '';
     // Do not leave previously rendered totals visible after a passive failure.
     viewContainer.hidden = failed.length > 0;
   }
@@ -189,7 +189,7 @@ async function boot() {
   try {
     await store.init();
   } catch (err) {
-    loadingMessage.textContent = `Could not connect to the shared database: ${err.message}`;
+    loadingMessage.textContent = 'Could not connect. Check your connection and try again.';
     const retryBtn = el('button', { type: 'button', class: 'btn btn-primary btn-block' }, 'Retry');
     retryBtn.addEventListener('click', () => window.location.reload());
     loadingScreen.querySelector('.gate-card').appendChild(retryBtn);
