@@ -366,7 +366,7 @@ export function buildDashboardHtml(d, { expectedHaPer8 = 1.3, idealStart = '7:00
   const catName = (c) => (c === 'Maintenance' ? 'Repairs & Parts' : c);
   const reqRows = rq.rows.map((r) => {
     const cls = r.status === 'Paid' ? 'paid' : r.status === 'Approved' ? 'approved' : 'pending';
-    return `        <tr><td>${esc(r.description)}${r.isNew ? ' <span class="src">· new today</span>' : ''}</td><td>${esc(catName(r.category))}</td><td class="num">${fmt(r.amount)}</td><td>${badge(cls, r.status)}</td></tr>`;
+    return `        <tr><td>${esc(formatDate(r.submittedDate || r.date))}</td><td>${esc(r.description)}${r.isNew ? ' <span class="src">· new today</span>' : ''}</td><td>${esc(catName(r.category))}</td><td class="num">${fmt(r.amount)}</td><td>${badge(cls, r.status)}</td></tr>`;
   }).join('\n');
   const catBars = rq.paidByCategory.map((b) => ({ label: b.label === 'Maintenance' ? 'Repairs/Parts' : b.label, value: b.value }));
   const reqTiles = [
@@ -595,6 +595,7 @@ ${reqTiles}
     <div class="table-wrap"><table id="tbl-requests">
       <thead>
         <tr>
+          <th data-type="text">Submission Date</th>
           <th data-type="text">Description</th>
           <th data-type="text">Category</th>
           <th data-type="num">Amount (₦)</th>
