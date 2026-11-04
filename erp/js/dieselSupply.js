@@ -28,3 +28,12 @@ export function mergeDieselReceipts({ receipts: saved, collections, operations }
   }));
   return [...receipts, ...synthetic];
 }
+
+// A delivery without a price must not erase the last evidenced purchase price.
+export function dieselPurchasePriceAsOf(date, receipts = [], cashPurchases = [], fallback = 0) {
+ const prices = [...receipts.map(r => ({date:r.date,price:Number(r.unitCost)})),
+ ...cashPurchases.map(p => ({date:p.date,price:Number(p.unitPriceAgreed)}))]
+ .filter(p => p.date && p.date <= date && Number.isFinite(p.price) && p.price > 0)
+ .sort((a,b) => b.date.localeCompare(a.date));
+ return prices[0]?.price || Number(fallback) || 0;
+}
