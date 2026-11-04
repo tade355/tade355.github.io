@@ -44,7 +44,7 @@ export function renderIncomeExpenditure(container) {
     addBtn,
   ));
 
-  container.appendChild(el('p', { class: 'backup-warning' }, 'Legacy cash records may overlap across expenses, paid requests and manual entries. Only explicitly linked entries are deduplicated. Reconcile historical payments before treating this as a finalized cashbook.'));
+  container.appendChild(el('p', { class: 'backup-warning' }, "Historical payments may overlap. Reconcile them before finalising the cashbook."));
   const basisSelect = el('select', {}, [el('option', { value: 'cash' }, 'Recorded Cash Activity'), el('option', { value: 'commitments' }, 'Approved Unpaid Commitments')]);
   basisSelect.addEventListener('change', refresh);
   const filterBar = el('div', { class: 'filter-bar' });

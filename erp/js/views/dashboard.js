@@ -216,7 +216,6 @@ export function renderDashboard(container) {
       headerSubtitle = `Viewing how Emagrims Ltd was doing on ${dateLabel}.`;
     }
     body.appendChild(sectionHeader('Dashboard', headerSubtitle));
-    body.appendChild(el('p', { class: 'section-subtitle' }, `Same rules as the Daily Operations Dashboard: diesel, operator allowance, deal days, Sunday bonus and alerts follow the dashboard basis from ${formatDate(DASHBOARD_BASIS_FROM)}; earlier dates keep the older Profitability rules.`));
 
     // KPI row — the Executive Command Centre's headline numbers, same-day
     // where a same-day figure exists, each with a 7-day sparkline (the

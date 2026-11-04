@@ -419,7 +419,7 @@ function renderWeeklyPerformanceTab(container) {
     // --- Tentative (field estimate): standard flat rates, computable the
     // same day a report comes in, before any ledger entries exist. ---
     body.appendChild(el('h3', { class: 'subsection-title' }, 'Cost & Profit — Tentative (Field Estimate)'));
-    body.appendChild(el('p', { class: 'section-subtitle' }, 'A quick field estimate using standard flat rates, not a full ledger reconciliation — see Profitability, Fuel Credit Tracking, and Dozer Rent Payments for the authoritative figures.'));
+    body.appendChild(el('p', { class: 'section-subtitle' }, "Field estimate based on standard rates."));
     body.appendChild(el('div', { class: 'stats-grid' }, [
       statCard({ label: 'Tentative Cost', value: formatCurrency(costData.total) }),
       statCard({ label: 'Tentative Profit', value: formatCurrency(revenueData.total - costData.total), tone: revenueData.total - costData.total >= 0 ? 'good' : 'critical' }),
@@ -461,7 +461,7 @@ function renderWeeklyPerformanceTab(container) {
     // plus this project's real Logistics/Other spend and this roster's
     // real Maintenance Log costs. ---
     body.appendChild(el('h3', { class: 'subsection-title' }, 'Cost & Profit — Actual (Ledger-Based)'));
-    body.appendChild(el('p', { class: 'section-subtitle' }, 'Dozer Cost uses hours worked × hourly rate for every dozer on the roster (Profitability\'s standard formula) — a different figure from Tentative Cost\'s Rental Cost above. Not a full ledger reconciliation either — see Profitability for the company-wide authoritative figures.'));
+    body.appendChild(el('p', { class: 'section-subtitle' }, "Dozer cost is based on hours worked and hourly rates. Use Profitability for the full financial view."));
     body.appendChild(el('div', { class: 'stats-grid' }, [
       statCard({ label: 'Total Cost', value: formatCurrency(actualData.totalCost) }),
       statCard({ label: 'Actual Profit', value: `${formatCurrency(actualData.actualProfit)} (${actualData.actualProfitPct.toFixed(0)}%)`, tone: actualData.actualProfit >= 0 ? 'good' : 'critical' }),

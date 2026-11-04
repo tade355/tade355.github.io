@@ -424,7 +424,7 @@ export function renderDozerPayroll(container) {
   container.appendChild(el('h3', { class: 'subsection-title' }, 'Operator Balances'));
   const balancesContainer = el('div');
   container.appendChild(balancesContainer);
-  container.appendChild(el('p', { class: 'section-subtitle' }, 'Balance Owed updates automatically: it includes everything already recorded on Approved/Paid runs, plus day-rate pay for any Daily Operations hours logged since the operator\'s last covered run (no new run needed just to see it), minus any lump-sum payment recorded as an Expense under their name (e.g. a bulk transfer-record upload) that hasn\'t yet been entered as "Amount Paid" on a run.'));
+  container.appendChild(el('p', { class: 'section-subtitle' }, "Balance owed includes recorded pay, uncovered work and payments already recorded. Review each operator before settling."));
 
   function refresh() {
     const rows = store.get('dozerPayrollRuns').slice().sort((a, b) => (a.periodStart < b.periodStart ? 1 : -1));

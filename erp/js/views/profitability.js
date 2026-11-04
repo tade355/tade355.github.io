@@ -462,7 +462,6 @@ function renderGroupedTable(body, groupBy, from, to, project) {
     emptyText: 'No Daily Operations reports in this range.',
   });
 
-  body.appendChild(el('p', { class: 'section-subtitle' }, 'Revenue here is Provisional only (quantity x the contract rate in effect that day) — clients invoice against a measured project period, never against an individual dozer, supervisor, date, or block, so verified revenue and Logistics/Other/Total Cost/Profit (which can only be attributed at the project level) can\'t be split this way and show as "—".'));
 }
 
 export function renderProfitability(container) {
@@ -573,7 +572,6 @@ function renderAllProjects(body, from, to) {
     emptyText: 'No projects to show.',
   });
 
-  body.appendChild(el('p', { class: 'section-subtitle', html: 'Provisional Revenue is quantity x the contract rate in effect that day, straight from Daily Operations reports — a same-day figure, whether or not it has been invoiced yet. Verified Revenue and Logistics/Other costs only include invoices, expenses, and Approved/Paid Fund Requests explicitly tagged to a project (Profit/Margin are based on Verified Revenue only). Dozer Cost, Diesel Cost, and Operator Allowance are computed automatically from Daily Operations logs (hours/litres x the rate in effect that day; Operator Allowance only for the owned EMG fleet) — Logistics Cost also includes a computed Tacoma PMS cost (flat 20L whenever a Partnership dozer works) and, from 4 Oct 2026 onward, a computed commercial-bike diesel-transport cost (litres consumed by Company/Rented dozers x N50/L) replacing manually-logged diesel-transport expenses — earlier dates keep using whatever was logged for them; Other Cost includes a computed Manager Sunday Allowance; Fuel-category expenses are excluded from it to avoid double-counting diesel spend, Loan Repayment / Profit Distribution expenses are excluded since it is financing activity, not operations spend, Maintenance expenses are excluded since that cost belongs to Machine Management Profitability instead, and lump-sum Salary/Allowance payments to the 4 owned-fleet operators are excluded since their pay is already counted via the Operator Allowance formula on the days they actually worked.' }));
 }
 
 // Operations Profit / Machine Recovery / Total Profit exactly as the Daily
@@ -593,7 +591,6 @@ function renderDashboardBasis(body, project, from, to) {
   const money = (v) => el('span', { class: neg(v) }, formatCurrency(v));
 
   body.appendChild(el('h3', { class: 'subsection-title' }, `Operations Profitability — Daily Dashboard Basis (${formatDate(dates[0])} – ${formatDate(dates[dates.length - 1])})`));
-  body.appendChild(el('p', { class: 'section-subtitle' }, 'Same figures as the Daily Operations Dashboards, from Daily Operations, Diesel Distribution, Fuel Credit (PMS) and Fund Request records. Applies from 10 Oct 2026; earlier dates keep the older rules above.'));
   body.appendChild(el('div', { class: 'stats-grid' }, [
     statCard({ label: 'Revenue (Ha × contract rate)', value: formatCurrency(s.provisionalRevenue), tone: 'good' }),
     statCard({ label: 'Total Cost', value: formatCurrency(s.totalCost), tone: 'critical' }),
@@ -695,7 +692,6 @@ function renderSingleProject(body, project, from, to) {
 
   renderDashboardBasis(body, project, from, to);
 
-  body.appendChild(el('p', { class: 'section-subtitle', html: 'Provisional Revenue is quantity x the contract rate in effect that day, straight from Daily Operations reports — a same-day figure, whether or not it has been invoiced yet. Verified Revenue and Logistics/Other costs only include invoices, expenses, and Approved/Paid Fund Requests explicitly tagged to this project (Profit/Margin are based on Verified Revenue only). Dozer Cost, Diesel Cost, and Operator Allowance are computed automatically from Daily Operations logs (hours/litres x the rate in effect that day; Operator Allowance only for the owned EMG fleet) — Logistics Cost also includes a computed Tacoma PMS cost (flat 20L whenever a Partnership dozer works) and, from 4 Oct 2026 onward, a computed commercial-bike diesel-transport cost (litres consumed by Company/Rented dozers x N50/L) replacing manually-logged diesel-transport expenses — earlier dates keep using whatever was logged for them; Other Cost includes a computed Manager Sunday Allowance; Fuel-category expenses are excluded from it to avoid double-counting diesel spend, Loan Repayment / Profit Distribution expenses are excluded since it is financing activity, not operations spend, Maintenance expenses are excluded since that cost belongs to Machine Management Profitability instead, and lump-sum Salary/Allowance payments to the 4 owned-fleet operators are excluded since their pay is already counted via the Operator Allowance formula on the days they actually worked.' }));
 
   body.appendChild(el('h3', { class: 'subsection-title' }, 'Weekly Productivity'));
   const { target, rows: weeklyRows } = computeWeeklyProductivity(project, from, to);

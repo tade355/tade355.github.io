@@ -100,7 +100,7 @@ export function renderDieselTracking(container) {
   const actionSlot = el('div');
   container.appendChild(sectionHeader(
     'Diesel Tracking',
-    'Company-wide diesel deliveries and stock reconciliation — saved receipts plus every Midejab diesel collection logged in Fuel Credit since (diesel sold on is left out). Tag a receipt with a station or site to feed the Station Ledger and Site Distribution tabs',
+    "Track diesel receipts, usage and physical stock counts by station and site.",
     actionSlot,
   ));
   actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openReceiptForm() }, '+ Log Diesel Receipt'));
