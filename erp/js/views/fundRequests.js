@@ -1,3 +1,4 @@
+import { requestSubmissionDate } from '../dateUtils.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, ico } from '../utils.js';
@@ -311,7 +312,7 @@ function renderRequestsTab(container, onRefresh = () => {}) {
 
     renderTable(tableContainer, {
       columns: [
-        { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
+        { key: 'submittedDate', label: 'Submission Date', render: (r) => formatDate(requestSubmissionDate(r)), sortValue: requestSubmissionDate },
         { key: 'paidAt', label: 'Payment Date', render: (r) => r.paidAt ? formatDate(r.paidAt) : '—' },
         { key: 'project', label: 'Project', render: (r) => r.project || '—' },
         { key: 'submittedBy', label: 'Submitted By', render: (r) => employeeName(r.submittedBy) },
