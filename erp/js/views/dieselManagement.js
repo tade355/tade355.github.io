@@ -70,7 +70,7 @@ function renderStationLedgerTab(container) {
   container.appendChild(summarySlot);
   const balancesContainer = el('div');
   container.appendChild(balancesContainer);
-  container.appendChild(el('p', { class: 'backup-warning' }, 'Only deliveries explicitly linked to a prepayment reduce that advance. Historical unallocated receipts need reconciliation; credit debt is shown separately. Negative balances show over-delivery.'));
+  container.appendChild(el('p', { class: 'backup-warning' }, "Unallocated deliveries need review. Credit debt is separate; negative balances indicate over-delivery."));
   container.appendChild(el('h3', { class: 'subsection-title' }, 'Prepayments'));
   const prepaymentsContainer = el('div');
   container.appendChild(prepaymentsContainer);
@@ -197,7 +197,7 @@ function renderSiteDistributionTab(container) {
   const actionSlot = el('div');
   container.appendChild(sectionHeader(
     'Site Distribution — Level 2',
-    "Each project's dump-tank stock: Opening + New Supply (diesel receipts tagged to the site) − Distributed (explicit distribution records, with legacy report fallback) = Closing. Distributed updates itself as reports come in from the field — nothing to log here for it to count.",
+    "Site stock: opening balance + deliveries − distribution = closing balance.",
     actionSlot,
   ));
   actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openDistributionForm() }, '+ Log Distribution'));
@@ -210,7 +210,7 @@ function renderSiteDistributionTab(container) {
   const ledgerContainer = el('div');
   container.appendChild(ledgerContainer);
   container.appendChild(el('h3', { class: 'subsection-title' }, 'Distributions'));
-  container.appendChild(el('p', { class: 'section-subtitle' }, "Optional accountability log (who handed diesel to which dozer) — logging one here also pre-fills that dozer's Daily Operations report for the same date/site with these litres, but the Distributed figures above always come from the report itself, not from this log."));
+  container.appendChild(el('p', { class: 'section-subtitle' }, "Record diesel handed to each dozer. Entries also update the daily operations report."));
   const distributionsContainer = el('div');
   container.appendChild(distributionsContainer);
 
@@ -314,7 +314,7 @@ function renderDiscrepancyReportTab(container) {
   container.innerHTML = '';
   container.appendChild(sectionHeader(
     'Dozer Discrepancy Report — Level 3',
-    'Distributed and Used come from Daily Operations reports; Closing Expected is opening + supplied − used, recomputed the same way the report auto-fills it; Closing Reported is whatever was actually saved (a real tank dip if one overrode the estimate). A gap between the two is the theft/leak signal.',
+    "Compare expected closing stock with the reported tank count to identify variances.",
   ));
 
   const filterBar = el('div', { class: 'filter-bar' });
