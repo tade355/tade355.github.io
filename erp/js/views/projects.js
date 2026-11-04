@@ -50,19 +50,19 @@ export function renderProjects(container) {
   const projectsTabBtn = canManageProjects
     ? el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('projects') }, 'Projects')
     : null;
-  const mapTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('map') }, 'Map View');
-  const galleryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('gallery') }, 'Photo Gallery');
-  const weeklyReportTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('weeklyReport') }, 'Weekly Report');
+  const mapTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('map') }, 'Map');
+  const galleryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('gallery') }, 'Photos');
+  const weeklyReportTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('weeklyReport') }, 'Weekly Reports');
   const rateHistoryTabBtn = canManageProjects
-    ? el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('rateHistory') }, 'Contract Rate History')
+    ? el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('rateHistory') }, 'Contract Rates')
     : null;
   const reconciliationTabBtn = canManageProjects
     ? el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('reconciliation') }, 'Revenue Reconciliation')
     : null;
   if (projectsTabBtn) tabBar.appendChild(projectsTabBtn);
+  tabBar.appendChild(weeklyReportTabBtn);
   tabBar.appendChild(mapTabBtn);
   tabBar.appendChild(galleryTabBtn);
-  tabBar.appendChild(weeklyReportTabBtn);
   if (rateHistoryTabBtn) tabBar.appendChild(rateHistoryTabBtn);
   if (reconciliationTabBtn) tabBar.appendChild(reconciliationTabBtn);
   container.appendChild(tabBar);
@@ -211,7 +211,7 @@ export function renderProjects(container) {
     body.appendChild(tableContainer);
 
     function refresh() {
-      const rows = store.get('projects').slice().sort((a, b) => a.name.localeCompare(b.name));
+      const rows = store.get('projects').slice().sort((a, b) => (a.status === 'Active' ? 0 : 1) - (b.status === 'Active' ? 0 : 1) || a.name.localeCompare(b.name, undefined, { numeric: true }));
       const active = rows.filter((r) => r.status === 'Active').length;
       const unsigned = rows.filter((r) => r.contractStatus && r.contractStatus !== 'Signed').length;
 

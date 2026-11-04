@@ -132,19 +132,19 @@ export function renderHR(container) {
   let tab = 'employees';
   const tabBar = el('div', { class: 'tab-bar' });
   const employeesTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('employees') }, 'Employees');
-  const memosTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('memos') }, 'Staff Memos & Letters');
-  const assetsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('assets') }, 'Assets Tracker');
+  const memosTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('memos') }, 'Letters');
+  const assetsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('assets') }, 'Assets');
   const payrollTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('payroll') }, 'Payroll');
   const operatorAllowanceTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('operatorAllowance') }, 'Operator Allowance');
   const trainingProgramsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('trainingPrograms') }, 'Training Programs');
   const personHistoryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('personHistory') }, 'Person History');
   tabBar.appendChild(employeesTabBtn);
-  tabBar.appendChild(memosTabBtn);
-  tabBar.appendChild(assetsTabBtn);
+  tabBar.appendChild(personHistoryTabBtn);
   tabBar.appendChild(payrollTabBtn);
   tabBar.appendChild(operatorAllowanceTabBtn);
+  tabBar.appendChild(memosTabBtn);
+  tabBar.appendChild(assetsTabBtn);
   tabBar.appendChild(trainingProgramsTabBtn);
-  tabBar.appendChild(personHistoryTabBtn);
 
   const actionSlot = el('div');
   container.appendChild(sectionHeader('HR & Employees', 'Staff records, roles, memos/letters, payroll, operator allowance, training programs, and person history', actionSlot));
@@ -207,7 +207,7 @@ export function renderHR(container) {
     function refresh() {
       const rows = store.get('employees')
         .slice()
-        .sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status));
+        .sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status) || a.name.localeCompare(b.name, undefined, { numeric: true }));
       renderTable(tableContainer, {
         columns: [
           { key: 'name', label: 'Name' },

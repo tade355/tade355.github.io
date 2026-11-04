@@ -4,6 +4,7 @@ import { canAccess, getCurrentTier, defaultRouteForTier } from './session.js';
 import { ICONS } from './icons.js';
 import { canImportData } from './access.js';
 import { store } from './store.js';
+import { enhanceViewNavigation } from './navigationState.js';
 
 // Each route's view module loads on demand (dynamic import), not upfront —
 // so a problem loading one view's code (a network hiccup, something
@@ -51,7 +52,7 @@ export const ROUTES = [
 
 export function initRouter(viewContainer, onRouteChange) {
   function currentPath() {
-    const hash = window.location.hash.replace('#/', '');
+    const hash = window.location.hash.replace('#/', '').split('?')[0];
     const route = ROUTES.find((r) => r.path === hash);
     if (route && canAccess(route.tiers) && (!route.guard || route.guard())) return hash;
     return defaultRouteForTier(getCurrentTier());
@@ -60,15 +61,17 @@ export function initRouter(viewContainer, onRouteChange) {
   // A render token guards against a slow/failed load finishing after the
   // user has already navigated elsewhere and overwriting that newer page.
   let renderToken = 0;
+  let disposeNavigation = () => {};
 
   async function render() {
+    disposeNavigation();
     closeModal();
     try { store.assertComplete(); } catch (error) {
       viewContainer.replaceChildren(el('p', { role: 'alert', class: 'backup-warning' }, error.message));
       return;
     }
     const path = currentPath();
-    if (window.location.hash.replace('#/', '') !== path) {
+    if (window.location.hash.replace('#/', '').split('?')[0] !== path) {
       window.location.hash = `#/${path}`;
       return;
     }
@@ -83,6 +86,7 @@ export function initRouter(viewContainer, onRouteChange) {
       if (token !== renderToken) return;
       viewContainer.innerHTML = '';
       renderFn(viewContainer);
+      disposeNavigation = enhanceViewNavigation(viewContainer, path);
     } catch (err) {
       if (token !== renderToken) return;
       console.error(`Failed to load the "${route.label}" page.`, err);

@@ -3,7 +3,7 @@ import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, ico } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
 import { printFundRequest } from '../print.js';
-import { filterFundRequests, getCurrentUserId, getCurrentTier } from '../session.js';
+import { filterLeaveRequests, filterByProject, filterFundRequests, getCurrentUserId, getCurrentTier } from '../session.js';
 import { createAttachmentPicker } from '../attachments.js';
 import { notifyNewFundRequest, notifyFundRequestDecision } from '../notifications.js';
 import { EXPENSE_CATEGORIES } from '../constants.js';
@@ -228,13 +228,16 @@ export function renderFundRequests(container) {
 
   const canApprove = ['Admin', 'Supervisor'].includes(getCurrentTier());
 
-  let tab = 'requests';
+  let tab = canApprove ? 'approvals' : 'requests';
   const tabBar = el('div', { class: 'tab-bar' });
-  const requestsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('requests') }, 'Requests');
+  const requestsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('requests') }, ['Staff','Supervisor'].includes(getCurrentTier()) ? 'My Requests' : 'Requests');
+  requestsTabBtn.dataset.tabLabel = 'Requests';
   tabBar.appendChild(requestsTabBtn);
   let approvalsTabBtn;
   if (canApprove) {
     approvalsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('approvals') }, 'Approvals');
+    approvalsTabBtn.dataset.tabLabel = 'Approvals';
+    approvalsTabBtn.appendChild(el('span', { class: 'tab-count' }));
     tabBar.appendChild(approvalsTabBtn);
   }
 
@@ -243,20 +246,27 @@ export function renderFundRequests(container) {
 
   const body = el('div');
   container.appendChild(body);
+  function updatePendingCount() {
+    const badge = approvalsTabBtn?.querySelector('.tab-count');
+    if (!badge) return;
+    const pending = (getCurrentTier() === 'Admin' ? filterFundRequests(store.get('fundRequests')).filter(r=>r.status==='Pending').length : 0) + filterLeaveRequests(store.get('leaveRequests')).filter(r=>r.status==='Pending').length + filterByProject(store.get('fuelingVouchers'), 'project').filter(r=>r.status==='Pending Approval').length;
+    badge.textContent = String(pending);
+    badge.setAttribute('aria-label', `${pending} pending`);
+  }
 
   function setTab(next) {
     tab = next;
     requestsTabBtn.classList.toggle('active', tab === 'requests');
     if (approvalsTabBtn) approvalsTabBtn.classList.toggle('active', tab === 'approvals');
     body.innerHTML = '';
-    if (tab === 'requests') renderRequestsTab(body);
-    else renderApprovals(body);
+    if (tab === 'requests') renderRequestsTab(body, updatePendingCount);
+    else renderApprovals(body, updatePendingCount);
   }
 
   setTab(tab);
 }
 
-function renderRequestsTab(container) {
+function renderRequestsTab(container, onRefresh = () => {}) {
   const addBtn = el('button', { class: 'btn btn-primary', onClick: () => openRequestForm(null, refresh) }, '+ Submit Fund Request');
   container.appendChild(sectionHeader('Fund Requests', 'Staff requests for funds, with approval and payee details', addBtn));
 
@@ -282,7 +292,8 @@ function renderRequestsTab(container) {
   }
 
   function refresh() {
-    let rows = filterFundRequests(store.get('fundRequests')).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+    onRefresh();
+    let rows = filterFundRequests(store.get('fundRequests')).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '') || a.id.localeCompare(b.id, undefined, { numeric: true }));
     const pending = rows.filter((r) => r.status === 'Pending').length;
     const totalPending = rows.filter((r) => r.status === 'Pending').reduce((sum, r) => sum + totalOf(r), 0);
 

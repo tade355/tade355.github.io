@@ -56,7 +56,7 @@ test('"how much diesel is on site" is a stock question, not the diesel-norm poli
 });
 
 test('navigation questions point to the page and tab', () => {
-  assert.match(ask('Where do I find the diesel stock count?').text, /Diesel Management/);
+  assert.match(ask('Where do I find the diesel stock count?').text, /Resource Management/);
 });
 
 test('fund requests: one by id, and the pending list', () => {

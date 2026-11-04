@@ -9,27 +9,13 @@ import { searchCatalogue, quickLinks } from './searchCatalogue.js';
 
 const canUse = (perm) => (perm === 'profitReports' ? canDownloadProfitReports() : false);
 
-// Go to a page and, if the target sits on a tab (or a tab inside a tab), click
-// through the tab buttons once the page has drawn them. Tabs are internal view
-// state, so this finds each tab button by its visible text rather than needing
-// every view to expose a deep link.
-const TAB_WAIT_MS = 4000;
+// Tabs use shareable route parameters; the view restores only visible tabs.
 export function openLocation(route, tabs = []) {
-  const target = `#/${route}`;
+  const params = new URLSearchParams();
+  tabs.forEach(tab => params.append('tab',tab));
+  const target = `#/${route}${tabs.length ? '?' + params : ''}`;
   if (window.location.hash === target) window.dispatchEvent(new HashChangeEvent('hashchange'));
   else window.location.hash = target;
-  const view = document.getElementById('view');
-  const started = Date.now();
-  const clickNext = (i) => {
-    if (i >= tabs.length || !view) return;
-    const tick = () => {
-      const btn = [...view.querySelectorAll('.tab-btn')].find((b) => b.textContent.trim() === tabs[i]);
-      if (btn) { btn.click(); setTimeout(() => clickNext(i + 1), 60); return; }
-      if (Date.now() - started < TAB_WAIT_MS) setTimeout(tick, 80);
-    };
-    setTimeout(tick, 80);
-  };
-  clickNext(0);
 }
 
 // One search across the handful of entities people actually look someone
@@ -55,7 +41,7 @@ function searchSources() {
       })),
     },
     {
-      route: 'fleet', kind: 'Equipment', tabs: ['Fleet Roster'],
+      route: 'fleet', kind: 'Equipment', tabs: ['Roster'],
       items: () => fleetItems().map((i) => ({
         id: i.id,
         label: i.name,
@@ -139,7 +125,7 @@ function searchSources() {
       })),
     },
     {
-      route: 'fleet', tabs: ['Inventory & Equipment'], kind: 'Inventory item',
+      route: 'fleet', tabs: ['Equipment'], kind: 'Inventory item',
       items: () => store.get('inventory').map((i) => ({
         id: i.id,
         label: i.name,
@@ -148,7 +134,7 @@ function searchSources() {
       })),
     },
     {
-      route: 'fleet', tabs: ['Maintenance Log'], kind: 'Maintenance',
+      route: 'fleet', tabs: ['Maintenance'], kind: 'Maintenance',
       items: () => store.get('maintenanceLogs').map((m) => ({
         id: m.id,
         label: `${m.equipment || m.equipmentName || m.id} — ${m.date ? formatDate(m.date) : 'no date'}`,

@@ -36,7 +36,7 @@ const numVal = (input) => { const n = Number(input.value); return Number.isFinit
 
 export function renderAgoPlanner(container) {
   container.innerHTML = '';
-  container.appendChild(sectionHeader('AGO Planner', 'Plan the diesel to supply for the next working day, download it, and raise the fueling vouchers at the station'));
+  container.appendChild(sectionHeader('Planner', 'Plan the diesel to supply for the next working day, download it, and raise the fueling vouchers at the station'));
 
   const today = todayISOString();
   const projects = projectNames();
@@ -243,7 +243,7 @@ export function renderAgoPlanner(container) {
       for (const d of drafts) await store.add('fuelingVouchers', d);
       status.innerHTML = '';
       status.appendChild(document.createTextNode(`Raised ${drafts.length} voucher${drafts.length === 1 ? '' : 's'} at ${stationSel.value} for ${formatDate(supplyDate.value)}, pending approval. `));
-      status.appendChild(el('a', { href: '#', onClick: (e) => { e.preventDefault(); [...document.querySelectorAll('.tab-btn')].find((b) => b.textContent.trim() === 'Fueling Vouchers')?.click(); } }, 'Open Fueling Vouchers'));
+      status.appendChild(el('a', { href: '#', onClick: (e) => { e.preventDefault(); [...document.querySelectorAll('.tab-btn')].find((b) => b.textContent.trim() === 'Vouchers')?.click(); } }, 'Open Fueling Vouchers'));
     } catch (e) {
       status.textContent = e.message || 'Could not raise the voucher.';
     } finally { voucherBtn.disabled = false; }
