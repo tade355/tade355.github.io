@@ -103,7 +103,7 @@ export function requestSubmissionDate(record) {
 }
 
 export function rexFortnightStart(project, date) {
-  const anchor = '2026-10-22';
+  const anchor = '2026-10-21';
   if (!/^REX Forestry Project(?: -|$)/i.test(project || '') || date < anchor) return null;
   const days = Math.round((toUTCDate(date) - toUTCDate(anchor)) / 86400000);
   return addDays(anchor, Math.floor(days / 14) * 14);
