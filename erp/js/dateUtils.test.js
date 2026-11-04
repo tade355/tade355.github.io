@@ -102,3 +102,16 @@ test('isSunday is true only for the Sunday in a known week', () => {
   assert.equal(isSunday('2026-10-02'), false); // Friday
   assert.equal(isSunday('2026-10-03'), false); // Saturday
 });
+
+test('REX fortnights reset every 14 days from 22 October', async () => {
+  const { rexFortnightStart, requestSubmissionDate } = await import('./dateUtils.js');
+  assert.equal(rexFortnightStart('REX Forestry Project - Kangidi','2026-11-04'),'2026-10-22');
+  assert.equal(rexFortnightStart('REX Forestry Project','2026-11-05'),'2026-11-05');
+  assert.equal(rexFortnightStart('REX Forestry Project - Kajola','2026-11-18'),'2026-11-05');
+  assert.equal(rexFortnightStart('REX Forestry Project','2026-11-19'),'2026-11-19');
+  assert.equal(rexFortnightStart('Other','2026-11-04'),null);
+  assert.equal(rexFortnightStart('REX Forestry Project','2026-10-21'),null);
+  assert.equal(requestSubmissionDate({date:'2026-11-03',description:'Original request date 2026-10-31.'}),'2026-10-31');
+  assert.equal(requestSubmissionDate({date:'2026-11-03',description:'Original request date 02/11/2026.'}),'2026-11-02');
+  assert.equal(requestSubmissionDate({date:'2026-11-03'}),'2026-11-03');
+});
