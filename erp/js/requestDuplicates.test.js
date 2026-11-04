@@ -59,3 +59,19 @@ test('a missing date still reports the request as an earlier match; nothing exis
   assert.deepEqual(findDuplicateRequests({ description: 'x', total: 1 }, undefined), []);
   assert.deepEqual(findDuplicateRequests({ description: 'Oil purchase for Tope', total: 100000 }, []), []);
 });
+
+test('duplicate visibility keeps the newest of any number of copies, preserves payments and separate service days', async () => {
+ const { uniqueFinancialRecords } = await import('./requestDuplicates.js');
+ const row=(id,date,status='Pending')=>({id,date,project:'Rex',description:'Rain boots',items:[{amount:40000}],status,createdAt:'2026-11-04T00:00:00Z'});
+ const rows=[row('FR-1','2026-11-03','Paid'),row('FR-2','2026-11-03'),row('FR-3','2026-11-03'),row('FR-4','2026-11-02')];
+ const visible=uniqueFinancialRecords(rows,'fundRequests');
+ assert.equal(visible.length,2);assert.equal(visible.find(r=>r.date==='2026-11-03').id,'FR-3');assert.equal(visible.find(r=>r.id==='FR-3').status,'Paid');
+ assert.equal(uniqueFinancialRecords(rows,'fundRequests',[{sourceCollection:'fundRequests',sourceId:'FR-4'}]).length,1);
+ assert.equal(rows[2].status,'Pending');
+});
+test('same receipt expense copies collapse but split amounts and projects remain separate', async () => {
+ const { uniqueFinancialRecords } = await import('./requestDuplicates.js');
+ const a={id:'EXP-1',date:'2026-11-03',project:'Rex',category:'Repairs',amount:100,description:'Repair. Receipt EXTTRF|123456'};
+ const rows=[a,{...a,id:'EXP-2',date:'2026-11-04'},{...a,id:'EXP-3',amount:200},{...a,id:'EXP-4',project:'Other'}];
+ const visible=uniqueFinancialRecords(rows,'expenses');assert.equal(visible.length,3);assert.ok(visible.some(r=>r.id==='EXP-2'));
+});
