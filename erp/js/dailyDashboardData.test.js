@@ -166,3 +166,17 @@ test('diesel against work is reported per dozer for the period', () => {
   assert.ok(Math.abs(d.diesel.normLitresPerHa - 153.846) < 0.01);
   d.diesel.efficiency.forEach((r) => assert.ok('litresPerHa' in r && 'high' in r));
 });
+
+test('request window includes three-day boundary and excludes older requests in every state', () => {
+  const req = (id, date, status) => ({ id, date, status, project: P, description: id, items: [{ amount: 100 }] });
+  const fundRequests = ['Pending','Approved','Paid'].flatMap((status) => [req('old-'+status,'2026-10-08',status),req('boundary-'+status,'2026-10-09',status),req('today-'+status,'2026-10-12',status)]);
+  fundRequests.push(req('future','2026-10-13','Pending'),req('rejected','2026-10-12','Rejected'));
+  const d=buildDailyDashboard(ctx({since:'2026-10-01',fundRequests}));
+  assert.equal(d.requests.since,'2026-10-09');
+  assert.equal(d.requests.rows.length,6);
+  assert.ok(d.requests.rows.every(r=>!r.id.startsWith('old-') && r.id!=='future' && r.id!=='rejected'));
+  assert.equal(d.requests.pending,200);
+  assert.equal(d.requests.approved,200);
+  assert.equal(d.requests.paidCumulative,200);
+  assert.ok(!d.flags.some(f=>f.text.includes('fund request(s) have waited')));
+});
