@@ -608,7 +608,7 @@ function renderDashboardBasis(body, project, from, to) {
     ['Dozer Cost — Rented', s.dozerRented, 'Hours × hourly rate (deal days at the deal rate)'],
     ['Dozer Cost — Partnership', s.dozerPartnership, 'Hours × hourly rate'],
     ['PMS — Tacoma', s.pmsTacoma, 'PMS collected at the station'],
-    ['PMS — unexplained', s.pmsUnexplained, 'Flagged litres with no explanation yet'],
+    ['PMS cost', s.pmsCost, 'PMS purchases charged to the selected period'],
   ];
   const lineRows = lines.map(([label, amount, basis]) => el('tr', {}, [el('td', {}, label), el('td', {}, formatCurrency(amount)), el('td', {}, basis)]));
   lineRows.push(el('tr', { class: 'row-cumulative' }, [el('td', {}, el('strong', {}, 'Operations Profit')), el('td', {}, el('strong', {}, money(s.opsProfit))), el('td', {}, 'Revenue less all costs above')]));
