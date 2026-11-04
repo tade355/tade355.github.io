@@ -29,7 +29,7 @@ test('a tab is found with the page and tab chain to open', () => {
 
 test('nested tabs carry the whole chain', () => {
   const r = searchCatalogue('station ledger', admin);
-  assert.deepEqual(r[0].tabs, ['Diesel Management', 'Station Ledger']);
+  assert.deepEqual(r[0].tabs, ['Diesel', 'Station Ledger']);
   assert.equal(r[0].route, 'resourceManagement');
 });
 
@@ -68,6 +68,7 @@ test('catalogue entries have a label and route', () => {
 test('Data Import is found only where the route guard allows it', () => {
   const r = [...routes, { path: 'dataImport', label: 'Data Import', tiers: ['Admin'], guard: () => false }];
   assert.equal(searchCatalogue('upload excel', { routes: r, canAccess: () => true }).length, 0);
+  assert.ok(!quickLinks({ routes: r, canAccess: () => true }).some(x=>x.route==='dataImport'));
   const open = [...routes, { path: 'dataImport', label: 'Data Import', tiers: ['Admin'], guard: () => true }];
   assert.equal(searchCatalogue('upload excel', { routes: open, canAccess: () => true })[0].route, 'dataImport');
 });

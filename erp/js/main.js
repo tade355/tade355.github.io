@@ -6,6 +6,7 @@ import { getCurrentUser, getCurrentTier, canAccess } from './session.js';
 import { showLoginForm } from './userGate.js';
 import { restoreSession, logout, changePassword } from './auth.js';
 import { initThemeSwitch } from './theme.js';
+import { setNavigationUser } from './navigationState.js';
 import { openGlobalSearch, initGlobalSearchShortcut } from './globalSearch.js';
 
 const sidebarNav = document.getElementById('sidebarNav');
@@ -93,6 +94,7 @@ function renderUserBadge() {
 }
 
 function initApp() {
+  setNavigationUser(getCurrentUser()?.id);
   const healthBanner = el('div', { role: 'alert', class: 'backup-warning' });
   viewContainer.before(healthBanner);
   function showHealth() {
@@ -109,7 +111,19 @@ function initApp() {
   initGlobalSearchShortcut();
 
   const navLinks = {};
-  ROUTES.forEach((route) => {
+  const groups = [
+    ['Overview', ['dashboard','dailyDashboard','askErp']],
+    ['Operations', ['projects','operations','fleet','resourceManagement']],
+    ['Commercial', ['sales','purchasing']],
+    ['Finance', ['accounting','fundRequests']],
+    ['People', ['hr','leave','mySalary','training','noticeBoard']],
+    ['Data Tools', ['pasteEntry','dataImport']],
+  ];
+  groups.forEach(([label, paths]) => {
+    const visible = paths.map(path => ROUTES.find(route => route.path === path)).filter(route => route && !route.hideFromNav && canAccess(route.tiers) && (!route.guard || route.guard()));
+    if (!visible.length) return;
+    sidebarNav.appendChild(el('div', { class: 'nav-group-label' }, label));
+    visible.forEach((route) => {
     if (route.hideFromNav) return;
     if (!canAccess(route.tiers) || (route.guard && !route.guard())) return;
     const link = el('a', { href: `#/${route.path}`, class: 'nav-link' }, [
@@ -120,6 +134,7 @@ function initApp() {
     sidebarNav.appendChild(link);
     link.addEventListener('click', () => {
       sidebar.classList.remove('open');
+    });
     });
   });
 

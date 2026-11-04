@@ -102,8 +102,9 @@ function navigationAnswer(t) {
   const q = tokens(t).filter((w) => w.length >= 3 && !STOP.has(w) && !['where', 'find', 'open', 'page', 'tab', 'screen', 'menu', 'log', 'see', 'view', 'check', 'record', 'add', 'raise', 'create', 'enter', 'can', 'get'].includes(w));
   if (!q.length) return null;
   const scored = CATALOGUE.map((e) => {
-    const hay = `${e.label} ${e.words || ''}`.toLowerCase();
-    const s = sum(q, (w) => (e.label.toLowerCase().includes(w) ? 3 : hay.includes(w) ? 1 : 0));
+    const labelWords = tokens(e.label.toLowerCase());
+    const hayWords = tokens(`${e.label} ${e.words || ''} ${(e.tabs || []).join(' ')}`.toLowerCase());
+    const s = sum(q, (w) => (labelWords.includes(w) ? 3 : hayWords.includes(w) ? 1 : 0));
     return { e, s };
   }).filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 4);
   if (!scored.length) return null;

@@ -4,6 +4,8 @@ import { createAttachmentPicker } from './attachments.js';
 import { renderSparkline } from './charts.js';
 import { todayISOString, addDays, mondayOf } from './dateUtils.js';
 import { downloadCSV } from './csv.js';
+import { sortRows } from './tableSort.js';
+import { readPreference, writePreference } from './navigationState.js';
 
 let modalRoot = null;
 
@@ -169,25 +171,52 @@ export function renderTable(container, { columns, rows, emptyText = 'No records 
     container.appendChild(el('p', { class: 'table-empty' }, emptyText));
     return;
   }
+  const activeTabs = [...document.querySelectorAll('#view .tab-bar .tab-btn.active')].map(button => button.dataset.tabLabel || button.textContent.trim());
+  const scope = location.hash.split('?')[0] + ':' + activeTabs.join('/') + ':' + columns.map(c => c.key || c.label).join('|');
+  let sorting = readPreference('sort', scope);
+  let displayedRows = rows;
+  const valueFor = (column, row) => {
+    if (column.sortValue) return column.sortValue(row);
+    const raw = row[column.key];
+    if (typeof raw === 'number' || (typeof raw === 'string' && (/^\d{4}-\d{2}(?:-\d{2})?$/.test(raw) || (raw.trim() && Number.isFinite(Number(raw)))))) return raw;
+    if (!column.render) return raw;
+    const rendered = column.render ? column.render(row) : '';
+    const value = rendered instanceof Node ? rendered.textContent : rendered;
+    return value === '—' ? null : value;
+  };
   const exportBtn = el('button', {
     type: 'button',
     class: 'btn btn-ghost btn-sm table-export-btn',
     title: 'Download this table as a CSV file (opens in Excel)',
-    onClick: () => downloadCSV(exportFilename || `emagrims-export-${todayISOString()}`, columns, rows),
+    onClick: () => downloadCSV(exportFilename || `emagrims-export-${todayISOString()}`, columns, displayedRows),
   }, [ico('download'), 'Export CSV']);
   container.appendChild(el('div', { class: 'table-toolbar' }, [exportBtn]));
 
   const table = el('table', { class: 'data-table' });
-  const thead = el('thead', {}, [
-    el('tr', {}, columns.map((c) => el('th', {}, c.label))),
-  ]);
-  const tbody = el('tbody', {}, rows.map((row) => el('tr', { class: rowClass ? rowClass(row) : undefined }, columns.map((c) => {
+  const headers = columns.map((c, index) => {
+    const th = el('th');
+    if (c.sort === false || !c.label || c.key === 'actions') { th.textContent = c.label; return th; }
+    th.appendChild(el('button', { class: 'table-sort', type: 'button', title: `Sort by ${c.label}`, onClick: () => {
+      sorting = { index, direction: sorting?.index === index && sorting.direction === 'asc' ? 'desc' : 'asc' };
+      writePreference('sort', scope, sorting); draw();
+    } }, c.label));
+    return th;
+  });
+  const thead = el('thead', {}, [el('tr', {}, headers)]);
+  const tbody = el('tbody');
+  function draw() {
+    const column = sorting && columns[sorting.index];
+    displayedRows = column && column.sort !== false && column.label && column.key !== 'actions' ? sortRows(rows, row => valueFor(column,row), sorting.direction) : rows;
+    headers.forEach((header,index) => header.setAttribute('aria-sort', sorting?.index === index ? sorting.direction === 'asc' ? 'ascending' : 'descending' : 'none'));
+    tbody.replaceChildren(...displayedRows.map((row) => el('tr', { class: rowClass ? rowClass(row) : undefined }, columns.map((c) => {
     const cell = el('td', c.wrap ? { class: 'cell-wrap' } : {});
     const content = c.render ? c.render(row) : row[c.key];
     if (content instanceof Node) cell.appendChild(content);
     else cell.textContent = content ?? '—';
     return cell;
-  }))));
+    }))));
+  }
+  draw();
   table.appendChild(thead);
   table.appendChild(tbody);
   // A wide table scrolls inside its own box instead of pushing the whole page sideways on a phone.
