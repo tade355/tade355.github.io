@@ -12,11 +12,11 @@ export function renderResourceManagement(container) {
   let tab = 'diesel';
 
   const tabBar = el('div', { class: 'tab-bar' });
-  const dieselTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('diesel') }, 'Diesel Management');
-  const partsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('parts') }, 'Bulldozer Parts & Supplies');
-  const rentTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('rent') }, 'Dozer Rent Payments');
-  const consumablesTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('consumables') }, 'Lubricants & Consumables');
-  const projectItemsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('projectItems') }, 'Project Items');
+  const dieselTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('diesel') }, 'Diesel');
+  const partsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('parts') }, 'Parts & Supplies');
+  const rentTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('rent') }, 'Rent Payments');
+  const consumablesTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('consumables') }, 'Consumables');
+  const projectItemsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('projectItems') }, 'Project Assets');
   tabBar.appendChild(dieselTabBtn);
   tabBar.appendChild(partsTabBtn);
   tabBar.appendChild(rentTabBtn);

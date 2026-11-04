@@ -369,16 +369,16 @@ export function renderDieselManagement(container) {
   const tabBar = el('div', { class: 'tab-bar' });
   const stationTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('station') }, 'Station Ledger');
   const siteTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('site') }, 'Site Distribution');
-  const reportTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('report') }, 'Dozer Discrepancy Report');
-  const trackingTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('tracking') }, 'Diesel Tracking');
-  const vouchersTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('vouchers') }, 'Fueling Vouchers');
-  const plannerTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('planner') }, 'AGO Planner');
+  const reportTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('report') }, 'Variances');
+  const trackingTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('tracking') }, 'Tracking');
+  const vouchersTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('vouchers') }, 'Vouchers');
+  const plannerTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('planner') }, 'Planner');
+  tabBar.appendChild(plannerTabBtn);
+  tabBar.appendChild(vouchersTabBtn);
   if (canViewFinance) tabBar.appendChild(stationTabBtn);
   tabBar.appendChild(siteTabBtn);
-  tabBar.appendChild(reportTabBtn);
   tabBar.appendChild(trackingTabBtn);
-  tabBar.appendChild(vouchersTabBtn);
-  tabBar.appendChild(plannerTabBtn);
+  tabBar.appendChild(reportTabBtn);
   container.appendChild(tabBar);
 
   const body = el('div');

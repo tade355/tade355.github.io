@@ -222,15 +222,15 @@ export function renderFleet(container) {
   let tab = 'roster';
 
   const tabBar = el('div', { class: 'tab-bar' });
-  const rosterTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('roster') }, 'Fleet Roster');
-  const maintenanceTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('maintenance') }, 'Maintenance Log');
-  const statusReportTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('statusReport') }, 'Daily Status Report');
-  const inventoryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('inventory') }, 'Inventory & Equipment');
-  const rateHistoryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('rateHistory') }, 'Fleet Rate History');
-  const dozerEconomicsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('dozerEconomics') }, 'Dozer Economics');
+  const rosterTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('roster') }, 'Roster');
+  const maintenanceTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('maintenance') }, 'Maintenance');
+  const statusReportTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('statusReport') }, 'Daily Status');
+  const inventoryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('inventory') }, 'Equipment');
+  const rateHistoryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('rateHistory') }, 'Rate History');
+  const dozerEconomicsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('dozerEconomics') }, 'Economics');
   tabBar.appendChild(rosterTabBtn);
-  tabBar.appendChild(maintenanceTabBtn);
   tabBar.appendChild(statusReportTabBtn);
+  tabBar.appendChild(maintenanceTabBtn);
   tabBar.appendChild(inventoryTabBtn);
   tabBar.appendChild(rateHistoryTabBtn);
   tabBar.appendChild(dozerEconomicsTabBtn);
@@ -363,7 +363,8 @@ export function renderFleet(container) {
     actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openAssetForm() }, '+ Add Fleet Asset'));
 
     function refresh() {
-      const rows = fleetItems();
+      const priority = { Down: 0, 'Under Maintenance': 1, Idle: 2, Active: 3 };
+      const rows = fleetItems().slice().sort((a,b) => (priority[a.fleetStatus] ?? 3) - (priority[b.fleetStatus] ?? 3) || a.name.localeCompare(b.name, undefined, { numeric: true }));
       const companyCount = rows.filter((r) => r.ownership === 'Company' || !r.ownership).length;
       const partnershipCount = rows.filter((r) => r.ownership === 'Partnership').length;
       const rentedCount = rows.filter((r) => r.ownership === 'Rented').length;
