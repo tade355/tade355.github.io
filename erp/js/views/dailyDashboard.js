@@ -474,17 +474,20 @@ function profitSection(d) {
 
 // ------------------------------------------------------- 6 Staff Performance
 function staffSection(d) {
-  const table = sortableTable([
-    { label: 'Rank', num: true, render: (r) => String(d.staff.indexOf(r) + 1), sortValue: (r) => d.staff.indexOf(r) },
+  const makeTable = (rows) => sortableTable([
+    { label: 'Rank', num: true, render: (r) => String(rows.indexOf(r) + 1), sortValue: (r) => rows.indexOf(r) },
     { label: 'Name', render: (r) => el('span', {}, [el('strong', {}, r.name), el('br'), el('span', { class: 'dd-muted' }, r.role)]), text: (r) => r.name },
-    { label: `Resumption (last 3 days${d.staff[0] ? `, ${formatDate(d.staff[0].days[0])} →` : ''})`, sort: false, render: (r) => r.resumption.join(' → ') },
+    { label: `Resumption (last 3 days${rows[0] ? `, ${formatDate(rows[0].days[0])} →` : ''})`, sort: false, render: (r) => r.resumption.join(' → ') },
     { label: 'Late vs 7:00 AM', render: (r) => r.lateToday, text: (r) => r.lateToday },
     { label: 'Hrs Today', num: true, render: (r) => num(r.hoursToday), sortValue: (r) => r.hoursToday },
     { label: 'Productivity trend (last 3 days)', sort: false, render: (r) => r.productivity.map((p) => (p === null ? '—' : `${p.toFixed(1)}%`)).join(' → ') },
     { label: 'Cumulative', num: true, render: (r) => pctText(r.cumulative), sortValue: (r) => r.cumulative ?? -1 },
-  ], d.staff, { rowClass: (r) => (r.lateMinutesToday !== null && r.lateMinutesToday >= 60 ? 'row-warning' : undefined) });
+  ], rows, { rowClass: (r) => (r.lateMinutesToday !== null && r.lateMinutesToday >= 60 ? 'row-warning' : undefined) });
+  const operators = d.staff.filter((r) => r.role !== 'Supervisor');
+  const supervisors = d.staff.filter((r) => r.role === 'Supervisor');
   return section('staff', 6, 'Staff Performance', [
-    el('p', { class: 'section-subtitle' }, `Ranked by cumulative productivity since ${formatDate(d.since)} (hectares cleared vs. expected for the hours worked). Ideal resumption is ${IDEAL_START} AM. Resumption and productivity trends cover the last 3 days (rolling), oldest first.`),
-    d.staff.length ? table : el('p', { class: 'section-subtitle' }, 'No operator reports in this period.'),
+    el('p', { class: 'section-subtitle' }, `Operators and supervisors are shown separately. Productivity is ranked only after 8 recorded hours since ${formatDate(d.since)}; shorter samples are shown without a percentage.`),
+    el('h3', {}, 'Operators'), operators.length ? makeTable(operators) : el('p', { class: 'section-subtitle' }, 'No operator reports in this period.'),
+    el('h3', {}, 'Supervisors'), supervisors.length ? makeTable(supervisors) : el('p', { class: 'section-subtitle' }, 'No supervisor reports in this period.'),
   ]);
 }
