@@ -23,7 +23,7 @@ function decisionButtons({ onPrint, onApprove, onReject }) {
   ]);
 }
 
-export function renderApprovals(container) {
+export function renderApprovals(container, onRefresh = () => {}) {
   container.innerHTML = '';
   container.appendChild(sectionHeader('Approvals', 'Everything waiting on your decision — fund requests, leave, and fueling vouchers'));
 
@@ -49,6 +49,7 @@ export function renderApprovals(container) {
   }
 
   function refresh() {
+    onRefresh();
     const tier = getCurrentTier();
 
     let fundRequests = [];
@@ -85,14 +86,14 @@ export function renderApprovals(container) {
         amount: r.estimatedCost,
         record: r, collection: 'fuelingVouchers',
       })),
-    ].sort((a, b) => (a.date < b.date ? 1 : -1));
+    ].sort((a, b) => (a.date || '').localeCompare(b.date || '') || a.record.id.localeCompare(b.record.id, undefined, { numeric: true }));
 
     summarySlot.innerHTML = '';
     summarySlot.appendChild(el('div', { class: 'stats-grid' }, [
       statCard({ label: 'Total Pending', value: String(rows.length), tone: rows.length ? 'warning' : 'good' }),
       statCard({ label: 'Fund Requests', value: String(fundRequests.length) }),
       statCard({ label: 'Leave Requests', value: String(leaveRequests.length) }),
-      statCard({ label: 'Fueling Vouchers', value: String(vouchers.length) }),
+      statCard({ label: 'Vouchers', value: String(vouchers.length) }),
     ]));
 
     renderTable(tableContainer, {
