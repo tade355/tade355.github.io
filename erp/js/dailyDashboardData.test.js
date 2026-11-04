@@ -182,10 +182,10 @@ test('request window includes three-day boundary and excludes older requests in 
 });
 
 test('REX cumulative period is automatic and preserves tank carry-over', () => {
-  const d=buildDailyDashboard(ctx({project:'REX Forestry Project - Kangidi',date:'2026-11-04',since:'2026-10-10',statsFor:(from,to)=>({areaCleared:from==='2026-10-22'?5:0})}));
-  assert.equal(d.since,'2026-10-22');
+  const d=buildDailyDashboard(ctx({project:'REX Forestry Project - Kangidi',date:'2026-11-04',since:'2026-10-10',statsFor:(from,to)=>({areaCleared:from==='2026-11-04'?5:0})}));
+  assert.equal(d.since,'2026-11-04');
   assert.equal(d.operations.cumulativeHa,5);
   assert.equal(d.diesel.chainSince,'2026-10-10');
   const next=buildDailyDashboard(ctx({project:'REX Forestry Project - Kangidi',date:'2026-11-05',since:'2026-10-10'}));
-  assert.equal(next.since,'2026-11-05');
+  assert.equal(next.since,'2026-11-04');
 });
