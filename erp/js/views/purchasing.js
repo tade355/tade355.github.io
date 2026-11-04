@@ -68,8 +68,8 @@ export function renderPurchasing(container) {
   const suppliersTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('suppliers') }, 'Suppliers');
   const fuelCreditTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('fuelCredit') }, 'Fuel Credit');
   tabBar.appendChild(ordersTabBtn);
-  tabBar.appendChild(suppliersTabBtn);
   tabBar.appendChild(fuelCreditTabBtn);
+  tabBar.appendChild(suppliersTabBtn);
 
   const actionSlot = el('div');
   container.appendChild(sectionHeader('Purchasing & Suppliers', 'Purchase orders, supplier records, and fuel credit', actionSlot));
