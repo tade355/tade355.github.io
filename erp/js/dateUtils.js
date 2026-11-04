@@ -90,3 +90,21 @@ export function weekOf(iso) {
   const sunday = addDays(key, 6);
   return { key, label: `${formatDate(key)} – ${formatDate(sunday)}` };
 }
+
+// Source request dates take precedence over historical payment-date moves.
+export function requestSubmissionDate(record) {
+  if (record.submittedOn) return record.submittedOn;
+  const text = record.description || '';
+  const iso = text.match(/(?:original request date|requested)\s*:?\s*(\d{4}-\d{2}-\d{2})/i);
+  if (iso) return iso[1];
+  const local = text.match(/original request date\s*:?\s*(\d{2})\/(\d{2})\/(\d{4})/i);
+  if (local) return local[3] + '-' + local[2] + '-' + local[1];
+  return record.appliedDate || record.date || null;
+}
+
+export function rexFortnightStart(project, date) {
+  const anchor = '2026-10-22';
+  if (!/^REX Forestry Project(?: -|$)/i.test(project || '') || date < anchor) return null;
+  const days = Math.round((toUTCDate(date) - toUTCDate(anchor)) / 86400000);
+  return addDays(anchor, Math.floor(days / 14) * 14);
+}
