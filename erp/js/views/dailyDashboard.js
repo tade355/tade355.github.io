@@ -404,7 +404,7 @@ function profitSection(d) {
     ['Dozer Cost — Rented', 'dozerRented', 'Hours × hourly rate'],
     ['Dozer Cost — Partnership', 'dozerPartnership', 'Hours × hourly rate'],
     ['PMS — Tacoma', 'pmsTacoma', 'PMS collected at the station'],
-    ['PMS — unexplained', 'pmsUnexplained', 'Flagged, not yet explained'],
+    ['PMS cost', 'pmsCost', 'PMS purchases charged to the selected period'],
   ];
   const otherT = t.otherCost - t.supervisorSundayAllowance; const otherC = c.otherCost - c.supervisorSundayAllowance;
   const lineRows = lines.map(([label, key, basis]) => ({ label, today: t[key], cumulative: c[key], basis }));
