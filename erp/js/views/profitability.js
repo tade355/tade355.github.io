@@ -462,7 +462,6 @@ function renderGroupedTable(body, groupBy, from, to, project) {
     emptyText: 'No Daily Operations reports in this range.',
   });
 
-  body.appendChild(el('p', { class: 'section-subtitle' }, 'Revenue here is Provisional only (quantity x the contract rate in effect that day) — clients invoice against a measured project period, never against an individual dozer, supervisor, date, or block, so verified revenue and Logistics/Other/Total Cost/Profit (which can only be attributed at the project level) can\'t be split this way and show as "—".'));
 }
 
 export function renderProfitability(container) {
@@ -573,7 +572,6 @@ function renderAllProjects(body, from, to) {
     emptyText: 'No projects to show.',
   });
 
-  body.appendChild(el('p', { class: 'section-subtitle', html: "Provisional revenue is estimated from reported work. Verified revenue is invoiced revenue. Profit and margin use verified revenue and recorded or calculated operating costs." }));
 }
 
 // Operations Profit / Machine Recovery / Total Profit exactly as the Daily
@@ -593,7 +591,6 @@ function renderDashboardBasis(body, project, from, to) {
   const money = (v) => el('span', { class: neg(v) }, formatCurrency(v));
 
   body.appendChild(el('h3', { class: 'subsection-title' }, `Operations Profitability — Daily Dashboard Basis (${formatDate(dates[0])} – ${formatDate(dates[dates.length - 1])})`));
-  body.appendChild(el('p', { class: 'section-subtitle' }, 'Same figures as the Daily Operations Dashboards, from Daily Operations, Diesel Distribution, Fuel Credit (PMS) and Fund Request records. Applies from 10 Oct 2026; earlier dates keep the older rules above.'));
   body.appendChild(el('div', { class: 'stats-grid' }, [
     statCard({ label: 'Revenue (Ha × contract rate)', value: formatCurrency(s.provisionalRevenue), tone: 'good' }),
     statCard({ label: 'Total Cost', value: formatCurrency(s.totalCost), tone: 'critical' }),
@@ -695,7 +692,6 @@ function renderSingleProject(body, project, from, to) {
 
   renderDashboardBasis(body, project, from, to);
 
-  body.appendChild(el('p', { class: 'section-subtitle', html: "Provisional revenue is estimated from reported work. Verified revenue is invoiced revenue. Profit and margin use verified revenue and recorded or calculated operating costs." }));
 
   body.appendChild(el('h3', { class: 'subsection-title' }, 'Weekly Productivity'));
   const { target, rows: weeklyRows } = computeWeeklyProductivity(project, from, to);
