@@ -99,15 +99,12 @@ function flagsBanner(flags) {
 function downloadHtml(d) {
   if (!d) return;
   const html = buildDashboardHtml(d, { fueling: d.diesel.fuelingState });
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  // Keep the download attribute, but also open the generated file in a tab as
-  // a fallback for in-app browsers that block downloads from blob URLs.
+  // Data URLs work in embedded browsers that block blob downloads.
+  const url = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
   const a = el('a', { href: url, download: dashboardFileName(d.date), target: '_blank', rel: 'noopener' });
   document.body.appendChild(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
 function printPage() {
@@ -399,7 +396,7 @@ function profitSection(d) {
   const lines = [
     ['Revenue', 'provisionalRevenue', 'Ha × contract rate'],
     ['Diesel Cost', 'dieselCost', 'Litres used × diesel price'],
-    ['Logistics', 'logisticsCost', '₦50/L of diesel supplied to Company and Rented dozers'],
+    ['Logistics', 'logisticsCost', 'Actual dated operator and diesel transport; otherwise ₦50/L of diesel distributed'],
     ['Operator Allowance', 'operatorAllowanceCost', 'Owned EMG operators, day rate per 8 hrs'],
     ['Supervisor Sunday Allowance', 'supervisorSundayAllowance', SUNDAY_BONUS_BASIS_TEXT],
     ['Dozer Cost — Owned', 'dozerOwned', 'Hours × hourly rate'],

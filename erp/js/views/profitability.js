@@ -8,7 +8,7 @@ import { hourlyRateAsOf, dieselRateAsOf, pmsRateAsOf, projectRateAsOf } from '..
 import { printProfitabilityReport } from '../print.js';
 import { operatorAllowanceForRows, isOwnedOperatorAllowancePayment } from '../ownedOperatorAllowance.js';
 import {
-  DASHBOARD_BASIS_FROM, onDashboardBasis, dieselLogisticsBasis, supervisorSundayAllowanceBasis,
+  DASHBOARD_BASIS_FROM, onDashboardBasis, dieselLogisticsBasis, rollingTransportCosts, supervisorSundayAllowanceBasis,
   pmsBasis, maintenanceBasis, machineRecoveredBasis, dozerCostFor, SUNDAY_BONUS_BASIS_TEXT,
 } from '../dashboardBasis.js';
 
@@ -224,10 +224,11 @@ export function computeProjectStats(project, from, to) {
   const legacyRequests = fundRequests.filter((r) => !onDashboardBasis(r.date));
   const ownershipByName = new Map(store.get('inventory').map((i) => [i.name, i.ownership]));
   const distributions = store.get('dieselSiteDistributions').filter((d) => d.project === project && dateInRange(d.date, from, to));
+  const actualTransport = rollingTransportCosts(store.get('fundRequests').filter((r) => r.project === project), from, to);
   const pmsCollections = store.get('fuelCreditCollections')
     .filter((c) => c.fuelType === 'PMS' && dateInRange(c.date, from, to) && onDashboardBasis(c.date) && pmsProjectForDate(c.date) === project);
   const pms = pmsBasis(pmsCollections);
-  const dieselLogistics = dieselLogisticsBasis(distributions, ownershipByName);
+  const dieselLogistics = dieselLogisticsBasis(distributions.filter((d) => !actualTransport.datesWithDiesel.has(d.date)), ownershipByName);
   const supervisorSundayAllowance = supervisorSundayAllowanceBasis(operations, store.get('operations').filter((o) => o.siteName === project));
   const dozerByOwnership = dozerCostByOwnership(operations);
 
@@ -235,7 +236,7 @@ export function computeProjectStats(project, from, to) {
     + legacyRequests.filter((r) => r.costHead === 'Logistics').reduce((sum, r) => sum + fundRequestTotal(r), 0)
     + commercialBikeLogisticsForRows(operations)
     + tacomaLogisticsForRows(project, from, to, operations)
-    + dieselLogistics;
+    + dieselLogistics + actualTransport.operator + actualTransport.diesel;
   // Fuel-category expenses/fund requests are excluded here since Diesel Cost above is already
   // derived from actual litres consumed (Daily Operations) x the diesel unit price - counting
   // the fuel purchase too would double-count the same fuel spend. Loan Repayment / Profit
@@ -282,6 +283,8 @@ export function computeProjectStats(project, from, to) {
     logisticsCost,
     otherCost,
     dieselLogistics,
+    actualOperatorTransport: actualTransport.operator,
+    actualDieselTransport: actualTransport.diesel,
     supervisorSundayAllowance,
     dozerOwned: dozerByOwnership.Company,
     dozerRented: dozerByOwnership.Rented,
