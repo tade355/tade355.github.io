@@ -140,7 +140,7 @@ export function renderDailyDashboard(container) {
 
   container.appendChild(el('div', { class: 'section-header' }, [el('div', {}, [
     el('h2', {}, 'Daily Operations Dashboard'),
-    el('p', { class: 'section-subtitle' }, 'Operations, diesel, fleet, requests, profitability and staff performance for one site and day — the same sections as the daily dashboard report.'),
+    el('p', { class: 'section-subtitle' }, "Daily site operations, diesel, fleet, requests and staff performance."),
   ])]));
   container.appendChild(el('div', { class: 'filter-bar' }, [
     el('label', { class: 'filter-field' }, [el('span', {}, 'Site'), projectSelect]),
@@ -173,7 +173,7 @@ export function renderDailyDashboard(container) {
 
     current = d;
     if (!['Admin', 'Accounts'].includes(getCurrentTier())) {
-      body.appendChild(el('p', { class: 'backup-warning' }, 'Project operations view. Financial, payroll and stock reconciliation summaries require Admin or Accounts access and are omitted because your data is scoped.'));
+      body.appendChild(el('p', { class: 'backup-warning' }, "Your access includes project operations. Financial and stock summaries require Admin or Accounts access."));
       body.appendChild(operationsSection(d));
       body.appendChild(staffSection(d));
       return;
