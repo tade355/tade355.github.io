@@ -31,7 +31,7 @@ test('store preserves failed collections, blocks incomplete exports and sends ch
   };
   let source = await readFile(new URL('./store.js', import.meta.url), 'utf8');
   source = source.replace("import { supabase } from './supabaseClient.js';", 'const supabase = globalThis.__storeTestClient;');
-  for (const helper of ['storeHelpers.js', 'backupSafety.js']) source = source.replace(`'./${helper}'`, JSON.stringify(new URL(helper, import.meta.url).href));
+  for (const helper of ['storeHelpers.js', 'backupSafety.js', 'requestDuplicates.js']) source = source.replace(`'./${helper}'`, JSON.stringify(new URL(helper, import.meta.url).href));
   const { store, COLLECTIONS } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
   await store.init();
   const exported = store.exportSnapshot();
@@ -59,6 +59,7 @@ test('store preserves failed collections, blocks incomplete exports and sends ch
   await assert.rejects(() => store.importSnapshot(exported), /Browser replacement is disabled/);
   await assert.rejects(() => store.importSnapshot(JSON.stringify({ employees: [] })), /Incomplete backup/);
   assert.equal(calls.length, beforeRestore);
-  assert.equal(COLLECTIONS.length, 37);
+  assert.equal(COLLECTIONS.length, 38);
   delete globalThis.__storeTestClient;
 });
+
