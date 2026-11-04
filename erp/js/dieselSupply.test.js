@@ -57,3 +57,13 @@ test('an old receipt station name joins the full station name used in Fuel Credi
   const all = mergeDieselReceipts({ receipts, collections, operations });
   assert.ok(all.filter((r) => !r.fromFuelCredit).every((r) => r.station === 'Midejab Ltd'));
 });
+
+test('cash purchase price survives newer unpriced deliveries and never uses future prices', async () => {
+ const { dieselPurchasePriceAsOf }=await import('./dieselSupply.js');
+ const receipts=[{date:'2026-10-22',unitCost:1900},{date:'2026-11-01',unitCost:0}];
+ const cash=[{date:'2026-11-03',unitPriceAgreed:1900},{date:'2026-11-05',unitPriceAgreed:2100}];
+ assert.equal(dieselPurchasePriceAsOf('2026-11-03',receipts,cash),1900);
+ assert.equal(dieselPurchasePriceAsOf('2026-11-01',receipts,cash),1900);
+ assert.equal(dieselPurchasePriceAsOf('2026-11-05',receipts,cash),2100);
+ assert.equal(550*dieselPurchasePriceAsOf('2026-11-03',receipts,cash),1045000);
+});
