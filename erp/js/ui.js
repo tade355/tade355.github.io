@@ -178,7 +178,7 @@ export function renderTable(container, { columns, rows, emptyText = 'No records 
   const valueFor = (column, row) => {
     if (column.sortValue) return column.sortValue(row);
     const raw = row[column.key];
-    if (typeof raw === 'number' || (typeof raw === 'string' && (/^\d{4}-\d{2}(?:-\d{2})?$/.test(raw) || (raw.trim() && Number.isFinite(Number(raw)))))) return raw;
+    if (typeof raw === 'number' || (typeof raw === 'string' && (/^\d{4}-\d{2}(?:-\d{2}(?:T.*)?)?$/.test(raw) || (raw.trim() && Number.isFinite(Number(raw)))))) return raw;
     if (!column.render) return raw;
     const rendered = column.render ? column.render(row) : '';
     const value = rendered instanceof Node ? rendered.textContent : rendered;
