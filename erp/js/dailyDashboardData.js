@@ -182,7 +182,9 @@ export function buildDailyDashboard(ctx) {
   const vendorAccrual = Object.values(vendors).map((v) => ({ ...v, dozers: [...v.dozers].sort() }));
 
   // ------------------------------------------------------------------ requests
-  const reqs = ctx.fundRequests.filter((r) => r.project === project && r.date <= date);
+  const requestSince = addDays(date, -3);
+  const recentRequests = ctx.fundRequests.filter((r) => r.date >= requestSince && r.date <= date);
+  const reqs = recentRequests.filter((r) => r.project === project);
   const total = (r) => sum(r.items || [], (it) => it.amount);
   const inRange = reqs.filter((r) => r.date >= since);
   const requestsToday = reqs.filter((r) => r.date === date);
@@ -190,6 +192,7 @@ export function buildDailyDashboard(ctx) {
   const byCategory = {};
   paidToday.forEach((r) => { byCategory[r.costHead || 'Other'] = (byCategory[r.costHead || 'Other'] || 0) + total(r); });
   const requests = {
+    since: requestSince,
     requestedToday: sum(requestsToday, total),
     requestedCumulative: sum(inRange, total),
     paidToday: sum(paidToday, total),
@@ -197,7 +200,7 @@ export function buildDailyDashboard(ctx) {
     pending: sum(inRange.filter((r) => r.status === 'Pending'), total),
     approved: sum(inRange.filter((r) => r.status === 'Approved'), total),
     paidByCategory: Object.entries(byCategory).map(([label, value]) => ({ label, value })),
-    rows: reqs.filter((r) => (r.date >= since && (r.status === 'Pending' || r.status === 'Approved')) || r.date === date)
+    rows: reqs.filter((r) => ['Pending', 'Approved', 'Paid'].includes(r.status))
       .map((r) => ({ id: r.id, date: r.date, description: r.description, category: r.costHead || '—', amount: total(r), status: r.status, isNew: r.date === date }))
       .sort((a, b) => (a.isNew === b.isNew ? (a.date < b.date ? 1 : -1) : a.isNew ? -1 : 1)),
   };
@@ -304,7 +307,7 @@ export function buildDailyDashboard(ctx) {
   if (down.length) flags.push({ tone: 'warning', text: `Not available: ${down.map((f) => `${f.equipment} (${f.fleetStatus})`).join(', ')}.` });
   if (todayStats.pmsUnexplained) flags.push({ tone: 'warning', text: `${fmt(todayStats.pmsUnexplained)} of PMS is unexplained.`, action: 'Explain it or reclassify it.' });
   // Requests waiting too long, duplicates, vouchers, old stock count, missing reports, backup: same list the main Dashboard uses.
-  flags.push(...buildAttention(ctx, { date })); // no backup flag here: that lives in the browser, and a downloaded dashboard has none
+  flags.push(...buildAttention({ ...ctx, fundRequests: recentRequests }, { date })); // no backup flag here: that lives in the browser, and a downloaded dashboard has none
 
   return {
     project, date, since,
