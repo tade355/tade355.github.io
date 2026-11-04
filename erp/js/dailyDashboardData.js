@@ -5,8 +5,8 @@
 //
 // Pure (no store / DOM imports): everything is passed in through `ctx`, so the
 // figures can be unit-tested and reconciled against the published dashboards.
-import { onDashboardBasis, dozerCostFor, DIESEL_LOGISTICS_PER_LITRE } from './dashboardBasis.js';
-import { isSunday, addDays } from './dateUtils.js';
+import { DASHBOARD_BASIS_FROM, onDashboardBasis, dozerCostFor, DIESEL_LOGISTICS_PER_LITRE } from './dashboardBasis.js';
+import { isSunday, addDays, requestSubmissionDate, rexFortnightStart } from './dateUtils.js';
 import { buildAttention } from './attention.js';
 import { fuelEfficiency, NORM_LITRES_PER_HA } from './fuelEfficiency.js';
 
@@ -41,7 +41,10 @@ function datesBetween(ops) {
 }
 
 export function buildDailyDashboard(ctx) {
-  const { project, date, since } = ctx;
+  const { project, date } = ctx;
+  const periodStart = rexFortnightStart(project, date);
+  const since = periodStart || ctx.since;
+  const dieselSince = periodStart ? DASHBOARD_BASIS_FROM : since;
   const inv = ctx.inventory.filter((i) => i.category === 'Heavy Equipment');
   const invByName = new Map(ctx.inventory.map((i) => [i.name, i]));
   const empName = (id) => ctx.employees.find((e) => e.id === id)?.name || null;
@@ -108,8 +111,8 @@ export function buildDailyDashboard(ctx) {
   // distributed, used = standard litres, closing = opening − used). Diesel
   // issued for a repair rather than for the tank ("not tank fuel" /
   // "maintenance diesel" in the distribution notes) is left out of the chain.
-  const tankDist = dist.filter((d) => d.date >= since && !/not tank fuel|maintenance diesel/i.test(d.notes || ''));
-  const chainOps = allOps.filter((o) => o.date >= since);
+  const tankDist = dist.filter((d) => d.date >= dieselSince && !/not tank fuel|maintenance diesel/i.test(d.notes || ''));
+  const chainOps = allOps.filter((o) => o.date >= dieselSince);
   const chainNames = [...new Set([...tankDist.map((d) => d.equipment), ...chainOps.map((o) => o.equipment)])];
   const diesel = chainNames.map((name) => {
     const closingBefore = sum(tankDist.filter((d) => d.equipment === name && d.date < date), (d) => d.litres)
@@ -183,7 +186,7 @@ export function buildDailyDashboard(ctx) {
 
   // ------------------------------------------------------------------ requests
   const requestSince = addDays(date, -3);
-  const recentRequests = ctx.fundRequests.filter((r) => r.date >= requestSince && r.date <= date);
+  const recentRequests = ctx.fundRequests.filter((r) => requestSubmissionDate(r) >= requestSince && requestSubmissionDate(r) <= date);
   const reqs = recentRequests.filter((r) => r.project === project);
   const total = (r) => sum(r.items || [], (it) => it.amount);
   const inRange = reqs.filter((r) => r.date >= since);
@@ -201,7 +204,7 @@ export function buildDailyDashboard(ctx) {
     approved: sum(inRange.filter((r) => r.status === 'Approved'), total),
     paidByCategory: Object.entries(byCategory).map(([label, value]) => ({ label, value })),
     rows: reqs.filter((r) => ['Pending', 'Approved', 'Paid'].includes(r.status))
-      .map((r) => ({ id: r.id, date: r.date, description: r.description, category: r.costHead || '—', amount: total(r), status: r.status, isNew: r.date === date }))
+      .map((r) => ({ id: r.id, date: r.date, submittedDate: requestSubmissionDate(r), description: r.description, category: r.costHead || '—', amount: total(r), status: r.status, isNew: r.date === date }))
       .sort((a, b) => (a.isNew === b.isNew ? (a.date < b.date ? 1 : -1) : a.isNew ? -1 : 1)),
   };
 
@@ -312,7 +315,7 @@ export function buildDailyDashboard(ctx) {
   return {
     project, date, since,
     operations: { rows: operations, reporting: operations.filter((o) => o.reported).length, fleetCount: operations.length, todayHa, todayHours, cumulativeHa: cumStats.areaCleared },
-    diesel: { efficiency, normLitresPerHa: NORM_LITRES_PER_HA, collectedAgo, soldAgo, collectedPms, distributedToday, usedToday, usedCost: usedToday * dieselRate, dieselRate, onGround, onGroundDate: latestCount?.date || null, onGroundBase: latestCount ? latestCount.countedLitres : null, onGroundIn: rolledIn, onGroundOut: rolledOut, rows: diesel, fuelingRequest, stationBalance, distributionChart: dist.filter(aldDay).map((d) => ({ label: d.equipment, value: d.litres })) },
+    diesel: { chainSince: dieselSince, efficiency, normLitresPerHa: NORM_LITRES_PER_HA, collectedAgo, soldAgo, collectedPms, distributedToday, usedToday, usedCost: usedToday * dieselRate, dieselRate, onGround, onGroundDate: latestCount?.date || null, onGroundBase: latestCount ? latestCount.countedLitres : null, onGroundIn: rolledIn, onGroundOut: rolledOut, rows: diesel, fuelingRequest, stationBalance, distributionChart: dist.filter(aldDay).map((d) => ({ label: d.equipment, value: d.litres })) },
     fleet, vendorAccrual, requests,
     profit: { today: todayStats, cumulative: cumStats, contribution, extraRows },
     staff, flags,
