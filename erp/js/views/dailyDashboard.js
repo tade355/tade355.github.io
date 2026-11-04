@@ -7,7 +7,7 @@ import { getCurrentTier } from '../session.js';
 import { store } from '../store.js';
 import { statCard, statusPill } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
-import { todayISOString, addDays } from '../dateUtils.js';
+import { todayISOString, addDays, rexFortnightStart } from '../dateUtils.js';
 import { projectNames } from './profitability.js';
 import { DASHBOARD_BASIS_FROM, SUNDAY_BONUS_BASIS_TEXT } from '../dashboardBasis.js';
 import { buildDashboardHtml, dashboardFileName } from '../dashboardHtml.js';
@@ -169,6 +169,9 @@ export function renderDailyDashboard(container) {
     body.innerHTML = '';
     const project = projectSelect.value;
     const date = dateInput.value || realToday;
+    const periodStart = rexFortnightStart(project, date);
+    sinceInput.disabled = !!periodStart;
+    if (periodStart) sinceInput.value = periodStart;
     const since = sinceInput.value && sinceInput.value <= date ? sinceInput.value : date;
     const d = dailyDashboardFor(project, date, since);
 
@@ -254,7 +257,7 @@ function dieselSection(d) {
   return section('diesel', 2, 'Diesel Management', [
     tiles,
     el('div', { class: 'dd-grid-2' }, [chartBox, fuelBox]),
-    el('p', { class: 'section-subtitle' }, `Opening = previous closing + diesel distributed; used = standard litres from the daily reports; chain starts ${formatDate(d.since)}.`),
+    el('p', { class: 'section-subtitle' }, `Opening = previous closing + diesel distributed; used = standard litres from the daily reports; chain starts ${formatDate(d.diesel.chainSince)}.`),
     table,
     el('h4', { class: 'subsection-title' }, 'Diesel Against Work'),
     el('p', { class: 'section-subtitle' }, `${formatDate(d.since)} to ${formatDate(d.date)}. Norm ${num(x.normLitresPerHa, 0)} L per hectare (8 hrs x 25 L for 1.3 ha); flagged above 125% of it. Needs at least 1 ha in the period.`),
@@ -344,7 +347,7 @@ function requestsSection(d, onRefresh) {
     statCard({ label: 'Approved, payment unconfirmed', value: money(r.approved), tone: 'warning' }),
   ]);
   const columns = [
-    { label: 'Date', render: (x) => formatDate(x.date), text: (x) => x.date },
+    { label: 'Submission Date', render: (x) => formatDate(x.submittedDate), text: (x) => x.submittedDate },
     { label: 'Description', render: (x) => el('span', {}, [x.description, x.isNew ? el('span', { class: 'dd-muted' }, ' · new today') : null]), text: (x) => x.description },
     { label: 'Category', render: (x) => x.category, text: (x) => x.category },
     { label: 'Amount (₦)', num: true, render: (x) => num(x.amount, 0), sortValue: (x) => x.amount },
