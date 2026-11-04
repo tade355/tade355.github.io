@@ -1,3 +1,4 @@
+import { requestSubmissionDate } from '../dateUtils.js';
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el, ico } from '../utils.js';
 import { renderTable, sectionHeader, statCard } from '../ui.js';
@@ -99,7 +100,8 @@ export function renderApprovals(container, onRefresh = () => {}) {
     renderTable(tableContainer, {
       columns: [
         { key: 'type', label: 'Type' },
-        { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
+        { key: 'submittedDate', label: 'Submission Date', render: (r) => formatDate(requestSubmissionDate(r.record)), sortValue: (r) => requestSubmissionDate(r.record) },
+        { key: 'date', label: 'Request Date', render: (r) => formatDate(r.date) },
         { key: 'summary', label: 'Summary' },
         { key: 'by', label: 'Submitted By' },
         { key: 'amount', label: 'Amount', render: (r) => (r.amount === null ? '—' : formatCurrency(r.amount)) },
