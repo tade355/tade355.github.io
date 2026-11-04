@@ -410,13 +410,16 @@ export function buildDashboardHtml(d, { expectedHaPer8 = 1.3, idealStart = '7:00
   ].map((y) => `    ${y}`).join('\n');
 
   // ---------------------------------------------------------- 6 staff
+  const operators = d.staff.filter((s) => s.role !== 'Supervisor');
+  const supervisors = d.staff.filter((s) => s.role === 'Supervisor');
   const first = d.staff[0] && d.staff[0].days[0]; const last = d.staff[0] && d.staff[0].days[d.staff[0].days.length - 1];
   const rangeLabel = first ? `last 3 days: ${parts(first).d} → ${dayMonth(last)}` : '';
-  const staffRows = d.staff.map((s, i) => {
+  const staffRowsFor = (rows) => rows.map((s, i) => {
     const late = s.lateMinutesToday !== null && s.lateMinutesToday >= 60;
     const prod = s.productivity.map((p) => (p === null ? '—' : `${p.toFixed(1)}%`)).join(' → ');
-    return `      <tr${late ? ' class="flag"' : ''}><td class="num">${i + 1}</td><td><strong>${esc(shortName(s.name))}</strong><br><span class="src">${esc(s.role)}</span></td><td>${esc(s.resumption.join(' → '))}</td><td>${esc(s.lateToday)}</td><td class="num">${fmt(s.hoursToday, 1)}</td><td>${prod}</td><td class="num">${pct(s.cumulative)}</td></tr>`;
+    return `      <tr${late ? ' class="flag"' : ''}><td class="num">${i + 1}</td><td><strong>${esc(shortName(s.name))}</strong><br><span class="src">${esc(s.role)}</span></td><td>${esc(s.resumption.join(' → '))}</td><td>${esc(s.lateToday)}</td><td class="num">${fmt(s.hoursToday, 1)}</td><td>${prod}</td><td class="num">${s.cumulative === null ? '—' : pct(s.cumulative)}</td></tr>`;
   }).join('\n');
+  const staffRows = `<tr><th colspan="7">Operators</th></tr>${staffRowsFor(operators)}<tr><th colspan="7">Supervisors</th></tr>${staffRowsFor(supervisors)}`;
 
   const dataCalls = [
     dist.length ? `  bar(document.getElementById('chart-diesel'), ${JSON.stringify(dist.map((b) => ({ label: b.label, value: b.value, color: 'var(--s1)' })))}, { unit: ' L' });` : '',
@@ -661,7 +664,7 @@ ${contribRows.join('\n')}
 <!-- ============ SECTION 6 — STAFF PERFORMANCE ============ -->
 <section id="staff">
   <h2><span class="n">6.</span> Staff Performance</h2>
-  <p class="lead">Ranked by cumulative productivity since ${onDay(d.since)}. Ideal resumption is ${esc(idealStart)}.</p>
+  <p class="lead">Operators and supervisors are shown separately. Productivity is ranked only after 8 recorded hours since ${onDay(d.since)}; shorter samples are shown without a percentage. Ideal resumption is ${esc(idealStart)}.</p>
 
   <div class="table-wrap"><table>
     <thead>

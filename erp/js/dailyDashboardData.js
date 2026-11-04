@@ -285,9 +285,10 @@ export function buildDailyDashboard(ctx) {
       lateToday: today ? lateLabel(today.start) : '—',
       lateMinutesToday: today && today.start !== null ? today.start - toMinutes(IDEAL_START) : null,
       hoursToday: today ? (p.role === 'Supervisor' && today.start !== null && stopT !== null ? (stopT - today.start) / 60 : today.hours) : 0,
-      cumulative: pct(totalHa, totalExp),
+      totalHours: sum(all, (d) => d.hours),
+      cumulative: sum(all, (d) => d.hours) >= 8 ? pct(totalHa, totalExp) : null,
     };
-  }).sort((a, b) => (b.cumulative ?? -1) - (a.cumulative ?? -1));
+  }).sort((a, b) => (a.role === 'Supervisor' ? 1 : 0) - (b.role === 'Supervisor' ? 1 : 0) || (b.cumulative ?? -1) - (a.cumulative ?? -1));
 
   // ------------------------------------------------------------------- flags
   const flags = [];
