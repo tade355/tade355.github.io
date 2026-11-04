@@ -1,3 +1,4 @@
+import { uniqueFinancialRecords } from './requestDuplicates.js';
 import { supabase } from './supabaseClient.js';
 import { fetchAllPages, isStale } from './storeHelpers.js';
 import { applyRefreshResults, validateSnapshot } from './backupSafety.js';
@@ -9,6 +10,7 @@ const LAST_BACKUP_KEY = 'emagrims_erp_last_backup';
 // collections that used to store a nested array (invoice line items,
 // payroll lines, etc.) — the child table that now holds those rows.
 const CONFIG = {
+  recordSupersessions: { table: 'record_supersessions', prefix: 'DUP' },
   employees: { table: 'employees', prefix: 'EMP' },
   inventory: { table: 'inventory', prefix: 'INV' },
   customers: { table: 'customers', prefix: 'CUS' },
@@ -240,7 +242,8 @@ export const store = {
   },
 
   get(collection) {
-    return state[collection] || [];
+    const rows = state[collection] || [];
+    return ['fundRequests', 'expenses'].includes(collection) ? uniqueFinancialRecords(rows, collection, state.recordSupersessions || []) : rows;
   },
   find(collection, id) {
     return (state[collection] || []).find((r) => r.id === id) || null;

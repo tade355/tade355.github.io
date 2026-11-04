@@ -67,3 +67,38 @@ export function findDuplicateRequests(candidate, existingRequests, { days = 14 }
   hits.sort((x, y) => rank[x.kind] - rank[y.kind] || String(y.r.date || '').localeCompare(String(x.r.date || '')));
   return hits.map((h) => h.r);
 }
+
+// Duplicate visibility is reversible: raw records remain in backups and audit history.
+function receiptKey(row) {
+  const text = row.description || '';
+  const refs = [...text.matchAll(/(?:receipt|ref(?:erence)?)\s*:?[ \t]+((?:EXTTRF|LTRF|TRF)\|[0-9]+|[a-f0-9]{24,})/gi)].map(m => m[1].toLowerCase());
+  return refs.length === 1 ? refs[0] : null;
+}
+function sourceDate(row) {
+  return row.submittedOn || (row.description || '').match(/original request date\s*:?\s*(\d{4}-\d{2}-\d{2})/i)?.[1] || row.date || '';
+}
+function newest(a, b) {
+  return String(b.createdAt || b.created_at || b.date || '').localeCompare(String(a.createdAt || a.created_at || a.date || '')) || String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+}
+export function uniqueFinancialRecords(rows, collection, supersessions = []) {
+  const hidden = new Set(supersessions.filter(s => s.sourceCollection === collection).map(s => s.sourceId));
+  const groups = new Map();
+  for (const row of rows || []) {
+    if (hidden.has(row.id)) continue;
+    const amount = requestTotal(row);
+    const receipt = receiptKey(row);
+    const description = normaliseDescription((row.description || '').split(/\[CANCEL-|\| Receipt |Original request date/i)[0]);
+    // A recurring cost on another service date is a separate claim. A receipt can match across import dates.
+    const identity = receipt ? 'receipt:' + receipt : sourceDate(row) && description ? 'claim:' + sourceDate(row) + ':' + description : 'id:' + row.id;
+    const key = JSON.stringify([collection, row.project || '', row.costHead || row.category || '', amount, identity]);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  }
+  return [...groups.values()].map(group => {
+    group.sort(newest);
+    const keep = group[0];
+    // A resent unpaid copy cannot turn an evidenced payment into another payable.
+    const paid = collection === 'fundRequests' && group.find(r => r.status === 'Paid');
+    return paid && keep.status !== 'Paid' ? { ...keep, status: 'Paid', paidAt: paid.paidAt || paid.date, approvedBy: paid.approvedBy } : keep;
+  });
+}
