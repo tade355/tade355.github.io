@@ -102,9 +102,13 @@ function initApp() {
   function showHealth() {
     const failed = Object.entries(store.getHealth()).filter(([, value]) => !value.ok).map(([key]) => key);
     healthBanner.hidden = failed.length === 0;
-    healthBanner.textContent = failed.length ? 'Some data could not be loaded. Refresh Data before using reports or backups.' : '';
-    // Do not leave previously rendered totals visible after a passive failure.
-    viewContainer.hidden = failed.length > 0;
+    healthBanner.textContent = failed.length
+      ? `Some data could not be loaded (${failed.join(', ')}). Refresh Data before using reports or backups.`
+      : '';
+    // Keep operational pages usable when an optional or permission-limited
+    // collection fails. Reports and backups still fail closed through
+    // store.assertComplete(), while the rest of the ERP remains visible.
+    viewContainer.hidden = false;
   }
   window.addEventListener('erp-data-health', showHealth);
   showHealth();
