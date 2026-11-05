@@ -9,6 +9,7 @@ import { initThemeSwitch } from './theme.js';
 import { setNavigationUser } from './navigationState.js';
 import { openGlobalSearch, initGlobalSearchShortcut } from './globalSearch.js';
 import { initNotificationCenter } from './notificationCenter.js';
+import { startFieldSync, pendingFieldSyncCount } from './fieldSync.js';
 
 const sidebarNav = document.getElementById('sidebarNav');
 const viewContainer = document.getElementById('view');
@@ -109,6 +110,10 @@ function initApp() {
   showHealth();
   renderUserBadge();
   initNotificationCenter(document.getElementById('notificationBell'));
+  startFieldSync(store, ({ pending }) => {
+    const bell = document.getElementById('notificationBell');
+    if (bell) bell.title = pending ? `${pending} field submission(s) waiting to sync` : 'Notifications';
+  });
   globalSearchBtn.addEventListener('click', openGlobalSearch);
   initGlobalSearchShortcut();
 
