@@ -1,6 +1,6 @@
 import { closeModal } from './ui.js';
 import { el } from './utils.js';
-import { canAccess, getCurrentTier, defaultRouteForTier } from './session.js';
+import { canAccessRoute, getCurrentTier, defaultRouteForTier } from './session.js';
 import { ICONS } from './icons.js';
 import { canImportData } from './access.js';
 import { store } from './store.js';
@@ -56,7 +56,7 @@ export function initRouter(viewContainer, onRouteChange) {
   function currentPath() {
     const hash = window.location.hash.replace('#/', '').split('?')[0];
     const route = ROUTES.find((r) => r.path === hash);
-    if (route && canAccess(route.tiers) && (!route.guard || route.guard())) return hash;
+    if (route && canAccessRoute(route) && (!route.guard || route.guard())) return hash;
     return defaultRouteForTier(getCurrentTier());
   }
 
