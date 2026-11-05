@@ -2,8 +2,27 @@ import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
+import { getCurrentTier } from '../session.js';
+import { uniqueFinancialRecords } from '../requestDuplicates.js';
 
 const CONSUMABLE_CATEGORY = 'Consumables';
+const LUBRICANT = /\b(?:engine oil|hydraulic (?:oil|fluid)|gear oil|grease|lubricants?|lube)\b/i;
+
+function lubricantPurchases() {
+  const requests = uniqueFinancialRecords(store.get('fundRequests'), 'fundRequests', store.get('recordSupersessions'))
+    .filter((r) => r.status === 'Paid')
+    .flatMap((r) => (r.items || []).filter((item) => LUBRICANT.test(item.description || ''))
+      .map((item) => ({ id: r.id, date: r.date, description: item.description,
+        amount: Number(item.amount) || 0, source: 'Paid request', link: '#/fundRequests' })));
+  const expenses = store.get('expenses')
+    .filter((e) => LUBRICANT.test(`${e.category || ''} ${e.description || ''}`))
+    .filter((e) => !requests.some((r) => r.date === e.date && r.amount === Number(e.amount)
+      && (LUBRICANT.exec(r.description || '')?.[0] || '').toLowerCase()
+        === (LUBRICANT.exec(e.description || '')?.[0] || '').toLowerCase()))
+    .map((e) => ({ id: e.id, date: e.date, description: e.description || e.category,
+      amount: Number(e.amount) || 0, source: 'Expense', link: '#/accounting' }));
+  return [...requests, ...expenses].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+}
 
 function consumablesCatalog() {
   return store.get('inventory').filter((i) => i.category === CONSUMABLE_CATEGORY);
@@ -66,6 +85,15 @@ export function renderConsumables(container) {
   container.appendChild(withdrawLogHeader);
   const withdrawalContainer = el('div');
   container.appendChild(withdrawalContainer);
+
+  let purchaseContainer;
+  if (['Admin', 'Accounts'].includes(getCurrentTier())) {
+    container.appendChild(el('h3', { class: 'subsection-title' }, 'Purchase & Payment History'));
+    container.appendChild(el('p', { class: 'section-subtitle' },
+      'Paid records show what was bought or requested. Stock on hand needs a separate quantity count.'));
+    purchaseContainer = el('div');
+    container.appendChild(purchaseContainer);
+  }
 
   function refresh() {
     const items = consumablesCatalog();
@@ -139,6 +167,17 @@ export function renderConsumables(container) {
       ],
       rows: withdrawals,
       emptyText: 'No withdrawals logged yet.',
+    });
+
+    if (purchaseContainer) renderTable(purchaseContainer, {
+      columns: [
+        { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
+        { key: 'description', label: 'Purchase / Payment' },
+        { key: 'amount', label: 'Recorded Amount', render: (r) => formatCurrency(r.amount) },
+        { key: 'source', label: 'Source', render: (r) => el('a', { href: r.link }, `${r.source} ${r.id}`) },
+      ],
+      rows: lubricantPurchases(),
+      emptyText: 'No paid lubricant records found.',
     });
   }
 
