@@ -22,6 +22,11 @@ function fields(record) {
     { name: 'title', label: 'Title', required: true },
     { name: 'category', label: 'Category', type: 'select', required: true, options: CATEGORIES.map((c) => ({ value: c, label: c })) },
     { name: 'date', label: 'Date', type: 'date', required: true },
+    { name: 'documentVersion', label: 'Document Version' },
+    { name: 'effectiveDate', label: 'Effective From', type: 'date' },
+    { name: 'reviewDate', label: 'Review Date', type: 'date' },
+    { name: 'documentOwner', label: 'Document Owner' },
+    { name: 'acknowledgementRequired', label: 'Acknowledgement Required?', type: 'select', options: [{ value: 'false', label: 'No' }, { value: 'true', label: 'Yes' }] },
     { name: 'body', label: 'Details', type: 'textarea', rows: 4 },
     { name: 'attachments', label: 'Attachments (flyers, policy documents, organogram, etc.)', type: 'attachments' },
     { name: 'pinned', label: 'Pin to top of the board?', type: 'select', options: [
@@ -98,10 +103,10 @@ function openNoticeForm(record, refresh) {
     fields: fields(record),
     initial: record
       ? { ...record, pinned: record.pinned ? 'true' : 'false' }
-      : { date: todayISOString(), category: 'Announcement', pinned: 'false' },
+      : { date: todayISOString(), category: 'Announcement', pinned: 'false', acknowledgementRequired: 'false' },
     submitLabel: record ? 'Save Changes' : 'Post Notice',
     onSubmit: async (data) => {
-      const payload = { ...data, pinned: data.pinned === 'true' };
+      const payload = { ...data, pinned: data.pinned === 'true', acknowledgementRequired: data.acknowledgementRequired === 'true' };
       if (record) {
         await store.update('noticeBoardPosts', record.id, payload);
       } else {
@@ -155,3 +160,4 @@ export function renderNoticeBoard(container) {
   categorySelect.addEventListener('change', refresh);
   refresh();
 }
+
