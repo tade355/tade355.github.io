@@ -55,7 +55,7 @@ const CONFIG = {
   // manual_url/plan_url/syllabus_url are training-materials Storage links,
   // same reasoning as video_url above.
   trainingPrograms: { table: 'training_programs', prefix: 'PRG' },
-  moduleStatuses: { table: 'erp_module_status', prefix: 'MOD' },
+  moduleStatuses: { table: 'erp_module_status', prefix: 'MOD', orderBy: 'module_key' },
 };
 
 const COLLECTIONS = Object.keys(CONFIG);
@@ -124,7 +124,7 @@ async function unusedId(key) {
 async function fetchCollection(key) {
   const cfg = CONFIG[key];
   const selectCols = cfg.child ? `*, ${cfg.child.table}(*)` : '*';
-  const orderColumn = key === 'moduleStatuses' ? 'module_key' : 'id';
+  const orderColumn = cfg.orderBy || 'id';
   const data = await fetchAllPages(async (from, to) => {
     const { data: page, error } = await supabase.from(cfg.table).select(selectCols).order(orderColumn).range(from, to);
     if (error) throw new Error(`Could not load ${key} (${error.message}).`);
@@ -316,4 +316,3 @@ export const store = {
 };
 
 export { COLLECTIONS };
-

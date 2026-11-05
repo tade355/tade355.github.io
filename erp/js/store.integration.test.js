@@ -3,17 +3,23 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 test('store preserves failed collections, blocks incomplete exports and sends checked versions', async () => {
-  const rows = { expenses: [{ id: 'EXP-1', amount: 100, updated_at: '2026-11-01T00:00:00Z' }] };
+  const rows = {
+    expenses: [{ id: 'EXP-1', amount: 100, updated_at: '2026-11-01T00:00:00Z' }],
+    erp_module_status: [{ module_key: 'operations', label: 'Field Operations', status: 'Active' }],
+  };
   const calls = [];
   let failedTable = null; let stale = false; let stampFailure = false; let next = 0;
   globalThis.localStorage = { setItem() {}, getItem() { return null; } };
   globalThis.__storeTestClient = {
     from(table) {
-      const query = { field: null, id: null, one: false,
-        select(field) { this.field = field; return this; }, order() { return this; }, range() { return this; },
+      const query = { field: null, id: null, one: false, sortColumn: null,
+        select(field) { this.field = field; return this; }, order(column) { this.sortColumn = column; return this; }, range() { return this; },
         eq(key, value) { if (key === 'id') this.id = value; return this; }, maybeSingle() { this.one = true; return this; },
         then(resolve, reject) {
-          const error = table === failedTable ? { message: 'Unavailable' } : stampFailure && this.field === 'updated_at' ? { code: 'NETWORK', message: 'Temporary failure' } : null;
+          const error = table === failedTable ? { message: 'Unavailable' }
+            : table === 'erp_module_status' && this.sortColumn && this.sortColumn !== 'module_key'
+              ? { code: '42703', message: `column erp_module_status.${this.sortColumn} does not exist` }
+              : stampFailure && this.field === 'updated_at' ? { code: 'NETWORK', message: 'Temporary failure' } : null;
           let data = (rows[table] || []).filter((r) => !this.id || r.id === this.id);
           if (this.one) data = data[0] || null;
           return Promise.resolve({ data, error }).then(resolve, reject);
@@ -34,6 +40,9 @@ test('store preserves failed collections, blocks incomplete exports and sends ch
   for (const helper of ['storeHelpers.js', 'backupSafety.js', 'requestDuplicates.js']) source = source.replace(`'./${helper}'`, JSON.stringify(new URL(helper, import.meta.url).href));
   const { store, COLLECTIONS } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
   await store.init();
+  assert.equal(store.getHealth().moduleStatuses.ok, true, 'readiness rows load using module_key, not a nonexistent id');
+  assert.equal(store.get('moduleStatuses')[0].moduleKey, 'operations');
+  assert.doesNotThrow(() => store.assertComplete());
   const exported = store.exportSnapshot();
   assert.equal(JSON.parse(exported)._backup.counts.expenses, 1);
   failedTable = 'expenses';
@@ -62,5 +71,4 @@ test('store preserves failed collections, blocks incomplete exports and sends ch
   assert.equal(COLLECTIONS.length, 40);
   delete globalThis.__storeTestClient;
 });
-
 

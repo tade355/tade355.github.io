@@ -24,3 +24,10 @@ test('one failed query preserves prior rows and marks data unhealthy', () => {
   assert.equal(result.health.operations.ok, true);
   assert.equal(previous.operations.length, 0);
 });
+
+test('module readiness backup rows validate by their natural key and still reject duplicates', () => {
+  const row = { moduleKey: 'operations', label: 'Field Operations', status: 'Active' };
+  assert.deepEqual(validateSnapshot({ moduleStatuses: [row] }, ['moduleStatuses']), [{ collection: 'moduleStatuses', records: 1 }]);
+  assert.throws(() => validateSnapshot({ moduleStatuses: [row, row] }, ['moduleStatuses']), /duplicate/);
+  assert.throws(() => validateSnapshot({ moduleStatuses: [{ id: 'fake' }] }, ['moduleStatuses']), /Invalid/);
+});

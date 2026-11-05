@@ -6,9 +6,11 @@ export function validateSnapshot(parsed, collections) {
   if (missing.length) throw new Error(`Incomplete backup: missing collections ${missing.join(', ')}. No data was changed.`);
   for (const key of collections) {
     const ids = new Set();
+    const identityKey = key === 'moduleStatuses' ? 'moduleKey' : 'id';
     for (const row of parsed[key]) {
-      if (!row || typeof row.id !== 'string' || !row.id || ids.has(row.id)) throw new Error(`Invalid or duplicate record id in ${key}.`);
-      ids.add(row.id);
+      const id = row?.[identityKey];
+      if (typeof id !== 'string' || !id || ids.has(id)) throw new Error(`Invalid or duplicate record id in ${key}.`);
+      ids.add(id);
     }
     if (parsed._backup && parsed._backup.counts?.[key] !== parsed[key].length) throw new Error(`Backup count mismatch in ${key}.`);
   }
