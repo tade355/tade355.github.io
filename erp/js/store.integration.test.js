@@ -59,7 +59,8 @@ test('store preserves failed collections, blocks incomplete exports and sends ch
   await assert.rejects(() => store.importSnapshot(exported), /Browser replacement is disabled/);
   await assert.rejects(() => store.importSnapshot(JSON.stringify({ employees: [] })), /Incomplete backup/);
   assert.equal(calls.length, beforeRestore);
-  assert.equal(COLLECTIONS.length, 38);
+  assert.equal(COLLECTIONS.length, 39);
   delete globalThis.__storeTestClient;
 });
+
 
