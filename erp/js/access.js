@@ -3,6 +3,12 @@
 // only shown to Olumide Davidson's account, and the download action checks again.
 import { getCurrentUser } from './session.js';
 
+// HRM's leave decision authority is checked again by the database trigger.
+export const HRM_EMPLOYEE_ID = 'EMP-27'; // Atabo Victoria
+export function canDecideLeave() {
+  return getCurrentUser()?.id === HRM_EMPLOYEE_ID;
+}
+
 export const REPORT_DOWNLOAD_EMPLOYEE_IDS = ['EMP-26']; // Olumide Davidson
 
 // The owner flag lives on the employee record (employees.is_owner, migration 0041);
