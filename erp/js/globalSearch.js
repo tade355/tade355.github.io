@@ -3,7 +3,7 @@ import { el, formatDate } from './utils.js';
 import { openCustomModal, closeModal } from './ui.js';
 import { fleetItems } from './views/fleet.js';
 import { ROUTES } from './router.js';
-import { canAccess } from './session.js';
+import { canAccess, canAccessRoute } from './session.js';
 import { canDownloadProfitReports } from './access.js';
 import { searchCatalogue, quickLinks } from './searchCatalogue.js';
 
@@ -161,14 +161,14 @@ function runSearch(query) {
   if (q.length < 1) return [];
 
   // Pages, tabs and features first — they answer "where is X?".
-  const results = searchCatalogue(q, { routes: ROUTES, canAccess, canUse }).map((e) => ({
+  const results = searchCatalogue(q, { routes: ROUTES, canAccess, canAccessRoute, canUse }).map((e) => ({
     ...e, isLocation: true, meta: e.kind === 'Page' ? '' : `in ${e.routeLabel}${e.tabs && e.tabs.length > 1 ? ` › ${e.tabs.slice(0, -1).join(' › ')}` : ''}`,
   }));
   if (q.length < 2) return results;
 
   searchSources().forEach((source) => {
     const route = ROUTES.find((r) => r.path === source.route);
-    if (route && (!canAccess(route.tiers) || (route.guard && !route.guard()))) return;
+    if (route && (!canAccessRoute(route) || (route.guard && !route.guard()))) return;
     const matches = source.items().filter((item) => item.searchText.toLowerCase().includes(q));
     matches.slice(0, MAX_PER_KIND).forEach((item) => results.push({ ...item, kind: source.kind, route: source.route, tabs: source.tabs }));
     if (matches.length > MAX_PER_KIND) {
@@ -205,7 +205,7 @@ export function openGlobalSearch() {
         resultsEl.innerHTML = '';
         if (!current.length && !input.value.trim()) {
           resultsEl.appendChild(el('p', { class: 'dd-muted' }, 'Quick links'));
-          current = quickLinks({ routes: ROUTES, canAccess, canUse }).map((e) => ({ ...e, isLocation: true, meta: '' }));
+          current = quickLinks({ routes: ROUTES, canAccess, canAccessRoute, canUse }).map((e) => ({ ...e, isLocation: true, meta: '' }));
         }
         if (!current.length) {
           const q = input.value.trim();
@@ -268,3 +268,4 @@ export function initGlobalSearchShortcut() {
     openGlobalSearch();
   });
 }
+
