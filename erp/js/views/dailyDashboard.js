@@ -13,7 +13,7 @@ import { DASHBOARD_BASIS_FROM, SUNDAY_BONUS_BASIS_TEXT } from '../dashboardBasis
 import { buildDashboardHtml, dashboardFileName } from '../dashboardHtml.js';
 import { ICONS } from '../icons.js';
 import { askCard, reportBuilderCard } from './ddTools.js';
-import { dailyDashboardFor } from '../reportContext.js';
+import { dailyDashboardForCurrentUser } from '../reportContext.js';
 import {
   minutesToClock, EXPECTED_HA_PER_8HRS, IDEAL_START, DIESEL_FILL_LITRES,
 } from '../dailyDashboardData.js';
@@ -173,11 +173,13 @@ export function renderDailyDashboard(container) {
     sinceInput.disabled = !!periodStart;
     if (periodStart) sinceInput.value = periodStart;
     const since = sinceInput.value && sinceInput.value <= date ? sinceInput.value : date;
-    const d = dailyDashboardFor(project, date, since);
+    const d = dailyDashboardForCurrentUser(project, date, since);
 
     current = d;
     if (!['Admin', 'Accounts'].includes(getCurrentTier())) {
-      body.appendChild(el('p', { class: 'backup-warning' }, "Your access includes project operations. Financial and stock summaries require Admin or Accounts access."));
+      body.appendChild(el('p', { class: 'backup-warning' }, getCurrentTier() === 'Supervisor'
+        ? 'Project view: operations, machine status and staff records for your assigned project.'
+        : 'Personal view: only your reported hours, assigned dozer records and operational information are shown. Financial and stock information is hidden.'));
       body.appendChild(operationsSection(d));
       body.appendChild(staffSection(d));
       return;
@@ -491,3 +493,4 @@ function staffSection(d) {
     el('h3', {}, 'Supervisors'), supervisors.length ? makeTable(supervisors) : el('p', { class: 'section-subtitle' }, 'No supervisor reports in this period.'),
   ]);
 }
+
