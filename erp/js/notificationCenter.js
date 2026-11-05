@@ -3,9 +3,13 @@ import { getCurrentUserId } from './session.js';
 import { el } from './utils.js';
 import { openCustomModal } from './ui.js';
 
-export function initNotificationCenter(userBadge) {
-  const button = el('button', { type: 'button', class: 'user-badge-switch', 'aria-label': 'Notifications' }, 'Notifications');
-  userBadge.querySelector('.user-badge-actions')?.prepend(button);
+export function initNotificationCenter(container) {
+  const button = el('button', { type: 'button', class: 'notification-bell', 'aria-label': 'Notifications', title: 'Notifications' }, [
+    el('span', { class: 'notification-bell-icon', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/></svg>' }),
+    el('span', { class: 'notification-count', hidden: true, 'aria-hidden': 'true' }),
+  ]);
+  container.appendChild(button);
+  const count = button.querySelector('.notification-count');
   let rows = [];
 
   async function refresh() {
@@ -20,7 +24,10 @@ export function initNotificationCenter(userBadge) {
     }
     rows = data || [];
     const unread = rows.filter((row) => !row.read_at).length;
-    button.textContent = unread ? `Notifications (${unread})` : 'Notifications';
+    count.textContent = unread > 99 ? '99+' : String(unread);
+    count.hidden = unread === 0;
+    button.setAttribute('aria-label', unread ? `Notifications, ${unread} unread` : 'Notifications');
+    button.title = unread ? `${unread} unread notification${unread === 1 ? '' : 's'}` : 'Notifications';
   }
 
   button.addEventListener('click', () => {

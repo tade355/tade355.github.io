@@ -108,7 +108,7 @@ function initApp() {
   window.addEventListener('erp-data-health', showHealth);
   showHealth();
   renderUserBadge();
-  initNotificationCenter(userBadge);
+  initNotificationCenter(document.getElementById('notificationBell'));
   globalSearchBtn.addEventListener('click', openGlobalSearch);
   initGlobalSearchShortcut();
 
