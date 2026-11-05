@@ -2,6 +2,7 @@ import { supabase } from '../supabaseClient.js';
 import { getCurrentUserId, getCurrentTier, getAssignedProject } from '../session.js';
 import { el } from '../utils.js';
 import { showToast } from '../ui.js';
+import { queueFieldSubmission, pendingFieldSyncCount } from '../fieldSync.js';
 
 export function renderDozerIssues(container) {
   container.replaceChildren(el('h2', {}, 'Dozer Issues'));
@@ -11,12 +12,18 @@ export function renderDozerIssues(container) {
   const equipment = el('input', { required: true, maxLength: 100, placeholder: 'Dozer number or name' });
   const projectInput = el('input', { required: true, value: project, readOnly: tier !== 'Admin', placeholder: 'Project' });
   const priority = el('select', {}, ['Normal','Urgent'].map((value) => el('option', { value }, value)));
+  const severity = el('select', {}, ['Low','Medium','High','Critical'].map((value) => el('option', { value }, value)));
+  const safetyRisk = el('input', { type: 'checkbox' });
+  const location = el('input', { required: true, maxLength: 120, placeholder: 'Site, block or camp' });
   const description = el('textarea', { required: true, minLength: 10, maxLength: 2000, placeholder: 'Describe the concern and when it started' });
   const submit = el('button', { type: 'submit', class: 'btn btn-primary' }, 'Submit issue');
   form.append(
     el('label', { class: 'field' }, [el('span', {}, 'Project'), projectInput]),
     el('label', { class: 'field' }, [el('span', {}, 'Dozer'), equipment]),
     el('label', { class: 'field' }, [el('span', {}, 'Priority'), priority]),
+    el('label', { class: 'field' }, [el('span', {}, 'Severity'), severity]),
+    el('label', { class: 'field checkbox-field' }, [safetyRisk, el('span', {}, 'Safety risk')]),
+    el('label', { class: 'field' }, [el('span', {}, 'Location'), location]),
     el('label', { class: 'field' }, [el('span', {}, 'Concern or fault'), description]), submit,
   );
   container.appendChild(form);
@@ -57,8 +64,12 @@ export function renderDozerIssues(container) {
       priority: priority.value, description: description.value.trim(), reported_by: getCurrentUserId(),
     });
     submit.disabled = false;
-    if (error) showToast(error.message, 'critical');
+    if (error) {
+      queueFieldSubmission('dozerIssues', { project: projectInput.value.trim(), equipment: equipment.value.trim(), priority: priority.value, severity: severity.value, safetyRisk: safetyRisk.checked, location: location.value.trim(), description: description.value.trim(), reportedBy: getCurrentUserId() });
+      showToast(`Saved on this device. It will sync when the connection returns (${pendingFieldSyncCount()} pending).`, 'warning');
+    }
     else { showToast('Issue submitted.'); equipment.value = ''; description.value = ''; load(); }
   });
   load();
 }
+
