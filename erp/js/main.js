@@ -2,7 +2,7 @@ import { ROUTES, initRouter } from './router.js';
 import { initModalRoot, initToastRoot, openModal } from './ui.js';
 import { store } from './store.js';
 import { el, ico } from './utils.js';
-import { getCurrentUser, getCurrentTier, canAccess } from './session.js';
+import { getCurrentUser, getCurrentTier, canAccessRoute } from './session.js';
 import { showLoginForm } from './userGate.js';
 import { restoreSession, logout, changePassword } from './auth.js';
 import { initThemeSwitch } from './theme.js';
@@ -68,7 +68,7 @@ function renderUserBadge() {
   // Routes flagged hideFromNav skip the main sidebar list (low daily-use,
   // admin-only tools) and surface here instead, next to account actions.
   const footerLinks = ROUTES
-    .filter((route) => route.hideFromNav && canAccess(route.tiers) && (!route.guard || route.guard()))
+    .filter((route) => route.hideFromNav && canAccessRoute(route) && (!route.guard || route.guard()))
     .map((route) => el('a', { href: `#/${route.path}`, class: 'user-badge-switch' }, route.label));
 
   userBadge.appendChild(el('div', { class: 'user-badge' }, [
@@ -128,12 +128,12 @@ function initApp() {
     ['Data Tools', ['pasteEntry','dataImport']],
   ];
   groups.forEach(([label, paths]) => {
-    const visible = paths.map(path => ROUTES.find(route => route.path === path)).filter(route => route && !route.hideFromNav && canAccess(route.tiers) && (!route.guard || route.guard()));
+    const visible = paths.map(path => ROUTES.find(route => route.path === path)).filter(route => route && !route.hideFromNav && canAccessRoute(route) && (!route.guard || route.guard()));
     if (!visible.length) return;
     sidebarNav.appendChild(el('div', { class: 'nav-group-label' }, label));
     visible.forEach((route) => {
     if (route.hideFromNav) return;
-    if (!canAccess(route.tiers) || (route.guard && !route.guard())) return;
+    if (!canAccessRoute(route) || (route.guard && !route.guard())) return;
     const link = el('a', { href: `#/${route.path}`, class: 'nav-link' }, [
       el('span', { class: 'nav-icon', 'aria-hidden': 'true', html: route.icon }),
       el('span', {}, route.label),
