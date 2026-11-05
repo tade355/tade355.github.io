@@ -96,6 +96,13 @@ export function renderDashboard(container) {
   const body = el('div');
   container.appendChild(body);
 
+  const moduleStatuses = store.get('moduleStatuses');
+  if (moduleStatuses.length) {
+    const readiness = el('div', { class: 'card' }, [el('h3', {}, 'ERP readiness')]);
+    readiness.appendChild(el('div', { class: 'stats-grid' }, moduleStatuses.map((m) => statCard({ label: m.label, value: m.status, tone: m.status === 'Active' ? 'good' : 'warning' }))));
+    container.appendChild(readiness);
+  }
+
   prevBtn.addEventListener('click', () => refresh(addDays(dateInput.value || realTodayISO, -1)));
   nextBtn.addEventListener('click', () => refresh(addDays(dateInput.value || realTodayISO, 1)));
   todayBtn.addEventListener('click', () => refresh(realTodayISO));
@@ -462,3 +469,4 @@ export function renderDashboard(container) {
 
   refresh(realTodayISO);
 }
+
