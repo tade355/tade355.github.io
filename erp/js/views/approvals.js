@@ -38,7 +38,23 @@ export function renderApprovals(container, onRefresh = () => {}) {
     if (newStatus === 'Rejected' && !window.confirm(`Reject this ${row.type.toLowerCase()}?`)) return;
     try {
       const decidedByName = employeeName(getCurrentUserId());
-      const updated = await store.update(row.collection, row.record.id, { status: newStatus, approvedBy: getCurrentUserId() });
+      let patch = { status: newStatus, approvedBy: getCurrentUserId() };
+      if (row.collection === 'fundRequests' && newStatus === 'Approved') {
+        const requested = (row.record.items || []).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+        const typed = window.prompt(`Requested: ${formatCurrency(requested)}\nEnter the amount approved:`, String(requested));
+        if (typed === null) return;
+        const approvedAmount = Number(typed);
+        if (!Number.isFinite(approvedAmount) || approvedAmount <= 0 || approvedAmount > requested) {
+          window.alert('Approved amount must be greater than zero and cannot exceed the requested amount.');
+          return;
+        }
+        if (approvedAmount < requested) {
+          const remainderDecision = window.prompt(`The remaining ${formatCurrency(requested - approvedAmount)} is not approved. Type REJECT to reject it, or PENDING to leave it for further review:`, 'PENDING');
+          if (!remainderDecision || !['REJECT', 'PENDING'].includes(remainderDecision.trim().toUpperCase())) return;
+          patch = { ...patch, status: 'Partially Approved', approvedAmount, remainderDecision: remainderDecision.trim().toUpperCase() === 'REJECTED' ? 'Rejected' : remainderDecision.trim().toUpperCase() === 'REJECT' ? 'Rejected' : 'Pending' };
+        } else patch = { ...patch, approvedAmount, remainderDecision: 'None' };
+      }
+      const updated = await store.update(row.collection, row.record.id, patch);
       if (row.collection === 'fundRequests') {
         notifyFundRequestDecision(updated, decidedByName).catch((err) => console.warn('Fund request decision notification failed:', err));
       } else if (row.collection === 'leaveRequests') {
@@ -129,3 +145,4 @@ export function renderApprovals(container, onRefresh = () => {}) {
 
   refresh();
 }
+
