@@ -5,6 +5,7 @@ import { renderTable, sectionHeader, statCard } from '../ui.js';
 import { getCurrentTier, getCurrentUserId, filterFundRequests, filterByProject, filterLeaveRequests } from '../session.js';
 import { printFundRequest, printFuelingVoucher } from '../print.js';
 import { notifyFundRequestDecision, notifyLeaveRequestDecision } from '../notifications.js';
+import { canDecideLeave } from '../access.js';
 
 function employeeName(id) {
   return store.get('employees').find((e) => e.id === id)?.name || 'Unknown';
@@ -60,8 +61,10 @@ export function renderApprovals(container, onRefresh = () => {}) {
     if (tier === 'Admin') {
       fundRequests = filterFundRequests(store.get('fundRequests')).filter((r) => r.status === 'Pending');
     }
-    if (tier === 'Admin' || tier === 'Supervisor') {
+    if (canDecideLeave()) {
       leaveRequests = filterLeaveRequests(store.get('leaveRequests')).filter((r) => r.status === 'Pending');
+    }
+    if (tier === 'Admin' || tier === 'Supervisor') {
       vouchers = filterByProject(store.get('fuelingVouchers'), 'project').filter((r) => r.status === 'Pending Approval');
     }
 

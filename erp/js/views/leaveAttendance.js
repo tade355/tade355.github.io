@@ -5,6 +5,7 @@ import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confi
 import { LEAVE_TYPES } from '../constants.js';
 import { getCurrentUserId, filterLeaveRequests, getCurrentTier, getAssignedProject } from '../session.js';
 import { notifyNewLeaveRequest, notifyLeaveRequestDecision } from '../notifications.js';
+import { canDecideLeave } from '../access.js';
 
 function projectOptions() {
   return store.get('projects').map((p) => p.name);
@@ -49,9 +50,7 @@ function leaveBalanceRows(leaveRows) {
 // decide a leave request (same Admin/Supervisor rule the Approvals inbox
 // uses) — everyone else sees them as plain text, so a Staff member can't
 // open their own request and approve it themselves.
-function canApproveLeave() {
-  return ['Admin', 'Supervisor'].includes(getCurrentTier());
-}
+function canApproveLeave() { return canDecideLeave(); }
 
 function leaveFields(record) {
   const canApprove = canApproveLeave();
@@ -67,13 +66,8 @@ function leaveFields(record) {
         { value: 'Approved', label: 'Approved' },
         { value: 'Rejected', label: 'Rejected' },
       ] }
-      : { name: 'status', label: 'Status', type: 'readonly', displayValue: `${record?.status || 'Pending'} — only an Admin or Supervisor can approve or reject a leave request.` },
-    canApprove
-      ? { name: 'approvedBy', label: 'Approved By', type: 'select', options: [
-        { value: '', label: '— Not yet approved —' },
-        ...employeeOptions(),
-      ] }
-      : { name: 'approvedBy', label: 'Approved By', type: 'readonly', displayValue: record?.approvedBy ? employeeName(record.approvedBy) : '— Not yet approved —' },
+      : { name: 'status', label: 'Status', type: 'readonly', displayValue: `${record?.status || 'Pending'} — HRM Victoria handles leave decisions.` },
+    { name: 'approvedBy', label: 'Approved By', type: 'readonly', displayValue: record?.approvedBy ? employeeName(record.approvedBy) : '— Not yet approved —' },
   ];
 }
 
@@ -219,7 +213,7 @@ export function renderLeaveAttendance(container) {
           const payload = { ...data, appliedDate: record?.appliedDate || todayIso() };
           if (record) {
             // A "decision" here is this edit actually moving Pending to
-            // Approved/Rejected (only an Admin/Supervisor can, per
+            // Approved/Rejected (only Victoria can, per
             // leaveFields()) — not a re-save of an already-decided request,
             // which shouldn't re-notify everyone every time it's touched.
             const isNewDecision = record.status === 'Pending' && (payload.status === 'Approved' || payload.status === 'Rejected');

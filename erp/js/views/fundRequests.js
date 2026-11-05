@@ -10,6 +10,7 @@ import { notifyNewFundRequest, notifyFundRequestDecision } from '../notification
 import { EXPENSE_CATEGORIES } from '../constants.js';
 import { renderApprovals } from './approvals.js';
 import { findDuplicateRequests, requestTotal } from '../requestDuplicates.js';
+import { canDecideLeave } from '../access.js';
 
 function costHeadOptions() {
   return [{ value: '', label: '— Not categorized —' }, ...EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }))];
@@ -250,7 +251,7 @@ export function renderFundRequests(container) {
   function updatePendingCount() {
     const badge = approvalsTabBtn?.querySelector('.tab-count');
     if (!badge) return;
-    const pending = (getCurrentTier() === 'Admin' ? filterFundRequests(store.get('fundRequests')).filter(r=>r.status==='Pending').length : 0) + filterLeaveRequests(store.get('leaveRequests')).filter(r=>r.status==='Pending').length + filterByProject(store.get('fuelingVouchers'), 'project').filter(r=>r.status==='Pending Approval').length;
+    const pending = (getCurrentTier() === 'Admin' ? filterFundRequests(store.get('fundRequests')).filter(r=>r.status==='Pending').length : 0) + (canDecideLeave() ? filterLeaveRequests(store.get('leaveRequests')).filter(r=>r.status==='Pending').length : 0) + filterByProject(store.get('fuelingVouchers'), 'project').filter(r=>r.status==='Pending Approval').length;
     badge.textContent = String(pending);
     badge.setAttribute('aria-label', `${pending} pending`);
   }
