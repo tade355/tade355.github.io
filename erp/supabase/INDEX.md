@@ -47,3 +47,5 @@ Run a new migration once in the Supabase SQL editor, in number order. `schema.sq
 | `0039_project_item_manager.sql` | Bikes and other vehicles are moving out of the dozer-focused Fleet |
 | `0040_machine_status_reports.sql` | Daily "General Machine Status Report" the site manager submits (per the |
 | `0041_data_safety.sql` | Data safety (Oct 2026): atomic saves, an audit trail, an approval guard and an |
+| `0053_partial_approvals_and_purchase_coverage.sql` | Partial fund approvals, auditable payment rows, and guardrails that prevent payment above the approved amount. |
+
