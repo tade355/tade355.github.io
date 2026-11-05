@@ -120,12 +120,12 @@ function score(entry, q) {
 
 // `routes` is the ROUTES array (path, label, tiers) — only entries whose route
 // the user may open are returned. `canUse(perm)` gates permissioned features.
-export function searchCatalogue(query, { routes, canAccess, canUse = () => false, limit = 12 }) {
+export function searchCatalogue(query, { routes, canAccess, canAccessRoute, canUse = () => false, limit = 12 }) {
   const q = norm(query).trim();
   if (!q) return [];
   const routeBy = Object.fromEntries(routes.map((r) => [r.path, r]));
   return CATALOGUE
-    .filter((e) => routeBy[e.route] && canAccess(routeBy[e.route].tiers) && (!routeBy[e.route].guard || routeBy[e.route].guard()))
+    .filter((e) => routeBy[e.route] && (canAccessRoute ? canAccessRoute(routeBy[e.route]) : canAccess(routeBy[e.route].tiers)) && (!routeBy[e.route].guard || routeBy[e.route].guard()))
     .filter((e) => !e.perm || canUse(e.perm))
     .map((e) => ({ e, s: score(e, q) }))
     .filter((x) => x.s > 0)
@@ -135,10 +135,11 @@ export function searchCatalogue(query, { routes, canAccess, canUse = () => false
 }
 
 // Pages shown before the user types anything.
-export function quickLinks({ routes, canAccess, canUse = () => false }) {
+export function quickLinks({ routes, canAccess, canAccessRoute, canUse = () => false }) {
   const routeBy = Object.fromEntries(routes.map((r) => [r.path, r]));
   return ['askErp', 'dailyDashboard', 'dashboard', 'dataImport', 'operations', 'fleet', 'fundRequests']
     .map((p) => CATALOGUE.find((e) => e.kind === 'Page' && e.route === p))
-    .filter((e) => e && routeBy[e.route] && canAccess(routeBy[e.route].tiers) && (!routeBy[e.route].guard || routeBy[e.route].guard()) && (!e.perm || canUse(e.perm)))
+    .filter((e) => e && routeBy[e.route] && (canAccessRoute ? canAccessRoute(routeBy[e.route]) : canAccess(routeBy[e.route].tiers)) && (!routeBy[e.route].guard || routeBy[e.route].guard()) && (!e.perm || canUse(e.perm)))
     .map((e) => ({ ...e, routeLabel: routeBy[e.route].label }));
 }
+
