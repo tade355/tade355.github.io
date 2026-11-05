@@ -124,8 +124,9 @@ async function unusedId(key) {
 async function fetchCollection(key) {
   const cfg = CONFIG[key];
   const selectCols = cfg.child ? `*, ${cfg.child.table}(*)` : '*';
+  const orderColumn = key === 'moduleStatuses' ? 'module_key' : 'id';
   const data = await fetchAllPages(async (from, to) => {
-    const { data: page, error } = await supabase.from(cfg.table).select(selectCols).order('id').range(from, to);
+    const { data: page, error } = await supabase.from(cfg.table).select(selectCols).order(orderColumn).range(from, to);
     if (error) throw new Error(`Could not load ${key} (${error.message}).`);
     return page || [];
   });
