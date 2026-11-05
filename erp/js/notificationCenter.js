@@ -11,54 +11,90 @@ export function initNotificationCenter(container) {
   container.appendChild(button);
   const count = button.querySelector('.notification-count');
   let rows = [];
+  let unread = 0;
 
   async function refresh() {
     const userId = getCurrentUserId();
     if (!userId) return;
-    const { data, error } = await supabase.from('erp_notifications')
-      .select('id,title,message,target_path,created_at,read_at')
-      .eq('recipient_id', userId).order('created_at', { ascending: false }).limit(50);
-    if (error) {
+    const [items, total] = await Promise.all([
+      supabase.from('erp_notifications').select('id,title,message,target_path,created_at,read_at')
+        .eq('recipient_id', userId).order('created_at', { ascending: false }).limit(100),
+      supabase.from('erp_notifications').select('id', { count: 'exact', head: true })
+        .eq('recipient_id', userId).is('read_at', null),
+    ]);
+    if (items.error || total.error) {
       button.title = 'Notifications unavailable. Contact the administrator.';
       return;
     }
-    rows = data || [];
-    const unread = rows.filter((row) => !row.read_at).length;
+    rows = items.data || [];
+    unread = total.count || 0;
     count.textContent = unread > 99 ? '99+' : String(unread);
     count.hidden = unread === 0;
     button.setAttribute('aria-label', unread ? `Notifications, ${unread} unread` : 'Notifications');
     button.title = unread ? `${unread} unread notification${unread === 1 ? '' : 's'}` : 'Notifications';
   }
 
-  button.addEventListener('click', () => {
+  button.addEventListener('click', async () => {
+    await refresh();
     openCustomModal({ title: 'Notifications', wide: true, build(body, close) {
-      if (!rows.length) {
-        body.appendChild(el('p', {}, 'No notifications yet.'));
-        return;
-      }
-      rows.forEach((row) => {
-        const link = el('button', { type: 'button', class: 'btn btn-ghost', onClick: async () => {
-          if (!row.read_at) {
-            const { error } = await supabase.from('erp_notifications')
-              .update({ read_at: new Date().toISOString() }).eq('id', row.id);
-            if (!error) row.read_at = new Date().toISOString();
-          }
-          close();
+      let filter = 'All';
+      const toolbar = el('div', { class: 'notification-toolbar' });
+      const list = el('div', { class: 'notification-list' });
+      const feedback = el('p', { class: 'notification-feedback', role: 'status' });
+      const tabs = ['All', 'Unread', 'Read'].map((name) => el('button', {
+        type: 'button', class: 'btn btn-ghost', onClick: () => { filter = name; render(); },
+      }, name));
+      const markAll = el('button', { type: 'button', class: 'btn btn-ghost', onClick: async () => {
+        markAll.disabled = true;
+        feedback.textContent = '';
+        const { error } = await supabase.from('erp_notifications')
+          .update({ read_at: new Date().toISOString() })
+          .eq('recipient_id', getCurrentUserId()).is('read_at', null);
+        if (error) feedback.textContent = 'Could not mark notifications as read. Please try again.';
+        else {
+          rows.forEach((row) => { row.read_at ||= new Date().toISOString(); });
           await refresh();
-          if (row.target_path.startsWith('#/')) window.location.hash = row.target_path;
-        } }, [
-          el('strong', {}, row.title),
-          el('span', {}, ` ${row.message} — ${new Date(row.created_at).toLocaleString('en-GB')}`),
-        ]);
-        link.style.display = 'block';
-        link.style.width = '100%';
-        link.style.textAlign = 'left';
-        if (!row.read_at) link.style.borderLeft = '3px solid var(--accent, #e9a700)';
-        body.appendChild(link);
-      });
+        }
+        markAll.disabled = false;
+        render();
+      } }, 'Mark all as read');
+      toolbar.append(...tabs, markAll);
+      body.append(toolbar, feedback, list);
+
+      function render() {
+        tabs.forEach((tab) => {
+          tab.setAttribute('aria-pressed', String(tab.textContent === filter));
+          tab.classList.toggle('notification-filter-active', tab.textContent === filter);
+        });
+        markAll.disabled = unread === 0;
+        list.replaceChildren();
+        const visible = rows.filter((row) => filter === 'All' || (filter === 'Unread' ? !row.read_at : !!row.read_at));
+        if (!visible.length) {
+          list.appendChild(el('p', {}, filter === 'All' ? 'No notifications yet.' : `No ${filter.toLowerCase()} notifications.`));
+          return;
+        }
+        visible.forEach((row) => {
+          const link = el('button', { type: 'button', class: 'btn btn-ghost notification-item', onClick: async () => {
+            if (!row.read_at) {
+              const now = new Date().toISOString();
+              const { error } = await supabase.from('erp_notifications').update({ read_at: now }).eq('id', row.id);
+              if (!error) row.read_at = now;
+            }
+            close();
+            await refresh();
+            if (row.target_path?.startsWith('#/')) window.location.hash = row.target_path;
+          } }, [
+            el('strong', {}, row.title),
+            el('span', {}, ` ${row.message} — ${new Date(row.created_at).toLocaleString('en-GB')}`),
+          ]);
+          if (!row.read_at) link.classList.add('notification-item-unread');
+          list.appendChild(link);
+        });
+      }
+      render();
     } });
   });
   refresh();
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refresh(); });
-  setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 30000);
+  setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 10000);
 }
