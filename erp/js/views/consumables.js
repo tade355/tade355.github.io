@@ -94,6 +94,10 @@ export function renderConsumables(container) {
     purchaseContainer = el('div');
     container.appendChild(purchaseContainer);
   }
+  const maintenanceCoverage = el('div');
+  container.appendChild(el('h3', { class: 'subsection-title' }, 'Maintenance Cost Coverage'));
+  container.appendChild(el('p', { class: 'section-subtitle' }, 'Costed maintenance work is shown here until its parts, lubricant and labour lines are linked to stock withdrawals.'));
+  container.appendChild(maintenanceCoverage);
 
   function refresh() {
     const items = consumablesCatalog();
@@ -179,6 +183,19 @@ export function renderConsumables(container) {
       rows: lubricantPurchases(),
       emptyText: 'No paid lubricant records found.',
     });
+
+    const maintenance = store.get('maintenanceLogs').filter((m) => Number(m.cost || m.partsCost || m.labourCost) > 0)
+      .sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 50);
+    renderTable(maintenanceCoverage, {
+      columns: [
+        { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
+        { key: 'equipment', label: 'Equipment', render: (r) => r.equipment || '—' },
+        { key: 'description', label: 'Maintenance', render: (r) => r.description || r.issue || 'Maintenance record' },
+        { key: 'cost', label: 'Recorded Cost', render: (r) => formatCurrency(Number(r.cost || r.partsCost || r.labourCost) || 0) },
+        { key: 'source', label: 'Source', render: () => el('a', { href: '#/fleet' }, 'Fleet maintenance') },
+      ], rows: maintenance,
+      emptyText: 'No costed maintenance records need item linkage yet.',
+    });
   }
 
   function openItemForm(record) {
@@ -232,3 +249,4 @@ export function renderConsumables(container) {
 
   refresh();
 }
+
