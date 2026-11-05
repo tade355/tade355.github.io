@@ -147,14 +147,15 @@ export function renderDailyDashboard(container) {
     el('label', { class: 'filter-field' }, [el('span', {}, 'Viewing'), dateInput]),
     el('div', { class: 'seg', role: 'group', 'aria-label': 'Change day' }, [prevBtn, todayBtn, nextBtn]),
     el('label', { class: 'filter-field' }, [el('span', {}, 'Cumulative since'), sinceInput]),
-    el('div', { class: 'filter-actions' }, [printBtn, downloadBtn]),
+    el('div', { class: 'filter-actions' }, ['Admin','Accounts'].includes(getCurrentTier()) ? [printBtn, downloadBtn] : []),
   ]));
   // Ask the ERP is open to everyone who can see this page; the profitability
   // report builder/download is shown to Olumide only.
-  const askPanel = askCard(() => projectSelect.value);
-  container.appendChild(askPanel);
-  const reportPanel = reportBuilderCard(() => projectSelect.value);
-  if (reportPanel) container.appendChild(reportPanel);
+  if (['Admin','Accounts'].includes(getCurrentTier())) {
+    container.appendChild(askCard(() => projectSelect.value));
+    const reportPanel = reportBuilderCard(() => projectSelect.value);
+    if (reportPanel) container.appendChild(reportPanel);
+  }
   const body = el('div', { class: 'dd-body' });
   container.appendChild(body);
 
