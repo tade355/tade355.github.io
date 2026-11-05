@@ -115,7 +115,8 @@ function initApp() {
   const navLinks = {};
   const groups = [
     ['Overview', ['dashboard','dailyDashboard','askErp']],
-    ['Operations', ['projects','operations','dailyStatus','dozerIssues','fleet','resourceManagement']],
+    ['Field Operations', ['projects','operations','dailyDashboard','dailyStatus','dozerIssues']],
+    ['Fleet & Resources', ['fleet','resourceManagement']],
     ['Commercial', ['sales','purchasing']],
     ['Finance', ['accounting','fundRequests']],
     ['People', ['hr','leave','mySalary','training','noticeBoard']],
@@ -208,3 +209,4 @@ async function boot() {
 }
 
 boot();
+
