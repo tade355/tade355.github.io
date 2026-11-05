@@ -46,7 +46,8 @@ export function canAccessRoute(route) {
   const isSecretary = /secretary|company secretary/.test(role) || /gladness/.test(name);
   const isExecutive = /ceo|chief executive|coo|chief operating/.test(role) || /gideon|olumide/.test(name);
   const isHrmOrAccounts = /human resources|hrm|hr manager|accounts?|finance/.test(role) || /victoria/.test(name);
-  const isManager = /manager|supervisor/.test(role);
+  const isManager = /manager|supervisor/.test(role) || /oki|godstime/.test(name);
+  const isMaintenanceManager = /maintenance|mechanical|fleet manager|machine manager/.test(role) || /ola sodunke|sodunke/.test(name);
   const isOlumide = /olumide/.test(name);
   const backend = ['dataImport', 'pasteEntry', 'backup'].includes(route.path);
   if (backend) return isOlumide;
@@ -54,6 +55,7 @@ export function canAccessRoute(route) {
   if (isSecretary) return true;
   if (isExecutive || isHrmOrAccounts) return true;
   if (isManager && ['dailyDashboard', 'operations', 'dailyStatus', 'dozerIssues', 'noticeBoard'].includes(route.path)) return true;
+  if (isMaintenanceManager && ['dailyDashboard', 'dailyStatus', 'dozerIssues', 'fleet', 'noticeBoard'].includes(route.path)) return true;
   return canAccess(route.tiers);
 }
 
