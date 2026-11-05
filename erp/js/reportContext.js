@@ -7,7 +7,7 @@ import { netPay as dozerPayrollNetPay, liveBalanceOwed } from './views/dozerPayr
 import { netPay as payrollNetPay } from './views/payroll.js';
 import { computeProjectStats } from './views/profitability.js';
 import { stationBalances } from './views/fuelCredit.js';
-import { getCurrentTier } from './session.js';
+import { getCurrentTier, getCurrentUser, getCurrentUserId, getAssignedProject } from './session.js';
 import { buildDailyDashboard } from './dailyDashboardData.js';
 import { DASHBOARD_BASIS_FROM } from './rules.js';
 
@@ -16,6 +16,26 @@ import { DASHBOARD_BASIS_FROM } from './rules.js';
 // they apply the same rules (rules.js) to the same records.
 export function dailyDashboardFor(project, date, since = DASHBOARD_BASIS_FROM) {
   return buildDailyDashboard({ ...liveContext(project), project, date, since: since <= date ? since : date });
+}
+
+// The dashboard is deliberately scoped before it is rendered. Operators see
+// only their own reported work and dozer; supervisors see their project; the
+// maintenance manager sees all dozer/maintenance status but no money panels.
+export function dailyDashboardForCurrentUser(project, date, since = DASHBOARD_BASIS_FROM) {
+  const user = getCurrentUser() || {};
+  const tier = getCurrentTier();
+  const role = String(user.role || '').toLowerCase();
+  const maintenance = /maintenance|mechanical|fleet manager/.test(role);
+  const ctx = liveContext(project);
+  if (tier === 'Admin' || tier === 'Accounts') return buildDailyDashboard({ ...ctx, project, date, since: since <= date ? since : date });
+  if (maintenance) return buildDailyDashboard({ ...ctx, project, date, since: since <= date ? since : date, operations: ctx.operations, employees: ctx.employees });
+  const assignedProject = getAssignedProject();
+  const own = ctx.operations.filter((o) => o.operatorId === getCurrentUserId() || o.supervisorId === getCurrentUserId());
+  const scoped = tier === 'Supervisor'
+    ? ctx.operations.filter((o) => assignedProject && o.siteName === assignedProject)
+    : own;
+  const scopedProject = tier === 'Supervisor' && assignedProject ? assignedProject : project;
+  return buildDailyDashboard({ ...ctx, project: scopedProject, operations: scoped, employees: ctx.employees.filter((e) => e.id === getCurrentUserId() || (assignedProject && e.assignedProject === assignedProject)), fundRequests: [], expenses: [], fuelCreditCollections: [], fuelCreditPayments: [], dieselStockCounts: [], invoices: [], purchaseOrders: [], loans: [], invoicePayments: [], scopedView: true, date, since: since <= date ? since : date });
 }
 
 export function liveContext(project) {
@@ -74,3 +94,4 @@ export function personHistoryContext() {
     dozerBalanceOwed: liveBalanceOwed,
   };
 }
+
