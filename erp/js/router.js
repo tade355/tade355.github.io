@@ -22,7 +22,7 @@ import { enhanceViewNavigation } from './navigationState.js';
 export const ROUTES = [
   // Overview
   { path: 'dashboard', label: 'Dashboard', icon: ICONS.dashboard, load: () => import('./views/dashboard.js').then((m) => m.renderDashboard), tiers: ['Admin', 'Accounts'] },
-  { path: 'dailyDashboard', label: 'Daily Operations Dashboard', icon: ICONS.barChart, load: () => import('./views/dailyDashboard.js').then((m) => m.renderDailyDashboard), tiers: ['Admin', 'Accounts', 'Supervisor'] },
+  { path: 'dailyDashboard', label: 'Daily Operations Dashboard', icon: ICONS.barChart, load: () => import('./views/dailyDashboard.js').then((m) => m.renderDailyDashboard), tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   { path: 'askErp', label: 'Ask the ERP', icon: ICONS.chat, load: () => import('./views/askErpPage.js').then((m) => m.renderAskErp), tiers: ['Admin', 'Accounts'] },
   // Excel upload: Olumide's account only (`guard` is checked wherever routes are listed or opened).
   { path: 'dataImport', label: 'Data Import', icon: ICONS.upload, load: () => import('./views/dataImport.js').then((m) => m.renderDataImport), tiers: ['Admin'], guard: canImportData },
