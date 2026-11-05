@@ -204,6 +204,10 @@ function maintenanceFields() {
       { value: 'Breakdown', label: 'Breakdown' },
     ] },
     { name: 'description', label: 'Description', required: true },
+    { name: 'workDone', label: 'Work Done / Findings' },
+    { name: 'hourMeter', label: 'Hour Meter at Service', type: 'number', min: 0 },
+    { name: 'nextServiceHours', label: 'Next Service Due at Hour Meter', type: 'number', min: 0 },
+    { name: 'vendorName', label: 'Mechanic / Vendor' },
     { name: 'partsCost', label: 'Parts Cost (₦)', type: 'number', min: 0 },
     { name: 'laborCost', label: 'Labor Cost (₦)', type: 'number', min: 0 },
     { name: 'performedBy', label: 'Performed By (Staff)', type: 'select', options: [{ value: '', label: '— External contractor (enter below) —' }, ...employeeOptions()] },
@@ -492,6 +496,8 @@ export function renderFleet(container) {
           { key: 'equipment', label: 'Dozer' },
           { key: 'type', label: 'Type' },
           { key: 'description', label: 'Description', wrap: true },
+          { key: 'hourMeter', label: 'Hour Meter', render: (r) => r.hourMeter ?? '—' },
+          { key: 'nextServiceHours', label: 'Next Due', render: (r) => r.nextServiceHours ?? '—' },
           { key: 'partsCost', label: 'Parts', render: (r) => formatCurrency(r.partsCost || 0) },
           { key: 'laborCost', label: 'Labor', render: (r) => formatCurrency(r.laborCost || 0) },
           { key: 'cost', label: 'Total Cost', render: (r) => formatCurrency(r.cost) },
@@ -547,3 +553,4 @@ export function renderFleet(container) {
 
   setTab('roster');
 }
+
