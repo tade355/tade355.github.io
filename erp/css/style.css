@@ -295,6 +295,13 @@ button { font-family: inherit; }
   text-align: center;
 }
 .notification-count[hidden] { display: none; }
+.notification-toolbar { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem; }
+.notification-toolbar .notification-filter-active { background: var(--surface-1); font-weight: 700; }
+.notification-toolbar button:last-child { margin-left: auto; }
+.notification-feedback:empty { display: none; }
+.notification-feedback { color: #c53030; }
+.notification-item { display: block; width: 100%; margin-bottom: 0.35rem; text-align: left; }
+.notification-item-unread { border-left: 3px solid var(--accent, #e9a700); }
 @media (max-width: 640px) {
   .topbar-search-btn { min-width: 0; }
   .topbar-search-label { display: none; }
