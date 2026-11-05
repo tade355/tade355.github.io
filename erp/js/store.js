@@ -55,6 +55,7 @@ const CONFIG = {
   // manual_url/plan_url/syllabus_url are training-materials Storage links,
   // same reasoning as video_url above.
   trainingPrograms: { table: 'training_programs', prefix: 'PRG' },
+  moduleStatuses: { table: 'erp_module_status', prefix: 'MOD' },
 };
 
 const COLLECTIONS = Object.keys(CONFIG);
