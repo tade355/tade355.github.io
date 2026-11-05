@@ -75,6 +75,8 @@ function openRequestForm(record, onSaved) {
       const today = todayISOString();
       const dateField = textField('date', 'Date', 'date', record?.date || today, true);
       const paidDateField = textField('paidAt', 'Payment Date (required when Paid)', 'date', record?.paidAt || '', false);
+      const paidAmountField = textField('paidAmount', 'Amount Paid (required when Paid)', 'number', record?.paidAmount ?? '', false);
+      const paymentReferenceField = textField('paymentReference', 'Payment Reference / Receipt', 'text', record?.paymentReference || '', false);
       const projectField = selectField('project', 'Project', [
         { value: '', label: '— Not specified —' },
         ...projectOptions(),
@@ -85,7 +87,7 @@ function openRequestForm(record, onSaved) {
       descriptionInput.value = record?.description || '';
       const descriptionField = el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Description'), descriptionInput]);
 
-      const topGrid = el('div', { class: 'form-grid-2' }, [dateField, paidDateField, projectField, submittedByField, costHeadField]);
+      const topGrid = el('div', { class: 'form-grid-2' }, [dateField, paidDateField, paidAmountField, paymentReferenceField, projectField, submittedByField, costHeadField]);
 
       const itemsHeader = el('div', { class: 'line-items-header' }, [
         el('span', {}, 'Description'), el('span', {}, 'Amount (₦)'), el('span', {}, 'Account Name'), el('span', {}, 'Account Number'), el('span', {}, 'Bank'), el('span', {}, ''),
@@ -117,6 +119,7 @@ function openRequestForm(record, onSaved) {
         statusField = selectField('status', 'Status', [
           { value: 'Pending', label: 'Pending' },
           { value: 'Approved', label: 'Approved' },
+          { value: 'Partially Approved', label: 'Partially Approved' },
           { value: 'Rejected', label: 'Rejected' },
           { value: 'Paid', label: 'Paid' },
         ], record?.status || 'Pending');
@@ -179,6 +182,8 @@ function openRequestForm(record, onSaved) {
         const payload = {
           date: dateField.querySelector('input').value,
           paidAt: paidDateField.querySelector('input').value || null,
+          paidAmount: paidAmountField.querySelector('input').value ? Number(paidAmountField.querySelector('input').value) : null,
+          paymentReference: paymentReferenceField.querySelector('input').value || null,
           project: projectField.querySelector('select').value,
           submittedBy: submittedByField.querySelector('select').value,
           costHead: costHeadField.querySelector('select').value,
@@ -193,13 +198,19 @@ function openRequestForm(record, onSaved) {
           submitBtn.disabled = true;
           submitBtn.textContent = 'Saving…';
           if (record) {
-            await store.update('fundRequests', record.id, payload);
+            const saved = await store.update('fundRequests', record.id, payload);
+            if (newStatus === 'Paid' && record.status !== 'Paid') {
+              await store.add('fundRequestPayments', { requestId: record.id, date: saved.paidAt, amount: saved.paidAmount, reference: saved.paymentReference || '', notes: 'Payment recorded from Fund Requests' });
+            }
             if (isNewDecision) {
               notifyFundRequestDecision({ ...record, ...payload }, employeeName(getCurrentUserId()))
                 .catch((err) => console.warn('Fund request decision notification failed:', err));
             }
           } else {
             const saved = await store.add('fundRequests', payload);
+            if (newStatus === 'Paid') {
+              await store.add('fundRequestPayments', { requestId: saved.id, date: payload.paidAt, amount: payload.paidAmount, reference: payload.paymentReference || '', notes: 'Payment recorded from Fund Requests' });
+            }
             notifyNewFundRequest(saved).catch((err) => console.warn('Fund request notification failed:', err));
           }
           closeModal();
@@ -280,7 +291,7 @@ function renderRequestsTab(container, onRefresh = () => {}) {
   const searchInput = el('input', { type: 'search', placeholder: 'Search by description, project, or submitter…' });
   const statusSelect = el('select', {}, [
     el('option', { value: '' }, 'All Statuses'),
-    ...['Pending', 'Approved', 'Rejected', 'Paid'].map((s) => el('option', { value: s }, s)),
+    ...['Pending', 'Approved', 'Partially Approved', 'Rejected', 'Paid'].map((s) => el('option', { value: s }, s)),
   ]);
   container.appendChild(el('div', { class: 'search-bar' }, [searchInput, statusSelect]));
   searchInput.addEventListener('input', () => { searchQuery = searchInput.value.trim().toLowerCase(); refresh(); });
@@ -320,6 +331,8 @@ function renderRequestsTab(container, onRefresh = () => {}) {
         { key: 'costHead', label: 'Cost Head', render: (r) => r.costHead || '—' },
         { key: 'description', label: 'Description', render: (r) => r.description || `${r.items.length} item(s)` },
         { key: 'total', label: 'Total', render: (r) => formatCurrency(totalOf(r)) },
+        { key: 'approvedAmount', label: 'Approved', render: (r) => r.approvedAmount != null ? formatCurrency(r.approvedAmount) : '—' },
+        { key: 'paidAmount', label: 'Paid', render: (r) => r.paidAmount != null ? formatCurrency(r.paidAmount) : '—' },
         { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
         { key: 'attachments', label: 'Files', render: (r) => (r.attachments?.length ? el('span', { class: 'attach-count' }, [ico('paperclip'), String(r.attachments.length)]) : '—') },
         {
@@ -351,3 +364,4 @@ function renderRequestsTab(container, onRefresh = () => {}) {
 
   refresh();
 }
+
