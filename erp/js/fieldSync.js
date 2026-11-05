@@ -2,6 +2,7 @@
 // device until connectivity returns; each item has a stable client id so a
 // retry cannot create a duplicate.
 const KEY = 'emagrims_field_sync_queue';
+import { supabase } from './supabaseClient.js';
 function read() { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; } }
 function write(rows) { localStorage.setItem(KEY, JSON.stringify(rows)); window.dispatchEvent(new CustomEvent('erp-sync-queue-changed')); }
 export function pendingFieldSyncCount() { return read().length; }
@@ -14,7 +15,13 @@ export async function flushFieldSync(store) {
   const rows = read();
   const remaining = [];
   for (const row of rows) {
-    try { await store.add(row.collectionKey, row.payload); }
+    try {
+      if (row.collectionKey === 'dozerIssues') {
+        const p = row.payload;
+        const { error } = await supabase.from('dozer_issues').insert({ project: p.project, equipment: p.equipment, priority: p.priority, severity: p.severity, safety_risk: p.safetyRisk, location: p.location, description: p.description, reported_by: p.reportedBy });
+        if (error) throw error;
+      } else await store.add(row.collectionKey, row.payload);
+    }
     catch { remaining.push(row); }
   }
   write(remaining);
