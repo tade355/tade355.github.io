@@ -32,9 +32,9 @@ export const ROUTES = [
   // Field operations: the job, the work done against it, the equipment doing it
   { path: 'projects', label: 'Projects', icon: ICONS.folder, load: () => import('./views/projects.js').then((m) => m.renderProjects), tiers: ['Admin', 'Accounts'] },
   { path: 'operations', label: 'Daily Operations', icon: ICONS.activity, load: () => import('./views/operations.js').then((m) => m.renderOperations), tiers: ['Admin', 'Supervisor'] },
-  { path: 'dailyStatus', label: 'Daily Machine Status', icon: ICONS.wrench, load: () => import('./views/machineStatusReport.js').then((m) => m.renderMachineStatusReport), tiers: ['Admin', 'Supervisor'] },
-  { path: 'dozerIssues', label: 'Dozer Issues', icon: ICONS.wrench, load: () => import('./views/dozerIssues.js').then((m) => m.renderDozerIssues), tiers: ['Admin', 'Supervisor', 'Staff'] },
-  { path: 'fleet', label: 'Fleet Management', icon: ICONS.wrench, load: () => import('./views/fleet.js').then((m) => m.renderFleet), tiers: ['Admin'] },
+  { path: 'dailyStatus', label: 'Machine Status', icon: ICONS.wrench, load: () => import('./views/machineStatusReport.js').then((m) => m.renderMachineStatusReport), tiers: ['Admin', 'Supervisor'] },
+  { path: 'dozerIssues', label: 'Dozer Issues & Maintenance', icon: ICONS.alert, load: () => import('./views/dozerIssues.js').then((m) => m.renderDozerIssues), tiers: ['Admin', 'Supervisor', 'Staff'] },
+  { path: 'fleet', label: 'Fleet & Assets', icon: ICONS.wrench, load: () => import('./views/fleet.js').then((m) => m.renderFleet), tiers: ['Admin'] },
   { path: 'resourceManagement', label: 'Resource Management', icon: ICONS.fuelCan, load: () => import('./views/resourceManagement.js').then((m) => m.renderResourceManagement), tiers: ['Admin', 'Accounts'] },
   // Commercial: money moving with outside parties
   { path: 'sales', label: 'Sales & Invoicing', icon: ICONS.receipt, load: () => import('./views/sales.js').then((m) => m.renderSales), tiers: ['Admin', 'Accounts'] },
@@ -107,3 +107,4 @@ export function initRouter(viewContainer, onRouteChange) {
 
   return { render, currentPath };
 }
+
