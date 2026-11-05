@@ -1,3 +1,4 @@
+import { operationMilestones } from '../operationMilestones.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatDate, el, ico } from '../utils.js';
@@ -5,6 +6,7 @@ import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal,
 import { OPERATION_TYPES, unitForOperationType, isHaOperationType, dieselUsedFor, DEFAULT_DIESEL_RATES } from '../constants.js';
 import { filterByProject, getAssignedProject, getCurrentUserId } from '../session.js';
 import { createAttachmentPicker } from '../attachments.js';
+import { formatClock, clockToStorage } from '../clockFormat.js';
 
 function projectOptions() {
   return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
@@ -44,6 +46,20 @@ function selectField(name, label, options, value) {
 }
 
 function textField(name, label, type, value, required) {
+  if (type === 'time') {
+    const stored = el('input', { type: 'hidden', name });
+    stored.value = value ? String(value).slice(0, 5) : '';
+    const [rawHour, rawMinute] = stored.value ? stored.value.split(':').map(Number) : [null, 0];
+    const hour = el('select', { 'aria-label': `${label} hour` }, [el('option', { value: '' }, 'Hour'), ...Array.from({ length: 12 }, (_, i) => el('option', { value: String(i + 1) }, String(i + 1)))]);
+    const minute = el('select', { 'aria-label': `${label} minute` }, Array.from({ length: 60 }, (_, i) => el('option', { value: String(i).padStart(2, '0') }, String(i).padStart(2, '0'))));
+    const period = el('select', { 'aria-label': `${label} AM or PM` }, ['AM', 'PM'].map((v) => el('option', { value: v }, v)));
+    if (rawHour !== null) hour.value = String(rawHour % 12 || 12);
+    minute.value = String(rawMinute || 0).padStart(2, '0');
+    period.value = rawHour !== null && rawHour >= 12 ? 'PM' : 'AM';
+    const sync = () => { stored.value = clockToStorage(hour.value, minute.value, period.value); stored.dispatchEvent(new Event('input', { bubbles: true })); };
+    [hour, minute, period].forEach((part) => part.addEventListener('change', sync));
+    return el('div', { class: 'field' }, [el('span', { class: 'field-label' }, label), stored, el('div', { class: 'clock-entry' }, [hour, minute, period])]);
+  }
   const input = el('input', { type: type || 'text', name, required: required ? 'required' : undefined, step: type === 'number' ? '0.1' : undefined, min: type === 'number' ? 0 : undefined });
   input.value = value ?? '';
   return el('label', { class: 'field' }, [el('span', { class: 'field-label' }, label + (required ? ' *' : '')), input]);
@@ -422,9 +438,20 @@ export function renderOperations(container) {
     el('button', { class: 'btn btn-primary', onClick: () => openForm(null, refresh) }, '+ Log Daily Report'),
   ));
 
+  const visibleProjects = [...new Set(filterByProject(store.get('operations'), 'siteName').map((row) => row.siteName).filter(Boolean))].sort();
+  const projectFilter = el('select', { 'aria-label': 'Project' }, [el('option', { value: '' }, 'All assigned projects'), ...visibleProjects.map((name) => el('option', { value: name }, name))]);
+  if (visibleProjects.includes(assignedProject)) projectFilter.value = assignedProject;
+  const milestoneFilter = el('select', { 'aria-label': 'Milestone' }, [el('option', { value: '' }, 'All milestones'), ...[...new Set(store.get('operations').map((row) => row.operationType).filter(Boolean))].sort().map((name) => el('option', { value: name }, name))]);
+  const fromDate = el('input', { type: 'date', 'aria-label': 'From date' });
+  const toDate = el('input', { type: 'date', 'aria-label': 'To date' });
+  const field = (label, input) => el('label', { class: 'field' }, [el('span', { class: 'field-label' }, label), input]);
+  container.appendChild(el('div', { class: 'filter-bar' }, [field('Project', projectFilter), field('Milestone', milestoneFilter), field('From', fromDate), field('To', toDate)]));
+  [projectFilter, milestoneFilter, fromDate, toDate].forEach((input) => input.addEventListener('change', refresh));
   const summaryGrid = el('div', { class: 'stats-grid' });
   container.appendChild(summaryGrid);
 
+  const milestoneSummary = el('div');
+  container.appendChild(milestoneSummary);
   let searchQuery = '';
   const searchInput = el('input', { type: 'search', placeholder: 'Search by site, equipment, operator, or notes…' });
   const searchBar = el('div', { class: 'search-bar' }, [searchInput]);
@@ -442,6 +469,11 @@ export function renderOperations(container) {
     const customers = store.get('customers');
     let rows = filterByProject(store.get('operations'), 'siteName').slice().sort((a, b) => (a.date < b.date ? 1 : -1));
 
+    rows = rows.filter((row) => (!projectFilter.value || row.siteName === projectFilter.value)
+      && (!milestoneFilter.value || row.operationType === milestoneFilter.value)
+      && (!fromDate.value || row.date >= fromDate.value)
+      && (!toDate.value || row.date <= toDate.value));
+
     if (searchQuery) {
       rows = rows.filter((r) => {
         const operatorName = employees.find((e) => e.id === r.operatorId)?.name || '';
@@ -450,24 +482,27 @@ export function renderOperations(container) {
       });
     }
 
-    const haRows = rows.filter((r) => isHaOperationType(r.operationType));
-    const roadRows = rows.filter((r) => r.operationType === 'Road');
-    const trekkingRows = rows.filter((r) => r.operationType === 'Trekking');
-    const totalArea = haRows.reduce((sum, r) => sum + r.quantity, 0);
-    const totalRoad = roadRows.reduce((sum, r) => sum + r.quantity, 0);
-    const totalTrekking = trekkingRows.reduce((sum, r) => sum + r.quantity, 0);
-    const totalFuel = rows.reduce((sum, r) => sum + r.fuelUsed, 0);
-    const ongoing = rows.filter((r) => r.status === 'Ongoing').length;
-    const totalDowntimeMinutes = rows.reduce((sum, r) => sum + ((Number(r.downtimeHours) || 0) * 60 + (Number(r.downtimeMinutes) || 0)), 0);
-
-    summaryGrid.innerHTML = '';
-    summaryGrid.appendChild(statCard({ label: 'Total Area Cleared', value: `${totalArea.toFixed(1)} Ha` }));
-    summaryGrid.appendChild(statCard({ label: 'Total Road', value: `${totalRoad.toFixed(1)} KM` }));
-    summaryGrid.appendChild(statCard({ label: 'Total Trekking', value: `${totalTrekking.toFixed(1)} hrs` }));
-    summaryGrid.appendChild(statCard({ label: 'Total Fuel Used', value: `${totalFuel.toLocaleString()} L` }));
-    summaryGrid.appendChild(statCard({ label: 'Total Downtime', value: `${Math.floor(totalDowntimeMinutes / 60)}h ${totalDowntimeMinutes % 60}m` }));
-    summaryGrid.appendChild(statCard({ label: 'Ongoing Sites', value: String(ongoing) }));
-    summaryGrid.appendChild(statCard({ label: 'Reports Logged', value: String(rows.length) }));
+    const milestones = operationMilestones(rows);
+    const totalFuel = rows.reduce((sum, row) => sum + (Number(row.fuelUsed) || 0), 0);
+    const totalHours = rows.reduce((sum, row) => sum + (Number(row.hoursWorked) || 0), 0);
+    const ongoing = new Set(rows.filter((row) => row.status === 'Ongoing').map((row) => row.siteName)).size;
+    const totalDowntimeMinutes = rows.reduce((sum, row) => sum + ((Number(row.downtimeHours) || 0) * 60 + (Number(row.downtimeMinutes) || 0)), 0);
+    summaryGrid.replaceChildren(
+      statCard({ label: 'Hours Worked', value: totalHours.toLocaleString() + ' hrs' }),
+      statCard({ label: 'Fuel Used', value: totalFuel.toLocaleString() + ' L' }),
+      statCard({ label: 'Downtime', value: Math.floor(totalDowntimeMinutes / 60) + 'h ' + (totalDowntimeMinutes % 60) + 'm' }),
+      statCard({ label: 'Ongoing Projects', value: String(ongoing) }),
+      statCard({ label: 'Reports', value: String(rows.length) }),
+    );
+    renderTable(milestoneSummary, {
+      columns: [
+        { key: 'project', label: 'Project' }, { key: 'milestone', label: 'Milestone' },
+        { key: 'quantity', label: 'Output', render: (row) => row.quantity.toLocaleString(undefined, { maximumFractionDigits: 2 }) + ' ' + row.unit },
+        { key: 'hours', label: 'Hours', render: (row) => row.hours.toLocaleString() },
+        { key: 'fuel', label: 'Fuel (L)', render: (row) => row.fuel.toLocaleString() },
+        { key: 'reports', label: 'Reports' },
+      ], rows: milestones, emptyText: 'No milestones for the selected project and dates.',
+    });
 
     renderTable(tableContainer, {
       columns: [
@@ -478,8 +513,8 @@ export function renderOperations(container) {
         { key: 'equipment', label: 'Equipment' },
         { key: 'operator', label: 'Operator', render: (r) => employees.find((e) => e.id === r.operatorId)?.name || 'Unknown' },
         { key: 'hoursWorked', label: 'Hours', render: (r) => `${r.hoursWorked} h` },
-        { key: 'timeResumed', label: 'Resumed', render: (r) => r.timeResumed || '—' },
-        { key: 'timeClosed', label: 'Closed', render: (r) => r.timeClosed || '—' },
+        { key: 'timeResumed', label: 'Resumed', render: (r) => formatClock(r.timeResumed) },
+        { key: 'timeClosed', label: 'Closed', render: (r) => formatClock(r.timeClosed) },
         { key: 'downtime', label: 'Downtime', render: (r) => {
           const hrs = Number(r.downtimeHours) || 0;
           const mins = Number(r.downtimeMinutes) || 0;
