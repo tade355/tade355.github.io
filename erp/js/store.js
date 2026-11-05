@@ -28,6 +28,7 @@ const CONFIG = {
   attendanceLogs: { table: 'attendance_logs', prefix: 'ATT' },
   fuelingVouchers: { table: 'fueling_vouchers', prefix: 'FV' },
   fundRequests: { table: 'fund_requests', prefix: 'FR', child: { key: 'items', table: 'fund_request_items', fk: 'fund_request_id' } },
+  fundRequestPayments: { table: 'fund_request_payments', prefix: 'FRP' },
   payrollRuns: { table: 'payroll_runs', prefix: 'PR', child: { key: 'lines', table: 'payroll_lines', fk: 'payroll_run_id' } },
   financialEntries: { table: 'financial_entries', prefix: 'FE' },
   dozerPayrollRuns: { table: 'dozer_payroll_runs', prefix: 'DPR', child: { key: 'lines', table: 'dozer_payroll_lines', fk: 'dozer_payroll_run_id' } },
@@ -313,3 +314,4 @@ export const store = {
 };
 
 export { COLLECTIONS };
+
