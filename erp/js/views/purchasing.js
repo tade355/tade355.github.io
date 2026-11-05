@@ -4,6 +4,7 @@ import { formatCurrency, formatDate, poTotal, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confirmDelete } from '../ui.js';
 import { printPurchaseOrder } from '../print.js';
 import { renderFuelCredit } from './fuelCredit.js';
+import { requestSubmissionDate } from '../dateUtils.js';
 
 const SUPPLIER_FIELDS = [
   { name: 'name', label: 'Supplier Name', required: true },
@@ -67,9 +68,11 @@ export function renderPurchasing(container) {
   const ordersTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('orders') }, 'Purchase Orders');
   const suppliersTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('suppliers') }, 'Suppliers');
   const fuelCreditTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('fuelCredit') }, 'Fuel Credit');
+  const historyTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('history') }, 'Purchase History');
   tabBar.appendChild(ordersTabBtn);
   tabBar.appendChild(fuelCreditTabBtn);
   tabBar.appendChild(suppliersTabBtn);
+  tabBar.appendChild(historyTabBtn);
 
   const actionSlot = el('div');
   container.appendChild(sectionHeader('Purchasing & Suppliers', 'Purchase orders, supplier records, and fuel credit', actionSlot));
@@ -83,8 +86,10 @@ export function renderPurchasing(container) {
     ordersTabBtn.classList.toggle('active', tab === 'orders');
     suppliersTabBtn.classList.toggle('active', tab === 'suppliers');
     fuelCreditTabBtn.classList.toggle('active', tab === 'fuelCredit');
+    historyTabBtn.classList.toggle('active', tab === 'history');
     if (tab === 'orders') renderOrdersTab();
     else if (tab === 'suppliers') renderSuppliersTab();
+    else if (tab === 'history') renderHistoryTab();
     else renderFuelCreditTab();
   }
 
@@ -92,6 +97,29 @@ export function renderPurchasing(container) {
     actionSlot.innerHTML = '';
     body.innerHTML = '';
     renderFuelCredit(body);
+  }
+
+  function renderHistoryTab() {
+    actionSlot.innerHTML = '';
+    body.innerHTML = '';
+    const requests = store.get('fundRequests').filter((r) => r.status === 'Paid').flatMap((r) => (r.items || []).map((item) => ({
+      date: r.paidAt || r.date, description: item.description || r.description || 'Fund request', amount: Number(item.amount) || 0,
+      source: `Paid request ${r.id}`, link: '#/fundRequests', submittedDate: requestSubmissionDate(r), project: r.project || '—',
+    })));
+    const expenses = store.get('expenses').map((e) => ({ date: e.date, description: e.description || e.category || 'Expense', amount: Number(e.amount) || 0,
+      source: `Expense ${e.id}`, link: '#/accounting', submittedDate: e.date, project: e.project || '—' }));
+    body.appendChild(el('p', { class: 'section-subtitle' }, 'Financial purchases are shown here even when no formal purchase order was created. Use the source link to review and convert confirmed suppliers or stock items.'));
+    renderTable(body, {
+      columns: [
+        { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
+        { key: 'submittedDate', label: 'Submission Date', render: (r) => formatDate(r.submittedDate) },
+        { key: 'project', label: 'Project' },
+        { key: 'description', label: 'Purchase / Expense' },
+        { key: 'amount', label: 'Amount', render: (r) => formatCurrency(r.amount) },
+        { key: 'source', label: 'Source', render: (r) => el('a', { href: r.link }, r.source) },
+      ], rows: [...requests, ...expenses].sort((a, b) => (b.date || '').localeCompare(a.date || '')),
+      emptyText: 'No financial purchases or expenses recorded yet.',
+    });
   }
 
   function renderOrdersTab() {
@@ -196,6 +224,14 @@ export function renderPurchasing(container) {
         rows,
         emptyText: 'No suppliers yet.',
       });
+      const candidates = [...new Set(store.get('fundRequests').filter((r) => ['Approved', 'Paid'].includes(r.status)).flatMap((r) => (r.items || []).map((i) => i.accountName).filter(Boolean)).map((v) => v.trim()).filter(Boolean))].sort();
+      body.appendChild(el('h3', { class: 'subsection-title' }, 'Unregistered Payees to Review'));
+      body.appendChild(el('p', { class: 'section-subtitle' }, 'These names came from approved or paid request payees. Confirm the supplier identity and contact details before creating a supplier record.'));
+      renderTable(body, {
+        columns: [{ key: 'name', label: 'Payee / Candidate Supplier' }, { key: 'action', label: 'Next Step', render: () => 'Confirm identity, then Add Supplier' }],
+        rows: candidates.map((name) => ({ name })),
+        emptyText: 'No unregistered payees found in approved or paid requests.',
+      });
     }
 
     function openSupplierForm(record) {
@@ -217,3 +253,4 @@ export function renderPurchasing(container) {
 
   setTab('orders');
 }
+
