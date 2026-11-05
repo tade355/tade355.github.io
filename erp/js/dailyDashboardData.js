@@ -189,22 +189,24 @@ export function buildDailyDashboard(ctx) {
   const recentRequests = ctx.fundRequests.filter((r) => requestSubmissionDate(r) >= requestSince && requestSubmissionDate(r) <= date);
   const reqs = recentRequests.filter((r) => r.project === project);
   const total = (r) => sum(r.items || [], (it) => it.amount);
+  const approvedTotal = (r) => Number(r.approvedAmount) || total(r);
+  const paidTotal = (r) => Number(r.paidAmount) || total(r);
   const inRange = reqs.filter((r) => r.date >= since);
   const requestsToday = reqs.filter((r) => r.date === date);
   const paidToday = requestsToday.filter((r) => r.status === 'Paid');
   const byCategory = {};
-  paidToday.forEach((r) => { byCategory[r.costHead || 'Other'] = (byCategory[r.costHead || 'Other'] || 0) + total(r); });
+  paidToday.forEach((r) => { byCategory[r.costHead || 'Other'] = (byCategory[r.costHead || 'Other'] || 0) + paidTotal(r); });
   const requests = {
     since: requestSince,
     requestedToday: sum(requestsToday, total),
     requestedCumulative: sum(inRange, total),
-    paidToday: sum(paidToday, total),
-    paidCumulative: sum(inRange.filter((r) => r.status === 'Paid'), total),
+    paidToday: sum(paidToday, paidTotal),
+    paidCumulative: sum(inRange.filter((r) => r.status === 'Paid'), paidTotal),
     pending: sum(inRange.filter((r) => r.status === 'Pending'), total),
-    approved: sum(inRange.filter((r) => r.status === 'Approved'), total),
+    approved: sum(inRange.filter((r) => ['Approved', 'Partially Approved'].includes(r.status)), approvedTotal),
     paidByCategory: Object.entries(byCategory).map(([label, value]) => ({ label, value })),
-    rows: reqs.filter((r) => ['Pending', 'Approved', 'Paid'].includes(r.status))
-      .map((r) => ({ id: r.id, date: r.date, submittedDate: requestSubmissionDate(r), description: r.description, category: r.costHead || '—', amount: total(r), status: r.status, isNew: r.date === date }))
+    rows: reqs.filter((r) => ['Pending', 'Approved', 'Partially Approved', 'Paid'].includes(r.status))
+      .map((r) => ({ id: r.id, date: r.date, submittedDate: requestSubmissionDate(r), description: r.description, category: r.costHead || '—', amount: r.status === 'Paid' ? paidTotal(r) : r.status === 'Pending' ? total(r) : approvedTotal(r), requestedAmount: total(r), status: r.status, isNew: r.date === date }))
       .sort((a, b) => (a.isNew === b.isNew ? (a.date < b.date ? 1 : -1) : a.isNew ? -1 : 1)),
   };
 
@@ -323,3 +325,4 @@ export function buildDailyDashboard(ctx) {
     staff, flags,
   };
 }
+
