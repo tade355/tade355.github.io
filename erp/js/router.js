@@ -23,17 +23,19 @@ export const ROUTES = [
   // Overview
   { path: 'dashboard', label: 'Dashboard', icon: ICONS.dashboard, load: () => import('./views/dashboard.js').then((m) => m.renderDashboard), tiers: ['Admin', 'Accounts'] },
   { path: 'dailyDashboard', label: 'Daily Operations Dashboard', icon: ICONS.barChart, load: () => import('./views/dailyDashboard.js').then((m) => m.renderDailyDashboard), tiers: ['Admin', 'Accounts', 'Supervisor'] },
-  { path: 'askErp', label: 'Ask the ERP', icon: ICONS.chat, load: () => import('./views/askErpPage.js').then((m) => m.renderAskErp), tiers: ['Admin', 'Accounts', 'Supervisor'] },
+  { path: 'askErp', label: 'Ask the ERP', icon: ICONS.chat, load: () => import('./views/askErpPage.js').then((m) => m.renderAskErp), tiers: ['Admin', 'Accounts'] },
   // Excel upload: Olumide's account only (`guard` is checked wherever routes are listed or opened).
   { path: 'dataImport', label: 'Data Import', icon: ICONS.upload, load: () => import('./views/dataImport.js').then((m) => m.renderDataImport), tiers: ['Admin'], guard: canImportData },
   // Paste a WhatsApp message, review the rows it makes, then confirm (nothing saves before that).
-  { path: 'pasteEntry', label: 'Paste Entry', icon: ICONS.clipboard, load: () => import('./views/pasteEntry.js').then((m) => m.renderPasteEntry), tiers: ['Admin', 'Supervisor'] },
+  { path: 'pasteEntry', label: 'Paste Entry', icon: ICONS.clipboard, load: () => import('./views/pasteEntry.js').then((m) => m.renderPasteEntry), tiers: ['Admin'] },
   { path: 'noticeBoard', label: 'Documents and Notices', icon: ICONS.documents, load: () => import('./views/noticeBoard.js').then((m) => m.renderNoticeBoard), tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
   // Field operations: the job, the work done against it, the equipment doing it
-  { path: 'projects', label: 'Projects', icon: ICONS.folder, load: () => import('./views/projects.js').then((m) => m.renderProjects), tiers: ['Admin', 'Accounts', 'Supervisor'] },
+  { path: 'projects', label: 'Projects', icon: ICONS.folder, load: () => import('./views/projects.js').then((m) => m.renderProjects), tiers: ['Admin', 'Accounts'] },
   { path: 'operations', label: 'Daily Operations', icon: ICONS.activity, load: () => import('./views/operations.js').then((m) => m.renderOperations), tiers: ['Admin', 'Supervisor'] },
-  { path: 'fleet', label: 'Fleet Management', icon: ICONS.wrench, load: () => import('./views/fleet.js').then((m) => m.renderFleet), tiers: ['Admin', 'Supervisor'] },
-  { path: 'resourceManagement', label: 'Resource Management', icon: ICONS.fuelCan, load: () => import('./views/resourceManagement.js').then((m) => m.renderResourceManagement), tiers: ['Admin', 'Accounts', 'Supervisor'] },
+  { path: 'dailyStatus', label: 'Daily Machine Status', icon: ICONS.wrench, load: () => import('./views/machineStatusReport.js').then((m) => m.renderMachineStatusReport), tiers: ['Admin', 'Supervisor'] },
+  { path: 'dozerIssues', label: 'Dozer Issues', icon: ICONS.wrench, load: () => import('./views/dozerIssues.js').then((m) => m.renderDozerIssues), tiers: ['Admin', 'Supervisor', 'Staff'] },
+  { path: 'fleet', label: 'Fleet Management', icon: ICONS.wrench, load: () => import('./views/fleet.js').then((m) => m.renderFleet), tiers: ['Admin'] },
+  { path: 'resourceManagement', label: 'Resource Management', icon: ICONS.fuelCan, load: () => import('./views/resourceManagement.js').then((m) => m.renderResourceManagement), tiers: ['Admin', 'Accounts'] },
   // Commercial: money moving with outside parties
   { path: 'sales', label: 'Sales & Invoicing', icon: ICONS.receipt, load: () => import('./views/sales.js').then((m) => m.renderSales), tiers: ['Admin', 'Accounts'] },
   { path: 'purchasing', label: 'Purchasing & Suppliers', icon: ICONS.bag, load: () => import('./views/purchasing.js').then((m) => m.renderPurchasing), tiers: ['Admin', 'Accounts'] },

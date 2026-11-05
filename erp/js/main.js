@@ -8,6 +8,7 @@ import { restoreSession, logout, changePassword } from './auth.js';
 import { initThemeSwitch } from './theme.js';
 import { setNavigationUser } from './navigationState.js';
 import { openGlobalSearch, initGlobalSearchShortcut } from './globalSearch.js';
+import { initNotificationCenter } from './notificationCenter.js';
 
 const sidebarNav = document.getElementById('sidebarNav');
 const viewContainer = document.getElementById('view');
@@ -107,13 +108,14 @@ function initApp() {
   window.addEventListener('erp-data-health', showHealth);
   showHealth();
   renderUserBadge();
+  initNotificationCenter(userBadge);
   globalSearchBtn.addEventListener('click', openGlobalSearch);
   initGlobalSearchShortcut();
 
   const navLinks = {};
   const groups = [
     ['Overview', ['dashboard','dailyDashboard','askErp']],
-    ['Operations', ['projects','operations','fleet','resourceManagement']],
+    ['Operations', ['projects','operations','dailyStatus','dozerIssues','fleet','resourceManagement']],
     ['Commercial', ['sales','purchasing']],
     ['Finance', ['accounting','fundRequests']],
     ['People', ['hr','leave','mySalary','training','noticeBoard']],
