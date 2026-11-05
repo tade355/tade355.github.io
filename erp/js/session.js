@@ -33,9 +33,34 @@ export function canAccess(tiers) {
   return tiers.includes(getCurrentTier());
 }
 
+// Named responsibility overrides sit above the broad access tiers. This keeps
+// the existing RLS/tier model intact while making the navigation match the
+// real organogram: the secretary is operationally broad but cannot open HR or
+// sensitive finance; CEO/COO can see the business but only Olumide opens the
+// backend/data tools.
+export function canAccessRoute(route) {
+  if (!route) return false;
+  const user = getCurrentUser() || {};
+  const name = String(user.name || '').toLowerCase();
+  const role = String(user.role || '').toLowerCase();
+  const isSecretary = /secretary|company secretary/.test(role) || /gladness/.test(name);
+  const isExecutive = /ceo|chief executive|coo|chief operating/.test(role) || /gideon|olumide/.test(name);
+  const isHrmOrAccounts = /human resources|hrm|hr manager|accounts?|finance/.test(role) || /victoria/.test(name);
+  const isManager = /manager|supervisor/.test(role);
+  const isOlumide = /olumide/.test(name);
+  const backend = ['dataImport', 'pasteEntry', 'backup'].includes(route.path);
+  if (backend) return isOlumide;
+  if (isSecretary && ['hr', 'leave', 'mySalary', 'payroll', 'accounting', 'purchasing', 'sales', 'loans', 'fundRequests'].includes(route.path)) return false;
+  if (isSecretary) return true;
+  if (isExecutive || isHrmOrAccounts) return true;
+  if (isManager && ['dailyDashboard', 'operations', 'dailyStatus', 'dozerIssues', 'noticeBoard'].includes(route.path)) return true;
+  return canAccess(route.tiers);
+}
+
 export function defaultRouteForTier(tier) {
   if (tier === 'Admin' || tier === 'Accounts') return 'dashboard';
   if (tier === 'Supervisor') return 'operations';
+  if (tier === 'Staff') return 'dailyDashboard';
   return 'leave';
 }
 
@@ -92,3 +117,4 @@ export function filterTrainingSubmissions(rows) {
   const userId = getCurrentUserId();
   return rows.filter((r) => r.employeeId === userId);
 }
+
