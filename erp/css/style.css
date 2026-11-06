@@ -1652,3 +1652,12 @@ a.btn { text-decoration: none; }
 
 .clock-entry { display: flex; gap: .35rem; align-items: center; }
 .clock-entry select { min-width: 0; flex: 1; }
+
+.request-view-tabs { margin: 0 0 0.75rem; }
+.request-summary {
+  display: block;
+  max-width: 28rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
