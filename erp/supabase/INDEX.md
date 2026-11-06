@@ -49,3 +49,9 @@ Run a new migration once in the Supabase SQL editor, in number order. `schema.sq
 | `0041_data_safety.sql` | Data safety (Oct 2026): atomic saves, an audit trail, an approval guard and an |
 | `0053_partial_approvals_and_purchase_coverage.sql` | Partial fund approvals, auditable payment rows, and guardrails that prevent payment above the approved amount. |
 
+
+
+### 0059 — Personal operator dashboard
+
+`0059_operator_portal.sql` adds project/dozer pairing, historical employee aliases and an authenticated personal dashboard API. It restricts Staff access to raw company finance and operational rows; the API returns only assigned-machine information and the operator's own work. Apply with the matching dashboard, issue and employee-form release. This migration is self-contained after 0043, 0046 and 0054 and does not depend on draft 0057 or 0058.
+

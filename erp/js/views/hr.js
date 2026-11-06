@@ -52,9 +52,13 @@ function fields() {
       { value: 'Disengaged', label: 'Disengaged' },
     ] },
     { name: 'accessTier', label: 'ERP Access Level', type: 'select', required: true, options: ACCESS_TIERS.map((t) => ({ value: t, label: ACCESS_TIER_LABELS[t] })) },
-    { name: 'assignedProject', label: 'Assigned Project (Supervisors only — restricts what they see)', type: 'select', options: [
-      { value: '', label: '— All projects —' },
+    { name: 'assignedProject', label: 'Assigned Project', type: 'select', options: [
+      { value: '', label: '— No project assigned —' },
       ...projectOptions(),
+    ] },
+    { name: 'assignedDozer', label: 'Assigned Dozer (Operators)', type: 'select', options: [
+      { value: '', label: '— No dozer assigned —' },
+      ...store.get('inventory').filter(item => item.category === 'Heavy Equipment').map(item => ({ value: item.name, label: item.name })),
     ] },
     { name: 'trainingProgramId', label: 'Training Currently Administered — what shows on their Training tab', type: 'select', options: [
       { value: '', label: '— None —' },
@@ -406,3 +410,4 @@ export function renderHR(container) {
 
   setTab('employees');
 }
+

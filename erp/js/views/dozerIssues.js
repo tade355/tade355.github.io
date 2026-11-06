@@ -1,10 +1,13 @@
+import { renderOperatorDashboard } from './operatorDashboard.js';
+import { isOperatorAccount } from '../operatorPortalData.js';
 import { supabase } from '../supabaseClient.js';
-import { getCurrentUserId, getCurrentTier, getAssignedProject } from '../session.js';
+import { getCurrentUserId, getCurrentTier, getAssignedProject, getCurrentUser } from '../session.js';
 import { el } from '../utils.js';
 import { showToast } from '../ui.js';
 import { queueFieldSubmission, pendingFieldSyncCount } from '../fieldSync.js';
 
 export function renderDozerIssues(container) {
+  if (isOperatorAccount(getCurrentUser())) return renderOperatorDashboard(container, { issuesOnly: true });
   container.replaceChildren(el('h2', {}, 'Dozer Issues'));
   const tier = getCurrentTier();
   const project = getAssignedProject();
@@ -72,4 +75,5 @@ export function renderDozerIssues(container) {
   });
   load();
 }
+
 

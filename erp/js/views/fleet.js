@@ -1,3 +1,4 @@
+import { engineServiceStatus } from '../serviceTracking.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, monthKey, statusPillClass } from '../utils.js';
@@ -152,13 +153,7 @@ function hoursSinceLastServiceFor(name) {
 }
 
 export function serviceStatusFor(item) {
-  const interval = item.serviceIntervalHours || 250;
-  const hours = hoursSinceLastServiceFor(item.name);
-  const ratio = hours / interval;
-  let status = 'OK';
-  if (ratio >= 1) status = 'Overdue';
-  else if (ratio >= 0.8) status = 'Due Soon';
-  return { hours, interval, ratio, status };
+  return engineServiceStatus(item, store.get('maintenanceLogs'), store.get('operations'), todayISOString());
 }
 
 function fleetFields() {
@@ -553,4 +548,5 @@ export function renderFleet(container) {
 
   setTab('roster');
 }
+
 

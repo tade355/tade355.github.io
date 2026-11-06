@@ -1,9 +1,11 @@
+import { renderOperatorDashboard } from './operatorDashboard.js';
+import { isOperatorAccount } from '../operatorPortalData.js';
 // Daily Operations Dashboard — the ERP version of the daily HTML dashboards:
 // 1 Operations, 2 Diesel, 3 Fleet, 4 Requests & Expenses, 5 Profitability,
 // 6 Staff Performance, with the Actions/Flags list on top. Everything is
 // derived live from ERP records (see dailyDashboardData.js).
 import { el, formatCurrency, formatDate } from '../utils.js';
-import { getCurrentTier } from '../session.js';
+import { getCurrentTier, getCurrentUser } from '../session.js';
 import { store } from '../store.js';
 import { statCard, statusPill } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
@@ -122,6 +124,7 @@ function onGroundNote(x, fmtDate) {
 }
 
 export function renderDailyDashboard(container) {
+  if (isOperatorAccount(getCurrentUser())) return renderOperatorDashboard(container);
   container.innerHTML = '';
   const realToday = todayISOString();
   const projects = projectNames();
@@ -493,4 +496,5 @@ function staffSection(d) {
     el('h3', {}, 'Supervisors'), supervisors.length ? makeTable(supervisors) : el('p', { class: 'section-subtitle' }, 'No supervisor reports in this period.'),
   ]);
 }
+
 
