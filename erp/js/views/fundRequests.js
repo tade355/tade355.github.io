@@ -28,6 +28,12 @@ function employeeName(id) {
   return store.get('employees').find((e) => e.id === id)?.name || 'Unknown';
 }
 
+function requestSummary(request, limit = 90) {
+  const full = String(request.description || `${request.items?.length || 0} item(s)`).trim();
+  const text = full.length > limit ? `${full.slice(0, limit - 1).trim()}…` : full;
+  return el('span', { class: 'request-summary', title: full }, text);
+}
+
 function selectField(name, label, options, value) {
   const select = el('select', { name }, options.map((o) => {
     const opt = el('option', { value: o.value }, o.label);
@@ -299,6 +305,7 @@ function renderRequestsTab(container, onRefresh = () => {}) {
   const summarySlot = el('div');
   container.appendChild(summarySlot);
 
+  let requestView = 'active';
   let searchQuery = '';
   let statusFilter = '';
   const searchInput = el('input', { type: 'search', placeholder: 'Search by description, project, or submitter…' });
@@ -306,7 +313,20 @@ function renderRequestsTab(container, onRefresh = () => {}) {
     el('option', { value: '' }, 'All Statuses'),
     ...['Pending', 'Approved', 'Partially Approved', 'Rejected', 'Paid'].map((s) => el('option', { value: s }, s)),
   ]);
+  const activeBtn = el('button', { type: 'button', class: 'tab-btn active' }, 'Awaiting Action');
+  const historyBtn = el('button', { type: 'button', class: 'tab-btn' }, 'History');
+  const setRequestView = (next) => {
+    requestView = next;
+    activeBtn.classList.toggle('active', next === 'active');
+    historyBtn.classList.toggle('active', next === 'history');
+    statusSelect.style.display = next === 'history' ? '' : 'none';
+    refresh();
+  };
+  activeBtn.addEventListener('click', () => setRequestView('active'));
+  historyBtn.addEventListener('click', () => setRequestView('history'));
+  container.appendChild(el('div', { class: 'tab-bar request-view-tabs', role: 'tablist', 'aria-label': 'Request view' }, [activeBtn, historyBtn]));
   container.appendChild(el('div', { class: 'search-bar' }, [searchInput, statusSelect]));
+  statusSelect.style.display = 'none';
   searchInput.addEventListener('input', () => { searchQuery = searchInput.value.trim().toLowerCase(); refresh(); });
   statusSelect.addEventListener('change', () => { statusFilter = statusSelect.value; refresh(); });
 
@@ -319,9 +339,10 @@ function renderRequestsTab(container, onRefresh = () => {}) {
 
   function refresh() {
     onRefresh();
-    let rows = filterFundRequests(store.get('fundRequests')).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '') || a.id.localeCompare(b.id, undefined, { numeric: true }));
-    const pending = rows.filter((r) => r.status === 'Pending').length;
-    const totalPending = rows.filter((r) => r.status === 'Pending').reduce((sum, r) => sum + totalOf(r), 0);
+    const allRows = filterFundRequests(store.get('fundRequests')).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '') || a.id.localeCompare(b.id, undefined, { numeric: true }));
+    let rows = allRows.filter((r) => requestView === 'active' ? r.status === 'Pending' : r.status !== 'Pending');
+    const pending = allRows.filter((r) => r.status === 'Pending').length;
+    const totalPending = allRows.filter((r) => r.status === 'Pending').reduce((sum, r) => sum + totalOf(r), 0);
 
     if (statusFilter) rows = rows.filter((r) => r.status === statusFilter);
     if (searchQuery) {
@@ -330,27 +351,20 @@ function renderRequestsTab(container, onRefresh = () => {}) {
 
     summarySlot.innerHTML = '';
     summarySlot.appendChild(el('div', { class: 'stats-grid' }, [
-      statCard({ label: 'Total Requests', value: String(rows.length) }),
+      statCard({ label: requestView === 'active' ? 'Awaiting Action' : 'History Records', value: String(rows.length) }),
       statCard({ label: 'Pending Approval', value: String(pending), tone: pending ? 'warning' : 'good' }),
       statCard({ label: 'Pending Amount', value: formatCurrency(totalPending) }),
     ]));
 
     renderTable(tableContainer, {
       columns: [
-        { key: 'submittedDate', label: 'Submission Date', render: (r) => formatDate(requestSubmissionDate(r)), sortValue: requestSubmissionDate },
-        { key: 'paidAt', label: 'Payment Date', render: (r) => r.paidAt ? formatDate(r.paidAt) : '—' },
-        { key: 'project', label: 'Project', render: (r) => r.project || '—' },
-        { key: 'submittedBy', label: 'Submitted By', render: (r) => employeeName(r.submittedBy) },
-        { key: 'costHead', label: 'Cost Head', render: (r) => r.costHead || '—' },
-        { key: 'description', label: 'Description', render: (r) => r.description || `${r.items.length} item(s)` },
-        { key: 'total', label: 'Total', render: (r) => formatCurrency(totalOf(r)) },
-        { key: 'approvedAmount', label: 'Approved', render: (r) => r.approvedAmount != null ? formatCurrency(r.approvedAmount) : '—' },
-        { key: 'paidAmount', label: 'Paid', render: (r) => r.paidAmount != null ? formatCurrency(r.paidAmount) : '—' },
+        { key: 'submittedDate', label: 'Date', render: (r) => formatDate(requestSubmissionDate(r)), sortValue: requestSubmissionDate },
         { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
-        { key: 'attachments', label: 'Files', render: (r) => (r.attachments?.length ? el('span', { class: 'attach-count' }, [ico('paperclip'), String(r.attachments.length)]) : '—') },
+        { key: 'total', label: 'Amount', render: (r) => formatCurrency(totalOf(r)) },
+        { key: 'submittedBy', label: 'Submitted By', render: (r) => employeeName(r.submittedBy) },
         {
           key: 'actions',
-          label: '',
+          label: 'Actions',
           render: (r) => actionButtons({
             onPrint: () => printFundRequest(r, {
               submittedByName: employeeName(r.submittedBy),
@@ -368,9 +382,16 @@ function renderRequestsTab(container, onRefresh = () => {}) {
             },
           }),
         },
+        { key: 'description', label: 'Description', wrap: true, render: requestSummary },
+        { key: 'project', label: 'Project', render: (r) => r.project || '—' },
+        { key: 'approvedAmount', label: 'Approved', render: (r) => r.approvedAmount != null ? formatCurrency(r.approvedAmount) : '—' },
+        { key: 'paidAmount', label: 'Paid', render: (r) => r.paidAmount != null ? formatCurrency(r.paidAmount) : '—' },
+        { key: 'costHead', label: 'Category', render: (r) => r.costHead || '—' },
+        { key: 'paidAt', label: 'Payment Date', render: (r) => r.paidAt ? formatDate(r.paidAt) : '—' },
+        { key: 'attachments', label: 'Files', render: (r) => (r.attachments?.length ? el('span', { class: 'attach-count' }, [ico('paperclip'), String(r.attachments.length)]) : '—') },
       ],
       rows,
-      emptyText: 'No fund requests yet.',
+      emptyText: requestView === 'active' ? 'Nothing is awaiting action.' : 'No request history yet.',
       rowClass: (r) => (r.status === 'Pending' ? 'row-warning' : undefined),
     });
   }
