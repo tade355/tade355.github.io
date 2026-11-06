@@ -820,6 +820,23 @@ th[aria-sort=descending] .table-sort::after { content: '↓'; opacity: 1; }
 .data-table tbody tr.row-cumulative { background: var(--page-plane); }
 .weekly-report-footer { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.35rem; }
 .table-wrap { overflow-x: auto; }
+.table-scrollbar-top {
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 18px;
+  margin: 0 0 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  scrollbar-width: auto;
+  scrollbar-color: var(--text-muted) var(--page-plane);
+}
+.table-scrollbar-top[hidden] { display: none; }
+.table-scrollbar-inner { height: 1px; }
+.table-scrollbar-top:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
 .table-empty {
   color: var(--text-muted);
   background: var(--surface-1);
@@ -1014,6 +1031,7 @@ th[aria-sort=descending] .table-sort::after { content: '↓'; opacity: 1; }
   body.print-page .app-shell,
   body.print-page .app-main { display: block; min-height: 0; height: auto; }
   body.print-page .table-wrap { overflow: visible; }
+  body.print-page .table-scrollbar-top { display: none; }
   body.print-page .data-table tr { break-inside: avoid; }
 }
 

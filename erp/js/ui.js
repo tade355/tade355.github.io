@@ -219,8 +219,35 @@ export function renderTable(container, { columns, rows, emptyText = 'No records 
   draw();
   table.appendChild(thead);
   table.appendChild(tbody);
-  // A wide table scrolls inside its own box instead of pushing the whole page sideways on a phone.
-  container.appendChild(el('div', { class: 'table-wrap' }, [table]));
+  // Keep a second, synchronized horizontal scrollbar above long tables. The
+  // browser's native scrollbar remains below the final row, while this one is
+  // available as soon as the user reaches the table controls.
+  const tableWrap = el('div', { class: 'table-wrap' }, [table]);
+  const topScrollInner = el('div', { class: 'table-scrollbar-inner' });
+  const topScroll = el('div', {
+    class: 'table-scrollbar-top',
+    role: 'region',
+    'aria-label': 'Scroll table left or right',
+    tabindex: '0',
+  }, [topScrollInner]);
+  let syncingScroll = false;
+  const syncScroll = (source, target) => {
+    if (syncingScroll) return;
+    syncingScroll = true;
+    target.scrollLeft = source.scrollLeft;
+    syncingScroll = false;
+  };
+  topScroll.addEventListener('scroll', () => syncScroll(topScroll, tableWrap), { passive: true });
+  tableWrap.addEventListener('scroll', () => syncScroll(tableWrap, topScroll), { passive: true });
+  const sizeTopScrollbar = () => {
+    topScrollInner.style.width = `${table.scrollWidth}px`;
+    topScroll.hidden = table.scrollWidth <= tableWrap.clientWidth + 1;
+  };
+  const resizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(sizeTopScrollbar) : null;
+  resizeObserver?.observe(tableWrap);
+  resizeObserver?.observe(table);
+  requestAnimationFrame(sizeTopScrollbar);
+  container.append(topScroll, tableWrap);
 }
 
 export function actionButtons({ onEdit, onDelete, onPrint, onPayment }) {
