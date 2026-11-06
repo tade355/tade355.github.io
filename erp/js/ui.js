@@ -166,6 +166,8 @@ export function statusPill(status) {
 // sites across the app individually; it just gets a nicer filename than
 // the generic timestamped default where the caller has one to give.
 export function renderTable(container, { columns, rows, emptyText = 'No records yet.', rowClass, exportFilename }) {
+  container._tableScrollbarCleanup?.();
+  container._tableScrollbarCleanup = null;
   container.innerHTML = '';
   if (!rows.length) {
     container.appendChild(el('p', { class: 'table-empty' }, emptyText));
@@ -239,14 +241,35 @@ export function renderTable(container, { columns, rows, emptyText = 'No records 
   };
   topScroll.addEventListener('scroll', () => syncScroll(topScroll, tableWrap), { passive: true });
   tableWrap.addEventListener('scroll', () => syncScroll(tableWrap, topScroll), { passive: true });
-  const sizeTopScrollbar = () => {
+  const updateFloatingScrollbar = () => {
     topScrollInner.style.width = `${table.scrollWidth}px`;
-    topScroll.hidden = table.scrollWidth <= tableWrap.clientWidth + 1;
+    const rect = tableWrap.getBoundingClientRect();
+    const overflows = table.scrollWidth > tableWrap.clientWidth + 1;
+    const tableIsVisible = rect.bottom > 0 && rect.top < window.innerHeight;
+    const normalBottomIsBelowScreen = rect.bottom > window.innerHeight - 24;
+    const floating = overflows && tableIsVisible && normalBottomIsBelowScreen;
+    topScroll.hidden = !floating;
+    topScroll.classList.toggle('table-scrollbar-floating', floating);
+    if (floating) {
+      const left = Math.max(0, rect.left);
+      topScroll.style.left = `${left}px`;
+      topScroll.style.width = `${Math.min(rect.width, window.innerWidth - left)}px`;
+    } else {
+      topScroll.style.removeProperty('left');
+      topScroll.style.removeProperty('width');
+    }
   };
-  const resizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(sizeTopScrollbar) : null;
+  const resizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(updateFloatingScrollbar) : null;
   resizeObserver?.observe(tableWrap);
   resizeObserver?.observe(table);
-  requestAnimationFrame(sizeTopScrollbar);
+  const scrollbarEvents = new AbortController();
+  window.addEventListener('scroll', updateFloatingScrollbar, { passive: true, signal: scrollbarEvents.signal });
+  window.addEventListener('resize', updateFloatingScrollbar, { passive: true, signal: scrollbarEvents.signal });
+  container._tableScrollbarCleanup = () => {
+    scrollbarEvents.abort();
+    resizeObserver?.disconnect();
+  };
+  requestAnimationFrame(updateFloatingScrollbar);
   container.append(topScroll, tableWrap);
 }
 
