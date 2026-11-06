@@ -1,3 +1,5 @@
+import { renderOperatorDashboard } from './operatorDashboard.js';
+import { isOperatorAccount } from '../operatorPortalData.js';
 import { store } from '../store.js';
 import { formatCurrency, formatDate, invoiceTotal, monthKey, monthLabel, el, ico } from '../utils.js';
 import { ICONS } from '../icons.js';
@@ -77,6 +79,7 @@ function buildDayTimeline(dayISO, daysOps) {
 }
 
 export function renderDashboard(container) {
+  if (isOperatorAccount(getCurrentUser())) return renderOperatorDashboard(container);
   container.innerHTML = '';
 
   const realTodayISO = todayISOString();

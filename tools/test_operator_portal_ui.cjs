@@ -46,7 +46,7 @@ const portal = { employee: { id: 'EMP-TEST', name: 'Operator A' }, assignmentSta
       });
       const page = await context.newPage(); page.on('pageerror', error => errors.push(error.message));
       await page.clock.install({ time: new Date('2026-11-06T10:00:00Z') });
-      await page.goto(`http://127.0.0.1:${server.address().port}/erp/#/dailyDashboard`);
+      await page.goto(`http://127.0.0.1:${server.address().port}/erp/#/dashboard`);
       await page.locator('input[name=username]').fill('operator-test'); await page.locator('input[name=password]').fill('fictional-test-password');
       await page.locator('button[type=submit]').click();
       await page.getByRole('heading', { name: 'My Work & Dozer', exact: true }).waitFor();
@@ -76,3 +76,4 @@ const portal = { employee: { id: 'EMP-TEST', name: 'Operator A' }, assignmentSta
     }
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
 })().catch(error => { console.error(error); process.exit(1); });
+
