@@ -831,6 +831,13 @@ th[aria-sort=descending] .table-sort::after { content: '↓'; opacity: 1; }
   scrollbar-width: auto;
   scrollbar-color: var(--text-muted) var(--page-plane);
 }
+.table-scrollbar-floating {
+  position: fixed;
+  bottom: 0.65rem;
+  z-index: 120;
+  margin: 0;
+  box-shadow: 0 4px 16px var(--shadow-color);
+}
 .table-scrollbar-top[hidden] { display: none; }
 .table-scrollbar-inner { height: 1px; }
 .table-scrollbar-top:focus-visible {
