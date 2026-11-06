@@ -51,7 +51,7 @@ export function canAccessRoute(route) {
   const isOlumide = /olumide/.test(name);
   const backend = ['dataImport', 'pasteEntry', 'backup'].includes(route.path);
   if (backend) return isOlumide;
-  if (isSecretary && ['hr', 'leave', 'mySalary', 'payroll', 'accounting', 'purchasing', 'sales', 'loans', 'fundRequests'].includes(route.path)) return false;
+  // Gladness supports requests, procurement, sales and finance, and needs leave and salary self-service.\n  // HR administration remains restricted; backend/data tools are handled above.\n  if (isSecretary && ['hr', 'payroll', 'loans'].includes(route.path)) return false;
   if (isSecretary) return true;
   if (isExecutive || isHrmOrAccounts) return true;
   if (isManager && ['dailyDashboard', 'operations', 'dailyStatus', 'dozerIssues', 'noticeBoard'].includes(route.path)) return true;
