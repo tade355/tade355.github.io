@@ -1,7 +1,7 @@
 import { requestSubmissionDate } from '../dateUtils.js';
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el, ico } from '../utils.js';
-import { renderTable, sectionHeader, statCard } from '../ui.js';
+import { renderTable, sectionHeader, statCard, statusPill } from '../ui.js';
 import { getCurrentTier, getCurrentUserId, filterFundRequests, filterByProject, filterLeaveRequests } from '../session.js';
 import { printFundRequest, printFuelingVoucher } from '../print.js';
 import { notifyFundRequestDecision, notifyLeaveRequestDecision } from '../notifications.js';
@@ -9,6 +9,12 @@ import { canDecideLeave } from '../access.js';
 
 function employeeName(id) {
   return store.get('employees').find((e) => e.id === id)?.name || 'Unknown';
+}
+
+function shortSummary(value, limit = 90) {
+  const full = String(value || '').trim();
+  const text = full.length > limit ? `${full.slice(0, limit - 1).trim()}…` : full;
+  return el('span', { class: 'request-summary', title: full }, text);
 }
 
 function daysBetween(start, end) {
@@ -118,15 +124,14 @@ export function renderApprovals(container, onRefresh = () => {}) {
 
     renderTable(tableContainer, {
       columns: [
-        { key: 'type', label: 'Type' },
-        { key: 'submittedDate', label: 'Submission Date', render: (r) => formatDate(requestSubmissionDate(r.record)), sortValue: (r) => requestSubmissionDate(r.record) },
-        { key: 'date', label: 'Request Date', render: (r) => formatDate(r.date) },
-        { key: 'summary', label: 'Summary' },
-        { key: 'by', label: 'Submitted By' },
+        { key: 'submittedDate', label: 'Date', render: (r) => formatDate(requestSubmissionDate(r.record)), sortValue: (r) => requestSubmissionDate(r.record) },
+        { key: 'type', label: 'Request Type' },
+        { key: 'status', label: 'Status', render: () => statusPill('Pending') },
         { key: 'amount', label: 'Amount', render: (r) => (r.amount === null ? '—' : formatCurrency(r.amount)) },
+        { key: 'by', label: 'Submitted By' },
         {
           key: 'actions',
-          label: '',
+          label: 'Actions',
           render: (r) => decisionButtons({
             onPrint: r.collection === 'fundRequests'
               ? () => printFundRequest(r.record, { submittedByName: employeeName(r.record.submittedBy) })
@@ -137,6 +142,8 @@ export function renderApprovals(container, onRefresh = () => {}) {
             onReject: () => decide(r, 'Rejected'),
           }),
         },
+        { key: 'summary', label: 'Description', wrap: true, render: (r) => shortSummary(r.summary) },
+        { key: 'date', label: 'Request Date', render: (r) => formatDate(r.date) },
       ],
       rows,
       emptyText: "Nothing pending — you're all caught up.",
