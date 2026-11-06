@@ -76,17 +76,26 @@ export function filterByProject(rows, projectKey) {
   return rows.filter((r) => r[projectKey] === project);
 }
 
-// Fund requests: Supervisors see their project's requests, Staff see only their own.
+// A non-finance user sees a request only when they submitted it, were
+// explicitly tagged, or their unique full name appears in its description.
+export function requestMentionsEmployee(request, employee, employees) {
+  if (!employee?.name) return false;
+  const normalize = (value) => String(value || '').toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  const name = normalize(employee.name);
+  if (name.length < 5 || employees.filter((person) => person.status === 'Active' && !person.archivedAt && normalize(person.name) === name).length !== 1) return false;
+  const text = normalize([request.description, ...(request.items || []).map((item) => item.description)].join(' '));
+  return (' ' + text + ' ').includes(' ' + name + ' ');
+}
+
 export function filterFundRequests(rows) {
   const tier = getCurrentTier();
   if (tier === 'Admin' || tier === 'Accounts') return rows;
-  if (tier === 'Supervisor' && getCurrentUser()?.canManageAllProjects) return rows;
-  if (tier === 'Supervisor') {
-    const project = getAssignedProject();
-    return rows.filter((r) => r.submittedBy === getCurrentUserId() || (project && r.project === project));
-  }
   const userId = getCurrentUserId();
-  return rows.filter((r) => r.submittedBy === userId);
+  const employee = getCurrentUser();
+  const employees = store.get('employees');
+  return rows.filter((request) => request.submittedBy === userId
+    || (Array.isArray(request.concernedStaff) && request.concernedStaff.includes(userId))
+    || requestMentionsEmployee(request, employee, employees));
 }
 
 // Leave requests: Supervisors see requests from staff on their assigned project, Staff see only their own.
