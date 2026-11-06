@@ -82,6 +82,17 @@ function openRequestForm(record, onSaved) {
         ...projectOptions(),
       ], record?.project);
       const submittedByField = selectField('submittedBy', 'Submitted By', employeeOptions(), record?.submittedBy || getCurrentUserId());
+      if (!['Admin', 'Accounts'].includes(getCurrentTier())) submittedByField.querySelector('select').disabled = true;
+      const selectedStaff = new Set(record?.concernedStaff || []);
+      const staffPicker = el('div', { class: 'concerned-staff-list' }, employeeOptions().map((person) => {
+        const checkbox = el('input', { type: 'checkbox', value: person.value });
+        checkbox.checked = selectedStaff.has(person.value);
+        return el('label', { class: 'concerned-staff-option' }, [checkbox, el('span', {}, person.label)]);
+      }));
+      const concernedField = el('div', { class: 'field' }, [
+        el('span', { class: 'field-label' }, 'Tag staff who should see this request'),
+        staffPicker,
+      ]);
       const costHeadField = selectField('costHead', 'Cost Head (for Income & Expenditure reporting)', costHeadOptions(), record?.costHead);
       const descriptionInput = el('textarea', { name: 'description', rows: 2 });
       descriptionInput.value = record?.description || '';
@@ -186,6 +197,7 @@ function openRequestForm(record, onSaved) {
           paymentReference: paymentReferenceField.querySelector('input').value || null,
           project: projectField.querySelector('select').value,
           submittedBy: submittedByField.querySelector('select').value,
+          concernedStaff: [...staffPicker.querySelectorAll('input:checked')].map((input) => input.value),
           costHead: costHeadField.querySelector('select').value,
           description: descriptionInput.value,
           items,
@@ -224,6 +236,7 @@ function openRequestForm(record, onSaved) {
 
       container.appendChild(topGrid);
       container.appendChild(descriptionField);
+      container.appendChild(concernedField);
       container.appendChild(el('h3', { class: 'subsection-title' }, 'Line Items'));
       container.appendChild(itemsHeader);
       container.appendChild(itemsContainer);
