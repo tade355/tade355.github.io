@@ -55,3 +55,5 @@ Run a new migration once in the Supabase SQL editor, in number order. `schema.sq
 
 `0059_operator_portal.sql` adds project/dozer pairing, historical employee aliases and an authenticated personal dashboard API. It restricts Staff access to raw company finance and operational rows; the API returns only assigned-machine information and the operator's own work. Apply with the matching dashboard, issue and employee-form release. This migration is self-contained after 0043, 0046 and 0054 and does not depend on draft 0057 or 0058.
 
+
+| 0060 | `0060_staff_archive.sql` | Recoverable staff archive; preserves historical employee references. |

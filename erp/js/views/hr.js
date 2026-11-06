@@ -51,7 +51,7 @@ function fields() {
       { value: 'Suspended', label: 'Suspended' },
       { value: 'Disengaged', label: 'Disengaged' },
     ] },
-    { name: 'accessTier', label: 'ERP Access Level', type: 'select', required: true, options: ACCESS_TIERS.map((t) => ({ value: t, label: ACCESS_TIER_LABELS[t] })) },
+    { name: 'accessTier', label: 'ERP Access Level', type: 'select', required: true, options: ACCESS_TIERS.map((t) => ({ value: t, label: t === 'Staff' ? 'Staff / Operators — personal records' : ACCESS_TIER_LABELS[t] })) },
     { name: 'assignedProject', label: 'Assigned Project', type: 'select', options: [
       { value: '', label: '— No project assigned —' },
       ...projectOptions(),
@@ -204,14 +204,23 @@ export function renderHR(container) {
     actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openForm() }, '+ Add Employee'));
 
     body.innerHTML = '';
+    const listMode = el('select', { 'aria-label': 'Employee list' }, [
+      el('option', { value: 'current' }, 'Current staff'),
+      el('option', { value: 'archived' }, 'Archived staff'),
+    ]);
+    const count = el('span', { role: 'status' });
+    body.appendChild(el('div', { class: 'filter-bar' }, [
+      el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Staff list'), listMode]), count,
+    ]));
     const tableContainer = el('div');
     body.appendChild(tableContainer);
 
     const STATUS_ORDER = ['Active', 'Suspended', 'Disengaged'];
     function refresh() {
       const rows = store.get('employees')
-        .slice()
+        .filter(r => listMode.value === 'archived' ? !!r.archivedAt : !r.archivedAt)
         .sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status) || a.name.localeCompare(b.name, undefined, { numeric: true }));
+      count.textContent = `${rows.length} ${listMode.value === 'archived' ? 'archived staff' : 'current staff'}`;
       renderTable(tableContainer, {
         columns: [
           { key: 'name', label: 'Name' },
@@ -226,22 +235,21 @@ export function renderHR(container) {
           {
             key: 'actions',
             label: '',
-            render: (r) => actionButtons({
-              onEdit: () => openForm(r),
-              onDelete: async () => {
-                if (!confirmDelete(r.name)) return;
-                try {
-                  await store.remove('employees', r.id);
-                  refresh();
-                } catch (err) {
-                  window.alert(err.message || 'Could not delete this employee.');
-                }
-              },
-            }),
+            render: (r) => el('div', { class: 'row-actions' }, [
+              !r.archivedAt ? el('button', { type: 'button', class: 'btn btn-ghost btn-sm', onClick: () => openForm(r) }, 'Edit') : null,
+              r.archivedAt || r.status === 'Disengaged' ? el('button', {
+                type: 'button', class: 'btn btn-ghost btn-sm', onClick: async () => {
+                  try {
+                    await store.update('employees', r.id, { archivedAt: r.archivedAt ? null : new Date().toISOString() });
+                    refresh();
+                  } catch (err) { window.alert(err.message || 'Could not update this employee.'); }
+                },
+              }, r.archivedAt ? 'Restore' : 'Archive') : null,
+            ]),
           },
         ],
         rows,
-        emptyText: 'No employees yet. Add your first team member.',
+        emptyText: listMode.value === 'archived' ? 'No archived staff.' : 'No current staff.',
       });
     }
 
@@ -259,6 +267,7 @@ export function renderHR(container) {
       });
     }
 
+    listMode.addEventListener('change', refresh);
     refresh();
   }
 
