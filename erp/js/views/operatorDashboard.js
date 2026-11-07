@@ -18,6 +18,8 @@ export async function renderOperatorDashboard(container, { issuesOnly = false } 
   try {
     const { data, error } = await supabase.rpc('erp_operator_portal');
     if (error) throw new Error('Your records could not be loaded. Please refresh or contact your administrator.');
+    const { data: allowance, error: allowanceError } = await supabase.rpc('erp_operator_allowance');
+    if (!allowanceError && allowance) data.allowance = allowance;
     if (!data || data.assignmentStatus !== 'Ready') {
       body.replaceChildren(el('p', { class: 'backup-warning' }, data?.assignmentStatus === 'Needs review'
         ? 'Your dozer and project assignment need to be checked by your administrator.'
