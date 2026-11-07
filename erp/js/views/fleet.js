@@ -163,6 +163,7 @@ function fleetFields() {
       { value: 'Heavy Equipment', label: 'Heavy Equipment (Bulldozer, Excavator, etc.)' },
     ] },
     { name: 'sku', label: 'Asset Tag / SKU / Dozer Code', required: true },
+    { name: 'assetCode', label: 'Stable Asset ID (used across operations, maintenance and custody)' },
     { name: 'ownership', label: 'Ownership', type: 'select', required: true, options: OWNERSHIP_CATEGORIES.map((o) => ({ value: o, label: OWNERSHIP_LABELS[o] })) },
     { name: 'ownerName', label: 'Owner / Contractor Name (Partnership/Rented)' },
     { name: 'fleetStatus', label: 'Status', type: 'select', required: true, options: [
@@ -387,6 +388,7 @@ export function renderFleet(container) {
       renderTable(body, {
         columns: [
           { key: 'name', label: 'Asset' },
+          { key: 'assetCode', label: 'Asset ID', render: (r) => r.assetCode || r.sku || '—' },
           { key: 'ownership', label: 'Ownership', render: (r) => statusPill(r.ownership || 'Company') },
           { key: 'ownerName', label: 'Owner', render: (r) => (r.ownership && r.ownership !== 'Company' ? (r.ownerName || '—') : '—') },
           { key: 'fleetStatus', label: 'Status', render: (r) => statusPill(r.fleetStatus || 'Active') },
