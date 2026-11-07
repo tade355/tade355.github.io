@@ -17,6 +17,30 @@ function shortSummary(value, limit = 90) {
   return el('span', { class: 'request-summary', title: full }, text);
 }
 
+function copyPaymentButton(label, value) {
+  const button = el('button', { type: 'button', class: 'btn btn-ghost btn-sm', title: 'Copy ' + label }, label);
+  button.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(String(value || '')); button.textContent = 'Copied'; setTimeout(() => { button.textContent = label; }, 1200); }
+    catch { window.alert('Copy failed. ' + label + ': ' + (value || 'not provided')); }
+  });
+  return button;
+}
+function paymentCard(request) {
+  const item = (request.items || []).find(row => row.accountNumber || row.accountName || row.bankName) || request.items?.[0] || {};
+  const amount = Number(request.approvedAmount || (request.items || []).reduce((sum, row) => sum + Number(row.amount || 0), 0));
+  const all = 'Amount: ₦' + amount.toLocaleString() + '\nAccount Number: ' + (item.accountNumber || '') + '\nAccount Name: ' + (item.accountName || '') + '\nBank: ' + (item.bankName || '') + '\nNarration: ' + (request.description || item.description || request.id) + '\nReference: ' + request.id;
+  return el('div', { class: 'payment-card' }, [
+    el('strong', {}, 'Payment details'),
+    el('div', { class: 'payment-card-actions' }, [
+      copyPaymentButton('Copy account no.', item.accountNumber),
+      copyPaymentButton('Copy account name', item.accountName),
+      copyPaymentButton('Copy bank', item.bankName),
+      copyPaymentButton('Copy amount', amount),
+      copyPaymentButton('Copy all', all),
+    ]),
+  ]);
+}
+
 function daysBetween(start, end) {
   if (!start || !end) return 0;
   const ms = new Date(end + 'T00:00:00') - new Date(start + 'T00:00:00');
@@ -129,6 +153,7 @@ export function renderApprovals(container, onRefresh = () => {}) {
         { key: 'status', label: 'Status', render: () => statusPill('Pending') },
         { key: 'amount', label: 'Amount', render: (r) => (r.amount === null ? '—' : formatCurrency(r.amount)) },
         { key: 'by', label: 'Submitted By' },
+        { key: 'payment', label: 'Payment-ready details', render: (r) => r.collection === 'fundRequests' ? paymentCard(r.record) : '—' },
         {
           key: 'actions',
           label: 'Actions',
