@@ -1683,3 +1683,10 @@ a.btn { text-decoration: none; }
  .request-form-mobile .modal-actions .btn { flex:1; min-height:48px; }
  .request-item-card { padding:.75rem; }
 }
+
+.approval-card-list {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:1rem;margin-top:1rem;}
+.approval-request-card {border:1px solid var(--border);border-radius:12px;padding:1rem;background:var(--surface-1);overflow-wrap:anywhere;min-width:0;}
+.approval-request-card .row-actions,.approval-request-card .payment-card-actions {display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.8rem;}
+.approval-request-card button {min-height:44px;white-space:normal;}
+.approval-request-card details {margin:.8rem 0;}
+.approval-request-card summary {cursor:pointer;padding:.5rem 0;font-weight:600;}
