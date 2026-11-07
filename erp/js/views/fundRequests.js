@@ -52,8 +52,14 @@ function textField(name, label, type, value, required) {
 function buildItemRow(item, onChange) {
   const description = el('input', { type: 'text', class: 'li-description', placeholder: 'What is this for?' });
   description.value = item.description || '';
-  const amount = el('input', { type: 'number', class: 'li-amount', min: 0, placeholder: '0' });
-  amount.value = item.amount ?? '';
+  const quantity = el('input', { type: 'number', class: 'li-quantity', min: 0, step: '0.01', placeholder: 'Qty' });
+  quantity.value = item.quantity ?? 1;
+  const unit = el('input', { type: 'text', class: 'li-unit', placeholder: 'Unit (keg, item, day)' });
+  unit.value = item.unit || '';
+  const rate = el('input', { type: 'number', class: 'li-rate', min: 0, step: '0.01', placeholder: 'Rate' });
+  rate.value = item.rate ?? item.amount ?? '';
+  const amount = el('input', { type: 'number', class: 'li-amount', min: 0, placeholder: 'Amount', readOnly: true });
+  amount.value = (Number(quantity.value) || 0) * (Number(rate.value) || 0);
   const accountName = el('input', { type: 'text', class: 'li-accountName', placeholder: 'Account name' });
   accountName.value = item.accountName || '';
   const accountNumber = el('input', { type: 'text', class: 'li-accountNumber', placeholder: 'Account number' });
@@ -62,8 +68,11 @@ function buildItemRow(item, onChange) {
   bankName.value = item.bankName || '';
   const removeBtn = el('button', { type: 'button', class: 'icon-btn icon-btn-danger', title: 'Remove line' }, '✕');
 
-  const row = el('div', { class: 'line-item-row' }, [description, amount, accountName, accountNumber, bankName, removeBtn]);
-  amount.addEventListener('input', onChange);
+  const row = el('div', { class: 'line-item-row' }, [description, quantity, unit, rate, amount, accountName, accountNumber, bankName, removeBtn]);
+  const recalculate = () => { amount.value = ((Number(quantity.value) || 0) * (Number(rate.value) || 0)).toFixed(2); onChange(); };
+  quantity.addEventListener('input', recalculate);
+  rate.addEventListener('input', recalculate);
+  recalculate();
   removeBtn.addEventListener('click', () => { row.remove(); onChange(); });
   return row;
 }
@@ -107,7 +116,7 @@ function openRequestForm(record, onSaved) {
       const topGrid = el('div', { class: 'form-grid-2' }, [dateField, paidDateField, paidAmountField, paymentReferenceField, projectField, submittedByField, costHeadField]);
 
       const itemsHeader = el('div', { class: 'line-items-header' }, [
-        el('span', {}, 'Description'), el('span', {}, 'Amount (₦)'), el('span', {}, 'Account Name'), el('span', {}, 'Account Number'), el('span', {}, 'Bank'), el('span', {}, ''),
+        el('span', {}, 'Item'), el('span', {}, 'Qty'), el('span', {}, 'Unit'), el('span', {}, 'Rate (₦)'), el('span', {}, 'Amount (₦)'), el('span', {}, 'Account Name'), el('span', {}, 'Account Number'), el('span', {}, 'Bank'), el('span', {}, ''),
       ]);
       const itemsContainer = el('div', { class: 'line-items-container' });
       const totalDisplay = el('strong', {}, formatCurrency(0));
@@ -171,6 +180,9 @@ function openRequestForm(record, onSaved) {
       submitBtn.addEventListener('click', async () => {
         const items = [...itemsContainer.children].map((row) => ({
           description: row.querySelector('.li-description').value,
+          quantity: Number(row.querySelector('.li-quantity').value) || 0,
+          unit: row.querySelector('.li-unit').value,
+          rate: Number(row.querySelector('.li-rate').value) || 0,
           amount: Number(row.querySelector('.li-amount').value) || 0,
           accountName: row.querySelector('.li-accountName').value,
           accountNumber: row.querySelector('.li-accountNumber').value,
@@ -179,6 +191,9 @@ function openRequestForm(record, onSaved) {
 
         if (!dateField.querySelector('input').value) { window.alert('Date is required.'); return; }
         if (!items.length) { window.alert('Add at least one line item.'); return; }
+        if (items.some((item) => item.quantity <= 0 || item.rate < 0)) { window.alert('Each line needs a quantity and a valid rate.'); return; }
+        const calculatedTotal = items.reduce((sum, item) => sum + item.amount, 0);
+        if (!Number.isFinite(calculatedTotal) || calculatedTotal <= 0) { window.alert('The calculated total must be greater than zero.'); return; }
 
         if (!record) {
           // The site manager resends requests: ask before adding one that matches an existing request.
