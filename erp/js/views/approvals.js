@@ -6,7 +6,7 @@ import { getCurrentTier, getCurrentUserId, filterFundRequests, filterByProject, 
 import { printFundRequest, printFuelingVoucher } from '../print.js';
 import { notifyFundRequestDecision, notifyLeaveRequestDecision } from '../notifications.js';
 import { findDuplicateRequests } from '../requestDuplicates.js';
-import { canDecideLeave } from '../access.js';
+import { canDecideFundRequests, canDecideLeave } from '../access.js';
 
 function employeeName(id) {
   return store.get('employees').find((e) => e.id === id)?.name || 'Unknown';
@@ -67,6 +67,7 @@ export function renderApprovals(container, onRefresh = () => {}) {
 
   async function decide(row, newStatus) {
     if (newStatus === 'Rejected' && !window.confirm(`Reject this ${row.type.toLowerCase()}?`)) return;
+    if (row.collection === 'fundRequests' && !canDecideFundRequests()) { window.alert('Only the CEO and COO can decide fund requests.'); return; }
     try {
       const decidedByName = employeeName(getCurrentUserId());
       let patch = { status: newStatus, approvedBy: getCurrentUserId() };
@@ -112,7 +113,7 @@ export function renderApprovals(container, onRefresh = () => {}) {
     let leaveRequests = [];
     let vouchers = [];
 
-    if (tier === 'Admin') {
+    if (canDecideFundRequests()) {
       fundRequests = filterFundRequests(store.get('fundRequests')).filter((r) => r.status === 'Pending');
     }
     if (canDecideLeave()) {
