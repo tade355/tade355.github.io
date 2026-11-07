@@ -5,6 +5,7 @@ import { renderTable, sectionHeader, statCard, statusPill } from '../ui.js';
 import { getCurrentTier, getCurrentUserId, filterFundRequests, filterByProject, filterLeaveRequests } from '../session.js';
 import { printFundRequest, printFuelingVoucher } from '../print.js';
 import { notifyFundRequestDecision, notifyLeaveRequestDecision } from '../notifications.js';
+import { findDuplicateRequests } from '../requestDuplicates.js';
 import { canDecideLeave } from '../access.js';
 
 function employeeName(id) {
@@ -170,7 +171,16 @@ export function renderApprovals(container, onRefresh = () => {}) {
           el('strong', {}, r.type + ' · ' + r.record.id),
           el('h3', {}, r.amount === null ? r.summary : formatCurrency(r.amount)),
           el('p', {}, r.by + ' · ' + (r.record.project || 'No project') + ' · Submitted ' + formatDate(requestSubmissionDate(r.record))),
-          shortSummary(r.summary), breakdown,
+          shortSummary(r.summary),
+          r.collection === 'fundRequests' && findDuplicateRequests(r.record, store.get('fundRequests').filter(other=>other.id!==r.record.id)).length ? el('p',{},'Possible duplicate — review related requests before deciding.') : null,
+          r.record.approvalNote ? el('p',{},'Latest feedback: '+r.record.approvalNote) : null,
+          breakdown,
+          r.collection === 'fundRequests' ? el('button',{type:'button',class:'btn btn-ghost',onClick:async()=>{
+            const message=window.prompt('What should the requester clarify?'); if(!message?.trim())return;
+            try { const updated=await store.update('fundRequests',r.record.id,{approvalNote:'Clarification requested: '+message.trim()});
+              await notifyFundRequestDecision(updated,employeeName(getCurrentUserId()));refresh();
+            } catch(error){window.alert(error.message||'Could not send clarification.');}
+          }},'Ask for clarification') : null,
           decisionButtons({ onApprove: () => decide(r, 'Approved'), onReject: () => decide(r, 'Rejected') }),
         ]);
       }));
