@@ -60,15 +60,14 @@ function buildItemRow(item, onChange) {
   rate.value = item.rate ?? item.amount ?? '';
   const amount = el('input', { type: 'number', class: 'li-amount', min: 0, placeholder: 'Amount', readOnly: true });
   amount.value = (Number(quantity.value) || 0) * (Number(rate.value) || 0);
-  const accountName = el('input', { type: 'text', class: 'li-accountName', placeholder: 'Account name' });
-  accountName.value = item.accountName || '';
-  const accountNumber = el('input', { type: 'text', class: 'li-accountNumber', placeholder: 'Account number' });
-  accountNumber.value = item.accountNumber || '';
-  const bankName = el('input', { type: 'text', class: 'li-bankName', placeholder: 'Bank' });
-  bankName.value = item.bankName || '';
-  const removeBtn = el('button', { type: 'button', class: 'icon-btn icon-btn-danger', title: 'Remove line' }, '✕');
-
-  const row = el('div', { class: 'line-item-row' }, [description, quantity, unit, rate, amount, accountName, accountNumber, bankName, removeBtn]);
+  const removeBtn = el('button', { type: 'button', class: 'btn btn-ghost', title: 'Remove item' }, 'Remove item');
+  const field = (label, input) => el('label', { class: 'field' }, [el('span', { class: 'field-label' }, label), input]);
+  const itemName = field('Item / description', description);
+  itemName.classList.add('request-item-name');
+  const row = el('div', { class: 'request-item-card' }, [
+    itemName, field('Quantity', quantity), field('Unit (optional)', unit),
+    field('Unit price (₦)', rate), field('Amount (₦)', amount), removeBtn,
+  ]);
   const recalculate = () => { amount.value = ((Number(quantity.value) || 0) * (Number(rate.value) || 0)).toFixed(2); onChange(); };
   quantity.addEventListener('input', recalculate);
   rate.addEventListener('input', recalculate);
@@ -134,11 +133,9 @@ function openRequestForm(record, onSaved) {
       descriptionInput.value = record?.description || '';
       const descriptionField = el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Description'), descriptionInput]);
 
-      const topGrid = el('div', { class: 'form-grid-2' }, [dateField, projectField, submittedByField, costHeadField]);
+      container.classList.add('request-form-mobile');
+      const topGrid = el('div', { class: 'form-grid-2' }, [dateField, projectField]);
 
-      const itemsHeader = el('div', { class: 'line-items-header' }, [
-        el('span', {}, 'Item'), el('span', {}, 'Qty'), el('span', {}, 'Unit'), el('span', {}, 'Rate (₦)'), el('span', {}, 'Amount (₦)'), el('span', {}, 'Account Name'), el('span', {}, 'Account Number'), el('span', {}, 'Bank'), el('span', {}, ''),
-      ]);
       const itemsContainer = el('div', { class: 'line-items-container' });
       const totalDisplay = el('strong', {}, formatCurrency(0));
 
@@ -151,13 +148,23 @@ function openRequestForm(record, onSaved) {
       initialItems.forEach((item) => itemsContainer.appendChild(buildItemRow(item, recomputeTotal)));
       recomputeTotal();
 
-      const addLineBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '+ Add Line');
+      const addLineBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '+ Add another item');
       addLineBtn.addEventListener('click', () => {
         itemsContainer.appendChild(buildItemRow({}, recomputeTotal));
         recomputeTotal();
       });
 
       const totalRow = el('div', { class: 'line-items-total' }, [el('span', {}, 'Total Amount:'), totalDisplay]);
+
+      const recipient = record?.items?.[0] || {};
+      const accountNameField = textField('recipientName', 'Account name', 'text', recipient.accountName || '', true);
+      const accountNumberField = textField('recipientNumber', 'Account number', 'text', recipient.accountNumber || '', true);
+      accountNumberField.querySelector('input').inputMode = 'numeric';
+      const bankField = textField('recipientBank', 'Bank', 'text', recipient.bankName || '', true);
+      const recipientGrid = el('div', { class: 'form-grid-2' }, [accountNameField, accountNumberField, bankField]);
+      const moreDetails = el('details', { class: 'request-more-details' }, [
+        el('summary', {}, 'More details (optional)'), submittedByField, costHeadField, concernedField,
+      ]);
 
       const isAdmin = getCurrentTier() === 'Admin';
       let statusField;
@@ -168,7 +175,7 @@ function openRequestForm(record, onSaved) {
           { value: 'Approved', label: 'Approved' },
           { value: 'Partially Approved', label: 'Partially Approved' },
           { value: 'Rejected', label: 'Rejected' },
-          { value: 'Paid', label: 'Paid' },
+
         ], record?.status || 'Pending');
         // Not a dropdown: Approved By is always whoever actually makes the
         // decision (set automatically on save), the same rule the Approvals
@@ -205,13 +212,15 @@ function openRequestForm(record, onSaved) {
           unit: row.querySelector('.li-unit').value,
           rate: Number(row.querySelector('.li-rate').value) || 0,
           amount: Number(row.querySelector('.li-amount').value) || 0,
-          accountName: row.querySelector('.li-accountName').value,
-          accountNumber: row.querySelector('.li-accountNumber').value,
-          bankName: row.querySelector('.li-bankName').value,
+          accountName: accountNameField.querySelector('input').value.trim(),
+          accountNumber: accountNumberField.querySelector('input').value.trim(),
+          bankName: bankField.querySelector('input').value.trim(),
         })).filter((it) => it.description || it.amount);
 
         if (!dateField.querySelector('input').value) { window.alert('Date is required.'); return; }
-        if (!items.length) { window.alert('Add at least one line item.'); return; }
+        if (!items.length) { window.alert('Add at least one item.'); return; }
+        if (!accountNameField.querySelector('input').value.trim() || !accountNumberField.querySelector('input').value.trim() || !bankField.querySelector('input').value.trim()) { window.alert('Enter the recipient account name, number and bank.'); return; }
+        if (items.some((item) => !item.description.trim())) { window.alert('Give each item a name or description.'); return; }
         if (items.some((item) => item.quantity <= 0 || item.rate < 0)) { window.alert('Each line needs a quantity and a valid rate.'); return; }
         const accountNumbers = [...new Set(items.map((item) => String(item.accountNumber || '').trim()).filter(Boolean))];
         if (accountNumbers.length > 1) { window.alert('A single request can only use one account number. Submit separate requests for different recipients.'); return; }
@@ -280,14 +289,14 @@ function openRequestForm(record, onSaved) {
 
       container.appendChild(topGrid);
       container.appendChild(descriptionField);
-      container.appendChild(concernedField);
       container.appendChild(el('h3', { class: 'subsection-title' }, 'Line Items'));
-      container.appendChild(itemsHeader);
       container.appendChild(itemsContainer);
       container.appendChild(addLineBtn);
       container.appendChild(totalRow);
-      container.appendChild(bottomGrid);
-      container.appendChild(attachmentField);
+      container.appendChild(el('h3', { class: 'subsection-title' }, 'Pay to'));
+      container.appendChild(recipientGrid);
+      moreDetails.appendChild(attachmentField);
+      container.appendChild(moreDetails);
       container.appendChild(actions);
     },
   });
