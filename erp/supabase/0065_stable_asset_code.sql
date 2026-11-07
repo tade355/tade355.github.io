@@ -1,0 +1,1 @@
+begin; alter table public.inventory add column if not exists asset_code text; insert into public.erp_schema_migrations(version) values ('0065') on conflict do nothing; notify pgrst,'reload schema'; commit;
