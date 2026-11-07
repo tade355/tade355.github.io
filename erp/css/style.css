@@ -1661,3 +1661,8 @@ a.btn { text-decoration: none; }
   overflow-wrap: anywhere;
   line-height: 1.35;
 }
+
+.staff-tag-chips { display:flex; flex-wrap:wrap; gap:.4rem; }
+.staff-tag-suggestions { display:flex; flex-direction:column; gap:.25rem; max-height:16rem; overflow-y:auto; }
+.staff-tag-suggestions:empty { display:none; }
+.staff-tag-suggestions .btn { text-align:left; justify-content:flex-start; white-space:normal; min-height:44px; }
