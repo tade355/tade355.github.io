@@ -133,10 +133,22 @@ export function renderDailyDashboard(container) {
   const projectSelect = el('select', {}, projects.map((p) => el('option', { value: p }, p)));
   projectSelect.value = defaultProject;
   const dateInput = el('input', { type: 'date', max: realToday, value: realToday });
-  const sinceInput = el('input', { type: 'date', value: DASHBOARD_BASIS_FROM });
+  const defaultSince = rexFortnightStart(defaultProject, realToday) || DASHBOARD_BASIS_FROM;
+  const sinceInput = el('input', {
+    type: 'date',
+    value: defaultSince,
+    max: realToday,
+    title: 'Select the first date to include in cumulative calculations',
+    'aria-label': 'Cumulative since date',
+  });
   const prevBtn = el('button', { type: 'button', class: 'btn btn-ghost', title: 'Previous day' }, [el('span', { html: ICONS.chevronLeft }), 'Prev day']);
   const nextBtn = el('button', { type: 'button', class: 'btn btn-ghost', title: 'Next day' }, ['Next day', el('span', { html: ICONS.chevronRight })]);
   const todayBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Today');
+  // Open the native calendar when the field itself is clicked. Browsers that
+  // do not expose showPicker still open it through their normal date control.
+  sinceInput.addEventListener('click', () => {
+    try { sinceInput.showPicker?.(); } catch (_) { /* native control remains usable */ }
+  });
   const printBtn = el('button', { type: 'button', class: 'btn btn-ghost', onClick: printPage }, [el('span', { html: ICONS.printer }), 'Print']);
   let current = null;
   const downloadBtn = el('button', { type: 'button', class: 'btn btn-primary', title: 'Download this dashboard as a single HTML file (same format as the daily dashboard report)', onClick: () => downloadHtml(current) }, [el('span', { html: ICONS.download }), 'Download HTML']);
@@ -172,10 +184,12 @@ export function renderDailyDashboard(container) {
     body.innerHTML = '';
     const project = projectSelect.value;
     const date = dateInput.value || realToday;
-    const periodStart = rexFortnightStart(project, date);
-    sinceInput.disabled = !!periodStart;
-    if (periodStart) sinceInput.value = periodStart;
-    const since = sinceInput.value && sinceInput.value <= date ? sinceInput.value : date;
+    // The REX Wednesday-to-Tuesday fortnight remains the initial default, but
+    // users can choose any earlier date and recalculate the whole dashboard.
+    sinceInput.max = date;
+    if (!sinceInput.value) sinceInput.value = rexFortnightStart(project, date) || DASHBOARD_BASIS_FROM;
+    if (sinceInput.value > date) sinceInput.value = date;
+    const since = sinceInput.value;
     const d = dailyDashboardForCurrentUser(project, date, since);
 
     current = d;
