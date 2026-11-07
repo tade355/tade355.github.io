@@ -11,6 +11,7 @@ import { financialActivity } from '../financialActivity.js';
 import { renderDozerPayroll, liveBalanceOwed } from './dozerPayroll.js';
 import { renderPayroll } from './payroll.js';
 import { amountOutstanding } from '../loanPayments.js';
+import { renderBudgets } from './budgets.js';
 
 function projectOptions() {
   return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
@@ -50,7 +51,8 @@ export function renderAccounting(container) {
   const expensesTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('expenses') }, 'Expenses');
   const incomeExpenditureTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('incomeExpenditure') }, 'Income & Expenditure');
   const profitabilityTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('profitability') }, 'Profitability');
-  const loansTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('loans') }, 'Loans');
+  const loansTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('loans') }, 'Loans & Investments');
+  const budgetsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('budgets') }, 'Budgets & Plans');
   tabBar.appendChild(overviewTabBtn);
   tabBar.appendChild(expensesTabBtn);
   tabBar.appendChild(operatorAllowanceTabBtn);
@@ -58,6 +60,7 @@ export function renderAccounting(container) {
   tabBar.appendChild(incomeExpenditureTabBtn);
   tabBar.appendChild(profitabilityTabBtn);
   tabBar.appendChild(loansTabBtn);
+  tabBar.appendChild(budgetsTabBtn);
 
   const actionSlot = el('div');
   container.appendChild(sectionHeader('Finance & Accounts', 'Cash, commitments, receivables, payroll, operator allowances, loans, expenses, and profitability in one control centre', actionSlot));
@@ -75,12 +78,14 @@ export function renderAccounting(container) {
     incomeExpenditureTabBtn.classList.toggle('active', tab === 'incomeExpenditure');
     profitabilityTabBtn.classList.toggle('active', tab === 'profitability');
     loansTabBtn.classList.toggle('active', tab === 'loans');
+    budgetsTabBtn.classList.toggle('active', tab === 'budgets');
     if (tab === 'overview') renderOverviewTab();
     else if (tab === 'expenses') renderExpensesTab();
     else if (tab === 'operatorAllowance') { actionSlot.innerHTML = ''; body.innerHTML = ''; renderDozerPayroll(body); }
     else if (tab === 'payroll') { actionSlot.innerHTML = ''; body.innerHTML = ''; renderPayroll(body); }
     else if (tab === 'incomeExpenditure') renderIncomeExpenditureTab();
     else if (tab === 'profitability') renderProfitabilityTab();
+    else if (tab === 'budgets') { actionSlot.innerHTML = ''; body.innerHTML = ''; renderBudgets(body); }
     else renderLoansTab();
   }
 
