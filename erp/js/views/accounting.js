@@ -100,6 +100,7 @@ export function renderAccounting(container) {
     const requests = store.get('fundRequests');
     const pending = requests.filter(r => r.status === 'Pending');
     const approved = requests.filter(r => ['Approved', 'Partially Approved'].includes(r.status));
+    const paidUnreconciled = requests.filter(r => r.status === 'Paid' && !store.get('expenses').some(e => e.fundRequestId === r.id));
     const payments = store.get('invoicePayments');
     const receivables = store.get('invoices').map(invoice => {
       const paid = payments.filter(p => p.invoiceId === invoice.id).reduce((sum, p) => sum + Number(p.amount || 0), 0);
@@ -190,6 +191,7 @@ export function renderAccounting(container) {
       { check: 'Draft payroll runs', result: String(draftPayroll) },
       { check: 'Expenses missing project', result: String(store.get('expenses').filter(e => !e.project).length) },
       { check: 'Expenses missing payee', result: String(store.get('expenses').filter(e => !e.payee).length) },
+      { check: 'Paid requests without matched expense', result: String(paidUnreconciled.length) },
     ], emptyText: '' });
 
     body.appendChild(el('h3', { class: 'subsection-title' }, 'Recent financial activity'));
