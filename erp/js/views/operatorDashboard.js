@@ -1,10 +1,11 @@
 import { supabase } from '../supabaseClient.js';
-import { el, formatDate } from '../utils.js';
+import { el, formatDate, formatCurrency } from '../utils.js';
 import { sectionHeader, statCard, renderTable, statusPill } from '../ui.js';
 import { todayISOString, rexFortnightStart } from '../dateUtils.js';
 import { formatClock, formatDateTime } from '../clockFormat.js';
 import { unitForOperationType } from '../constants.js';
 import { operatorPeriod } from '../operatorPortalData.js';
+import { DOZER_OVERTIME_RATE_DEFAULT } from '../constants.js';
 
 const number = value => Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
 
@@ -36,14 +37,44 @@ export async function renderOperatorDashboard(container, { issuesOnly = false } 
         el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'To'), to]), all,
       ]));
       const summary = el('div', { class: 'stats-grid' });
+      const allowanceSummary = el('div', { class: 'stats-grid' });
+      const allowanceLedger = el('div');
       const reports = el('div');
-      body.append(summary, reports);
+      body.append(summary, el('h3', {}, 'My allowance'), allowanceSummary,
+        el('p', { class: 'section-subtitle' }, 'Your first 8 hours each day are prorated against your daily rate. Hours above 8 are overtime. Payments recorded by Accounts reduce the balance owed.'),
+        allowanceLedger, el('h3', {}, 'My work records'), reports);
       function refreshPeriod() {
         if (from.value && to.value && from.value > to.value) {
           summary.replaceChildren(el('p', { role: 'alert' }, 'The From date must be on or before the To date.'));
           reports.replaceChildren(); return;
         }
         const period = operatorPeriod(data.reports || [], from.value, to.value);
+        const rate = Number(data.allowance?.dayRate || 30000);
+        const overtimeRate = Number(data.allowance?.overtimeRate || DOZER_OVERTIME_RATE_DEFAULT);
+        const allowanceRows = period.rows.map(row => {
+          const hours = Number(row.hours || 0);
+          const baseHours = Math.min(hours, 8);
+          const overtimeHours = Math.max(0, hours - 8);
+          const earned = (baseHours / 8) * rate + overtimeHours * overtimeRate;
+          return { ...row, baseHours, overtimeHours, earned };
+        });
+        const periodEarned = allowanceRows.reduce((sum, row) => sum + row.earned, 0);
+        const totalEarned = Number(data.allowance?.earned || 0);
+        const totalPaid = Number(data.allowance?.paid || 0);
+        const balance = Number(data.allowance?.balance ?? (totalEarned - totalPaid));
+        allowanceSummary.replaceChildren(
+          statCard({ label: 'Daily rate (8 hrs)', value: formatCurrency(rate) }),
+          statCard({ label: 'Earned in selected period', value: formatCurrency(periodEarned) }),
+          statCard({ label: 'Paid to date', value: formatCurrency(totalPaid), tone: 'good' }),
+          statCard({ label: 'Balance owed', value: formatCurrency(balance), tone: balance > 0 ? 'warning' : 'good' }),
+        );
+        renderTable(allowanceLedger, { columns: [
+          { key: 'date', label: 'Date', render: row => formatDate(row.date) },
+          { key: 'hours', label: 'Hours', render: row => number(row.hours) },
+          { key: 'baseHours', label: 'Regular hrs', render: row => number(row.baseHours) },
+          { key: 'overtimeHours', label: 'Extra hrs', render: row => number(row.overtimeHours) },
+          { key: 'earned', label: 'Allowance earned', render: row => formatCurrency(row.earned) },
+        ], rows: allowanceRows, emptyText: 'No allowance has accrued in this period.' });
         summary.replaceChildren(statCard({ label: 'My reported hours', value: `${number(period.hours)} hrs` }),
           statCard({ label: 'Days reported', value: String(period.days) }),
           ...period.stages.map(stage => statCard({ label: stage.name, value: `${number(stage.quantity)} ${stage.unit}` })));
