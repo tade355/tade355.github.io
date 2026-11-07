@@ -10,6 +10,14 @@ function projectOptions() {
 }
 function amount(v){ return Number(v || 0); }
 function budgetTotal(r){ return ['dieselBudget','pmsBudget','allowancesBudget','logisticsBudget','maintenanceBudget','staffBudget','otherBudget'].reduce((s,k)=>s+amount(r[k]),0); }
+function actualTotal(r){
+  const from=r.periodStart||'0000-00-00', to=r.periodEnd||'9999-99-99', project=r.project||'';
+  const expenses=store.get('expenses').filter(e=>e.date>=from&&e.date<=to&&(!project||e.project===project));
+  const requests=store.get('fundRequests').filter(q=>q.status==='Paid'&&q.date>=from&&q.date<=to&&(!project||q.project===project));
+  const exp=expenses.reduce((s,e)=>s+amount(e.amount),0);
+  const req=requests.reduce((s,q)=>s+(Number(q.paidAmount)||((q.items||[]).reduce((x,i)=>x+amount(i.amount),0))),0);
+  return exp+req;
+}
 
 export function renderBudgets(container) {
   container.innerHTML = '';
@@ -20,7 +28,7 @@ export function renderBudgets(container) {
   const table = el('div'); container.appendChild(table);
 
   function refresh(){
-    const rows=store.get('budgets').slice().sort((a,b)=>(a.periodStart<b.periodStart?1:-1)).map(r=>({...r,total:budgetTotal(r)}));
+    const rows=store.get('budgets').slice().sort((a,b)=>(a.periodStart<b.periodStart?1:-1)).map(r=>({...r,total:budgetTotal(r),actual:actualTotal(r),variance:budgetTotal(r)-actualTotal(r)}));
     summary.innerHTML='';
     summary.appendChild(statCard({label:'Budget plans',value:String(rows.length)}));
     summary.appendChild(statCard({label:'Planned spend',value:formatCurrency(rows.reduce((s,r)=>s+r.total,0))}));
@@ -31,6 +39,8 @@ export function renderBudgets(container) {
       {key:'targetHa',label:'Target (ha)',render:r=>r.targetHa||'—'},
       {key:'machinesOnSite',label:'Machines',render:r=>r.machinesOnSite||'—'},
       {key:'total',label:'Planned Cost',render:r=>formatCurrency(r.total)},
+      {key:'actual',label:'Actual Spend',render:r=>formatCurrency(r.actual)},
+      {key:'variance',label:'Variance',render:r=>formatCurrency(r.variance)},
       {key:'status',label:'Status'},
       {key:'actions',label:'',render:r=>actionButtons({onEdit:()=>openForm(r),onDelete:async()=>{if(!confirmDelete('this budget plan'))return;await store.remove('budgets',r.id);refresh();}})}
     ],rows,emptyText:'No budget plan has been created yet.'});
