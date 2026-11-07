@@ -89,9 +89,6 @@ function openRequestForm(record, onSaved) {
     build: (container) => {
       const today = todayISOString();
       const dateField = textField('date', 'Date', 'date', record?.date || today, true);
-      const paidDateField = textField('paidAt', 'Payment Date (required when Paid)', 'date', record?.paidAt || '', false);
-      const paidAmountField = textField('paidAmount', 'Amount Paid (required when Paid)', 'number', record?.paidAmount ?? '', false);
-      const paymentReferenceField = textField('paymentReference', 'Payment Reference / Receipt', 'text', record?.paymentReference || '', false);
       const projectField = selectField('project', 'Project', [
         { value: '', label: '— Not specified —' },
         ...projectOptions(),
@@ -113,7 +110,7 @@ function openRequestForm(record, onSaved) {
       descriptionInput.value = record?.description || '';
       const descriptionField = el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Description'), descriptionInput]);
 
-      const topGrid = el('div', { class: 'form-grid-2' }, [dateField, paidDateField, paidAmountField, paymentReferenceField, projectField, submittedByField, costHeadField]);
+      const topGrid = el('div', { class: 'form-grid-2' }, [dateField, projectField, submittedByField, costHeadField]);
 
       const itemsHeader = el('div', { class: 'line-items-header' }, [
         el('span', {}, 'Item'), el('span', {}, 'Qty'), el('span', {}, 'Unit'), el('span', {}, 'Rate (₦)'), el('span', {}, 'Amount (₦)'), el('span', {}, 'Account Name'), el('span', {}, 'Account Number'), el('span', {}, 'Bank'), el('span', {}, ''),
@@ -192,6 +189,8 @@ function openRequestForm(record, onSaved) {
         if (!dateField.querySelector('input').value) { window.alert('Date is required.'); return; }
         if (!items.length) { window.alert('Add at least one line item.'); return; }
         if (items.some((item) => item.quantity <= 0 || item.rate < 0)) { window.alert('Each line needs a quantity and a valid rate.'); return; }
+        const accountNumbers = [...new Set(items.map((item) => String(item.accountNumber || '').trim()).filter(Boolean))];
+        if (accountNumbers.length > 1) { window.alert('A single request can only use one account number. Submit separate requests for different recipients.'); return; }
         const calculatedTotal = items.reduce((sum, item) => sum + item.amount, 0);
         if (!Number.isFinite(calculatedTotal) || calculatedTotal <= 0) { window.alert('The calculated total must be greater than zero.'); return; }
 
@@ -213,9 +212,9 @@ function openRequestForm(record, onSaved) {
 
         const payload = {
           date: dateField.querySelector('input').value,
-          paidAt: paidDateField.querySelector('input').value || null,
-          paidAmount: paidAmountField.querySelector('input').value ? Number(paidAmountField.querySelector('input').value) : null,
-          paymentReference: paymentReferenceField.querySelector('input').value || null,
+          paidAt: record?.paidAt || null,
+          paidAmount: record?.paidAmount ?? null,
+          paymentReference: record?.paymentReference || null,
           project: projectField.querySelector('select').value,
           submittedBy: submittedByField.querySelector('select').value,
           concernedStaff: [...staffPicker.querySelectorAll('input:checked')].map((input) => input.value),
