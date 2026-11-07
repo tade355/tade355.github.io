@@ -1,3 +1,4 @@
+import { renderRequestPayments } from './requestPayments.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, invoiceTotal, el } from '../utils.js';
@@ -53,7 +54,9 @@ export function renderAccounting(container) {
   const profitabilityTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('profitability') }, 'Profitability');
   const loansTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('loans') }, 'Loans & Investments');
   const budgetsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('budgets') }, 'Budgets & Plans');
+  const paymentsTabBtn = el('button', { class:'tab-btn', type:'button', onClick:()=>setTab('requestPayments') }, 'Request Payments');
   tabBar.appendChild(overviewTabBtn);
+  tabBar.appendChild(paymentsTabBtn);
   tabBar.appendChild(expensesTabBtn);
   tabBar.appendChild(operatorAllowanceTabBtn);
   tabBar.appendChild(payrollTabBtn);
@@ -71,6 +74,7 @@ export function renderAccounting(container) {
 
   function setTab(next) {
     tab = next;
+    paymentsTabBtn.classList.toggle('active', tab === 'requestPayments');
     overviewTabBtn.classList.toggle('active', tab === 'overview');
     expensesTabBtn.classList.toggle('active', tab === 'expenses');
     operatorAllowanceTabBtn.classList.toggle('active', tab === 'operatorAllowance');
@@ -79,7 +83,8 @@ export function renderAccounting(container) {
     profitabilityTabBtn.classList.toggle('active', tab === 'profitability');
     loansTabBtn.classList.toggle('active', tab === 'loans');
     budgetsTabBtn.classList.toggle('active', tab === 'budgets');
-    if (tab === 'overview') renderOverviewTab();
+    if (tab === 'requestPayments') { actionSlot.innerHTML=''; body.innerHTML=''; renderRequestPayments(body); }
+    else if (tab === 'overview') renderOverviewTab();
     else if (tab === 'expenses') renderExpensesTab();
     else if (tab === 'operatorAllowance') { actionSlot.innerHTML = ''; body.innerHTML = ''; renderDozerPayroll(body); }
     else if (tab === 'payroll') { actionSlot.innerHTML = ''; body.innerHTML = ''; renderPayroll(body); }
