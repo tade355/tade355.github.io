@@ -177,6 +177,9 @@ function fleetFields() {
     { name: 'dieselRateFirst8h', label: `Diesel Consumption — first 8 hrs/day (L/hr) — leave blank to use the fleet default of ${DEFAULT_DIESEL_RATES.first8h}`, type: 'number', min: 0 },
     { name: 'dieselRateAfter8h', label: `Diesel Consumption — after 8 hrs/day (L/hr) — leave blank to use the fleet default of ${DEFAULT_DIESEL_RATES.after8h}`, type: 'number', min: 0 },
     { name: 'dieselRateTrekking', label: `Diesel Consumption — Trekking (L/hr, flat) — leave blank to use the fleet default of ${DEFAULT_DIESEL_RATES.trekking}`, type: 'number', min: 0 },
+    { name: 'assignedStaffId', label: 'Assigned Staff / Custodian', type: 'select', options: [{ value: '', label: '— Unassigned —' }, ...employeeOptions()] },
+    { name: 'deploymentFrom', label: 'Deployment From' },
+    { name: 'deployedTo', label: 'Deployed To / Site' },
     { name: 'currentProject', label: 'Current Project', type: 'select', options: [
       { value: '', label: '— Unassigned —' },
       ...projectOptions(),
@@ -388,6 +391,8 @@ export function renderFleet(container) {
           { key: 'ownerName', label: 'Owner', render: (r) => (r.ownership && r.ownership !== 'Company' ? (r.ownerName || '—') : '—') },
           { key: 'fleetStatus', label: 'Status', render: (r) => statusPill(r.fleetStatus || 'Active') },
           { key: 'currentProject', label: 'Current Project', render: (r) => r.currentProject || '—' },
+          { key: 'assignedStaffId', label: 'Custodian', render: (r) => store.find('employees', r.assignedStaffId)?.name || '—' },
+          { key: 'deployedTo', label: 'Deployed To', render: (r) => r.deployedTo || r.location || '—' },
           { key: 'hourlyRate', label: 'Rate/hr', render: (r) => formatCurrency(r.hourlyRate) },
           { key: 'utilization', label: 'Utilization (30d)', render: (r) => ((r.ownership === 'Company' || !r.ownership) ? `${utilization30dFor(r.name).toFixed(0)}%` : '—') },
           { key: 'avgHoursPerDay', label: 'Avg Hrs/Day (30d)', render: (r) => { const v = avgWorkRateFor(r.name).avgHoursPerDay; return v === null ? '—' : `${v.toFixed(1)} h`; } },
