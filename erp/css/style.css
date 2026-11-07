@@ -1666,3 +1666,20 @@ a.btn { text-decoration: none; }
 .staff-tag-suggestions { display:flex; flex-direction:column; gap:.25rem; max-height:16rem; overflow-y:auto; }
 .staff-tag-suggestions:empty { display:none; }
 .staff-tag-suggestions .btn { text-align:left; justify-content:flex-start; white-space:normal; min-height:44px; }
+
+.request-item-card { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.7rem; padding:1rem; margin-bottom:.8rem; border:1px solid var(--border); border-radius:12px; background:var(--surface-1); }
+.request-item-card .request-item-name { grid-column:1/-1; }
+.request-item-card .field { margin:0; min-width:0; }
+.request-item-card input { width:100%; min-width:0; box-sizing:border-box; min-height:44px; }
+.request-item-card .btn { justify-self:end; align-self:end; }
+.request-more-details { margin:1rem 0; border-top:1px solid var(--border); padding-top:1rem; }
+.request-more-details summary { cursor:pointer; padding:.5rem 0; font-weight:600; }
+.request-more-details[open] summary { margin-bottom:.7rem; }
+.request-form-mobile .line-items-container { overflow:visible; }
+.request-form-mobile .modal-actions { position:sticky; bottom:0; background:var(--surface-1); padding:.8rem 0; z-index:2; }
+@media(max-width:640px) {
+ .request-form-mobile .form-grid-2 { grid-template-columns:1fr; }
+ .request-form-mobile input,.request-form-mobile select,.request-form-mobile textarea { font-size:16px; min-height:44px; }
+ .request-form-mobile .modal-actions .btn { flex:1; min-height:48px; }
+ .request-item-card { padding:.75rem; }
+}
