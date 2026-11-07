@@ -25,9 +25,9 @@ function copyPaymentButton(label, value) {
   });
   return button;
 }
-function paymentCard(request) {
+export function paymentCard(request) {
   const item = (request.items || []).find(row => row.accountNumber || row.accountName || row.bankName) || request.items?.[0] || {};
-  const amount = Number(request.approvedAmount || (request.items || []).reduce((sum, row) => sum + Number(row.amount || 0), 0));
+  const amount = Number(request.approvedAmount ?? (request.items || []).reduce((sum, row) => sum + Number(row.amount || 0), 0));
   const all = 'Amount: ₦' + amount.toLocaleString() + '\nAccount Number: ' + (item.accountNumber || '') + '\nAccount Name: ' + (item.accountName || '') + '\nBank: ' + (item.bankName || '') + '\nNarration: ' + (request.description || item.description || request.id) + '\nReference: ' + request.id;
   return el('div', { class: 'payment-card' }, [
     el('strong', {}, 'Payment details'),
@@ -69,6 +69,11 @@ export function renderApprovals(container, onRefresh = () => {}) {
     try {
       const decidedByName = employeeName(getCurrentUserId());
       let patch = { status: newStatus, approvedBy: getCurrentUserId() };
+      if (row.collection === 'fundRequests' && newStatus === 'Rejected') {
+        const reason = window.prompt('Reason for rejecting this request:');
+        if (!reason?.trim()) return;
+        patch.approvalNote = reason.trim();
+      }
       if (row.collection === 'fundRequests' && newStatus === 'Approved') {
         const requested = (row.record.items || []).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
         const typed = window.prompt(`Requested: ${formatCurrency(requested)}\nEnter the amount approved:`, String(requested));
@@ -81,7 +86,9 @@ export function renderApprovals(container, onRefresh = () => {}) {
         if (approvedAmount < requested) {
           const remainderDecision = window.prompt(`The remaining ${formatCurrency(requested - approvedAmount)} is not approved. Type REJECT to reject it, or PENDING to leave it for further review:`, 'PENDING');
           if (!remainderDecision || !['REJECT', 'PENDING'].includes(remainderDecision.trim().toUpperCase())) return;
-          patch = { ...patch, status: 'Partially Approved', approvedAmount, remainderDecision: remainderDecision.trim().toUpperCase() === 'REJECTED' ? 'Rejected' : remainderDecision.trim().toUpperCase() === 'REJECT' ? 'Rejected' : 'Pending' };
+          const note = window.prompt('Reason for reducing the approved amount:');
+          if (!note?.trim()) return;
+          patch = { ...patch, approvalNote: note.trim(), status: 'Partially Approved', approvedAmount, remainderDecision: remainderDecision.trim().toUpperCase() === 'REJECTED' ? 'Rejected' : remainderDecision.trim().toUpperCase() === 'REJECT' ? 'Rejected' : 'Pending' };
         } else patch = { ...patch, approvedAmount, remainderDecision: 'None' };
       }
       const updated = await store.update(row.collection, row.record.id, patch);
@@ -146,33 +153,31 @@ export function renderApprovals(container, onRefresh = () => {}) {
       statCard({ label: 'Vouchers', value: String(vouchers.length) }),
     ]));
 
-    renderTable(tableContainer, {
-      columns: [
-        { key: 'submittedDate', label: 'Date', render: (r) => formatDate(requestSubmissionDate(r.record)), sortValue: (r) => requestSubmissionDate(r.record) },
-        { key: 'type', label: 'Request Type' },
-        { key: 'status', label: 'Status', render: () => statusPill('Pending') },
-        { key: 'amount', label: 'Amount', render: (r) => (r.amount === null ? '—' : formatCurrency(r.amount)) },
-        { key: 'by', label: 'Submitted By' },
-        { key: 'payment', label: 'Payment-ready details', render: (r) => r.collection === 'fundRequests' ? paymentCard(r.record) : '—' },
-        {
-          key: 'actions',
-          label: 'Actions',
-          render: (r) => decisionButtons({
-            onPrint: r.collection === 'fundRequests'
-              ? () => printFundRequest(r.record, { submittedByName: employeeName(r.record.submittedBy) })
-              : r.collection === 'fuelingVouchers'
-                ? () => printFuelingVoucher(r.record, { requestedByName: employeeName(r.record.requestedBy) })
-                : null,
-            onApprove: () => decide(r, 'Approved'),
-            onReject: () => decide(r, 'Rejected'),
-          }),
-        },
-        { key: 'summary', label: 'Description', wrap: true, render: (r) => shortSummary(r.summary) },
-        { key: 'date', label: 'Request Date', render: (r) => formatDate(r.date) },
-      ],
-      rows,
-      emptyText: "Nothing pending — you're all caught up.",
-    });
+    tableContainer.replaceChildren();
+    const search = el('input', { type: 'search', placeholder: 'Search project, requester or request…', 'aria-label': 'Search approvals' });
+    tableContainer.appendChild(search);
+    const cards = el('div', { class: 'approval-card-list' });
+    tableContainer.appendChild(cards);
+    const draw = () => {
+      const query = search.value.trim().toLowerCase();
+      const visible = rows.filter(r => [r.summary,r.by,r.record.project,r.record.id].join(' ').toLowerCase().includes(query));
+      cards.replaceChildren(...visible.map(r => {
+        const breakdown = el('details', {}, [el('summary', {}, 'View full request and items'),
+          el('p', {}, r.summary),
+          ...(r.record.items || []).map(item => el('p', {}, (item.description || 'Item') + ' — ' + (item.quantity ?? 1) + ' × ' + formatCurrency(item.rate ?? item.amount) + ' = ' + formatCurrency(item.amount))),
+        ]);
+        return el('article', { class: 'approval-request-card' }, [
+          el('strong', {}, r.type + ' · ' + r.record.id),
+          el('h3', {}, r.amount === null ? r.summary : formatCurrency(r.amount)),
+          el('p', {}, r.by + ' · ' + (r.record.project || 'No project') + ' · Submitted ' + formatDate(requestSubmissionDate(r.record))),
+          shortSummary(r.summary), breakdown,
+          decisionButtons({ onApprove: () => decide(r, 'Approved'), onReject: () => decide(r, 'Rejected') }),
+        ]);
+      }));
+      if (!visible.length) cards.appendChild(el('p', {}, 'No requests awaiting your decision.'));
+    };
+    search.addEventListener('input', draw); draw();
+
   }
 
   refresh();
