@@ -8,6 +8,9 @@ import { renderLoans } from './loans.js';
 import { renderProfitability } from './profitability.js';
 import { renderIncomeExpenditure } from './incomeExpenditure.js';
 import { financialActivity } from '../financialActivity.js';
+import { renderDozerPayroll, liveBalanceOwed } from './dozerPayroll.js';
+import { renderPayroll } from './payroll.js';
+import { amountOutstanding } from '../loanPayments.js';
 
 function projectOptions() {
   return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
@@ -38,20 +41,26 @@ function fields() {
 export function renderAccounting(container) {
   container.innerHTML = '';
 
-  let tab = 'expenses';
+  let tab = 'overview';
 
   const tabBar = el('div', { class: 'tab-bar' });
+  const overviewTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('overview') }, 'Finance Overview');
+  const operatorAllowanceTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('operatorAllowance') }, 'Operator Allowances');
+  const payrollTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('payroll') }, 'Staff Payroll');
   const expensesTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('expenses') }, 'Expenses');
   const incomeExpenditureTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('incomeExpenditure') }, 'Income & Expenditure');
   const profitabilityTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('profitability') }, 'Profitability');
   const loansTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('loans') }, 'Loans');
+  tabBar.appendChild(overviewTabBtn);
   tabBar.appendChild(expensesTabBtn);
+  tabBar.appendChild(operatorAllowanceTabBtn);
+  tabBar.appendChild(payrollTabBtn);
   tabBar.appendChild(incomeExpenditureTabBtn);
   tabBar.appendChild(profitabilityTabBtn);
   tabBar.appendChild(loansTabBtn);
 
   const actionSlot = el('div');
-  container.appendChild(sectionHeader('Accounting & Expenses', 'Company spending, revenue summary, and project profitability', actionSlot));
+  container.appendChild(sectionHeader('Finance & Accounts', 'Cash, commitments, receivables, payroll, operator allowances, loans, expenses, and profitability in one control centre', actionSlot));
   container.appendChild(tabBar);
 
   const body = el('div');
@@ -59,14 +68,116 @@ export function renderAccounting(container) {
 
   function setTab(next) {
     tab = next;
+    overviewTabBtn.classList.toggle('active', tab === 'overview');
     expensesTabBtn.classList.toggle('active', tab === 'expenses');
+    operatorAllowanceTabBtn.classList.toggle('active', tab === 'operatorAllowance');
+    payrollTabBtn.classList.toggle('active', tab === 'payroll');
     incomeExpenditureTabBtn.classList.toggle('active', tab === 'incomeExpenditure');
     profitabilityTabBtn.classList.toggle('active', tab === 'profitability');
     loansTabBtn.classList.toggle('active', tab === 'loans');
-    if (tab === 'expenses') renderExpensesTab();
+    if (tab === 'overview') renderOverviewTab();
+    else if (tab === 'expenses') renderExpensesTab();
+    else if (tab === 'operatorAllowance') { actionSlot.innerHTML = ''; body.innerHTML = ''; renderDozerPayroll(body); }
+    else if (tab === 'payroll') { actionSlot.innerHTML = ''; body.innerHTML = ''; renderPayroll(body); }
     else if (tab === 'incomeExpenditure') renderIncomeExpenditureTab();
     else if (tab === 'profitability') renderProfitabilityTab();
     else renderLoansTab();
+  }
+
+  function renderOverviewTab() {
+    actionSlot.innerHTML = '';
+    body.innerHTML = '';
+    const cash = financialActivity(store.all());
+    const income = cash.filter(r => r.type === 'Income').reduce((sum, r) => sum + Number(r.amount || 0), 0);
+    const outflow = cash.filter(r => r.type === 'Expenditure').reduce((sum, r) => sum + Number(r.amount || 0), 0);
+    const commitments = financialActivity(store.all(), 'commitments');
+    const commitmentTotal = commitments.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+    const requests = store.get('fundRequests');
+    const pending = requests.filter(r => r.status === 'Pending');
+    const approved = requests.filter(r => ['Approved', 'Partially Approved'].includes(r.status));
+    const payments = store.get('invoicePayments');
+    const receivables = store.get('invoices').map(invoice => {
+      const paid = payments.filter(p => p.invoiceId === invoice.id).reduce((sum, p) => sum + Number(p.amount || 0), 0);
+      return { ...invoice, outstanding: Math.max(0, invoiceTotal(invoice) - paid) };
+    }).filter(invoice => invoice.outstanding > 0);
+    const receivableTotal = receivables.reduce((sum, invoice) => sum + invoice.outstanding, 0);
+    const loanRows = store.get('loans').map(loan => ({ ...loan, outstanding: amountOutstanding(loan) })).filter(loan => loan.outstanding > 0);
+    const loanTotal = loanRows.reduce((sum, loan) => sum + loan.outstanding, 0);
+    const operatorIds = [...new Set([
+      ...store.get('dozerPayrollRuns').flatMap(run => (run.lines || []).map(line => line.employeeId)),
+      ...store.get('operations').map(row => row.operatorId).filter(Boolean),
+    ])];
+    const operatorBalances = operatorIds.map(id => ({
+      id, name: store.find('employees', id)?.name || id, balance: liveBalanceOwed(id),
+    })).filter(row => row.balance > 0);
+    const operatorTotal = operatorBalances.reduce((sum, row) => sum + row.balance, 0);
+    let salaryOutstanding = 0;
+    store.get('payrollRuns').filter(run => run.status !== 'Draft').forEach(run => {
+      (run.lines || []).forEach(line => {
+        salaryOutstanding += Math.max(0, Number(line.baseSalary || 0) + Number(line.bonus || 0)
+          - Number(line.deductions || 0) - Number(line.amountPaid || 0));
+      });
+    });
+    const draftPayroll = store.get('payrollRuns').filter(run => run.status === 'Draft').length
+      + store.get('dozerPayrollRuns').filter(run => run.status === 'Draft').length;
+
+    body.appendChild(el('div', { class: 'stats-grid' }, [
+      statCard({ label: 'Cash received', value: formatCurrency(income), tone: 'good' }),
+      statCard({ label: 'Cash paid out', value: formatCurrency(outflow), tone: 'critical' }),
+      statCard({ label: 'Recorded cash balance', value: formatCurrency(income - outflow), tone: income >= outflow ? 'good' : 'critical' }),
+      statCard({ label: 'Approved unpaid requests', value: formatCurrency(commitmentTotal), tone: commitmentTotal ? 'warning' : 'good' }),
+      statCard({ label: 'Customer receivables', value: formatCurrency(receivableTotal), tone: receivableTotal ? 'warning' : 'good' }),
+      statCard({ label: 'Operator allowances owed', value: formatCurrency(operatorTotal), tone: operatorTotal ? 'warning' : 'good' }),
+      statCard({ label: 'Staff salary owed', value: formatCurrency(salaryOutstanding), tone: salaryOutstanding ? 'warning' : 'good' }),
+      statCard({ label: 'Loan balance outstanding', value: formatCurrency(loanTotal), tone: loanTotal ? 'warning' : 'good' }),
+    ]));
+
+    const quick = el('div', { class: 'filter-bar' }, [
+      el('button', { class: 'btn btn-primary', type: 'button', onClick: () => setTab('expenses') }, 'Record expense'),
+      el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => setTab('operatorAllowance') }, 'Manage operator allowances'),
+      el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => setTab('payroll') }, 'Manage staff payroll'),
+      el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => setTab('incomeExpenditure') }, 'Income & expenditure'),
+    ]);
+    body.append(quick, el('h3', { class: 'subsection-title' }, 'Action required'));
+
+    const actionRows = [
+      ...pending.map(r => ({ priority: 'Approval', item: r.description || r.id, amount: Number(r.amount || 0), status: 'Pending' })),
+      ...approved.map(r => ({ priority: 'Payment', item: r.description || r.id, amount: Number(r.amount || 0), status: r.status })),
+      ...receivables.map(r => ({ priority: 'Collection', item: r.customer || r.id, amount: r.outstanding, status: 'Unpaid invoice' })),
+      ...operatorBalances.map(r => ({ priority: 'Allowance', item: r.name, amount: r.balance, status: 'Owed' })),
+      ...loanRows.map(r => ({ priority: 'Loan', item: r.lender || r.id, amount: r.outstanding, status: r.status || 'Active' })),
+    ];
+    const actionsTable = el('div');
+    body.appendChild(actionsTable);
+    renderTable(actionsTable, { columns: [
+      { key: 'priority', label: 'Action' }, { key: 'item', label: 'Record' },
+      { key: 'amount', label: 'Amount', render: row => formatCurrency(row.amount) },
+      { key: 'status', label: 'Status' },
+    ], rows: actionRows, emptyText: 'No finance action is currently outstanding.' });
+
+    body.appendChild(el('h3', { class: 'subsection-title' }, 'Control checks'));
+    const checks = el('div');
+    body.appendChild(checks);
+    renderTable(checks, { columns: [
+      { key: 'check', label: 'Check' }, { key: 'result', label: 'Current result' },
+    ], rows: [
+      { check: 'Requests awaiting approval', result: String(pending.length) },
+      { check: 'Approved requests awaiting payment', result: String(approved.length) },
+      { check: 'Unpaid customer invoices', result: String(receivables.length) },
+      { check: 'Draft payroll runs', result: String(draftPayroll) },
+      { check: 'Expenses missing project', result: String(store.get('expenses').filter(e => !e.project).length) },
+      { check: 'Expenses missing payee', result: String(store.get('expenses').filter(e => !e.payee).length) },
+    ], emptyText: '' });
+
+    body.appendChild(el('h3', { class: 'subsection-title' }, 'Recent financial activity'));
+    const recent = el('div');
+    body.appendChild(recent);
+    renderTable(recent, { columns: [
+      { key: 'date', label: 'Date', render: row => formatDate(row.date) },
+      { key: 'type', label: 'Type' }, { key: 'description', label: 'Description' },
+      { key: 'amount', label: 'Amount', render: row => formatCurrency(row.amount) },
+      { key: 'project', label: 'Project', render: row => row.project || '—' },
+    ], rows: cash.slice().sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 15), emptyText: 'No financial activity recorded.' });
   }
 
   function renderLoansTab() {
@@ -188,5 +299,5 @@ export function renderAccounting(container) {
     refresh();
   }
 
-  setTab('expenses');
+  setTab('overview');
 }
