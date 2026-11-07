@@ -27,3 +27,7 @@ export const DATA_IMPORT_EMPLOYEE_IDS = ['EMP-26']; // Olumide Davidson
 export function canImportData() {
   return isOwnerAccount(getCurrentUser(), DATA_IMPORT_EMPLOYEE_IDS);
 }
+
+export function canDecideFundRequests() {
+  return ['EMP-28', 'EMP-26'].includes(getCurrentUser()?.id);
+}
