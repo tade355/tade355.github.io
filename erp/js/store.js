@@ -46,6 +46,7 @@ const CONFIG = {
   dieselSiteDistributions: { table: 'diesel_site_distributions', prefix: 'DSD' },
   invoicePayments: { table: 'invoice_payments', prefix: 'IVP' },
   loans: { table: 'loans', prefix: 'LN' },
+  budgets: { table: 'budgets', prefix: 'BUD' },
   loanRepayments: { table: 'loan_repayments', prefix: 'LNR' },
   // video_url only ever holds a Supabase Storage link (see training.js) —
   // the recording itself lives in the trainee-videos bucket, not this row,
