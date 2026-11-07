@@ -237,7 +237,7 @@ function openRequestForm(record, onSaved) {
           }
         }
 
-        const newStatus = isAdmin ? statusField.querySelector('select').value : (record?.status || 'Pending');
+        const newStatus = record?.status || 'Pending';
         // A "decision" is Admin actually moving it to Approved/Rejected just
         // now — not re-saving an already-decided request (e.g. later marking
         // it Paid), which keeps whoever originally decided it as-is.
