@@ -141,8 +141,8 @@ export function renderAccounting(container) {
     body.append(quick, el('h3', { class: 'subsection-title' }, 'Action required'));
 
     const actionRows = [
-      ...pending.map(r => ({ priority: 'Approval', item: r.description || r.id, amount: Number(r.amount || 0), status: 'Pending' })),
-      ...approved.map(r => ({ priority: 'Payment', item: r.description || r.id, amount: Number(r.amount || 0), status: r.status })),
+      ...pending.map(r => ({ priority: 'Approval', item: (r.description || r.id).length > 140 ? `${(r.description || r.id).slice(0, 137)}…` : (r.description || r.id), amount: Number(r.totalAmount || r.amount || 0), status: 'Pending' })),
+      ...approved.map(r => ({ priority: 'Payment', item: (r.description || r.id).length > 140 ? `${(r.description || r.id).slice(0, 137)}…` : (r.description || r.id), amount: Number(r.totalAmount || r.amount || 0), status: r.status })),
       ...receivables.map(r => ({ priority: 'Collection', item: r.customer || r.id, amount: r.outstanding, status: 'Unpaid invoice' })),
       ...operatorBalances.map(r => ({ priority: 'Allowance', item: r.name, amount: r.balance, status: 'Owed' })),
       ...loanRows.map(r => ({ priority: 'Loan', item: r.lender || r.id, amount: r.outstanding, status: r.status || 'Active' })),
