@@ -96,14 +96,38 @@ function openRequestForm(record, onSaved) {
       const submittedByField = selectField('submittedBy', 'Submitted By', employeeOptions(), record?.submittedBy || getCurrentUserId());
       if (!['Admin', 'Accounts'].includes(getCurrentTier())) submittedByField.querySelector('select').disabled = true;
       const selectedStaff = new Set(record?.concernedStaff || []);
-      const staffPicker = el('div', { class: 'concerned-staff-list' }, employeeOptions().map((person) => {
-        const checkbox = el('input', { type: 'checkbox', value: person.value });
-        checkbox.checked = selectedStaff.has(person.value);
-        return el('label', { class: 'concerned-staff-option' }, [checkbox, el('span', {}, person.label)]);
-      }));
+      const staffSearch = el('input', { type: 'search', placeholder: 'Type a staff name…', 'aria-label': 'Search staff to tag', autocomplete: 'off' });
+      const staffTags = el('div', { class: 'staff-tag-chips' });
+      const staffSuggestions = el('div', { class: 'staff-tag-suggestions' });
+      const people = employeeOptions();
+      function renderStaffTags() {
+        staffTags.replaceChildren(...[...selectedStaff].map((id) => {
+          const person = people.find((p) => String(p.value) === String(id));
+          return el('button', { type: 'button', class: 'btn btn-ghost', 'aria-label': 'Remove tag ' + (person?.label || id), onClick: () => {
+            selectedStaff.delete(id); renderStaffTags(); renderStaffSuggestions();
+          } }, (person?.label || id) + ' ×');
+        }));
+      }
+      function renderStaffSuggestions() {
+        const query = staffSearch.value.trim().replace(/^@/, '').toLowerCase();
+        staffSuggestions.replaceChildren();
+        if (!query) return;
+        const matches = people.filter((p) => !selectedStaff.has(p.value) && p.label.toLowerCase().includes(query)).slice(0, 6);
+        if (!matches.length) { staffSuggestions.appendChild(el('span', {}, 'No matching staff')); return; }
+        matches.forEach((person) => staffSuggestions.appendChild(el('button', {
+          type: 'button', class: 'btn btn-ghost', onClick: () => {
+            selectedStaff.add(person.value); staffSearch.value = ''; renderStaffTags(); renderStaffSuggestions(); staffSearch.focus();
+          },
+        }, person.label)));
+      }
+      staffSearch.addEventListener('input', renderStaffSuggestions);
+      staffSearch.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') { staffSearch.value = ''; renderStaffSuggestions(); }
+      });
+      renderStaffTags();
       const concernedField = el('div', { class: 'field' }, [
-        el('span', { class: 'field-label' }, 'Tag staff who should see this request'),
-        staffPicker,
+        el('span', { class: 'field-label' }, 'Tag staff (optional)'),
+        staffTags, staffSearch, staffSuggestions,
       ]);
       const costHeadField = selectField('costHead', 'Cost Head (for Income & Expenditure reporting)', costHeadOptions(), record?.costHead);
       const descriptionInput = el('textarea', { name: 'description', rows: 2 });
@@ -217,7 +241,7 @@ function openRequestForm(record, onSaved) {
           paymentReference: record?.paymentReference || null,
           project: projectField.querySelector('select').value,
           submittedBy: submittedByField.querySelector('select').value,
-          concernedStaff: [...staffPicker.querySelectorAll('input:checked')].map((input) => input.value),
+          concernedStaff: [...selectedStaff],
           costHead: costHeadField.querySelector('select').value,
           description: descriptionInput.value,
           items,
