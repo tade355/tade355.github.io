@@ -42,9 +42,12 @@ function datesBetween(ops) {
 
 export function buildDailyDashboard(ctx) {
   const { project, date } = ctx;
-  const periodStart = rexFortnightStart(project, date);
-  const since = periodStart || ctx.since;
-  const dieselSince = periodStart ? DASHBOARD_BASIS_FROM : since;
+  // Use the date selected on the dashboard for cumulative operations,
+  // profitability, requests and staff performance. REX tank balances still
+  // retain their full carry-over chain from the dashboard basis date.
+  const selectedSince = ctx.since || DASHBOARD_BASIS_FROM;
+  const since = selectedSince <= date ? selectedSince : date;
+  const dieselSince = rexFortnightStart(project, date) ? DASHBOARD_BASIS_FROM : since;
   const inv = ctx.inventory.filter((i) => i.category === 'Heavy Equipment');
   const invByName = new Map(ctx.inventory.map((i) => [i.name, i]));
   const empName = (id) => ctx.employees.find((e) => e.id === id)?.name || null;
