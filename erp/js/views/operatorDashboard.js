@@ -41,13 +41,21 @@ export async function renderOperatorDashboard(container, { issuesOnly = false } 
       const summary = el('div', { class: 'stats-grid' });
       const allowanceSummary = el('div', { class: 'stats-grid' });
       const allowanceLedger = el('div');
+      const allowancePayments = el('div');
       const reports = el('div');
       body.append(summary, el('h3', {}, 'My allowance'), allowanceSummary,
         el('p', { class: 'section-subtitle' }, 'Your first 8 hours each day are prorated against your daily rate. Hours above 8 are overtime. Payments recorded by Accounts reduce the balance owed.'),
-        allowanceLedger, el('h3', {}, 'My work records'), reports);
+        allowanceLedger, el('h3', {}, 'Payments recorded by Accounts'), allowancePayments,
+        el('h3', {}, 'My work records'), reports);
       function refreshPeriod() {
         if (from.value && to.value && from.value > to.value) {
-          summary.replaceChildren(el('p', { role: 'alert' }, 'The From date must be on or before the To date.'));
+          renderTable(allowancePayments, { columns: [
+          { key: 'date', label: 'Payment date', render: row => formatDate(row.date) },
+          { key: 'amount', label: 'Amount paid', render: row => formatCurrency(row.amount) },
+          { key: 'source', label: 'Recorded from' },
+          { key: 'reference', label: 'Reference' },
+        ], rows: data.allowance?.payments || [], emptyText: 'No allowance payment has been recorded yet.' });
+        summary.replaceChildren(el('p', { role: 'alert' }, 'The From date must be on or before the To date.'));
           reports.replaceChildren(); return;
         }
         const period = operatorPeriod(data.reports || [], from.value, to.value);
