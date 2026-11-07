@@ -429,6 +429,7 @@ function renderRequestsTab(container, onRefresh = () => {}) {
             },
           }),
         },
+        { key: 'approvalNote', label: 'Feedback', render: (r) => r.approvalNote || '—' },
         { key: 'description', label: 'Description', wrap: true, render: requestSummary },
         { key: 'project', label: 'Project', render: (r) => r.project || '—' },
         { key: 'approvedAmount', label: 'Approved', render: (r) => r.approvedAmount != null ? formatCurrency(r.approvedAmount) : '—' },
