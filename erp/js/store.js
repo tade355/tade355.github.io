@@ -3,6 +3,9 @@ import { supabase } from './supabaseClient.js';
 import { fetchAllPages, isStale } from './storeHelpers.js';
 import { applyRefreshResults, validateSnapshot } from './backupSafety.js';
 
+function emitRecordAction(action, collection) {
+ if(typeof window!=='undefined') window.dispatchEvent(new CustomEvent('erp-record-action',{detail:{action,collection}}));
+}
 const LAST_BACKUP_KEY = 'emagrims_erp_last_backup';
 
 // Every collection the app uses, its Supabase table, the prefix used to
@@ -268,6 +271,7 @@ export const store = {
     await upsertRow(collection, id, record, { create: true });
     const saved = await readAfterSave(collection, id, { ...record, id });
     state[collection] = [...(state[collection] || []).filter((r) => r.id !== id), saved];
+    emitRecordAction('created', collection);
     return store.find(collection, id);
   },
   async update(collection, id, patch) {
@@ -279,6 +283,7 @@ export const store = {
     await upsertRow(collection, id, merged, { expectedUpdatedAt: existing.updatedAt || null });
     const saved = await readAfterSave(collection, id, merged);
     state[collection] = (state[collection] || []).map((r) => (r.id === id ? saved : r));
+    emitRecordAction('updated', collection);
     return store.find(collection, id);
   },
   async remove(collection, id) {
@@ -286,6 +291,7 @@ export const store = {
     const { error } = await supabase.from(cfg.table).delete().eq('id', id);
     if (error) throw new Error(`Could not delete this record (${error.message}).`);
     state[collection] = (state[collection] || []).filter((r) => r.id !== id);
+    emitRecordAction('deleted', collection);
   },
 
   all() {

@@ -1,3 +1,4 @@
+import { startUsageMonitor } from './usageMonitor.js';
 import { ROUTES, initRouter } from './router.js';
 import { initModalRoot, initToastRoot, openModal } from './ui.js';
 import { store } from './store.js';
@@ -113,6 +114,7 @@ function initApp() {
   window.addEventListener('erp-data-health', showHealth);
   showHealth();
   renderUserBadge();
+  startUsageMonitor(getCurrentUser());
   initNotificationCenter(document.getElementById('notificationBell'));
   startFieldSync(store, ({ pending }) => {
     const bell = document.getElementById('notificationBell');
