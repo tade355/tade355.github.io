@@ -26,7 +26,7 @@ export const CATALOGUE = [
   { kind: 'Page', route: 'fundRequests', label: 'Fund Requests & Approvals', words: 'fund requests approvals payment requests' },
   { kind: 'Page', route: 'hr', label: 'HR & Employees', words: 'hr staff employees people' },
   { kind: 'Page', route: 'leave', label: 'Leave & Attendance', words: 'leave attendance absence holiday' },
-  { kind: 'Page', route: 'mySalary', label: 'My Salary', words: 'salary payslip pay' },
+  { kind: 'Page', route: 'mySalary', label: 'My Pay & Allowances', words: 'salary payslip pay allowances statement outstanding payments monthly' },
   { kind: 'Page', route: 'training', label: 'Training', words: 'training courses learning' },
   { kind: 'Page', route: 'backup', label: 'Backup & Data', words: 'backup export restore data' },
 
