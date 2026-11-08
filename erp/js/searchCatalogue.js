@@ -8,6 +8,7 @@
 // `perm: 'profitReports'` marks features only Olumide's account can use.
 
 export const CATALOGUE = [
+  { kind:'Page', route:'staffActivity', label:'Staff Activity Monitor', words:'visits logins actions time modules devices browser location usage monitoring' },
   // ---- pages (route titles come from ROUTES; these add aliases) -----------
   { kind: 'Page', route: 'dashboard', label: 'Dashboard', words: 'overview home headline profit kpi' },
   { kind: 'Page', route: 'dailyDashboard', label: 'Daily Operations Dashboard', words: 'daily dashboard html flags fueling diesel start times output daily report' },

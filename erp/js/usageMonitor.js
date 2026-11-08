@@ -40,7 +40,7 @@ export function startUsageMonitor(user) {
  });
  document.addEventListener('click',event=>{
   const button=event.target.closest('button');if(!button)return;
-  const label=(button.getAttribute('title')||button.textContent||'').trim();
+  const label=(button.textContent||button.getAttribute('title')||'').trim();
   // Intent only, no form values, names, bank details, searches or free text.
   const action=/^Approve$|^Reject$|^Ask for clarification$|^Record payment made$|^Submit Request$|^Log Out$|^Export CSV$|^Download HTML$/i.test(label)?label:null;
   if(action){push('action','Clicked '+action);checkpoint();}
