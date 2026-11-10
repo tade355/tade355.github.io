@@ -4,6 +4,7 @@ import { formatCurrency, formatDate, el, dateInRange, ico } from '../utils.js';
 import { sectionHeader, statCard, renderTable, actionButtons, openCustomModal, closeModal, confirmDelete } from '../ui.js';
 import { printDozerSettlement } from '../print.js';
 import { dozerRatesAsOf } from '../rateHistory.js';
+import { currentOwnerSettlements } from '../rentSettlementBasis.js';
 
 // Partnership dozers pay a management fee (Emagrims retains a cut of the
 // rental); Rented dozers don't (Emagrims just pays the day rate) — but both
@@ -170,12 +171,15 @@ function openSettlementForm(record, refresh) {
 export function ownerSettlementBalances() {
   const settlements = store.get('dozerOwnerSettlements');
   return settleableDozers().map((d) => {
-    const own = settlements.filter((s) => s.equipment === d.name);
+    const history = settlements.filter((s) => s.equipment === d.name);
+    const own = currentOwnerSettlements(history);
+    const beneficiary = history.filter((s) => s.accountNumber).sort((a, b) => String(b.periodEnd).localeCompare(String(a.periodEnd)))[0] || {};
+    const opening = own.find((s) => s.isOpeningBalance);
     const generated = own.reduce((sum, s) => sum + (s.daysWorked * s.rentalRatePerDay), 0);
     const retained = own.reduce((sum, s) => sum + (s.daysWorked * s.managementFeePerDay), 0);
     const repairs = own.reduce((sum, s) => sum + s.repairsCost, 0);
     const paid = own.reduce((sum, s) => sum + s.amountPaidToOwner, 0);
-    return { name: d.name, owner: d.ownerName || '—', generated, retained, repairs, paid, balance: generated - retained - repairs - paid };
+    return { name: d.name, owner: d.ownerName || '—', generated, retained, repairs, paid, balance: generated - retained - repairs - paid, balanceSince: opening?.periodEnd, accountName: beneficiary.accountName, accountNumber: beneficiary.accountNumber, bankName: beneficiary.bankName };
   });
 }
 
@@ -196,6 +200,8 @@ export function renderDozerRentPayments(container) {
       columns: [
         { key: 'name', label: 'Dozer' },
         { key: 'owner', label: 'Owner' },
+        { key: 'balanceSince', label: 'Opening Balance As Of', render: (r) => r.balanceSince ? formatDate(r.balanceSince) : 'All recorded periods' },
+        { key: 'beneficiary', label: 'Pay To', render: (r) => [r.accountName, r.accountNumber, r.bankName].filter(Boolean).join(' · ') || '—', wrap: true },
         { key: 'generated', label: 'Total Generated', render: (r) => formatCurrency(r.generated) },
         { key: 'retained', label: 'Management Retained', render: (r) => formatCurrency(r.retained) },
         { key: 'repairs', label: 'Repairs Cost', render: (r) => formatCurrency(r.repairs) },
@@ -206,12 +212,15 @@ export function renderDozerRentPayments(container) {
       emptyText: 'No Partnership or Rented dozers in the fleet yet.',
     });
 
+    container.appendChild(el('p', { class: 'section-subtitle' }, 'A confirmed opening balance replaces earlier balances in the summary. Earlier entries remain below for history; no payment is implied. Add subsequent rent periods after the opening date to avoid overlap.'));
     container.appendChild(el('h3', { class: 'subsection-title' }, 'Settlement History'));
     const tableContainer = el('div');
     container.appendChild(tableContainer);
     renderTable(tableContainer, {
       columns: [
         { key: 'equipment', label: 'Dozer' },
+        { key: 'basis', label: 'Record Type', render: (r) => r.isOpeningBalance ? 'Confirmed opening balance' : 'Rent settlement' },
+        { key: 'notes', label: 'Notes', render: (r) => r.notes || '—', wrap: true },
         { key: 'period', label: 'Period', render: (r) => `${formatDate(r.periodStart)} – ${formatDate(r.periodEnd)}` },
         { key: 'daysWorked', label: 'Days', render: (r) => r.daysWorked },
         { key: 'rentalRatePerDay', label: 'Rate/Day', render: (r) => formatCurrency(r.rentalRatePerDay) },
