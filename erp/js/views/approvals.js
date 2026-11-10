@@ -27,6 +27,7 @@ function copyPaymentButton(label, value) {
   return button;
 }
 export function paymentCard(request) {
+  const canCopy = ['Approved', 'Partially Approved'].includes(request.status) && ['Admin', 'Accounts'].includes(getCurrentTier());
   const recipients = [...new Map((request.items || []).map(item => {
     const payee = {
       accountName: String(item.accountName || '').trim(),
@@ -50,13 +51,13 @@ export function paymentCard(request) {
         value('Account number', item.accountNumber),
         value('Bank', item.bankName),
         missing ? el('p', { class: 'text-critical' }, 'Account details are incomplete — ask the requester to clarify before approval or payment.') : null,
-        el('div', { class: 'payment-card-actions' }, [
+        canCopy ? el('div', { class: 'payment-card-actions' }, [
           item.accountNumber ? copyPaymentButton('Copy account no.', item.accountNumber) : null,
           item.accountName ? copyPaymentButton('Copy account name', item.accountName) : null,
           item.bankName ? copyPaymentButton('Copy bank', item.bankName) : null,
           copyPaymentButton('Copy amount', amount),
           copyPaymentButton('Copy all', all),
-        ]),
+        ]) : null,
       ]);
     }),
   ]);
