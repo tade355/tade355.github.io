@@ -89,8 +89,15 @@ export function initNotificationCenter(container) {
             await refresh();
             if (row.target_path?.startsWith('#/')) window.location.hash = row.target_path;
           } }, [
-            el('strong', {}, row.title),
-            el('span', {}, ` ${row.message} — ${notificationDateTime(row.created_at)}`),
+            el('span', { class: 'notification-item-head' }, [
+              el('strong', {}, row.title),
+              el('time', { class: 'notification-item-time', dateTime: row.created_at }, notificationDateTime(row.created_at)),
+            ]),
+            el('span', { class: 'notification-item-message' }, row.message),
+            el('span', { class: 'notification-item-footer' }, [
+              el('span', {}, row.read_at ? 'Read' : 'New'),
+              row.target_path?.startsWith('#/') ? el('span', { class: 'notification-item-open' }, 'Open related item →') : null,
+            ]),
           ]);
           if (!row.read_at) link.classList.add('notification-item-unread');
           list.appendChild(link);
