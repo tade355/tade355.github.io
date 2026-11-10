@@ -42,11 +42,11 @@ export function initNotificationCenter(container) {
   button.addEventListener('click', async () => {
     await refresh();
     openCustomModal({ title: 'Notifications', wide: true, build(body, close) {
-      let filter = 'All';
+      let filter = 'Unread';
       const toolbar = el('div', { class: 'notification-toolbar' });
       const list = el('div', { class: 'notification-list' });
       const feedback = el('p', { class: 'notification-feedback', role: 'status' });
-      const tabs = ['All', 'Unread', 'Read'].map((name) => el('button', {
+      const tabs = ['Unread', 'Read'].map((name) => el('button', {
         type: 'button', class: 'btn btn-ghost', onClick: () => { filter = name; render(); },
       }, name));
       const markAll = el('button', { type: 'button', class: 'btn btn-ghost', onClick: async () => {
@@ -73,9 +73,9 @@ export function initNotificationCenter(container) {
         });
         markAll.disabled = unread === 0;
         list.replaceChildren();
-        const visible = rows.filter((row) => filter === 'All' || (filter === 'Unread' ? !row.read_at : !!row.read_at));
+        const visible = rows.filter((row) => filter === 'Unread' ? !row.read_at : !!row.read_at);
         if (!visible.length) {
-          list.appendChild(el('p', {}, filter === 'All' ? 'No notifications yet.' : `No ${filter.toLowerCase()} notifications.`));
+          list.appendChild(el('p', {}, filter === 'Unread' ? 'You are all caught up.' : 'No read notifications in history.'));
           return;
         }
         visible.forEach((row) => {
