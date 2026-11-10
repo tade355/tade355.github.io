@@ -27,18 +27,38 @@ function copyPaymentButton(label, value) {
   return button;
 }
 export function paymentCard(request) {
-  const item = (request.items || []).find(row => row.accountNumber || row.accountName || row.bankName) || request.items?.[0] || {};
+  const recipients = [...new Map((request.items || []).map(item => {
+    const payee = {
+      accountName: String(item.accountName || '').trim(),
+      accountNumber: String(item.accountNumber || '').trim(),
+      bankName: String(item.bankName || '').trim(),
+    };
+    return [JSON.stringify(payee), payee];
+  })).values()];
+  if (!recipients.length) recipients.push({ accountName: '', accountNumber: '', bankName: '' });
   const amount = Number(request.approvedAmount ?? (request.items || []).reduce((sum, row) => sum + Number(row.amount || 0), 0));
-  const all = 'Amount: ₦' + amount.toLocaleString() + '\nAccount Number: ' + (item.accountNumber || '') + '\nAccount Name: ' + (item.accountName || '') + '\nBank: ' + (item.bankName || '') + '\nNarration: ' + (request.description || item.description || request.id) + '\nReference: ' + request.id;
-  return el('div', { class: 'payment-card' }, [
-    el('strong', {}, 'Payment details'),
-    el('div', { class: 'payment-card-actions' }, [
-      copyPaymentButton('Copy account no.', item.accountNumber),
-      copyPaymentButton('Copy account name', item.accountName),
-      copyPaymentButton('Copy bank', item.bankName),
-      copyPaymentButton('Copy amount', amount),
-      copyPaymentButton('Copy all', all),
-    ]),
+  return el('section', { class: 'payment-card', 'aria-label': 'Beneficiary account details' }, [
+    el('strong', {}, 'Pay to — beneficiary details'),
+    ...recipients.map(item => {
+      const missing = !item.accountName || !item.accountNumber || !item.bankName;
+      const all = 'Amount: ₦' + amount.toLocaleString() + '\nAccount Number: ' + item.accountNumber + '\nAccount Name: ' + item.accountName + '\nBank: ' + item.bankName + '\nNarration: ' + (request.description || request.id) + '\nReference: ' + request.id;
+      const value = (label, text) => el('p', { style: 'margin:0.4rem 0;overflow-wrap:anywhere;user-select:text;' }, [
+        el('strong', {}, label + ': '), el('span', {}, text || 'Not provided'),
+      ]);
+      return el('div', {}, [
+        value('Account name', item.accountName),
+        value('Account number', item.accountNumber),
+        value('Bank', item.bankName),
+        missing ? el('p', { class: 'text-critical' }, 'Account details are incomplete — ask the requester to clarify before approval or payment.') : null,
+        el('div', { class: 'payment-card-actions' }, [
+          item.accountNumber ? copyPaymentButton('Copy account no.', item.accountNumber) : null,
+          item.accountName ? copyPaymentButton('Copy account name', item.accountName) : null,
+          item.bankName ? copyPaymentButton('Copy bank', item.bankName) : null,
+          copyPaymentButton('Copy amount', amount),
+          copyPaymentButton('Copy all', all),
+        ]),
+      ]);
+    }),
   ]);
 }
 
@@ -175,6 +195,7 @@ export function renderApprovals(container, onRefresh = () => {}) {
           shortSummary(r.summary),
           r.collection === 'fundRequests' && findDuplicateRequests(r.record, store.get('fundRequests').filter(other=>other.id!==r.record.id)).length ? el('p',{},'Possible duplicate — review related requests before deciding.') : null,
           r.record.approvalNote ? el('p',{},'Latest feedback: '+r.record.approvalNote) : null,
+          r.collection === 'fundRequests' ? paymentCard(r.record) : null,
           breakdown,
           r.collection === 'fundRequests' ? el('button',{type:'button',class:'btn btn-ghost',onClick:async()=>{
             const message=window.prompt('What should the requester clarify?'); if(!message?.trim())return;
