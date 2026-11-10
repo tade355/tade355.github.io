@@ -3,6 +3,11 @@ import { getCurrentUserId } from './session.js';
 import { el } from './utils.js';
 import { openCustomModal } from './ui.js';
 
+const notificationDateTime = (value) => new Date(value).toLocaleString('en-GB', {
+  timeZone: 'Africa/Lagos', day: '2-digit', month: 'short', year: 'numeric',
+  hour: 'numeric', minute: '2-digit', hour12: true,
+});
+
 export function initNotificationCenter(container) {
   const button = el('button', { type: 'button', class: 'notification-bell', 'aria-label': 'Notifications', title: 'Notifications' }, [
     el('span', { class: 'notification-bell-icon', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/></svg>' }),
@@ -85,7 +90,7 @@ export function initNotificationCenter(container) {
             if (row.target_path?.startsWith('#/')) window.location.hash = row.target_path;
           } }, [
             el('strong', {}, row.title),
-            el('span', {}, ` ${row.message} — ${new Date(row.created_at).toLocaleString('en-GB')}`),
+            el('span', {}, ` ${row.message} — ${notificationDateTime(row.created_at)}`),
           ]);
           if (!row.read_at) link.classList.add('notification-item-unread');
           list.appendChild(link);
