@@ -149,29 +149,15 @@ export function renderAccounting(container) {
       el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => setTab('payroll') }, 'Manage staff payroll'),
       el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => setTab('incomeExpenditure') }, 'Income & expenditure'),
     ]);
-    body.append(quick, el('h3', { class: 'subsection-title' }, 'Action required'));
-
-    const copyButton = (label, value) => {
-      const button = el('button', { type: 'button', class: 'btn btn-ghost btn-sm' }, label);
-      button.addEventListener('click', async () => {
-        try { await navigator.clipboard.writeText(String(value || '')); button.textContent = 'Copied'; setTimeout(() => { button.textContent = label; }, 1200); }
-        catch { window.alert('Copy failed: ' + (value || 'not provided')); }
-      });
-      return button;
-    };
-    const paymentCard = (request) => {
-      const item = (request.items || []).find(row => row.accountNumber || row.accountName || row.bankName) || request.items?.[0] || {};
-      const amount = Number(request.approvedAmount || (request.items || []).reduce((sum, row) => sum + Number(row.amount || 0), 0));
-      const all = 'Amount: ₦' + amount.toLocaleString() + '\nAccount Number: ' + (item.accountNumber || '') + '\nAccount Name: ' + (item.accountName || '') + '\nBank: ' + (item.bankName || '') + '\nNarration: ' + (request.description || item.description || request.id) + '\nReference: ' + request.id;
-      return el('div', { class: 'payment-card' }, [
-        copyButton('Copy account no.', item.accountNumber), copyButton('Copy account name', item.accountName),
-        copyButton('Copy bank', item.bankName), copyButton('Copy amount', amount), copyButton('Copy all', all),
-      ]);
-    };
+    body.appendChild(quick);
+    body.appendChild(el('h3', { class: 'subsection-title' }, 'Approved requests awaiting payment'));
+    const paymentQueue = el('div');
+    body.appendChild(paymentQueue);
+    renderRequestPayments(paymentQueue);
+    body.appendChild(el('h3', { class: 'subsection-title' }, 'Other actions required'));
 
     const actionRows = [
       ...pending.map(r => ({ priority: 'Approval', item: (r.description || r.id).length > 140 ? `${(r.description || r.id).slice(0, 137)}…` : (r.description || r.id), amount: Number(r.approvedAmount || 0) || (r.items || []).reduce((sum, item) => sum + Number(item.amount || 0), 0), status: 'Pending' })),
-      ...approved.map(r => ({ priority: 'Payment', record: r, payment: paymentCard(r), item: (r.description || r.id).length > 140 ? `${(r.description || r.id).slice(0, 137)}…` : (r.description || r.id), amount: Number(r.approvedAmount || 0) || (r.items || []).reduce((sum, item) => sum + Number(item.amount || 0), 0), status: r.status })),
       ...receivables.map(r => ({ priority: 'Collection', item: r.customer || r.id, amount: r.outstanding, status: 'Unpaid invoice' })),
       ...operatorBalances.map(r => ({ priority: 'Allowance', item: r.name, amount: r.balance, status: 'Owed' })),
       ...loanRows.map(r => ({ priority: 'Loan', item: r.lender || r.id, amount: r.outstanding, status: r.status || 'Active' })),
@@ -181,7 +167,7 @@ export function renderAccounting(container) {
     renderTable(actionsTable, { columns: [
       { key: 'priority', label: 'Action' }, { key: 'item', label: 'Record' },
       { key: 'amount', label: 'Amount', render: row => formatCurrency(row.amount) },
-      { key: 'status', label: 'Status' }, { key: 'payment', label: 'Banking copy' },
+      { key: 'status', label: 'Status' },
     ], rows: actionRows, emptyText: 'No finance action is currently outstanding.' });
 
     body.appendChild(el('h3', { class: 'subsection-title' }, 'Control checks'));
