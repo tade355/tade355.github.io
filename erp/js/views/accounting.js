@@ -124,7 +124,7 @@ export function renderAccounting(container) {
     })).filter(row => row.balance > 0);
     const operatorTotal = operatorBalances.reduce((sum, row) => sum + row.balance, 0);
     let salaryOutstanding = 0;
-    store.get('payrollRuns').filter(run => run.status !== 'Draft').forEach(run => {
+    store.get('payrollRuns').filter(run => ['Approved','PartiallyPaid','Paid'].includes(run.status)).forEach(run => {
       (run.lines || []).forEach(line => {
         salaryOutstanding += Math.max(0, Number(line.baseSalary || 0) + Number(line.bonus || 0)
           - Number(line.deductions || 0) - Number(line.amountPaid || 0));
