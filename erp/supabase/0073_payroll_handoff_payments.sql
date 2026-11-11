@@ -83,7 +83,7 @@ language sql stable security definer set search_path=public as $$
         or lower(coalesce(e.role,'')) like '%account%'
         or lower(coalesce(e.role,'')) like '%finance%')
   );
-$;
+$$;
 revoke all on function is_payroll_accounts() from public;
 grant execute on function is_payroll_accounts() to authenticated;
 
