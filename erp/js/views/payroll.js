@@ -236,7 +236,10 @@ function openRunForm(record, onSaved) {
         if (!monthInput.value) { window.alert('Pay period is required.'); return; }
         if (!lines.length) { window.alert('Add at least one employee.'); return; }
 
-        const newStatus = statusSelect.value;
+        const requestedStatus = statusSelect.value;
+        const approvedTotal = lines.reduce((sum, l) => sum + l.baseSalary + l.bonus - l.deductions, 0);
+        const paidTotal = lines.reduce((sum, l) => sum + (l.amountPaid || 0), 0);
+        const newStatus = requestedStatus === 'Paid' && paidTotal < approvedTotal ? 'PartiallyPaid' : requestedStatus;
         const payload = { month: monthInput.value, status: newStatus, lines };
 
         try {
