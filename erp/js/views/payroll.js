@@ -291,10 +291,10 @@ function openRunForm(record, onSaved, { review = false } = {}) {
           catch (error) { window.alert(error.message || 'Could not return this payroll.'); returnBtn.disabled = false; }
         });
         actions.appendChild(returnBtn);
-        await runAction('Approve payroll', 'Approved');
+        runAction('Approve payroll', 'Approved');
       } else if (canEdit) {
-        if (!record || record.status === 'Draft') await runAction('Save draft', 'Draft', 'ghost');
-        await runAction(record?.status === 'Returned' ? 'Resubmit for CEO approval' : 'Submit for CEO approval', 'Submitted');
+        if (!record || record.status === 'Draft') runAction('Save draft', 'Draft', 'ghost');
+        runAction(record?.status === 'Returned' ? 'Resubmit for CEO approval' : 'Submit for CEO approval', 'Submitted');
       }
       container.appendChild(actions);
     },
