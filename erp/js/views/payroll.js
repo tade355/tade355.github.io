@@ -146,6 +146,8 @@ function openRunForm(record, onSaved) {
       const statusField = el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Status'), statusSelect]);
 
       const topGrid = el('div', { class: 'form-grid-2' }, [monthField, statusField]);
+      const commentsInput = el('textarea', { name: 'comments', placeholder: 'CEO comments or payroll notes' });
+      commentsInput.value = record?.comments || '';
 
       const itemsHeader = el('div', { class: 'payroll-line-header' }, [
         el('span', {}, 'Employee'), el('span', {}, 'Base Salary'), el('span', {}, 'Bonus'), el('span', {}, 'Deductions'), el('span', {}, 'Paid'), el('span', {}, 'Net Pay'), el('span', {}, ''), el('span', {}, ''),
@@ -235,12 +237,16 @@ function openRunForm(record, onSaved) {
         }
         if (!monthInput.value) { window.alert('Pay period is required.'); return; }
         if (!lines.length) { window.alert('Add at least one employee.'); return; }
+        if (lines.some((l) => l.amountPaid > (l.baseSalary + l.bonus - l.deductions))) { window.alert('A payment cannot be higher than the approved amount.'); return; }
+        if (!record && store.get('payrollRuns').some((r) => r.month === monthInput.value)) { window.alert('A payroll run already exists for this month. Edit the existing run instead.'); return; }
 
         const requestedStatus = statusSelect.value;
         const approvedTotal = lines.reduce((sum, l) => sum + l.baseSalary + l.bonus - l.deductions, 0);
         const paidTotal = lines.reduce((sum, l) => sum + (l.amountPaid || 0), 0);
         const newStatus = requestedStatus === 'Paid' && paidTotal < approvedTotal ? 'PartiallyPaid' : requestedStatus;
-        const payload = { month: monthInput.value, status: newStatus, lines };
+        const now = new Date().toISOString();
+        const auditTrail = [...(record?.auditTrail || []), { at: now, action: record ? 'updated' : 'created', status: newStatus }];
+        const payload = { month: monthInput.value, status: newStatus, lines, comments: commentsInput.value.trim(), paymentEntries: record?.paymentEntries || [], auditTrail, submittedAt: newStatus === 'Submitted' ? (record?.submittedAt || now) : (record?.submittedAt || ''), approvedAt: newStatus === 'Approved' || newStatus === 'PartiallyPaid' || newStatus === 'Paid' ? (record?.approvedAt || now) : (record?.approvedAt || '') };
 
         try {
           submitBtn.disabled = true;
@@ -276,6 +282,7 @@ function openRunForm(record, onSaved) {
       });
 
       container.appendChild(topGrid);
+      container.appendChild(el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Comments / Notes'), commentsInput]));
       container.appendChild(el('h3', { class: 'subsection-title' }, 'Employees'));
       container.appendChild(itemsHeader);
       container.appendChild(itemsContainer);
