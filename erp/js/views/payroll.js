@@ -103,13 +103,17 @@ function buildLineRow(line, onChange, getRunContext) {
   deductions.value = line.deductions ?? 0;
   const paid = el('input', { type: 'number', class: 'li-paid', min: 0 });
   paid.value = line.amountPaid ?? 0;
+  const paymentDate = el('input', { type: 'date', class: 'li-payment-date' });
+  paymentDate.value = line.paymentDate || '';
+  const paymentReference = el('input', { type: 'text', class: 'li-payment-reference', placeholder: 'Bank reference' });
+  paymentReference.value = line.paymentReference || '';
   const netSpan = el('strong', {}, formatCurrency(netPay(line)));
   const printBtn = el('button', { type: 'button', class: 'icon-btn', title: 'Print payslip' }, [ico('printer')]);
   const removeBtn = el('button', { type: 'button', class: 'icon-btn icon-btn-danger', title: 'Remove' }, '✕');
 
   const row = el('div', { class: 'payroll-line-row', 'data-employee-id': line.employeeId }, [
     el('span', {}, displayName),
-    base, bonus, deductions, paid, netSpan, printBtn, removeBtn,
+    base, bonus, deductions, paid, paymentDate, paymentReference, netSpan, printBtn, removeBtn,
   ]);
 
   function recompute() {
@@ -170,7 +174,7 @@ function openRunForm(record, onSaved) {
       commentsInput.value = record?.comments || '';
 
       const itemsHeader = el('div', { class: 'payroll-line-header' }, [
-        el('span', {}, 'Employee'), el('span', {}, 'Base Salary'), el('span', {}, 'Bonus'), el('span', {}, 'Deductions'), el('span', {}, 'Paid'), el('span', {}, 'Net Pay'), el('span', {}, ''), el('span', {}, ''),
+        el('span', {}, 'Employee'), el('span', {}, 'Base Salary'), el('span', {}, 'Bonus'), el('span', {}, 'Deductions'), el('span', {}, 'Paid'), el('span', {}, 'Payment Date'), el('span', {}, 'Payment Reference'), el('span', {}, 'Net Pay'), el('span', {}, ''), el('span', {}, ''),
       ]);
       const itemsContainer = el('div', { class: 'line-items-container' });
       const totalDisplay = el('strong', {}, formatCurrency(0));
@@ -253,6 +257,8 @@ function openRunForm(record, onSaved) {
             bonus: Number(row.querySelector('.li-bonus').value) || 0,
             deductions: Number(row.querySelector('.li-deductions').value) || 0,
             amountPaid: Number(row.querySelector('.li-paid').value) || 0,
+            paymentDate: row.querySelector('.li-payment-date')?.value || '',
+            paymentReference: row.querySelector('.li-payment-reference')?.value || '',
           });
         }
         if (!monthInput.value) { window.alert('Pay period is required.'); return; }
