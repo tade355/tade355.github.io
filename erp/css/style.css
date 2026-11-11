@@ -1740,3 +1740,29 @@ a.btn { text-decoration: none; }
   color: var(--brand);
   white-space: nowrap;
 }
+
+/* Shared list readability: every data list keeps its columns usable on desktop
+   and scrollable on phones instead of compressing text into unreadable blocks. */
+.data-table {
+  min-width: 760px;
+  table-layout: auto;
+}
+.data-table th, .data-table td {
+  vertical-align: top;
+  line-height: 1.35;
+}
+.data-table td.cell-wrap,
+.data-table td .cell-wrap {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 720px) {
+  .data-table { min-width: 680px; font-size: 0.84rem; }
+  .data-table th, .data-table td { padding: 0.65rem 0.7rem; }
+}
