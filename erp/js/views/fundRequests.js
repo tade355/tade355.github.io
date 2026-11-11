@@ -402,7 +402,7 @@ function renderRequestsTab(container, onRefresh = () => {}) {
 
   function refresh() {
     onRefresh();
-    const allRows = filterFundRequests(store.get('fundRequests')).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '') || a.id.localeCompare(b.id, undefined, { numeric: true }));
+    const allRows = filterFundRequests(store.get('fundRequests')).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.id.localeCompare(a.id, undefined, { numeric: true }));
     let rows = allRows.filter((r) => requestView === 'active' ? r.status === 'Pending' : r.status !== 'Pending');
     const pending = allRows.filter((r) => r.status === 'Pending').length;
     const totalPending = allRows.filter((r) => r.status === 'Pending').reduce((sum, r) => sum + totalOf(r), 0);
