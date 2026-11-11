@@ -25,7 +25,7 @@ function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
 }
 
-const MONTHLY_STAFF_NAMES = new Set(['Agrimo Gideon', 'Atabo Victoria', 'Gladness Oghenekome', 'Hussein Godstime', 'Oki Christopher', 'Olumide Davidson', 'Sodunke Ola', 'Salifu Job']);
+const MONTHLY_STAFF_NAMES = new Set(['Agrimo Gideon', 'Atabo Victoria', 'Gladness Oghenekome', 'Hussein Godstime', 'Oki Christopher', 'Olumide Davidson', 'Sodunke Ola', 'Salifu Job', 'Dauzigha Joseph']);
 const EXTERNAL_STAFF_NAMES = new Set(['Ewanchia Collins', 'Ogbebor (Pastor)']);
 
 function employmentCategory(employee) {
