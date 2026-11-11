@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
-import { formatCurrency, formatMonthLong, el, ico } from '../utils.js';
+import { formatCurrency, formatDate, formatMonthLong, el, ico } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
 import { printPayslip, printPayrollRegister, printSalaryStatement } from '../print.js';
 import { getCurrentUser } from '../session.js';
