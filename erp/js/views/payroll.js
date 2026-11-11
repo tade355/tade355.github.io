@@ -282,7 +282,8 @@ function openRunForm(record, onSaved) {
         const newStatus = requestedStatus === 'Paid' && paidTotal < approvedTotal ? 'PartiallyPaid' : requestedStatus;
         const now = new Date().toISOString();
         const auditTrail = [...(record?.auditTrail || []), { at: now, action: record ? 'updated' : 'created', status: newStatus }];
-        const payload = { month: monthInput.value, status: newStatus, lines };
+        const databaseStatus = ['Submitted', 'Returned'].includes(newStatus) ? 'Draft' : (newStatus === 'PartiallyPaid' ? 'Paid' : newStatus);
+        const payload = { month: monthInput.value, status: databaseStatus, lines };
 
         try {
           submitBtn.disabled = true;
