@@ -38,7 +38,7 @@ create policy payroll_payments_read on payroll_payments for select to authentica
   using (current_employee_tier() in ('Admin','Accounts'));
 drop policy if exists payroll_payments_insert on payroll_payments;
 create policy payroll_payments_insert on payroll_payments for insert to authenticated
-  with check (current_employee_tier() = 'Accounts');
+  with check (is_payroll_accounts());
 revoke all on payroll_payments from anon, authenticated;
 grant select, insert on payroll_payments to authenticated;
 
@@ -72,6 +72,21 @@ language sql stable security definer set search_path=public as $$
 $$;
 revoke all on function is_payroll_ceo() from public;
 grant execute on function is_payroll_ceo() to authenticated;
+create or replace function is_payroll_accounts() returns boolean
+language sql stable security definer set search_path=public as $
+  select exists (
+    select 1 from employees e
+    where e.auth_user_id = auth.uid() and e.status = 'Active'
+      and (e.access_tier = 'Accounts'
+        or lower(coalesce(e.name,'')) like '%atabo%'
+        or lower(coalesce(e.name,'')) like '%gladness%'
+        or lower(coalesce(e.role,'')) like '%account%'
+        or lower(coalesce(e.role,'')) like '%finance%')
+  );
+$;
+revoke all on function is_payroll_accounts() from public;
+grant execute on function is_payroll_accounts() to authenticated;
+
 
 create or replace function guard_payroll_run_workflow()
 returns trigger language plpgsql security definer set search_path=public as $$
@@ -90,7 +105,7 @@ begin
   end if;
 
   if current_setting('erp.payroll_payment_recalc', true) = new.id then
-    if tier <> 'Accounts' then raise exception 'Only Accounts can record payroll payments'; end if;
+    if not is_payroll_accounts() then raise exception 'Only Accounts can record payroll payments'; end if;
     return new;
   end if;
 
@@ -143,7 +158,7 @@ returns trigger language plpgsql security definer set search_path=public as $$
 declare run_row payroll_runs%rowtype; line_row payroll_lines%rowtype; emp employees%rowtype;
   due numeric; paid numeric; complete boolean; any_paid boolean;
 begin
-  if auth.uid() is not null and current_employee_tier() <> 'Accounts' then
+  if auth.uid() is not null and not is_payroll_accounts() then
     raise exception 'Only Accounts can record payroll payments';
   end if;
   select * into run_row from payroll_runs where id=new.payroll_run_id for update;
