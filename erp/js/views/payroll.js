@@ -251,6 +251,8 @@ function openRunForm(record, onSaved, { review = false } = {}) {
       actions.appendChild(el('button', { type: 'button', class: 'btn btn-ghost', onClick: closeModal }, 'Close'));
 
       const save = async (nextStatus) => {
+        if (!monthInput.value) throw new Error('Select the pay period.');
+        if (!record && store.get('payrollRuns').some((run) => run.month === monthInput.value && run.status !== 'Returned')) throw new Error('A payroll run already exists for this month. Open the existing run instead.');
         const lines = [];
         for (const row of [...items.querySelectorAll('.payroll-line-row')]) {
           row._recompute();
@@ -266,7 +268,6 @@ function openRunForm(record, onSaved, { review = false } = {}) {
           lines.push({ employeeId, baseSalary, bonus, deductions, amountPaid: Number(line.amountPaid || 0) });
         }
         if (!monthInput.value) throw new Error('Select the pay period.');
-        if (!record && store.get('payrollRuns').some((run) => run.month === monthInput.value && run.status !== 'Returned')) throw new Error('A payroll run already exists for this month. Open the existing run instead.');
         if (!lines.length) throw new Error('Add at least one employee.');
         if (new Set(lines.map((line) => line.employeeId)).size !== lines.length) throw new Error('Each staff member can appear only once.');
         const payload = { month: monthInput.value, status: nextStatus, lines, comments: comments.value.trim() || null };
