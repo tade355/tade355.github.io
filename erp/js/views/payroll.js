@@ -162,12 +162,11 @@ function openRunForm(record, onSaved) {
       const monthField = el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Pay Period *'), monthInput]);
 
       const statusOptions = isCEO() ? ['Draft', 'Submitted', 'Approved', 'Returned', 'PartiallyPaid', 'Paid'] : (isAccounts() ? ['Approved', 'PartiallyPaid', 'Paid'] : ['Draft', 'Submitted']);
-      const statusSelect = el('select', { name: 'status' }, statusOptions.map((s) => {
-        const opt = el('option', { value: s }, payrollStatusLabel(s));
-        if ((record?.status || 'Draft') === s) opt.setAttribute('selected', 'selected');
-        return opt;
-      }));
-      const statusField = el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Status'), statusSelect]);
+      const currentStatus = record?.status || 'Draft';
+      const statusField = el('div', { class: 'field' }, [
+        el('span', { class: 'field-label' }, 'Status'),
+        el('strong', { class: 'status-summary' }, payrollStatusLabel(currentStatus)),
+      ]);
 
       const topGrid = el('div', { class: 'form-grid-2' }, [monthField, statusField]);
       const commentsInput = el('textarea', { name: 'comments', placeholder: 'CEO comments or payroll notes' });
@@ -228,9 +227,10 @@ function openRunForm(record, onSaved) {
 
       const totalRow = el('div', { class: 'line-items-total' }, [el('span', {}, 'Total Net Pay:'), totalDisplay]);
 
+      const primaryLabel = !record ? 'Submit for CEO Approval' : (isCEO() && record.status === 'Submitted' ? 'Approve Payroll' : 'Save Changes');
       const actions = el('div', { class: 'modal-actions' }, [
         el('button', { type: 'button', class: 'btn btn-ghost', onClick: closeModal }, 'Cancel'),
-        el('button', { type: 'button', class: 'btn btn-primary' }, record ? 'Save Changes' : 'Create Run'),
+        el('button', { type: 'button', class: 'btn btn-primary' }, primaryLabel),
       ]);
       const submitBtn = actions.lastChild;
 
@@ -266,7 +266,7 @@ function openRunForm(record, onSaved) {
         if (lines.some((l) => l.amountPaid > (l.baseSalary + l.bonus - l.deductions))) { window.alert('A payment cannot be higher than the approved amount.'); return; }
         if (!record && store.get('payrollRuns').some((r) => r.month === monthInput.value)) { window.alert('A payroll run already exists for this month. Edit the existing run instead.'); return; }
 
-        const requestedStatus = statusSelect.value;
+        const requestedStatus = !record ? 'Submitted' : (isCEO() && record.status === 'Submitted' ? 'Approved' : record.status);
         const approvedTotal = lines.reduce((sum, l) => sum + l.baseSalary + l.bonus - l.deductions, 0);
         const paidTotal = lines.reduce((sum, l) => sum + (l.amountPaid || 0), 0);
         const newStatus = requestedStatus === 'Paid' && paidTotal < approvedTotal ? 'PartiallyPaid' : requestedStatus;
@@ -303,7 +303,7 @@ function openRunForm(record, onSaved) {
         } catch (err) {
           window.alert(err.message || 'Could not save this payroll run. Please try again.');
           submitBtn.disabled = false;
-          submitBtn.textContent = record ? 'Save Changes' : 'Create Run';
+          submitBtn.textContent = primaryLabel;
         }
       });
 
