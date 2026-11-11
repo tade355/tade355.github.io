@@ -147,7 +147,7 @@ export function renderHR(container) {
   const employeesTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('employees') }, 'Employees');
   const memosTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('memos') }, 'Letters');
   const assetsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('assets') }, 'Assets');
-  const payrollTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('payroll') }, 'Payroll');
+  const payrollTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('payroll') }, 'Payroll Preparation');
   const operatorAllowanceTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('operatorAllowance') }, 'Operator Allowance');
   const trainingProgramsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('trainingPrograms') }, 'Training Programs');
   const personHistoryTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('personHistory') }, 'Person History');
@@ -160,7 +160,7 @@ export function renderHR(container) {
   tabBar.appendChild(trainingProgramsTabBtn);
 
   const actionSlot = el('div');
-  container.appendChild(sectionHeader('HR & Employees', 'Staff records, roles, memos/letters, payroll, operator allowance, training programs, and person history', actionSlot));
+  container.appendChild(sectionHeader('HR & Employees', 'Staff records, roles, employment categories, payroll preparation, operator allowance, training programs, and person history', actionSlot));
   container.appendChild(tabBar);
 
   const body = el('div');
