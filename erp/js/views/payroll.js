@@ -379,7 +379,7 @@ export function renderPayroll(container, { mode = 'preparation' } = {}) {
         {key:'percent',label:'Paid',render:(row)=>`${netPay(row.line)?Math.min(100,Math.round((Number(row.line.amountPaid||0)/netPay(row.line))*100)):0}%`},
         {key:'balance',label:'Outstanding',render:(row)=>formatCurrency(runOutstanding(row.run,row.line))},
         {key:'history',label:'Payment history',render:(row)=>paymentHistoryView(row.run.id,row.line.employeeId)},
-        {key:'action',label:'',render:(row)=>canPay&&runOutstanding(row.run,row.line)>0?el('button',{type:'button',class:'btn btn-primary btn-sm',onClick:()=>openPaymentForm(row.run,row.line.employeeId,refresh)},'Record payment'):el('span',{class:'muted'},'View')},
+        {key:'action',label:'',render:(row)=>canPay&&runOutstanding(row.run,row.line)>0?el('button',{type:'button',class:'btn btn-primary btn-sm',onClick:()=>openPaymentForm(row.run,row.line.employeeId,refresh)},'Record payment'):el('button',{type:'button',class:'btn btn-ghost btn-sm',onClick:()=>openReadOnlyRun(row.run,refresh)},'View')},
       ],rows,emptyText:'No approved payrolls are waiting for payment.'});
     }
     refresh();return;
