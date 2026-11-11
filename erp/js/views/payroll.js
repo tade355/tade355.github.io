@@ -13,6 +13,10 @@ function employeeNameOnly(id) {
   return store.get('employees').find((x) => x.id === id)?.name || 'Unknown';
 }
 
+function isMonthlySalaryStaff(employee) {
+  return Number(employee.salary || 0) > 0;
+}
+
 export function netPay(line) {
   return (line.baseSalary || 0) + (line.bonus || 0) - (line.deductions || 0);
 }
@@ -68,6 +72,7 @@ export function balanceOwed(employeeId) {
 
 function buildLineRow(line, onChange, getRunContext) {
   const employee = store.get('employees').find((e) => e.id === line.employeeId);
+  const displayName = line.employeeName || (employee ? `${employee.name} (${employee.role})` : 'One-off staff');
   const base = el('input', { type: 'number', class: 'li-base', min: 0 });
   base.value = line.baseSalary ?? 0;
   const bonus = el('input', { type: 'number', class: 'li-bonus', min: 0 });
@@ -81,7 +86,7 @@ function buildLineRow(line, onChange, getRunContext) {
   const removeBtn = el('button', { type: 'button', class: 'icon-btn icon-btn-danger', title: 'Remove' }, '✕');
 
   const row = el('div', { class: 'payroll-line-row', 'data-employee-id': line.employeeId }, [
-    el('span', {}, employee ? `${employee.name} (${employee.role})` : 'Unknown'),
+    el('span', {}, displayName),
     base, bonus, deductions, paid, netSpan, printBtn, removeBtn,
   ]);
 
@@ -109,7 +114,7 @@ function buildLineRow(line, onChange, getRunContext) {
 }
 
 function openRunForm(record, onSaved) {
-  if (!store.get('employees').some((e) => e.status === 'Active')) {
+  if (!store.get('employees').some((e) => e.status === 'Active' && isMonthlySalaryStaff(e))) {
     window.alert('No Active employees found. Payroll runs are generated from Active staff in HR.');
     return;
   }
@@ -151,7 +156,7 @@ function openRunForm(record, onSaved) {
 
       const initialLines = record?.lines?.length
         ? record.lines
-        : store.get('employees').filter((e) => e.status === 'Active').map((e) => ({ employeeId: e.id, baseSalary: e.salary || 0, bonus: 0, deductions: 0, amountPaid: 0 }));
+        : store.get('employees').filter((e) => e.status === 'Active' && isMonthlySalaryStaff(e)).map((e) => ({ employeeId: e.id, baseSalary: e.salary || 0, bonus: 0, deductions: 0, amountPaid: 0 }));
       initialLines.forEach((line) => itemsContainer.appendChild(buildLineRow(line, recomputeTotal, runContext)));
       recomputeTotal();
 
@@ -161,6 +166,20 @@ function openRunForm(record, onSaved) {
           .filter((e) => !initialLines.some((l) => l.employeeId === e.id))
           .map((e) => el('option', { value: e.id }, `${e.name} (${e.role})`)),
       ]);
+      const oneOffName = el('input', { type: 'text', placeholder: 'Adhoc / part-time staff name' });
+      const oneOffAmount = el('input', { type: 'number', min: 0, placeholder: 'Amount (₦)' });
+      const addOneOffBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '+ Add one-off staff');
+      addOneOffBtn.addEventListener('click', () => {
+        const name = oneOffName.value.trim();
+        const amount = Number(oneOffAmount.value) || 0;
+        if (!name || amount <= 0) { window.alert('Enter the one-off staff name and amount.'); return; }
+        itemsContainer.appendChild(buildLineRow({ employeeId: `adhoc-${Date.now()}`, employeeName: name, baseSalary: amount, bonus: 0, deductions: 0, amountPaid: 0 }, recomputeTotal, runContext));
+        oneOffName.value = '';
+        oneOffAmount.value = '';
+        recomputeTotal();
+      });
+      const oneOffRow = el('div', { class: 'form-grid-2' }, [oneOffName, oneOffAmount, addOneOffBtn]);
+
       addSelect.addEventListener('change', () => {
         if (!addSelect.value) return;
         const emp = store.get('employees').find((e) => e.id === addSelect.value);
@@ -181,6 +200,7 @@ function openRunForm(record, onSaved) {
       submitBtn.addEventListener('click', async () => {
         const lines = [...itemsContainer.querySelectorAll('.payroll-line-row')].map((row) => ({
           employeeId: row.getAttribute('data-employee-id'),
+          employeeName: row.getAttribute('data-employee-id')?.startsWith('adhoc-') ? row.querySelector('span')?.textContent || 'One-off staff' : undefined,
           baseSalary: Number(row.querySelector('.li-base').value) || 0,
           bonus: Number(row.querySelector('.li-bonus').value) || 0,
           deductions: Number(row.querySelector('.li-deductions').value) || 0,
@@ -230,6 +250,7 @@ function openRunForm(record, onSaved) {
       container.appendChild(itemsHeader);
       container.appendChild(itemsContainer);
       container.appendChild(addSelect);
+      container.appendChild(oneOffRow);
       container.appendChild(totalRow);
       container.appendChild(actions);
     },
