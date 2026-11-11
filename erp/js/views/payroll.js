@@ -233,6 +233,15 @@ function openRunForm(record, onSaved) {
         el('button', { type: 'button', class: 'btn btn-primary' }, primaryLabel),
       ]);
       const submitBtn = actions.lastChild;
+      if (record && isCEO() && record.status === 'Submitted') {
+        const returnBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Return for Correction');
+        returnBtn.addEventListener('click', async () => {
+          await store.update('payrollRuns', record.id, { status: 'Returned', comments: commentsInput.value.trim(), auditTrail: [...(record.auditTrail || []), { at: new Date().toISOString(), action: 'returned', status: 'Returned' }] });
+          closeModal();
+          onSaved();
+        });
+        actions.insertBefore(returnBtn, submitBtn);
+      }
 
       submitBtn.addEventListener('click', async () => {
         const lines = [];
