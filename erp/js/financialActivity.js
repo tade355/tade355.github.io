@@ -25,3 +25,25 @@ export function financialActivity(ctx, basis = 'cash') {
   return rows;
 }
 
+
+/** Cash expense register, sharing reconciliation rules with financial reports. */
+export function expenseLedgerRows(ctx) {
+  const expenses = new Map((ctx.expenses || []).map(row => [row.id, row]));
+  const requests = new Map((ctx.fundRequests || []).map(row => [row.id, row]));
+  return financialActivity(ctx)
+    .filter(row => row.type === 'Expenditure' && ['Expense', 'Paid Fund Request'].includes(row.source))
+    .map(row => {
+      if (row.source === 'Expense') return { ...expenses.get(row.id), source: 'Expense', sourceId: row.id };
+      const request = requests.get(row.id);
+      const payees = [...new Set((request.items || []).map(item => item.accountName).filter(Boolean))];
+      return {
+        id: row.id, sourceId: row.id, source: 'Paid Fund Request', date: row.date,
+        category: row.costHead, description: row.description, amount: row.amount,
+        payee: payees.join(' / '), paidBy: request.paidBy || '',
+        project: row.project, equipment: request.equipment || '',
+        paymentReference: request.paymentReference || '', fundRequestId: row.id,
+      };
+    })
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) ||
+      String(b.id).localeCompare(String(a.id), undefined, { numeric: true }));
+}
