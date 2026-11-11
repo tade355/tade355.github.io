@@ -269,8 +269,6 @@ function openRunForm(record, onSaved) {
             bonus: Number(row.querySelector('.li-bonus').value) || 0,
             deductions: Number(row.querySelector('.li-deductions').value) || 0,
             amountPaid: Number(row.querySelector('.li-paid').value) || 0,
-            paymentDate: row.querySelector('.li-payment-date')?.value || '',
-            paymentReference: row.querySelector('.li-payment-reference')?.value || '',
           });
         }
         if (!monthInput.value) { window.alert('Pay period is required.'); return; }
