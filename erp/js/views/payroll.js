@@ -139,7 +139,7 @@ function openRunForm(record, onSaved) {
       const monthField = el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Pay Period *'), monthInput]);
 
       const statusSelect = el('select', { name: 'status' }, ['Draft', 'Submitted', 'Approved', 'Returned', 'PartiallyPaid', 'Paid'].map((s) => {
-        const opt = el('option', { value: s }, s);
+        const opt = el('option', { value: s }, payrollStatusLabel(s));
         if ((record?.status || 'Draft') === s) opt.setAttribute('selected', 'selected');
         return opt;
       }));
