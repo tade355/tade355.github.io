@@ -51,6 +51,7 @@ export function renderRequestPayments(container) {
         el('h3',{},formatCurrency(due)+' to pay'),
         el('p', {}, r.queueApprovedAt ? 'Approved ' + approvalDateText(r.queueApprovedAt) + ' WAT' : 'Approval date unavailable'),
         el('p', {}, 'Submitted ' + formatDate(requestSubmissionDate(r))),
+        el('p', {}, 'Category: ' + (r.costHead || 'Not categorized') + (r.equipment ? ' · Dozer: ' + r.equipment : '')),
         el('p',{},r.description||'Fund request'),
         el('p',{},'Requested '+formatCurrency(total)+' · Approved '+formatCurrency(approved)+' · Paid '+formatCurrency(paid)),
         el('p',{},(recipient.accountName||'Missing account name')+' · '+(recipient.bankName||'Missing bank')+' · '+(recipient.accountNumber||'Missing account number')),
