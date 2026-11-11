@@ -121,6 +121,9 @@ begin
   if auth.uid() is null then return coalesce(new,old); end if;
   rid := case when tg_op = 'DELETE' then old.payroll_run_id else new.payroll_run_id end;
   select status into run_status from payroll_runs where id=rid for update;
+  if current_setting('erp.payroll_payment_aggregate', true) = rid and tier = 'Accounts' then
+    return coalesce(new,old);
+  end if;
   if current_setting('erp.payroll_review_run', true) = rid and is_payroll_ceo() then
     return coalesce(new,old);
   end if;
@@ -175,31 +178,6 @@ end $$;
 drop trigger if exists trg_record_payroll_payment on payroll_payments;
 create trigger trg_record_payroll_payment after insert on payroll_payments
   for each row execute function record_payroll_payment();
-
-create or replace function erp_save_mapping(p_table text) returns jsonb
-language sql immutable set search_path=public as $$
-  select case p_table
-    when 'payroll_payments' then '[]'::jsonb
-    else (case p_table
-      when 'invoices' then '["invoice_items","invoice_id"]'::jsonb
-      when 'purchase_orders' then '["purchase_order_items","purchase_order_id"]'::jsonb
-      when 'fund_requests' then '["fund_request_items","fund_request_id"]'::jsonb
-      when 'payroll_runs' then '["payroll_lines","payroll_run_id"]'::jsonb
-      when 'dozer_payroll_runs' then '["dozer_payroll_lines","dozer_payroll_run_id"]'::jsonb
-      when 'machine_status_reports' then '["machine_status_report_lines","report_id"]'::jsonb
-      when 'employees' then '[]'::jsonb when 'inventory' then '[]'::jsonb when 'customers' then '[]'::jsonb
-      when 'suppliers' then '[]'::jsonb when 'projects' then '[]'::jsonb when 'expenses' then '[]'::jsonb
-      when 'operations' then '[]'::jsonb when 'maintenance_logs' then '[]'::jsonb when 'diesel_receipts' then '[]'::jsonb
-      when 'diesel_stock_counts' then '[]'::jsonb when 'leave_requests' then '[]'::jsonb when 'attendance_logs' then '[]'::jsonb
-      when 'fueling_vouchers' then '[]'::jsonb when 'financial_entries' then '[]'::jsonb when 'dozer_owner_settlements' then '[]'::jsonb
-      when 'staff_memos' then '[]'::jsonb when 'dozer_rate_history' then '[]'::jsonb when 'project_rate_history' then '[]'::jsonb
-      when 'notice_board_posts' then '[]'::jsonb when 'fuel_credit_collections' then '[]'::jsonb when 'fuel_credit_payments' then '[]'::jsonb
-      when 'dozer_part_withdrawals' then '[]'::jsonb when 'assets' then '[]'::jsonb when 'inventory_withdrawals' then '[]'::jsonb
-      when 'diesel_station_prepayments' then '[]'::jsonb when 'diesel_site_distributions' then '[]'::jsonb when 'invoice_payments' then '[]'::jsonb
-      when 'loans' then '[]'::jsonb when 'loan_repayments' then '[]'::jsonb when 'training_submissions' then '[]'::jsonb
-      when 'training_programs' then '[]'::jsonb else null end)
-  end;
-$$;
 
 update payroll_runs r set status='PartiallyPaid'
 where r.status='Approved' and exists(select 1 from payroll_lines l where l.payroll_run_id=r.id and l.amount_paid>0)
