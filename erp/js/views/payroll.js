@@ -198,14 +198,30 @@ function openRunForm(record, onSaved) {
       const submitBtn = actions.lastChild;
 
       submitBtn.addEventListener('click', async () => {
-        const lines = [...itemsContainer.querySelectorAll('.payroll-line-row')].map((row) => ({
-          employeeId: row.getAttribute('data-employee-id'),
-          employeeName: row.getAttribute('data-employee-id')?.startsWith('adhoc-') ? row.querySelector('span')?.textContent || 'One-off staff' : undefined,
-          baseSalary: Number(row.querySelector('.li-base').value) || 0,
-          bonus: Number(row.querySelector('.li-bonus').value) || 0,
-          deductions: Number(row.querySelector('.li-deductions').value) || 0,
-          amountPaid: Number(row.querySelector('.li-paid').value) || 0,
-        }));
+        const lines = [];
+        for (const row of [...itemsContainer.querySelectorAll('.payroll-line-row')]) {
+          let employeeId = row.getAttribute('data-employee-id');
+          if (employeeId?.startsWith('adhoc-')) {
+            const employeeName = row.querySelector('span')?.textContent?.trim() || 'One-off staff';
+            const adhoc = await store.add('employees', {
+              name: employeeName,
+              role: 'Adhoc / Part-time',
+              department: 'Operations',
+              status: 'Active',
+              accessTier: 'Staff',
+              salary: 0,
+              dayRate: 0,
+            });
+            employeeId = adhoc.id;
+          }
+          lines.push({
+            employeeId,
+            baseSalary: Number(row.querySelector('.li-base').value) || 0,
+            bonus: Number(row.querySelector('.li-bonus').value) || 0,
+            deductions: Number(row.querySelector('.li-deductions').value) || 0,
+            amountPaid: Number(row.querySelector('.li-paid').value) || 0,
+          });
+        }
         if (!monthInput.value) { window.alert('Pay period is required.'); return; }
         if (!lines.length) { window.alert('Add at least one employee.'); return; }
 
