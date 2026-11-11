@@ -33,6 +33,7 @@ const CONFIG = {
   fundRequests: { table: 'fund_requests', prefix: 'FR', child: { key: 'items', table: 'fund_request_items', fk: 'fund_request_id' } },
   fundRequestPayments: { table: 'fund_request_payments', prefix: 'FRP' },
   payrollRuns: { table: 'payroll_runs', prefix: 'PR', child: { key: 'lines', table: 'payroll_lines', fk: 'payroll_run_id' } },
+  payrollPayments: { table: 'payroll_payments', prefix: 'PPAY', orderBy: 'payment_date' },
   financialEntries: { table: 'financial_entries', prefix: 'FE' },
   dozerPayrollRuns: { table: 'dozer_payroll_runs', prefix: 'DPR', child: { key: 'lines', table: 'dozer_payroll_lines', fk: 'dozer_payroll_run_id' } },
   dozerOwnerSettlements: { table: 'dozer_owner_settlements', prefix: 'DOS' },
@@ -273,6 +274,16 @@ export const store = {
     state[collection] = [...(state[collection] || []).filter((r) => r.id !== id), saved];
     emitRecordAction('created', collection);
     return store.find(collection, id);
+  },
+  async recordPayrollPayment(record) {
+    const id = record.id || (await unusedId('payrollPayments'));
+    const payload = rowToDb({ ...record, id });
+    const { data, error } = await supabase.from(CONFIG.payrollPayments.table).insert(payload).select('*').single();
+    if (error) throw new Error(`Could not record this payroll payment (${error.message}).`);
+    const saved = rowFromDb(data);
+    state.payrollPayments = [...(state.payrollPayments || []).filter((row) => row.id !== id), saved];
+    emitRecordAction('created', 'payrollPayments');
+    return saved;
   },
   async update(collection, id, patch) {
     const existing = store.find(collection, id) || {};
