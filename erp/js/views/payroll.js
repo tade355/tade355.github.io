@@ -92,7 +92,7 @@ export function balanceOwed(employeeId) {
   return earned - paid;
 }
 
-function buildLineRow(line, onChange, getRunContext) {
+function buildLineRow(line, onChange, getRunContext, showPaymentFields = false) {
   const employee = store.get('employees').find((e) => e.id === line.employeeId);
   const displayName = line.employeeName || (employee ? `${employee.name} (${employee.role})` : 'One-off staff');
   const base = el('input', { type: 'number', class: 'li-base', min: 0 });
@@ -107,13 +107,15 @@ function buildLineRow(line, onChange, getRunContext) {
   paymentDate.value = line.paymentDate || '';
   const paymentReference = el('input', { type: 'text', class: 'li-payment-reference', placeholder: 'Bank reference' });
   paymentReference.value = line.paymentReference || '';
+  paymentDate.hidden = !showPaymentFields;
+  paymentReference.hidden = !showPaymentFields;
   const netSpan = el('strong', {}, formatCurrency(netPay(line)));
   const printBtn = el('button', { type: 'button', class: 'icon-btn', title: 'Print payslip' }, [ico('printer')]);
   const removeBtn = el('button', { type: 'button', class: 'icon-btn icon-btn-danger', title: 'Remove' }, '✕');
 
   const row = el('div', { class: 'payroll-line-row', 'data-employee-id': line.employeeId }, [
     el('span', {}, displayName),
-    base, bonus, deductions, paid, paymentDate, paymentReference, netSpan, printBtn, removeBtn,
+    base, bonus, deductions, paid, ...(showPaymentFields ? [paymentDate, paymentReference] : []), netSpan, printBtn, removeBtn,
   ]);
 
   function recompute() {
@@ -173,7 +175,7 @@ function openRunForm(record, onSaved) {
       commentsInput.value = record?.comments || '';
 
       const itemsHeader = el('div', { class: 'payroll-line-header' }, [
-        el('span', {}, 'Employee'), el('span', {}, 'Base Salary'), el('span', {}, 'Bonus'), el('span', {}, 'Deductions'), el('span', {}, 'Paid'), el('span', {}, 'Payment Date'), el('span', {}, 'Payment Reference'), el('span', {}, 'Net Pay'), el('span', {}, ''), el('span', {}, ''),
+        el('span', {}, 'Employee'), el('span', {}, 'Base Salary'), el('span', {}, 'Bonus'), el('span', {}, 'Deductions'), el('span', {}, 'Paid'), ...(showPaymentFields ? [el('span', {}, 'Payment Date'), el('span', {}, 'Payment Reference')] : []), el('span', {}, 'Net Pay'), el('span', {}, ''), el('span', {}, ''),
       ]);
       const itemsContainer = el('div', { class: 'line-items-container' });
       const totalDisplay = el('strong', {}, formatCurrency(0));
@@ -193,7 +195,8 @@ function openRunForm(record, onSaved) {
       const initialLines = record?.lines?.length
         ? record.lines
         : store.get('employees').filter((e) => e.status === 'Active' && isMonthlySalaryStaff(e)).map((e) => ({ employeeId: e.id, baseSalary: e.salary || 0, bonus: 0, deductions: 0, amountPaid: 0 }));
-      initialLines.forEach((line) => itemsContainer.appendChild(buildLineRow(line, recomputeTotal, runContext)));
+      const showPaymentFields = !!record && isAccounts() && ['Approved', 'PartiallyPaid', 'Paid'].includes(record.status);
+      initialLines.forEach((line) => itemsContainer.appendChild(buildLineRow(line, recomputeTotal, runContext, showPaymentFields)));
       recomputeTotal();
 
       const addSelect = el('select', {}, [
@@ -209,7 +212,7 @@ function openRunForm(record, onSaved) {
         const name = oneOffName.value.trim();
         const amount = Number(oneOffAmount.value) || 0;
         if (!name || amount <= 0) { window.alert('Enter the one-off staff name and amount.'); return; }
-        itemsContainer.appendChild(buildLineRow({ employeeId: `adhoc-${Date.now()}`, employeeName: name, baseSalary: amount, bonus: 0, deductions: 0, amountPaid: 0 }, recomputeTotal, runContext));
+        itemsContainer.appendChild(buildLineRow({ employeeId: `adhoc-${Date.now()}`, employeeName: name, baseSalary: amount, bonus: 0, deductions: 0, amountPaid: 0 }, recomputeTotal, runContext, false));
         oneOffName.value = '';
         oneOffAmount.value = '';
         recomputeTotal();
@@ -219,7 +222,7 @@ function openRunForm(record, onSaved) {
       addSelect.addEventListener('change', () => {
         if (!addSelect.value) return;
         const emp = store.get('employees').find((e) => e.id === addSelect.value);
-        itemsContainer.appendChild(buildLineRow({ employeeId: emp.id, baseSalary: emp.salary || 0, bonus: 0, deductions: 0, amountPaid: 0 }, recomputeTotal, runContext));
+        itemsContainer.appendChild(buildLineRow({ employeeId: emp.id, baseSalary: emp.salary || 0, bonus: 0, deductions: 0, amountPaid: 0 }, recomputeTotal, runContext, showPaymentFields));
         recomputeTotal();
         addSelect.querySelectorAll(`option[value="${emp.id}"]`).forEach((o) => o.remove());
         addSelect.value = '';
