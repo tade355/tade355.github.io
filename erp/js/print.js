@@ -123,6 +123,8 @@ export function printFundRequest(request, { projectLabel, submittedByName, appro
       <div><strong>Project:</strong> ${projectLabel || request.project || '—'}</div>
       <div><strong>Submitted By:</strong> ${submittedByName || 'Unknown'}</div>
       <div><strong>Status:</strong> ${request.status}</div>
+      <div><strong>Category:</strong> ${String(request.costHead || '—').replace(/[&<>\"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[ch]))}</div>
+      ${request.equipment ? `<div><strong>Dozer code:</strong> ${String(request.equipment).replace(/[&<>\"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[ch]))}</div>` : ''}
     </div>
     ${request.description ? `<div class="print-block"><strong>Description:</strong><p>${request.description}</p></div>` : ''}
     <table class="print-table">
