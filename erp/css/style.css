@@ -1709,3 +1709,34 @@ a.btn { text-decoration: none; }
 .approval-request-card button {min-height:44px;white-space:normal;}
 .approval-request-card details {margin:.8rem 0;}
 .approval-request-card summary {cursor:pointer;padding:.5rem 0;font-weight:600;}
+
+/* Payroll review and payment summary */
+.payroll-lines-readonly {
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 0.35rem;
+}
+.payroll-lines-readonly .payroll-line-row {
+  min-width: 980px;
+  grid-template-columns: minmax(220px, 2.2fr) repeat(6, minmax(105px, 1fr)) minmax(185px, 1.6fr);
+  gap: 0.85rem;
+  padding: 0.8rem 0;
+  margin: 0;
+  border-bottom: 1px solid var(--border);
+  align-items: start;
+}
+.payroll-lines-readonly .payroll-line-row > * {
+  min-width: 0;
+  line-height: 1.35;
+}
+.payroll-lines-readonly .payroll-line-row > strong:first-child {
+  overflow-wrap: anywhere;
+}
+.payroll-lines-readonly .payroll-payment-history {
+  min-width: 0;
+}
+.payroll-lines-readonly .payroll-payment-history summary {
+  cursor: pointer;
+  color: var(--brand);
+  white-space: nowrap;
+}
