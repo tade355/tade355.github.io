@@ -1,5 +1,5 @@
 const num = (v) => Number(v) || 0;
-const approved = (r) => ['Approved', 'Paid'].includes(r.status);
+const approved = (r) => ['Approved', 'PartiallyPaid', 'Paid'].includes(r.status);
 
 // Only this employee's rows enter the statement. Approved figures are
 // authoritative; post-payroll work is an estimate, never a new payroll entry.
