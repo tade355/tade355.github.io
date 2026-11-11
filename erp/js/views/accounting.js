@@ -49,7 +49,7 @@ export function renderAccounting(container) {
   const tabBar = el('div', { class: 'tab-bar' });
   const overviewTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('overview') }, 'Finance Overview');
   const operatorAllowanceTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('operatorAllowance') }, 'Operator Allowances');
-  const payrollTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('payroll') }, 'Staff Payroll');
+  const payrollTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('payroll') }, 'Payroll Payments');
   const expensesTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('expenses') }, 'Expenses');
   const incomeExpenditureTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('incomeExpenditure') }, 'Income & Expenditure');
   const profitabilityTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('profitability') }, 'Profitability');
@@ -67,7 +67,7 @@ export function renderAccounting(container) {
   tabBar.appendChild(budgetsTabBtn);
 
   const actionSlot = el('div');
-  container.appendChild(sectionHeader('Finance & Accounts', 'Cash, commitments, receivables, payroll, operator allowances, loans, expenses, and profitability in one control centre', actionSlot));
+  container.appendChild(sectionHeader('Finance & Accounts', 'Cash, commitments, receivables, payroll payments, operator allowances, loans, expenses, and profitability in one control centre', actionSlot));
   container.appendChild(tabBar);
 
   const body = el('div');
@@ -147,7 +147,7 @@ export function renderAccounting(container) {
     const quick = el('div', { class: 'filter-bar' }, [
       el('button', { class: 'btn btn-primary', type: 'button', onClick: () => setTab('expenses') }, 'Record expense'),
       el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => setTab('operatorAllowance') }, 'Manage operator allowances'),
-      el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => setTab('payroll') }, 'Manage staff payroll'),
+      el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => setTab('payroll') }, 'Manage payroll payments'),
       el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => setTab('incomeExpenditure') }, 'Income & expenditure'),
     ]);
     body.appendChild(quick);
