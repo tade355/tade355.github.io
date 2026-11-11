@@ -13,7 +13,7 @@ import { findDuplicateRequests, requestTotal } from '../requestDuplicates.js';
 import { canDecideFundRequests, canDecideLeave } from '../access.js';
 
 function costHeadOptions() {
-  return [{ value: '', label: '— Not categorized —' }, ...EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }))];
+  return [{ value: '', label: '— Select request category —' }, ...EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c === 'Administration' ? 'Admin / office' : c === 'Maintenance' ? 'Bulldozer maintenance' : c }))];
 }
 
 function projectOptions() {
@@ -128,7 +128,19 @@ function openRequestForm(record, onSaved) {
         el('span', { class: 'field-label' }, 'Tag staff (optional)'),
         staffTags, staffSearch, staffSuggestions,
       ]);
-      const costHeadField = selectField('costHead', 'Cost Head (for Income & Expenditure reporting)', costHeadOptions(), record?.costHead);
+      const costHeadField = selectField('costHead', 'Request category *', costHeadOptions(), record?.costHead);
+      const dozers = store.get('inventory').filter(item => item.category === 'Heavy Equipment');
+      const equipmentField = selectField('equipment', 'Dozer code *', [
+        { value: '', label: '— Select the dozer —' },
+        ...dozers.map(item => ({ value: item.name, label: [item.assetCode || item.sku, item.name].filter((v, i, a) => v && a.indexOf(v) === i).join(' — ') })),
+      ], record?.equipment);
+      const updateEquipmentVisibility = () => {
+        const maintenance = costHeadField.querySelector('select').value === 'Maintenance';
+        equipmentField.hidden = !maintenance;
+        equipmentField.querySelector('select').required = maintenance;
+      };
+      costHeadField.querySelector('select').addEventListener('change', updateEquipmentVisibility);
+      updateEquipmentVisibility();
       const descriptionInput = el('textarea', { name: 'description', rows: 2 });
       descriptionInput.value = record?.description || '';
       const descriptionField = el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Description'), descriptionInput]);
@@ -163,7 +175,7 @@ function openRequestForm(record, onSaved) {
       const bankField = textField('recipientBank', 'Bank', 'text', recipient.bankName || '', true);
       const recipientGrid = el('div', { class: 'form-grid-2' }, [accountNameField, accountNumberField, bankField]);
       const moreDetails = el('details', { class: 'request-more-details' }, [
-        el('summary', {}, 'More details (optional)'), submittedByField, costHeadField, concernedField,
+        el('summary', {}, 'More details (optional)'), submittedByField, concernedField,
       ]);
 
       const isAdmin = getCurrentTier() === 'Admin';
@@ -217,6 +229,8 @@ function openRequestForm(record, onSaved) {
           bankName: bankField.querySelector('input').value.trim(),
         })).filter((it) => it.description || it.amount);
 
+        if (!costHeadField.querySelector('select').value) { window.alert('Select a request category.'); return; }
+        if (costHeadField.querySelector('select').value === 'Maintenance' && !equipmentField.querySelector('select').value) { window.alert('Select the dozer code for this maintenance request.'); return; }
         if (!dateField.querySelector('input').value) { window.alert('Date is required.'); return; }
         if (!items.length) { window.alert('Add at least one item.'); return; }
         if (!accountNameField.querySelector('input').value.trim() || !accountNumberField.querySelector('input').value.trim() || !bankField.querySelector('input').value.trim()) { window.alert('Enter the recipient account name, number and bank.'); return; }
@@ -252,6 +266,7 @@ function openRequestForm(record, onSaved) {
           submittedBy: submittedByField.querySelector('select').value,
           concernedStaff: [...selectedStaff],
           costHead: costHeadField.querySelector('select').value,
+          equipment: costHeadField.querySelector('select').value === 'Maintenance' ? equipmentField.querySelector('select').value : null,
           description: descriptionInput.value,
           items,
           status: newStatus,
@@ -288,6 +303,7 @@ function openRequestForm(record, onSaved) {
       });
 
       container.appendChild(topGrid);
+      container.appendChild(el('div', { class: 'form-grid-2' }, [costHeadField, equipmentField]));
       container.appendChild(descriptionField);
       container.appendChild(el('h3', { class: 'subsection-title' }, 'Line Items'));
       container.appendChild(itemsContainer);
@@ -393,7 +409,7 @@ function renderRequestsTab(container, onRefresh = () => {}) {
 
     if (statusFilter) rows = rows.filter((r) => r.status === statusFilter);
     if (searchQuery) {
-      rows = rows.filter((r) => [r.description, r.project, employeeName(r.submittedBy)].join(' ').toLowerCase().includes(searchQuery));
+      rows = rows.filter((r) => [r.description, r.project, r.costHead, r.equipment, employeeName(r.submittedBy)].join(' ').toLowerCase().includes(searchQuery));
     }
 
     summarySlot.innerHTML = '';
@@ -434,7 +450,8 @@ function renderRequestsTab(container, onRefresh = () => {}) {
         { key: 'project', label: 'Project', render: (r) => r.project || '—' },
         { key: 'approvedAmount', label: 'Approved', render: (r) => r.approvedAmount != null ? formatCurrency(r.approvedAmount) : '—' },
         { key: 'paidAmount', label: 'Paid', render: (r) => r.paidAmount != null ? formatCurrency(r.paidAmount) : '—' },
-        { key: 'costHead', label: 'Category', render: (r) => r.costHead || '—' },
+        { key: 'costHead', label: 'Category', render: (r) => r.costHead === 'Administration' ? 'Admin / office' : r.costHead === 'Maintenance' ? 'Bulldozer maintenance' : r.costHead || '—' },
+        { key: 'equipment', label: 'Dozer code', render: (r) => r.equipment || '—' },
         { key: 'paidAt', label: 'Payment Date', render: (r) => r.paidAt ? formatDate(r.paidAt) : '—' },
         { key: 'attachments', label: 'Files', render: (r) => (r.attachments?.length ? el('span', { class: 'attach-count' }, [ico('paperclip'), String(r.attachments.length)]) : '—') },
       ],
