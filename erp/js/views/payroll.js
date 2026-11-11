@@ -3,6 +3,7 @@ import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatMonthLong, el, ico } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
 import { printPayslip, printPayrollRegister, printSalaryStatement } from '../print.js';
+import { getCurrentUser } from '../session.js';
 
 function employeeLabel(id) {
   const e = store.get('employees').find((x) => x.id === id);
@@ -15,6 +16,16 @@ function employeeNameOnly(id) {
 
 function isMonthlySalaryStaff(employee) {
   return Number(employee.salary || 0) > 0;
+}
+
+function isCEO() {
+  const user = getCurrentUser() || {};
+  return /gideon|chief executive|ceo/i.test(`${user.name || ''} ${user.role || ''}`);
+}
+
+function isAccounts() {
+  const user = getCurrentUser() || {};
+  return /gladness|atabo|account|finance/i.test(`${user.name || ''} ${user.role || ''}`);
 }
 
 export function netPay(line) {
@@ -125,6 +136,14 @@ function buildLineRow(line, onChange, getRunContext) {
 }
 
 function openRunForm(record, onSaved) {
+  if (record && record.status !== 'Draft' && !isCEO() && !isAccounts()) {
+    window.alert('This payroll has been submitted and is locked. Only the CEO can approve or edit it.');
+    return;
+  }
+  if (record && record.status === 'Submitted' && isAccounts()) {
+    window.alert('This payroll is awaiting CEO approval. Accounts can act only after approval.');
+    return;
+  }
   if (!store.get('employees').some((e) => e.status === 'Active' && isMonthlySalaryStaff(e))) {
     window.alert('No Active employees found. Payroll runs are generated from Active staff in HR.');
     return;
@@ -138,7 +157,8 @@ function openRunForm(record, onSaved) {
       monthInput.value = record?.month || currentMonthKey();
       const monthField = el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Pay Period *'), monthInput]);
 
-      const statusSelect = el('select', { name: 'status' }, ['Draft', 'Submitted', 'Approved', 'Returned', 'PartiallyPaid', 'Paid'].map((s) => {
+      const statusOptions = isCEO() ? ['Draft', 'Submitted', 'Approved', 'Returned', 'PartiallyPaid', 'Paid'] : (isAccounts() ? ['Approved', 'PartiallyPaid', 'Paid'] : ['Draft', 'Submitted']);
+      const statusSelect = el('select', { name: 'status' }, statusOptions.map((s) => {
         const opt = el('option', { value: s }, payrollStatusLabel(s));
         if ((record?.status || 'Draft') === s) opt.setAttribute('selected', 'selected');
         return opt;
