@@ -88,7 +88,7 @@ export function renderAccounting(container) {
     else if (tab === 'overview') renderOverviewTab();
     else if (tab === 'expenses') renderExpensesTab();
     else if (tab === 'operatorAllowance') { actionSlot.innerHTML = ''; body.innerHTML = ''; renderDozerPayroll(body); }
-    else if (tab === 'payroll') { actionSlot.innerHTML = ''; body.innerHTML = ''; body.appendChild(el('div', { class: 'notice notice-info' }, 'Accounts: open approved payrolls, make full or partial payments, and record each payment. Do not change the approved payroll amount.')); renderPayroll(body); }
+    else if (tab === 'payroll') { actionSlot.innerHTML = ''; body.innerHTML = ''; body.appendChild(el('div', { class: 'notice notice-info' }, 'Accounts: open approved payrolls, make full or partial payments, and record each payment. Do not change the approved payroll amount.')); renderPayroll(body, { mode: 'accounts' }); }
     else if (tab === 'incomeExpenditure') renderIncomeExpenditureTab();
     else if (tab === 'profitability') renderProfitabilityTab();
     else if (tab === 'budgets') { actionSlot.innerHTML = ''; body.innerHTML = ''; renderBudgets(body); }
