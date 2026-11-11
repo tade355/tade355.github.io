@@ -239,7 +239,7 @@ function openRunForm(record, onSaved) {
       if (record && isCEO() && record.status === 'Submitted') {
         const returnBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Return for Correction');
         returnBtn.addEventListener('click', async () => {
-          await store.update('payrollRuns', record.id, { status: 'Returned' });
+          await store.update('payrollRuns', record.id, { status: 'Draft' });
           closeModal();
           onSaved();
         });
