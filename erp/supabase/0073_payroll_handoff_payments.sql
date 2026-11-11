@@ -77,7 +77,11 @@ create or replace function guard_payroll_run_workflow()
 returns trigger language plpgsql security definer set search_path=public as $$
 declare tier text := current_employee_tier(); actor text := current_employee_id();
 begin
-  if auth.uid() is null then return new; end if;
+  if auth.uid() is null then return coalesce(new,old); end if;
+  if tg_op = 'DELETE' then
+    if tier = 'Admin' and old.status = 'Draft' then return old; end if;
+    raise exception 'Only an unsubmitted draft payroll can be deleted';
+  end if;
   if tg_op = 'INSERT' then
     if tier <> 'Admin' or new.status <> 'Draft' then
       raise exception 'HR must create a payroll as Draft';
@@ -89,29 +93,25 @@ begin
     if tier <> 'Accounts' then raise exception 'Only Accounts can record payroll payments'; end if;
     return new;
   end if;
-  if tier <> 'Admin' then raise exception 'Only HR or the CEO can manage payroll preparation'; end if;
 
-  if old.status = 'Submitted' and new.status in ('Approved','Returned') then
-    if not is_payroll_ceo() then raise exception 'Only the CEO can approve or return a submitted payroll'; end if;
-    perform set_config('erp.payroll_review_run', new.id, true);
-    if new.status = 'Approved' then new.approved_by := actor; new.approved_at := now(); end if;
-  elsif old.status = 'Submitted' and new.status = 'Submitted' then
-    if not is_payroll_ceo() then raise exception 'Submitted payroll is locked for HR'; end if;
-    perform set_config('erp.payroll_review_run', new.id, true);
-  elsif old.status = 'Draft' and new.status = 'Submitted' then
-    new.submitted_by := actor; new.submitted_at := now();
+  if old.status = 'Draft' and new.status in ('Draft','Submitted') then
+    if tier <> 'Admin' then raise exception 'Only HR can prepare and submit payroll'; end if;
+    if new.status = 'Submitted' then new.submitted_by := actor; new.submitted_at := now(); end if;
   elsif old.status = 'Returned' and new.status = 'Submitted' then
+    if tier <> 'Admin' then raise exception 'Only HR can correct and resubmit payroll'; end if;
     new.submitted_by := actor; new.submitted_at := now();
     perform set_config('erp.payroll_correction_run', new.id, true);
-  elsif old.status in ('Approved','PartiallyPaid','Paid') then
+  elsif old.status = 'Submitted' and new.status in ('Approved','Returned','Submitted') then
+    if not is_payroll_ceo() then raise exception 'Only the CEO can review a submitted payroll'; end if;
+    perform set_config('erp.payroll_review_run', new.id, true);
+    if new.status = 'Approved' then new.approved_by := actor; new.approved_at := now(); end if;
+  else
     raise exception 'Approved payroll is locked; record payments in Accounts';
-  elsif old.status = 'Returned' and new.status = 'Returned' then
-    raise exception 'Returned payroll must be corrected and resubmitted';
   end if;
   return new;
 end $$;
 drop trigger if exists trg_guard_payroll_run_workflow on payroll_runs;
-create trigger trg_guard_payroll_run_workflow before insert or update on payroll_runs
+create trigger trg_guard_payroll_run_workflow before insert or update or delete on payroll_runs
   for each row execute function guard_payroll_run_workflow();
 
 create or replace function guard_payroll_line_workflow()
@@ -229,13 +229,17 @@ end $$;
 revoke all on function public.erp_personal_pay() from public;
 grant execute on function public.erp_personal_pay() to authenticated;
 
-update payroll_runs r set status='PartiallyPaid'
-where r.status='Approved' and exists(select 1 from payroll_lines l where l.payroll_run_id=r.id and l.amount_paid>0)
-  and exists(select 1 from payroll_lines l where l.payroll_run_id=r.id and l.amount_paid < l.base_salary+l.bonus-l.deductions);
-update payroll_runs r set status='Paid'
-where r.status in ('Approved','PartiallyPaid') and not exists(
-  select 1 from payroll_lines l where l.payroll_run_id=r.id and l.amount_paid < l.base_salary+l.bonus-l.deductions
-);
+update payroll_runs r set status=case
+  when exists(select 1 from payroll_lines l where l.payroll_run_id=r.id
+    and l.amount_paid < l.base_salary+l.bonus-l.deductions)
+   and exists(select 1 from payroll_lines l where l.payroll_run_id=r.id and l.amount_paid>0)
+    then 'PartiallyPaid'
+  when exists(select 1 from payroll_lines l where l.payroll_run_id=r.id
+    and l.amount_paid < l.base_salary+l.bonus-l.deductions)
+    then 'Approved'
+  else 'Paid' end
+where r.status in ('Approved','PartiallyPaid','Paid')
+  and exists(select 1 from payroll_lines l where l.payroll_run_id=r.id);
 
 drop policy if exists personal_pay_read on payroll_runs;
 -- Personal pay RPC controls employee-specific disclosure. Only Accounts/Admin
