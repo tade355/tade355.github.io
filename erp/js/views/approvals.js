@@ -193,6 +193,7 @@ export function renderApprovals(container, onRefresh = () => {}) {
           el('strong', {}, r.type + ' · ' + r.record.id),
           el('h3', {}, r.amount === null ? r.summary : formatCurrency(r.amount)),
           el('p', {}, r.by + ' · ' + (r.record.project || 'No project') + ' · Submitted ' + formatDate(requestSubmissionDate(r.record))),
+          r.collection === 'fundRequests' ? el('p', {}, 'Category: ' + (r.record.costHead || 'Not categorized') + (r.record.equipment ? ' · Dozer: ' + r.record.equipment : '')) : null,
           shortSummary(r.summary),
           r.collection === 'fundRequests' && findDuplicateRequests(r.record, store.get('fundRequests').filter(other=>other.id!==r.record.id)).length ? el('p',{},'Possible duplicate — review related requests before deciding.') : null,
           r.record.approvalNote ? el('p',{},'Latest feedback: '+r.record.approvalNote) : null,
