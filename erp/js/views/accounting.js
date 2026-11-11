@@ -8,7 +8,8 @@ import { EXPENSE_CATEGORIES } from '../constants.js';
 import { renderLoans } from './loans.js';
 import { renderProfitability } from './profitability.js';
 import { renderIncomeExpenditure } from './incomeExpenditure.js';
-import { financialActivity } from '../financialActivity.js';
+import { financialActivity, expenseLedgerRows } from '../financialActivity.js';
+import { printFundRequest } from '../print.js';
 import { renderDozerPayroll, liveBalanceOwed } from './dozerPayroll.js';
 import { renderPayroll } from './payroll.js';
 import { amountOutstanding } from '../loanPayments.js';
@@ -221,12 +222,14 @@ export function renderAccounting(container) {
     body.innerHTML = '';
     const summaryGrid = el('div', { class: 'stats-grid' });
     body.appendChild(summaryGrid);
+    body.appendChild(el('p', { class: 'section-subtitle' }, 'Includes recorded expenses and paid fund requests automatically. Linked records are reconciled using the same cash ledger as the financial reports.'));
+
 
     const chartContainer = el('div', { class: 'charts-grid charts-grid-1' });
     body.appendChild(chartContainer);
 
     let searchQuery = '';
-    const searchInput = el('input', { type: 'search', placeholder: 'Search by description, category, or paid by…' });
+    const searchInput = el('input', { type: 'search', placeholder: 'Search reference, description, payee, category or dozer…' });
     body.appendChild(el('div', { class: 'search-bar' }, [searchInput]));
     searchInput.addEventListener('input', () => {
       searchQuery = searchInput.value.trim().toLowerCase();
@@ -237,15 +240,13 @@ export function renderAccounting(container) {
     body.appendChild(tableContainer);
 
     function refresh() {
-      const invoices = store.get('invoices');
-      const expenses = store.get('expenses');
+      const expenses = expenseLedgerRows(store.all());
       const cash = financialActivity(store.all());
       const totalRevenue = cash.filter((r) => r.type === 'Income').reduce((sum, r) => sum + r.amount, 0);
       const totalExpenses = cash.filter((r) => r.type === 'Expenditure').reduce((sum, r) => sum + r.amount, 0);
       // Payments since the last bank-transfer upload are recorded as fund requests
       // (approved or paid), not as expenses; Income & Expenditure counts both.
       const requestTotal = financialActivity(store.all(), 'commitments').reduce((sum, r) => sum + r.amount, 0);
-      const lastExpenseDate = expenses.reduce((m, e) => (e.date > m ? e.date : m), '');
       const netPosition = totalRevenue - totalExpenses;
 
       summaryGrid.innerHTML = '';
@@ -264,22 +265,34 @@ export function renderAccounting(container) {
 
       let rows = expenses.slice().sort((a, b) => (a.date < b.date ? 1 : -1));
       if (searchQuery) {
-        rows = rows.filter((r) => [r.description, r.category, r.payee, r.paidBy, r.project, r.equipment].join(' ').toLowerCase().includes(searchQuery));
+        rows = rows.filter((r) => [r.id, r.source, r.paymentReference, r.description, r.category, r.payee, r.paidBy, r.project, r.equipment].join(' ').toLowerCase().includes(searchQuery));
       }
       renderTable(tableContainer, {
         columns: [
-          { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
+          { key: 'sourceId', label: 'Reference' },
+          { key: 'source', label: 'Source' },
+          { key: 'date', label: 'Payment Date', render: (r) => formatDate(r.date) },
           { key: 'category', label: 'Category' },
-          { key: 'description', label: 'Description' },
+          { key: 'description', label: 'Description', wrap: true },
           { key: 'amount', label: 'Amount', render: (r) => formatCurrency(r.amount) },
           { key: 'payee', label: 'Paid To', render: (r) => r.payee || '—' },
-          { key: 'paidBy', label: 'Paid By' },
+          { key: 'paidBy', label: 'Paid By', render: (r) => r.paidBy || '—' },
+          { key: 'paymentReference', label: 'Payment Reference', render: (r) => r.paymentReference || '—' },
           { key: 'project', label: 'Project', render: (r) => r.project || '—' },
           { key: 'equipment', label: 'Equipment', render: (r) => r.equipment || '—' },
           {
             key: 'actions',
             label: '',
-            render: (r) => actionButtons({
+            render: (r) => r.source === 'Paid Fund Request' ? el('button', {
+              class: 'btn btn-ghost btn-sm', type: 'button',
+              onClick: () => {
+                const request = store.find('fundRequests', r.fundRequestId);
+                if (request) printFundRequest(request, {
+                  submittedByName: store.find('employees', request.submittedBy)?.name || '',
+                  approvedByName: store.find('employees', request.approvedBy)?.name || '',
+                });
+              },
+            }, 'View / print request') : actionButtons({
               onEdit: () => openForm(r),
               onDelete: async () => {
                 if (!confirmDelete(r.description)) return;
