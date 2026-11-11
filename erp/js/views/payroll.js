@@ -165,9 +165,17 @@ function openReadOnlyRun(record, onSaved) {
         el('span', {}, `Total approved: ${formatCurrency(runTotal(record))}`),
         el('strong', {}, `Outstanding: ${formatCurrency(record.lines.reduce((sum,line) => sum + runOutstanding(record,line),0))}`),
       ]));
-      container.appendChild(el('div', { class: 'modal-actions' }, [
-        el('button', { type: 'button', class: 'btn btn-primary', onClick: closeModal }, 'Close'),
-      ]));
+      const modalActions = el('div', { class: 'modal-actions' }, []);
+      if (isAccounts() && ['Approved', 'PartiallyPaid'].includes(record.status) &&
+          record.lines.some((line) => runOutstanding(record, line) > 0)) {
+        modalActions.appendChild(el('button', {
+          type: 'button',
+          class: 'btn btn-primary',
+          onClick: () => openPaymentForm(record, record.lines.find((line) => runOutstanding(record, line) > 0)?.employeeId, onSaved),
+        }, 'Record payment'));
+      }
+      modalActions.appendChild(el('button', { type: 'button', class: 'btn btn-ghost', onClick: closeModal }, 'Close'));
+      container.appendChild(modalActions);
     },
   });
 }
