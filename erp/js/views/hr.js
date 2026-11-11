@@ -25,6 +25,15 @@ function employeeOptions() {
   return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
 }
 
+const MONTHLY_STAFF_NAMES = new Set(['Agrimo Gideon', 'Atabo Victoria', 'Gladness Oghenekome', 'Hussein Godstime', 'Oki Christopher', 'Olumide Davidson', 'Sodunke Ola', 'Salifu Job']);
+const EXTERNAL_STAFF_NAMES = new Set(['Ewanchia Collins', 'Ogbebor (Pastor)']);
+
+function employmentCategory(employee) {
+  if (MONTHLY_STAFF_NAMES.has(employee.name)) return 'Monthly Staff';
+  if (EXTERNAL_STAFF_NAMES.has(employee.name)) return 'External Staff';
+  return 'Daily Allowance Staff';
+}
+
 function employeeName(id) {
   return store.get('employees').find((e) => e.id === id)?.name || 'Unknown';
 }
@@ -208,24 +217,34 @@ export function renderHR(container) {
       el('option', { value: 'current' }, 'Current staff'),
       el('option', { value: 'archived' }, 'Archived staff'),
     ]);
+    const categoryFilter = el('select', { 'aria-label': 'Employment category' }, [
+      el('option', { value: '' }, 'All employment categories'),
+      el('option', { value: 'Monthly Staff' }, 'Monthly Staff'),
+      el('option', { value: 'Daily Allowance Staff' }, 'Daily Allowance Staff'),
+      el('option', { value: 'External Staff' }, 'External Staff'),
+    ]);
     const count = el('span', { role: 'status' });
     body.appendChild(el('div', { class: 'filter-bar' }, [
-      el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Staff list'), listMode]), count,
+      el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Staff list'), listMode]),
+      el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Employment category'), categoryFilter]), count,
     ]));
     const tableContainer = el('div');
     body.appendChild(tableContainer);
 
     const STATUS_ORDER = ['Active', 'Suspended', 'Disengaged'];
     function refresh() {
+      const CATEGORY_ORDER = ['Monthly Staff', 'Daily Allowance Staff', 'External Staff'];
       const rows = store.get('employees')
         .filter(r => listMode.value === 'archived' ? !!r.archivedAt : !r.archivedAt)
-        .sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status) || a.name.localeCompare(b.name, undefined, { numeric: true }));
+        .filter(r => !categoryFilter.value || employmentCategory(r) === categoryFilter.value)
+        .sort((a, b) => CATEGORY_ORDER.indexOf(employmentCategory(a)) - CATEGORY_ORDER.indexOf(employmentCategory(b)) || STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status) || a.name.localeCompare(b.name, undefined, { numeric: true }));
       count.textContent = `${rows.length} ${listMode.value === 'archived' ? 'archived staff' : 'current staff'}`;
       renderTable(tableContainer, {
         columns: [
           { key: 'name', label: 'Name' },
           { key: 'role', label: 'Role' },
           { key: 'department', label: 'Department' },
+          { key: 'employmentCategory', label: 'Employment Category', render: (r) => employmentCategory(r) },
           { key: 'phone', label: 'Phone', render: (r) => r.phone || '—' },
           { key: 'salary', label: 'Salary', render: (r) => (r.salary ? formatCurrency(r.salary) : '—') },
           { key: 'dayRate', label: 'Day Rate', render: (r) => (r.dayRate ? formatCurrency(r.dayRate) : '—') },
@@ -268,6 +287,7 @@ export function renderHR(container) {
     }
 
     listMode.addEventListener('change', refresh);
+    categoryFilter.addEventListener('change', refresh);
     refresh();
   }
 
