@@ -174,6 +174,7 @@ function openRunForm(record, onSaved) {
       const commentsInput = el('textarea', { name: 'comments', placeholder: 'CEO comments or payroll notes' });
       commentsInput.value = record?.comments || '';
 
+      const showPaymentFields = !!record && isAccounts() && ['Approved', 'PartiallyPaid', 'Paid'].includes(record.status);
       const itemsHeader = el('div', { class: 'payroll-line-header' }, [
         el('span', {}, 'Employee'), el('span', {}, 'Base Salary'), el('span', {}, 'Bonus'), el('span', {}, 'Deductions'), el('span', {}, 'Paid'), ...(showPaymentFields ? [el('span', {}, 'Payment Date'), el('span', {}, 'Payment Reference')] : []), el('span', {}, 'Net Pay'), el('span', {}, ''), el('span', {}, ''),
       ]);
@@ -195,7 +196,6 @@ function openRunForm(record, onSaved) {
       const initialLines = record?.lines?.length
         ? record.lines
         : store.get('employees').filter((e) => e.status === 'Active' && isMonthlySalaryStaff(e)).map((e) => ({ employeeId: e.id, baseSalary: e.salary || 0, bonus: 0, deductions: 0, amountPaid: 0 }));
-      const showPaymentFields = !!record && isAccounts() && ['Approved', 'PartiallyPaid', 'Paid'].includes(record.status);
       initialLines.forEach((line) => itemsContainer.appendChild(buildLineRow(line, recomputeTotal, runContext, showPaymentFields)));
       recomputeTotal();
 
