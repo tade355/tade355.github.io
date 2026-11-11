@@ -73,7 +73,7 @@ $$;
 revoke all on function is_payroll_ceo() from public;
 grant execute on function is_payroll_ceo() to authenticated;
 create or replace function is_payroll_accounts() returns boolean
-language sql stable security definer set search_path=public as $
+language sql stable security definer set search_path=public as $$
   select exists (
     select 1 from employees e
     where e.auth_user_id = auth.uid() and e.status = 'Active'
