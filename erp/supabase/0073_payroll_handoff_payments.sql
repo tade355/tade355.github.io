@@ -121,6 +121,7 @@ begin
   if auth.uid() is null then return coalesce(new,old); end if;
   rid := case when tg_op = 'DELETE' then old.payroll_run_id else new.payroll_run_id end;
   select status into run_status from payroll_runs where id=rid for update;
+  if run_status is null and tg_op = 'DELETE' and tier = 'Admin' then return old; end if;
   if current_setting('erp.payroll_payment_aggregate', true) = rid and tier = 'Accounts' then
     return coalesce(new,old);
   end if;
