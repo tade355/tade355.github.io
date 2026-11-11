@@ -375,10 +375,17 @@ export function renderPayroll(container) {
     });
 
     const employeeIds = [...new Set(rows.filter((r) => r.status !== 'Draft').flatMap((r) => r.lines.map((l) => l.employeeId)))];
-    const balances = employeeIds.map((id) => ({ id, balance: balanceOwed(id) })).filter((b) => b.balance !== 0);
+    const balances = employeeIds.map((id) => {
+      const approved = rows.filter((r) => r.status !== 'Draft').flatMap((r) => r.lines).filter((l) => l.employeeId === id).reduce((sum, l) => sum + netPay(l), 0);
+      const paid = rows.filter((r) => r.status !== 'Draft').flatMap((r) => r.lines).filter((l) => l.employeeId === id).reduce((sum, l) => sum + (l.amountPaid || 0), 0);
+      return { id, approved, paid, percent: approved ? Math.min(100, Math.round((paid / approved) * 100)) : 0, balance: approved - paid };
+    }).filter((b) => b.balance !== 0 || b.approved !== 0);
     renderTable(balancesContainer, {
       columns: [
         { key: 'employee', label: 'Employee', render: (r) => employeeLabel(r.id) },
+        { key: 'approved', label: 'Approved', render: (r) => formatCurrency(r.approved) },
+        { key: 'paid', label: 'Paid', render: (r) => formatCurrency(r.paid) },
+        { key: 'percent', label: '% Paid', render: (r) => `${r.percent}%` },
         { key: 'balance', label: 'Outstanding Balance', render: (r) => el('strong', { class: r.balance >= 0 ? 'text-critical' : 'text-good' }, formatCurrency(r.balance)) },
         {
           key: 'actions',
