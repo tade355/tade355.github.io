@@ -29,6 +29,17 @@ function currentMonthKey() {
   return new Date().toISOString().slice(0, 7);
 }
 
+function payrollStatusLabel(status) {
+  return {
+    Draft: 'Draft',
+    Submitted: 'Awaiting CEO Approval',
+    Approved: 'Approved — Awaiting Payment',
+    Returned: 'Returned for Correction',
+    PartiallyPaid: 'Partially Paid',
+    Paid: 'Fully Paid',
+  }[status] || status || 'Draft';
+}
+
 // Every Approved/Paid period's line for one employee, oldest first, each
 // carrying its own running balance — a salary increase mid-year (or a
 // month only partly paid) just falls out of this naturally, since
@@ -127,7 +138,7 @@ function openRunForm(record, onSaved) {
       monthInput.value = record?.month || currentMonthKey();
       const monthField = el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Pay Period *'), monthInput]);
 
-      const statusSelect = el('select', { name: 'status' }, ['Draft', 'Approved', 'Paid'].map((s) => {
+      const statusSelect = el('select', { name: 'status' }, ['Draft', 'Submitted', 'Approved', 'Returned', 'PartiallyPaid', 'Paid'].map((s) => {
         const opt = el('option', { value: s }, s);
         if ((record?.status || 'Draft') === s) opt.setAttribute('selected', 'selected');
         return opt;
@@ -277,7 +288,7 @@ export function renderPayroll(container) {
   container.innerHTML = '';
 
   const addBtn = el('button', { class: 'btn btn-primary', onClick: () => openRunForm(null, refresh) }, '+ New Payroll Run');
-  container.appendChild(sectionHeader('Payroll', "Monthly payroll runs from each employee's HR salary, with editable bonus/deductions and printable payslips", addBtn));
+  container.appendChild(sectionHeader('Payroll Preparation', "HR prepares salaries, deductions and bonuses here. Submit for CEO approval; Accounts records full or partial payments separately.", addBtn));
 
   const summarySlot = el('div');
   container.appendChild(summarySlot);
@@ -304,7 +315,7 @@ export function renderPayroll(container) {
         { key: 'month', label: 'Pay Period', render: (r) => formatMonthLong(r.month) },
         { key: 'employees', label: 'Employees', render: (r) => String(r.lines.length) },
         { key: 'total', label: 'Total Net Pay', render: (r) => formatCurrency(runTotal(r)) },
-        { key: 'status', label: 'Status', render: (r) => statusPill(r.status) },
+        { key: 'status', label: 'Status', render: (r) => statusPill(payrollStatusLabel(r.status)) },
         {
           key: 'actions',
           label: '',
