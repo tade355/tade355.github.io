@@ -239,7 +239,7 @@ function openRunForm(record, onSaved) {
       if (record && isCEO() && record.status === 'Submitted') {
         const returnBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Return for Correction');
         returnBtn.addEventListener('click', async () => {
-          await store.update('payrollRuns', record.id, { status: 'Returned', comments: commentsInput.value.trim(), auditTrail: [...(record.auditTrail || []), { at: new Date().toISOString(), action: 'returned', status: 'Returned' }] });
+          await store.update('payrollRuns', record.id, { status: 'Returned' });
           closeModal();
           onSaved();
         });
@@ -284,7 +284,7 @@ function openRunForm(record, onSaved) {
         const newStatus = requestedStatus === 'Paid' && paidTotal < approvedTotal ? 'PartiallyPaid' : requestedStatus;
         const now = new Date().toISOString();
         const auditTrail = [...(record?.auditTrail || []), { at: now, action: record ? 'updated' : 'created', status: newStatus }];
-        const payload = { month: monthInput.value, status: newStatus, lines, comments: commentsInput.value.trim(), paymentEntries: record?.paymentEntries || [], auditTrail, submittedAt: newStatus === 'Submitted' ? (record?.submittedAt || now) : (record?.submittedAt || ''), approvedAt: newStatus === 'Approved' || newStatus === 'PartiallyPaid' || newStatus === 'Paid' ? (record?.approvedAt || now) : (record?.approvedAt || '') };
+        const payload = { month: monthInput.value, status: newStatus, lines };
 
         try {
           submitBtn.disabled = true;
