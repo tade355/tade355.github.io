@@ -222,7 +222,9 @@ function openRunForm(record, onSaved, { review = false } = {}) {
       const addOneOff = el('button', { type: 'button', class: 'btn btn-ghost' }, '+ Add one-off staff');
       const updateEmployeeChoices = () => {
         const used = new Set([...items.querySelectorAll('.payroll-line-row')].map((row) => row.dataset.employeeId));
-        [...addSelect.options].forEach((option) => { if (option.value && used.has(option.value)) option.remove(); });
+        addSelect.replaceChildren(el('option', { value: '' }, '+ Add monthly staff'));
+        store.get('employees').filter((employee) => employee.status === 'Active' && isMonthlySalaryStaff(employee)
+          && !used.has(employee.id)).forEach((employee) => addSelect.appendChild(el('option', { value: employee.id }, `${employee.name} (${employee.role})`)));
       };
       const addLine = (line) => items.appendChild(makePayrollLine(line, refreshTotal, canEdit, updateEmployeeChoices));
       sourceLines.forEach(addLine);
@@ -251,7 +253,8 @@ function openRunForm(record, onSaved, { review = false } = {}) {
       const save = async (nextStatus) => {
         const lines = [];
         for (const row of [...items.querySelectorAll('.payroll-line-row')]) {
-          const line = row._payrollLine; row._recompute();
+          row._recompute();
+          const line = row._payrollLine;
           let employeeId = row.dataset.employeeId;
           if (employeeId?.startsWith('adhoc-')) {
             const name = row.querySelector('span')?.textContent?.trim() || line.employeeName || 'One-off staff';
@@ -263,6 +266,7 @@ function openRunForm(record, onSaved, { review = false } = {}) {
           lines.push({ employeeId, baseSalary, bonus, deductions, amountPaid: Number(line.amountPaid || 0) });
         }
         if (!monthInput.value) throw new Error('Select the pay period.');
+        if (!record && store.get('payrollRuns').some((run) => run.month === monthInput.value && run.status !== 'Returned')) throw new Error('A payroll run already exists for this month. Open the existing run instead.');
         if (!lines.length) throw new Error('Add at least one employee.');
         if (new Set(lines.map((line) => line.employeeId)).size !== lines.length) throw new Error('Each staff member can appear only once.');
         const payload = { month: monthInput.value, status: nextStatus, lines, comments: comments.value.trim() || null };
@@ -357,7 +361,6 @@ export function renderPayroll(container, { mode = 'preparation' } = {}) {
     const table = el('div'); container.appendChild(table);
     function refresh() {
       const runs=store.get('payrollRuns').filter((run)=>['Approved','PartiallyPaid'].includes(run.status)).slice().sort((a,b)=>b.month.localeCompare(a.month));
-      const amountDue=runs.reduce((sum,run)=>sum+runTotal(run),0);
       const paid=runs.reduce((sum,run)=>sum+run.lines.reduce((lineSum,line)=>lineSum+Number(line.amountPaid||0),0),0);
       const outstanding=runs.reduce((sum,run)=>sum+run.lines.reduce((lineSum,line)=>lineSum+runOutstanding(run,line),0),0);
       summary.innerHTML='';
@@ -390,7 +393,7 @@ export function renderPayroll(container, { mode = 'preparation' } = {}) {
     const pending=rows.filter((run)=>run.status==='Submitted').length;
     const drafts=rows.filter((run)=>run.status==='Draft').length;
     const awaiting=rows.filter((run)=>['Approved','PartiallyPaid'].includes(run.status)).length;
-    const paid=rows.filter((run)=>run.status==='Paid').reduce((sum,run)=>sum+run.lines.reduce((lineSum,line)=>lineSum+Number(line.amountPaid||0),0),0);
+    const paid=rows.filter((run)=>PAYABLE_PAYROLL_STATUSES.has(run.status)).reduce((sum,run)=>sum+run.lines.reduce((lineSum,line)=>lineSum+Number(line.amountPaid||0),0),0);
     summary.innerHTML='';
     summary.appendChild(el('div',{class:'stats-grid'},[
       statCard({label:'Drafts',value:String(drafts)}),
