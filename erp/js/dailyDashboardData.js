@@ -42,6 +42,9 @@ function datesBetween(ops) {
 
 export function buildDailyDashboard(ctx) {
   const { project, date } = ctx;
+  const allProjects = project === 'all';
+  const belongsToProject = (value) => allProjects || value === project;
+  const recordProject = (record) => record?.project || record?.siteName || null;
   // Use the date selected on the dashboard for cumulative operations,
   // profitability, requests and staff performance. REX tank balances still
   // retain their full carry-over chain from the dashboard basis date.
@@ -52,15 +55,15 @@ export function buildDailyDashboard(ctx) {
   const invByName = new Map(ctx.inventory.map((i) => [i.name, i]));
   const empName = (id) => ctx.employees.find((e) => e.id === id)?.name || null;
 
-  const allOps = ctx.operations.filter((o) => o.siteName === project);
+  const allOps = ctx.operations.filter((o) => belongsToProject(o.siteName));
   const dayOps = allOps.filter((o) => o.date === date);
   const rangeOps = allOps.filter((o) => o.date >= since && o.date <= date);
   const workingDozers = [...new Set(dayOps.map((o) => o.equipment))];
-  const rev = (o) => (o.operationType === 'Trekking' ? 0 : (o.quantity || 0) * (ctx.projectRateAsOf(project, o.operationType, o.date).rate || 0));
+  const rev = (o) => (o.operationType === 'Trekking' ? 0 : (o.quantity || 0) * (ctx.projectRateAsOf(o.siteName, o.operationType, o.date).rate || 0));
 
   // ---------------------------------------------------------------- operations
   const fleetNames = [...new Set([
-    ...inv.filter((i) => i.currentProject === project).map((i) => i.name),
+    ...inv.filter((i) => belongsToProject(i.currentProject)).map((i) => i.name),
     ...rangeOps.map((o) => o.equipment),
   ])];
   const operations = fleetNames.map((name) => {
@@ -86,27 +89,28 @@ export function buildDailyDashboard(ctx) {
   const todayHours = sum(dayOps, (o) => o.hoursWorked);
 
   // -------------------------------------------------------------------- diesel
-  const dist = ctx.distributions.filter((d) => d.project === project);
+  const dist = ctx.distributions.filter((d) => belongsToProject(d.project));
   const aldDay = (d) => d.date === date;
   const ago = (c) => c.fuelType === 'Diesel';
   // Diesel collected at the station and then sold on (e.g. to the CEO) is
   // recorded as its own collection row whose notes say "sold to"; it is not
   // site diesel, so it is shown separately and left out of the site figures.
   const soldNote = (c) => /sold to/i.test(c.notes || '');
-  const dayAgo = ctx.fuelCreditCollections.filter((c) => c.date === date && ago(c));
+  const scopedCollections = ctx.fuelCreditCollections.filter((c) => allProjects || recordProject(c) === project);
+  const dayAgo = scopedCollections.filter((c) => c.date === date && ago(c));
   const collectedAgo = sum(dayAgo.filter((c) => !soldNote(c)), (c) => c.litres);
   const soldAgo = sum(dayAgo.filter(soldNote), (c) => c.litres);
-  const collectedPms = sum(ctx.fuelCreditCollections.filter((c) => c.date === date && c.fuelType === 'PMS'), (c) => c.litres);
+  const collectedPms = sum(scopedCollections.filter((c) => c.date === date && c.fuelType === 'PMS'), (c) => c.litres);
   const distributedToday = sum(dist.filter(aldDay), (d) => d.litres);
   const usedToday = sum(dayOps, (o) => o.fuelUsed);
   const dieselRate = ctx.dieselRateAsOf(date);
-  const counts = ctx.dieselStockCounts.filter((c) => c.date <= date).sort((a, b) => (a.date < b.date ? 1 : -1));
+  const counts = ctx.dieselStockCounts.filter((c) => (allProjects || recordProject(c) === project) && c.date <= date).sort((a, b) => (a.date < b.date ? 1 : -1));
   const latestCount = counts[0] || null;
   // The last stock count rolled forward to the viewed day: plus site diesel
   // collected since, minus diesel distributed to dozers since. (A count made on
   // the viewed day itself is used as it is.)
   const afterCount = (x) => !!latestCount && x.date > latestCount.date && x.date <= date;
-  const rolledIn = latestCount ? sum(ctx.fuelCreditCollections.filter((c) => afterCount(c) && ago(c) && !soldNote(c)), (c) => c.litres) : 0;
+  const rolledIn = latestCount ? sum(scopedCollections.filter((c) => afterCount(c) && ago(c) && !soldNote(c)), (c) => c.litres) : 0;
   const rolledOut = latestCount ? sum(dist.filter(afterCount), (d) => d.litres) : 0;
   const onGround = latestCount ? Math.max(0, latestCount.countedLitres + rolledIn - rolledOut) : null;
   // The diesel chain starts on the "since" date with each dozer at zero, the
@@ -152,7 +156,7 @@ export function buildDailyDashboard(ctx) {
   const stationBalance = ctx.stationBalance;
 
   // --------------------------------------------------------------------- fleet
-  const fleet = inv.filter((i) => i.currentProject === project || workingDozers.includes(i.name) || rangeOps.some((o) => o.equipment === i.name)).map((i) => {
+  const fleet = inv.filter((i) => belongsToProject(i.currentProject) || workingDozers.includes(i.name) || rangeOps.some((o) => o.equipment === i.name)).map((i) => {
     const o = operations.find((x) => x.equipment === i.name);
     const openLog = ctx.maintenanceLogs.filter((m) => m.equipment === i.name && m.status !== 'Completed' && m.date <= date).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
     const lastLog = ctx.maintenanceLogs.filter((m) => m.equipment === i.name && m.date <= date).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
@@ -190,7 +194,7 @@ export function buildDailyDashboard(ctx) {
   // ------------------------------------------------------------------ requests
   const requestSince = addDays(date, -3);
   const recentRequests = ctx.fundRequests.filter((r) => requestSubmissionDate(r) >= requestSince && requestSubmissionDate(r) <= date);
-  const reqs = recentRequests.filter((r) => r.project === project);
+  const reqs = recentRequests.filter((r) => belongsToProject(r.project));
   const total = (r) => sum(r.items || [], (it) => it.amount);
   const approvedTotal = (r) => Number(r.approvedAmount) || total(r);
   const paidTotal = (r) => Number(r.paidAmount) || total(r);
@@ -235,7 +239,7 @@ export function buildDailyDashboard(ctx) {
     const allowance = ctx.operatorAllowanceForRows([o]);
     const cost = dozer + dsl + logistics + allowance;
     const exp = expectedHa(o.hoursWorked || 0);
-    const rate = ctx.projectRateAsOf(project, o.operationType, o.date).rate || 0;
+    const rate = ctx.projectRateAsOf(o.siteName, o.operationType, o.date).rate || 0;
     return {
       equipment: o.equipment, operator: empName(o.operatorId), hours: o.hoursWorked || 0, ha: o.quantity || 0,
       outputPct: pct(o.quantity || 0, exp), breakEvenPct: exp * rate > 0 ? (cost / (exp * rate)) * 100 : null,
