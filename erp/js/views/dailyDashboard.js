@@ -128,9 +128,13 @@ export function renderDailyDashboard(container) {
   container.innerHTML = '';
   const realToday = todayISOString();
   const projects = projectNames();
-  const defaultProject = projects.find((p) => /kangidi/i.test(p)) || projects[0] || '';
+  const canSeeAllProjects = ['Admin', 'Accounts'].includes(getCurrentTier());
+  const defaultProject = canSeeAllProjects ? 'all' : (projects.find((p) => /kangidi/i.test(p)) || projects[0] || '');
 
-  const projectSelect = el('select', {}, projects.map((p) => el('option', { value: p }, p)));
+  const projectSelect = el('select', {}, [
+    ...(canSeeAllProjects ? [el('option', { value: 'all' }, 'All Projects')] : []),
+    ...projects.map((p) => el('option', { value: p }, p)),
+  ]);
   projectSelect.value = defaultProject;
   const dateInput = el('input', { type: 'date', max: realToday, value: realToday });
   const defaultSince = rexFortnightStart(defaultProject, realToday) || DASHBOARD_BASIS_FROM;
@@ -158,7 +162,7 @@ export function renderDailyDashboard(container) {
     el('p', { class: 'section-subtitle' }, "Daily site operations, diesel, fleet, requests and staff performance."),
   ])]));
   container.appendChild(el('div', { class: 'filter-bar' }, [
-    el('label', { class: 'filter-field' }, [el('span', {}, 'Site'), projectSelect]),
+    el('label', { class: 'filter-field' }, [el('span', {}, 'Project'), projectSelect]),
     el('label', { class: 'filter-field' }, [el('span', {}, 'Viewing'), dateInput]),
     el('div', { class: 'seg', role: 'group', 'aria-label': 'Change day' }, [prevBtn, todayBtn, nextBtn]),
     el('label', { class: 'filter-field' }, [el('span', {}, 'Cumulative since'), sinceInput]),
@@ -201,7 +205,8 @@ export function renderDailyDashboard(container) {
       body.appendChild(staffSection(d));
       return;
     }
-    body.appendChild(el('p', { class: 'section-subtitle' }, `${project} — ${formatDate(date)}. Expected output ${EXPECTED_HA_PER_8HRS} ha per 8 hrs; ideal start ${IDEAL_START} AM; cumulative figures since ${formatDate(since)}.`));
+    const projectLabel = project === 'all' ? 'All Projects' : project;
+    body.appendChild(el('p', { class: 'section-subtitle' }, `${projectLabel} — ${formatDate(date)}. Expected output ${EXPECTED_HA_PER_8HRS} ha per 8 hrs; ideal start ${IDEAL_START} AM; cumulative figures since ${formatDate(since)}.`));
     body.appendChild(flagsBanner(d.flags));
     body.appendChild(el('div', { class: 'dd-jump' }, ['operations:1. Operations', 'diesel:2. Diesel', 'fleet:3. Fleet', 'requests:4. Requests & Expenses', 'profit:5. Profitability', 'staff:6. Staff Performance']
       .map((t) => { const [id, label] = t.split(':'); return el('a', { href: `#/dailyDashboard`, onClick: (e) => { e.preventDefault(); document.getElementById(`dd-${id}`)?.scrollIntoView({ behavior: 'smooth' }); } }, label); })));
