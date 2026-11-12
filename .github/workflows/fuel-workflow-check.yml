@@ -1,7 +1,7 @@
 name: Fuel workflow checks
 on:
   push:
-    branches: [codex/fuel-workflow-20261112]
+    branches: [codex/coo-fuel-approvals-20261113]
   pull_request:
     branches: [master]
 permissions:
@@ -30,4 +30,5 @@ jobs:
         run: |
           psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f tools/tests/fuel_workflow_fixture.sql
           psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f erp/supabase/0077_fuel_workflow.sql
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f erp/supabase/0078_fuel_workflow_coo_approval.sql
           psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f tools/tests/fuel_workflow_test.sql
