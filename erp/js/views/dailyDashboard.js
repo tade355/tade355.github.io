@@ -405,7 +405,7 @@ function requestsSection(d, onRefresh) {
     chartBox.appendChild(el('p', { class: 'section-subtitle' }, 'No payments made today.'));
   }
   return section('requests', 4, 'Requests & Expenses', [
-    el('p', { class: 'section-subtitle' }, `Requests: ${formatDate(r.since)} – ${formatDate(d.date)}.`),
+    el('p', { class: 'section-subtitle' }, `Requests recorded on ${formatDate(d.date)} only. Cumulative amounts remain in the summary cards.`),
     tiles, el('div', { class: 'dd-grid-2' }, [table, chartBox]),
   ]);
 }
