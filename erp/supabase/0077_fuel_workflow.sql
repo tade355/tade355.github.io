@@ -136,9 +136,9 @@ begin
      if nullif(p_payload->>'reference','') is null then raise exception 'Enter the station receipt or waybill reference'; end if;
      if (delivered<>q or price<>(line->>'unitPrice')::numeric) and nullif(p_payload->>'note','') is null then raise exception 'Explain the quantity or price variance'; end if;
      if r.data->>'supplyMethod'<>'Site stock' then
-       insert into public.fuel_credit_collections(id,date,station,fuel_type,litres,unit_price,reference,notes,project,workflow_id,delivered_litres)
+       insert into public.fuel_credit_collections(id,date,station,fuel_type,litres,unit_price,reference,notes,project,workflow_id,delivered_litres,payment_basis)
        values(vref,event_date,r.data->>'station',line->>'product',q,price,p_payload->>'reference',
-        vref||' | '||coalesce(line->>'purpose','')||' | '||coalesce(p_payload->>'note',''),r.project,r.id,delivered);
+        vref||' | '||coalesce(line->>'purpose','')||' | '||coalesce(p_payload->>'note',''),r.project,r.id,delivered,case when r.data->>'supplyMethod'='Station credit' then 'Credit' else 'Cash and carry' end);
      else
        if nullif(p_payload->>'note','') is null then raise exception 'Record the counted site stock used for this allocation'; end if;
      end if;
