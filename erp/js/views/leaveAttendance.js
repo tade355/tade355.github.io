@@ -114,6 +114,33 @@ function isConnectionFailure(error) {
   return !navigator.onLine || /network|fetch|offline|connection|load failed/i.test(error?.message || '');
 }
 
+function attendancePayloadForCurrentSchema(payload) {
+  const { capturedAt, syncedAt, captureSource, ...compatible } = payload;
+  return compatible;
+}
+
+function isAttendanceSyncMetadataError(error) {
+  return /captured_at|synced_at|capture_source|unknown or protected record field|column .* does not exist/i.test(error?.message || '');
+}
+
+async function addAttendance(payload) {
+  try {
+    return await store.add('attendanceLogs', payload);
+  } catch (error) {
+    if (!isAttendanceSyncMetadataError(error)) throw error;
+    return store.add('attendanceLogs', attendancePayloadForCurrentSchema(payload));
+  }
+}
+
+async function updateAttendance(id, patch) {
+  try {
+    return await store.update('attendanceLogs', id, patch);
+  } catch (error) {
+    if (!isAttendanceSyncMetadataError(error)) throw error;
+    return store.update('attendanceLogs', id, attendancePayloadForCurrentSchema(patch));
+  }
+}
+
 function queueAttendance(operation) {
   const queue = readAttendanceQueue().filter((row) => !(row.kind === operation.kind
     && row.employeeId === operation.employeeId && row.date === operation.date));
@@ -395,7 +422,7 @@ export function renderLeaveAttendance(container) {
       };
       try {
         if (!navigator.onLine) throw new Error('Offline');
-        await store.add('attendanceLogs', payload);
+        await addAttendance(payload);
         statusNote.textContent = loc ? 'Clocked in and synced. Location captured.' : 'Clocked in and synced without location.';
       } catch (error) {
         if (!isConnectionFailure(error)) { window.alert(error.message || 'Could not clock in.'); return; }
@@ -424,7 +451,7 @@ export function renderLeaveAttendance(container) {
       } else {
         try {
           if (!navigator.onLine) throw new Error('Offline');
-          await store.update('attendanceLogs', existing.id, { ...patch, syncedAt: capturedAt, captureSource: 'online' });
+          await updateAttendance(existing.id, { ...patch, syncedAt: capturedAt, captureSource: 'online' });
           statusNote.textContent = loc ? 'Clocked out and synced. Location captured.' : 'Clocked out and synced without location.';
         } catch (error) {
           if (!isConnectionFailure(error)) { window.alert(error.message || 'Could not clock out.'); return; }
