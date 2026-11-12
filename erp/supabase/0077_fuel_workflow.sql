@@ -41,6 +41,8 @@ begin
  role_review := actor.id in ('EMP-28','EMP-26');
  role_accounts := actor.access_tier in ('Admin','Accounts');
  if p_action='submit' then
+   if nullif(p_id,'') is null then raise exception 'Missing request reference'; end if;
+   perform pg_advisory_xact_lock(hashtextextended(coalesce(p_payload->>'project','')||'|'||coalesce(p_payload->>'station','')||'|'||coalesce(p_payload->>'supplyDate',''),0));
    select * into r from public.fuel_workflows where id=p_id;
    if found then
      if r.requested_by<>actor.id then raise exception 'Reference is already used'; end if;
@@ -54,7 +56,7 @@ begin
      if coalesce(jsonb_typeof(p_payload->'lines'),'null') <> 'array' or jsonb_array_length(p_payload->'lines')=0 then raise exception 'Add fuel lines'; end if;
      if nullif(p_payload->>'station','') is null or nullif(p_payload->>'collector','') is null
        or p_payload->>'supplyMethod' not in ('Station credit','Immediate payment','Site stock') then raise exception 'Station, collector and supply method are required'; end if;
-     if (p_payload->>'supplyDate')::date is null or (p_payload->>'expiresOn')::date < (p_payload->>'supplyDate')::date then raise exception 'Set a valid supply and expiry date'; end if;
+     if (p_payload->>'supplyDate')::date is null or (p_payload->>'expiresOn')::date is null or (p_payload->>'expiresOn')::date < (p_payload->>'supplyDate')::date then raise exception 'Set a valid supply and expiry date'; end if;
      if (select count(*) from jsonb_array_elements(p_payload->'lines')) <> (select count(distinct l->>'id') from jsonb_array_elements(p_payload->'lines') l) then raise exception 'Duplicate fuel line'; end if;
      for line in select value from jsonb_array_elements(p_payload->'lines') loop
        if nullif(line->>'id','') is null or line->>'product' not in ('Diesel','PMS','Oil')
@@ -84,7 +86,7 @@ begin
  end if;
  select * into r from public.fuel_workflows where id=p_id for update;
  if not found then raise exception 'Request not found'; end if;
- if not (role_accounts or r.requested_by=actor.id or actor.assigned_project=r.project) then raise exception 'Request is outside your project'; end if;
+ if not coalesce((role_accounts or r.requested_by=actor.id or actor.assigned_project=r.project),false) then raise exception 'Request is outside your project'; end if;
  if exists(select 1 from jsonb_array_elements(r.events) e where e->>'token'=p_token) then return to_jsonb(r); end if;
  evt := p_payload || jsonb_build_object('type',p_action,'token',p_token,'at',now(),'actor',actor.id);
  if p_action='review' then
@@ -130,7 +132,7 @@ begin
      if event_date<(r.data->>'supplyDate')::date or event_date>(r.data->>'expiresOn')::date then raise exception 'Collection must be within the approved release dates'; end if;
      if q+collected>approved then raise exception 'Collection exceeds remaining approved quantity'; end if;
      delivered:=coalesce((p_payload->>'delivered')::numeric,0); price:=coalesce((p_payload->>'unitPrice')::numeric,0);
-     if delivered<0 or delivered>q or price<=0 then raise exception 'Check delivered litres and price'; end if;
+     if delivered<0 or delivered>q or price<=0 or price>(line->>'unitPrice')::numeric then raise exception 'Check delivered litres and price; price increases require a new approval'; end if;
      if nullif(p_payload->>'reference','') is null then raise exception 'Enter the station receipt or waybill reference'; end if;
      if (delivered<>q or price<>(line->>'unitPrice')::numeric) and nullif(p_payload->>'note','') is null then raise exception 'Explain the quantity or price variance'; end if;
      if r.data->>'supplyMethod'<>'Site stock' then
@@ -189,4 +191,16 @@ begin
 end $fuel$;
 revoke all on function public.fuel_workflow_command(text,text,jsonb,text) from public,anon;
 grant execute on function public.fuel_workflow_command(text,text,jsonb,text) to authenticated;
+-- Linked ledger rows are immutable; corrections require an administrator audit.
+create or replace function public.guard_fuel_workflow_ledger() returns trigger language plpgsql set search_path=public,pg_temp as $guard$
+begin
+ if auth.uid() is not null and old.id like 'FUEL-WF:%' then raise exception 'This row belongs to a fuel workflow. Use the workflow history for a documented correction.'; end if;
+ return coalesce(new,old);
+end $guard$;
+do $triggers$ declare t text; begin
+ foreach t in array array['fuel_credit_collections','fuel_credit_payments','diesel_site_distributions','expenses'] loop
+  execute format('drop trigger if exists guard_fuel_workflow_ledger on public.%I',t);
+  execute format('create trigger guard_fuel_workflow_ledger before update or delete on public.%I for each row execute function public.guard_fuel_workflow_ledger()',t);
+ end loop;
+end $triggers$;
 commit;
