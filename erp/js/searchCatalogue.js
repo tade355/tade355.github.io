@@ -8,6 +8,8 @@
 // `perm: 'profitReports'` marks features only Olumide's account can use.
 
 export const CATALOGUE = [
+  {kind:'Tab',route:'accounting',tabs:['Fuel & Earlier Costs'],label:'Fuel & Earlier Costs',words:'credit diesel PMS oil payment arrears incurred transport profitability'},
+  {kind:'Feature',route:'resourceManagement',tabs:['Diesel','Planner'],label:'Submit fuel plan',words:'AGO planning station credit approval release oil PMS'},
   { kind:'Page', route:'staffActivity', label:'Staff Activity Monitor', words:'visits logins actions time modules devices browser location usage monitoring' },
   // ---- pages (route titles come from ROUTES; these add aliases) -----------
   { kind: 'Page', route: 'dashboard', label: 'Dashboard', words: 'overview home headline profit kpi' },
