@@ -53,6 +53,20 @@ export function buildDailyDashboard(ctx) {
   const dieselSince = rexFortnightStart(project, date) ? DASHBOARD_BASIS_FROM : since;
   const inv = ctx.inventory.filter((i) => i.category === 'Heavy Equipment');
   const invByName = new Map(ctx.inventory.map((i) => [i.name, i]));
+  // A dozer belongs to the project it was assigned to on the viewed date.
+  // currentProjectSince marks a redeployment; older dates fall back to the
+  // latest operation logged on or before that date.
+  const equipmentProjectAsOf = (name) => {
+    const item = invByName.get(name);
+    const effective = item?.currentProjectSince;
+    if (item?.currentProject && effective && date >= effective) return item.currentProject;
+    const latest = ctx.operations.filter((o) => o.equipment === name && o.date <= date)
+      .slice().sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+    if (latest?.siteName) return latest.siteName;
+    if (item?.currentProject && !effective) return item.currentProject;
+    return null;
+  };
+  const equipmentBelongs = (name) => allProjects || equipmentProjectAsOf(name) === project;
   const empName = (id) => ctx.employees.find((e) => e.id === id)?.name || null;
 
   const allOps = ctx.operations.filter((o) => belongsToProject(o.siteName));
@@ -63,8 +77,8 @@ export function buildDailyDashboard(ctx) {
 
   // ---------------------------------------------------------------- operations
   const fleetNames = [...new Set([
-    ...inv.filter((i) => belongsToProject(i.currentProject)).map((i) => i.name),
-    ...rangeOps.map((o) => o.equipment),
+    ...inv.filter((i) => equipmentBelongs(i.name)).map((i) => i.name),
+    ...rangeOps.filter((o) => equipmentBelongs(o.equipment)).map((o) => o.equipment),
   ])];
   const operations = fleetNames.map((name) => {
     const rows = dayOps.filter((o) => o.equipment === name);
@@ -120,7 +134,7 @@ export function buildDailyDashboard(ctx) {
   // "maintenance diesel" in the distribution notes) is left out of the chain.
   const tankDist = dist.filter((d) => d.date >= dieselSince && !/not tank fuel|maintenance diesel/i.test(d.notes || ''));
   const chainOps = allOps.filter((o) => o.date >= dieselSince);
-  const chainNames = [...new Set([...tankDist.map((d) => d.equipment), ...chainOps.map((o) => o.equipment)])];
+  const chainNames = [...new Set([...tankDist.map((d) => d.equipment), ...chainOps.map((o) => o.equipment)])].filter(equipmentBelongs);
   const diesel = chainNames.map((name) => {
     const closingBefore = sum(tankDist.filter((d) => d.equipment === name && d.date < date), (d) => d.litres)
       - sum(chainOps.filter((o) => o.equipment === name && o.date < date), (o) => o.fuelUsed);
@@ -145,7 +159,7 @@ export function buildDailyDashboard(ctx) {
   const defaultRequestDozers = new Set([
     ...workingDozers,
     ...dist.filter((d) => aldDay(d) && !/not tank fuel|maintenance diesel/i.test(d.notes || '')).map((d) => d.equipment),
-    ...inv.filter((i) => i.fleetStatus === 'Active' && rangeOps.some((o) => o.equipment === i.name)).map((i) => i.name),
+    ...inv.filter((i) => equipmentBelongs(i.name) && i.fleetStatus === 'Active' && rangeOps.some((o) => o.equipment === i.name)).map((i) => i.name),
   ]);
   const fuelingRequest = [...defaultRequestDozers].sort().map((name) => {
     const row = diesel.find((d) => d.equipment === name);
@@ -156,7 +170,7 @@ export function buildDailyDashboard(ctx) {
   const stationBalance = ctx.stationBalance;
 
   // --------------------------------------------------------------------- fleet
-  const fleet = inv.filter((i) => belongsToProject(i.currentProject) || workingDozers.includes(i.name) || rangeOps.some((o) => o.equipment === i.name)).map((i) => {
+  const fleet = inv.filter((i) => equipmentBelongs(i.name)).map((i) => {
     const o = operations.find((x) => x.equipment === i.name);
     const openLog = ctx.maintenanceLogs.filter((m) => m.equipment === i.name && m.status !== 'Completed' && m.date <= date).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
     const lastLog = ctx.maintenanceLogs.filter((m) => m.equipment === i.name && m.date <= date).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
