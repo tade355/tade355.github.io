@@ -32,6 +32,18 @@ alter table expenses add column if not exists payment_reference text;
 create unique index if not exists expense_payroll_payment_once
   on expenses(payroll_payment_id) where payroll_payment_id is not null;
 
+create or replace function is_payroll_accounts() returns boolean
+language sql stable security definer set search_path=public as $$
+  select exists (
+    select 1 from employees e
+    where e.auth_user_id = auth.uid() and e.status = 'Active'
+      and (e.access_tier = 'Accounts'
+        or e.id in ('EMP-27', 'EMP-35'))
+  );
+$$;
+revoke all on function is_payroll_accounts() from public;
+grant execute on function is_payroll_accounts() to authenticated;
+
 alter table payroll_payments enable row level security;
 drop policy if exists payroll_payments_read on payroll_payments;
 create policy payroll_payments_read on payroll_payments for select to authenticated
@@ -72,20 +84,7 @@ language sql stable security definer set search_path=public as $$
 $$;
 revoke all on function is_payroll_ceo() from public;
 grant execute on function is_payroll_ceo() to authenticated;
-create or replace function is_payroll_accounts() returns boolean
-language sql stable security definer set search_path=public as $$
-  select exists (
-    select 1 from employees e
-    where e.auth_user_id = auth.uid() and e.status = 'Active'
-      and (e.access_tier = 'Accounts'
-        or lower(coalesce(e.name,'')) like '%atabo%'
-        or lower(coalesce(e.name,'')) like '%gladness%'
-        or lower(coalesce(e.role,'')) like '%account%'
-        or lower(coalesce(e.role,'')) like '%finance%')
-  );
-$$;
-revoke all on function is_payroll_accounts() from public;
-grant execute on function is_payroll_accounts() to authenticated;
+
 
 
 create or replace function guard_payroll_run_workflow()
@@ -137,7 +136,7 @@ begin
   rid := case when tg_op = 'DELETE' then old.payroll_run_id else new.payroll_run_id end;
   select status into run_status from payroll_runs where id=rid for update;
   if run_status is null and tg_op = 'DELETE' and tier = 'Admin' then return old; end if;
-  if current_setting('erp.payroll_payment_aggregate', true) = rid and tier = 'Accounts' then
+  if current_setting('erp.payroll_payment_aggregate', true) = rid and is_payroll_accounts() then
     return coalesce(new,old);
   end if;
   if current_setting('erp.payroll_review_run', true) = rid and is_payroll_ceo() then
