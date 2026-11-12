@@ -24,7 +24,7 @@ export function submitFuelPlan(data, onSaved) {
       {name:'supplyMethod',label:'Supply method',type:'select',options:['Station credit','Immediate payment','Site stock'].map(x=>({value:x,label:x}))},
       {name:'note',label:'Manager explanation / adjustments',type:'textarea',required:true},
       {name:'duplicateReason',label:'If another request exists for this station and day, explain why another is needed',type:'textarea'},
-    ],submitLabel:'Submit for Operations review and CEO approval',
+    ],submitLabel:'Submit for COO approval',
     onSubmit:async values=>{await fuelCommand(id,'submit',{...data,...values,kind:'Fuel'},token);onSaved?.();}
   });
 }
@@ -61,9 +61,9 @@ export function renderFuelWorkflow(container,{approvalsOnly=false}={}) {
   function approval(r){
     if(r.kind==='Cost') openModal({title:'Approve reported cost',initial:{amount:r.data.amount},fields:[
       {name:'amount',label:'Approved amount (₦)',type:'number',required:true,min:0},
-      {name:'note',label:'CEO comment',type:'textarea'}],submitLabel:'Approve',onSubmit:async p=>{await fuelCommand(r.id,'approve',p);draw();}});
+      {name:'note',label:'COO comment',type:'textarea'}],submitLabel:'Approve',onSubmit:async p=>{await fuelCommand(r.id,'approve',p);draw();}});
     else openModal({title:'Approve fuel quantities',initial:Object.fromEntries(r.data.lines.map(l=>[l.id,l.quantity])),
-      fields:[...r.data.lines.map(l=>({name:l.id,label:l.product+' · '+l.purpose+' (litres)',type:'number',min:0,required:true})),{name:'note',label:'CEO comment',type:'textarea'}],
+      fields:[...r.data.lines.map(l=>({name:l.id,label:l.product+' · '+l.purpose+' (litres)',type:'number',min:0,required:true})),{name:'note',label:'COO comment',type:'textarea'}],
       submitLabel:'Approve fuel release',onSubmit:async p=>{const {note,...quantities}=p;await fuelCommand(r.id,'approve',{quantities,note});draw();}});
   }
   function collection(r){
@@ -124,9 +124,8 @@ export function renderFuelWorkflow(container,{approvalsOnly=false}={}) {
     message.textContent='Reported costs affect the date incurred. Unapproved costs are provisional; later payments reduce the payable without adding the cost again.';
     for(const r of rows){
       const actions=el('div',{class:'row-actions'},[button('View details',()=>view(r))]);
-      if(user.id==='EMP-26' && r.status==='Submitted') actions.append(button('Operations checked',()=>fuelCommand(r.id,'review',{note:'Work plan and stock reviewed'})));
-      if(user.id==='EMP-28' && ['Submitted','Reviewed'].includes(r.status)){
-        actions.append(button('Review and approve',()=>approval(r)));
+      if(user.id==='EMP-26' && ['Submitted','Reviewed'].includes(r.status)){
+        actions.append(button('Approve',()=>approval(r)));
         actions.append(button('Reject',()=>{openModal({title:'Reject request',fields:[{name:'note',label:'Reason',required:true,type:'textarea'}],onSubmit:async p=>{await fuelCommand(r.id,'reject',p);draw();}});}));
       }
       if(r.kind==='Fuel' && ['Approved','Partially Collected','Collected'].includes(r.status)){
