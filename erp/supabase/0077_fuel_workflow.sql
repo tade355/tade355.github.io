@@ -32,6 +32,7 @@ declare
  actor public.employees%rowtype; r public.fuel_workflows%rowtype;
  line jsonb; lines jsonb; evt jsonb; q numeric; delivered numeric; price numeric;
  approved numeric; collected numeric; issued numeric; stocked numeric; paid numeric; due numeric;
+ business_today date := (now() at time zone 'Africa/Lagos')::date;
  collection_date date; event_date date; vref text; role_ceo boolean; role_review boolean; role_accounts boolean;
 begin
  select * into actor from public.employees where auth_user_id=auth.uid() limit 1;
@@ -73,9 +74,10 @@ begin
      p_payload := jsonb_set(p_payload,'{lines}',lines);
    else
      if coalesce((p_payload->>'amount')::numeric,0)<=0 or nullif(p_payload->>'description','') is null or nullif(p_payload->>'payee','') is null then raise exception 'Enter amount, description and person or vendor owed'; end if;
-     if (p_payload->>'incurredDate')::date is null or (p_payload->>'incurredDate')::date > current_date then raise exception 'Use the actual date the cost occurred'; end if;
+     if (p_payload->>'incurredDate')::date is null or (p_payload->>'incurredDate')::date > business_today then raise exception 'Use the actual date the cost occurred'; end if;
      if p_payload->>'category' not in ('Diesel transport','Worker transport','Maintenance','Other') then raise exception 'Invalid cost category'; end if;
-     if (p_payload->>'incurredDate')::date < current_date and nullif(p_payload->>'lateReason','') is null then raise exception 'Explain the late submission'; end if;
+     if (p_payload->>'incurredDate')::date < business_today and nullif(p_payload->>'lateReason','') is null then raise exception 'Explain the late submission'; end if;
+     if exists(select 1 from public.fuel_workflows f where f.kind='Cost' and f.status<>'Rejected' and f.project=p_payload->>'project' and f.data->>'incurredDate'=p_payload->>'incurredDate' and f.data->>'description'=p_payload->>'description' and f.data->>'amount'=p_payload->>'amount') then raise exception 'This cost has already been reported; open its existing record'; end if;
      if nullif(p_payload->>'linkedFundRequestId','') is not null and not exists(select 1 from public.fund_requests f where f.id=p_payload->>'linkedFundRequestId' and f.project=p_payload->>'project') then raise exception 'Linked fund request must belong to this project'; end if;
      p_payload := p_payload - 'approvedAmount';
    end if;
@@ -123,7 +125,7 @@ begin
    if line is null then raise exception 'Invalid fuel line'; end if;
    q:=coalesce((p_payload->>'quantity')::numeric,0);
    event_date:=(p_payload->>'date')::date;
-   if q<=0 or event_date is null or event_date>current_date then raise exception 'Enter a positive quantity and a valid actual date'; end if;
+   if q<=0 or event_date is null or event_date>business_today then raise exception 'Enter a positive quantity and a valid actual date'; end if;
    select coalesce(sum((e->>'quantity')::numeric),0),coalesce(sum((e->>'delivered')::numeric),0)
     into collected,stocked from jsonb_array_elements(r.events) e where e->>'type'='collection' and e->>'lineId'=line->>'id';
    approved:=(line->>'approvedQuantity')::numeric;
@@ -164,7 +166,7 @@ begin
    if not role_accounts or r.status in ('Submitted','Reviewed','Rejected') then raise exception 'Accounts may pay approved requests only'; end if;
    if nullif(r.data->>'linkedFundRequestId','') is not null then raise exception 'Record payment on the linked fund request; do not pay the same cost twice'; end if;
    q:=coalesce((p_payload->>'amount')::numeric,0); event_date:=(p_payload->>'date')::date;
-   if q<=0 or event_date is null or event_date>current_date or nullif(p_payload->>'reference','') is null then raise exception 'Enter positive payment, actual date and bank reference'; end if;
+   if q<=0 or event_date is null or event_date>business_today or nullif(p_payload->>'reference','') is null then raise exception 'Enter positive payment, actual date and bank reference'; end if;
    if r.kind='Fuel' then
      if r.data->>'supplyMethod'='Site stock' then raise exception 'Site stock allocations do not create a station payable'; end if;
      select coalesce(sum((e->>'quantity')::numeric*(e->>'unitPrice')::numeric),0) into due from jsonb_array_elements(r.events) e where e->>'type'='collection';
