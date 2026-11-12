@@ -179,7 +179,7 @@ begin
       values(vref,event_date,r.data->>'station',q,p_payload->>'reference',vref||' | '||coalesce(p_payload->>'note',''));
    else
      insert into public.expenses(id,date,category,description,amount,payee,paid_by,project)
-      values(vref,event_date,'Logistics',vref||' | '||(r.data->>'description'),q,r.data->>'payee',actor.name,r.project);
+      values(vref,event_date,case when r.data->>'category'='Maintenance' then 'Maintenance' when r.data->>'category'='Other' then 'Other' else 'Logistics' end,vref||' | '||(r.data->>'description'),q,r.data->>'payee',actor.name,r.project);
      r.status:=case when q+paid=due then 'Paid' else 'Partially Paid' end;
    end if;
  else raise exception 'Unknown workflow command'; end if;
