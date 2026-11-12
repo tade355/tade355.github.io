@@ -291,7 +291,7 @@ export function buildDailyDashboard(ctx) {
   siteDays.forEach((day) => {
     const rows = rangeOps.filter((o) => o.date === day);
     const byOperator = {};
-    rows.forEach((o) => { if (o.operatorId) (byOperator[o.operatorId] = byOperator[o.operatorId] || []).push(o); });
+    rows.filter((o) => equipmentBelongs(o.equipment)).forEach((o) => { if (o.operatorId) (byOperator[o.operatorId] = byOperator[o.operatorId] || []).push(o); });
     Object.entries(byOperator).forEach(([id, r]) => addPerson(id, `Operator — ${[...new Set(r.map((x) => x.equipment))].join(', ')}`, r, day));
     const bySup = {};
     rows.forEach((o) => { if (o.supervisorId) (bySup[o.supervisorId] = bySup[o.supervisorId] || []).push(o); });
