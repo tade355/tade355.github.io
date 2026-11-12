@@ -232,7 +232,7 @@ export function buildDailyDashboard(ctx) {
     pending: sum(inRange.filter((r) => r.status === 'Pending'), total),
     approved: sum(inRange.filter((r) => ['Approved', 'Partially Approved'].includes(r.status)), approvedTotal),
     paidByCategory: Object.entries(byCategory).map(([label, value]) => ({ label, value })),
-    rows: reqs.filter((r) => ['Pending', 'Approved', 'Partially Approved', 'Paid'].includes(r.status))
+    rows: requestsToday.filter((r) => ['Pending', 'Approved', 'Partially Approved', 'Paid'].includes(r.status))
       .map((r) => ({ id: r.id, date: r.date, submittedDate: requestSubmissionDate(r), description: r.description, category: r.costHead || '—', amount: r.status === 'Paid' ? paidTotal(r) : r.status === 'Pending' ? total(r) : approvedTotal(r), requestedAmount: total(r), status: r.status, isNew: r.date === date }))
       .sort((a, b) => (a.isNew === b.isNew ? (a.date < b.date ? 1 : -1) : a.isNew ? -1 : 1)),
   };
