@@ -4,6 +4,7 @@ import { formatCurrency, formatDate, formatMonthLong, el, ico } from '../utils.j
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
 import { printPayslip, printPayrollRegister, printSalaryStatement } from '../print.js';
 import { getCurrentUser } from '../session.js';
+import { employmentCategory } from '../employmentCategory.js';
 
 function employeeLabel(id) {
   const e = store.get('employees').find((x) => x.id === id);
@@ -15,7 +16,7 @@ function employeeNameOnly(id) {
 }
 
 function isMonthlySalaryStaff(employee) {
-  return Number(employee.salary || 0) > 0;
+  return employmentCategory(employee) === 'Monthly Staff';
 }
 
 function isCEO() {
@@ -25,11 +26,11 @@ function isCEO() {
 
 function isAccounts() {
   const user = getCurrentUser() || {};
-  return /gladness|atabo|account|finance/i.test(`${user.name || ''} ${user.role || ''}`);
+  return user.status === 'Active' && (user.accessTier === 'Accounts' || ['EMP-27', 'EMP-35'].includes(user.id));
 }
 
 export function netPay(line) {
-  return (line.baseSalary || 0) + (line.bonus || 0) - (line.deductions || 0);
+  return Number(line.baseSalary || 0) + Number(line.bonus || 0) - Number(line.deductions || 0);
 }
 
 function runTotal(run) {
@@ -359,7 +360,7 @@ export function renderPayroll(container, { mode = 'preparation' } = {}) {
   const isAccountsQueue = mode === 'accounts';
   const canPrepare = !isAccountsQueue && tier === 'Admin' && !isCEO();
   const canReview = !isAccountsQueue && isCEO();
-  const canPay = isAccountsQueue && tier === 'Accounts' && isAccounts();
+  const canPay = isAccountsQueue && isAccounts();
   const addBtn = canPrepare ? el('button', { class:'btn btn-primary', onClick:()=>openRunForm(null,refresh) }, '+ Prepare payroll') : null;
   container.appendChild(sectionHeader(isAccountsQueue ? 'Payroll Payments' : 'Payroll Preparation',
     isAccountsQueue ? 'Approved payroll appears here. Record the amount actually paid to each staff member; the ERP tracks instalments and outstanding balances.' :
