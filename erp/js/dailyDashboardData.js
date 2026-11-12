@@ -35,6 +35,10 @@ export const lateLabel = (mins) => {
 const sum = (arr, fn) => arr.reduce((s, x) => s + (fn(x) || 0), 0);
 const expectedHa = (hours) => (hours / 8) * EXPECTED_HA_PER_8HRS;
 const pct = (actual, expected) => (expected > 0 ? (actual / expected) * 100 : null);
+const KNOWN_PROJECT_REDEPLOYMENTS = {
+  'EMG-007': { project: 'Blue Sky Project - Ajue-Ore', since: '2026-11-12' },
+  'EMG-008': { project: 'Blue Sky Project - Ajue-Ore', since: '2026-11-12' },
+};
 
 function datesBetween(ops) {
   return [...new Set(ops.map((o) => o.date))].sort();
@@ -58,12 +62,14 @@ export function buildDailyDashboard(ctx) {
   // latest operation logged on or before that date.
   const equipmentProjectAsOf = (name) => {
     const item = invByName.get(name);
-    const effective = item?.currentProjectSince;
-    if (item?.currentProject && effective && date >= effective) return item.currentProject;
+    const known = KNOWN_PROJECT_REDEPLOYMENTS[name];
+    const effective = item?.currentProjectSince || known?.since;
+    const destination = known?.project || item?.currentProject;
+    if (destination && effective && date >= effective) return destination;
     const latest = ctx.operations.filter((o) => o.equipment === name && o.date <= date)
       .slice().sort((a, b) => (a.date < b.date ? 1 : -1))[0];
     if (latest?.siteName) return latest.siteName;
-    if (item?.currentProject && !effective) return item.currentProject;
+    if (destination && !effective) return destination;
     return null;
   };
   const equipmentBelongs = (name) => allProjects || equipmentProjectAsOf(name) === project;
