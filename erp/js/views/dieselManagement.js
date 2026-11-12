@@ -1,3 +1,4 @@
+import { renderFuelWorkflow } from './fuelWorkflow.js';
 import { stationAdvanceBalances, siteFuelIssues } from '../fuelLedger.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
@@ -372,6 +373,8 @@ export function renderDieselManagement(container) {
   const reportTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('report') }, 'Variances');
   const trackingTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('tracking') }, 'Tracking');
   const vouchersTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('vouchers') }, 'Vouchers');
+  const workflowTabBtn=el('button',{class:'tab-btn',type:'button',onClick:()=>setTab('workflow')},'Fuel Workflow');
+  tabBar.appendChild(workflowTabBtn);
   const plannerTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('planner') }, 'Planner');
   tabBar.appendChild(plannerTabBtn);
   tabBar.appendChild(vouchersTabBtn);
@@ -386,13 +389,15 @@ export function renderDieselManagement(container) {
 
   function setTab(next) {
     tab = next;
+    workflowTabBtn.classList.toggle('active',tab==='workflow');
     stationTabBtn.classList.toggle('active', tab === 'station');
     siteTabBtn.classList.toggle('active', tab === 'site');
     reportTabBtn.classList.toggle('active', tab === 'report');
     trackingTabBtn.classList.toggle('active', tab === 'tracking');
     vouchersTabBtn.classList.toggle('active', tab === 'vouchers');
     plannerTabBtn.classList.toggle('active', tab === 'planner');
-    if (tab === 'station') renderStationLedgerTab(body);
+    if (tab==='workflow') renderFuelWorkflow(body);
+    else if (tab === 'station') renderStationLedgerTab(body);
     else if (tab === 'site') renderSiteDistributionTab(body);
     else if (tab === 'report') renderDiscrepancyReportTab(body);
     else if (tab === 'tracking') renderDieselTracking(body);
