@@ -31,11 +31,12 @@ export function planDefaults(ctx, project, closingDate, since = DASHBOARD_BASIS_
   const rowBy = new Map(dash.diesel.rows.map((r) => [r.equipment, r]));
   const activeDefault = new Set(dash.diesel.fuelingRequest.map((r) => r.equipment));
   const siteOps = ctx.operations.filter((o) => o.siteName === project);
+  const plannedFleet = new Set(buildDailyDashboard({ ...ctx, project, date: addDays(closingDate, 1), since: since > closingDate ? closingDate : since }).fleet.map(r => r.equipment));
   const names = [...new Set([
     ...ctx.inventory.filter((i) => i.category === 'Heavy Equipment' && i.currentProject === project).map((i) => i.name),
     ...siteOps.map((o) => o.equipment).filter(Boolean),
     ...dash.diesel.fuelingRequest.map((r) => r.equipment),
-  ])].filter((n) => ctx.inventory.some((i) => i.name === n && i.category === 'Heavy Equipment')).sort();
+  ])].filter((n) => plannedFleet.has(n) && ctx.inventory.some((i) => i.name === n && i.category === 'Heavy Equipment')).sort();
   const operatorOf = (name) => {
     const last = siteOps.filter((o) => o.equipment === name && o.operatorId).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
     return last ? ctx.employees.find((e) => e.id === last.operatorId)?.name || null : null;
@@ -45,7 +46,7 @@ export function planDefaults(ctx, project, closingDate, since = DASHBOARD_BASIS_
     return {
       name, operator: operatorOf(name),
       distributed: r ? r.distributed : 0,
-      closing: r ? Math.max(0, round1(r.closing)) : 0,
+      closing: r ? Math.max(0, round1(r.reportedClosing ?? r.closing)) : 0,
       active: activeDefault.has(name),
     };
   });
@@ -63,7 +64,7 @@ export function planDefaults(ctx, project, closingDate, since = DASHBOARD_BASIS_
 
 // dozers: [{ name, operator, distributed, closing, active }]
 export function buildPlan({ dozers, target, onGround = 0, kegLitres = DEFAULTS.kegLitres, dieselPrice = 0, pmsLitres = 0, pmsPrice = 0 }) {
-  const rows = dozers.map((d) => ({ ...d, need: d.active ? Math.max(0, round1(target - (d.closing || 0))) : null }));
+  const rows = dozers.map((d) => ({ ...d, need: d.active ? Math.max(0, round1((d.target ?? target) - (d.closing || 0))) : null }));
   const totalNeed = round1(sum(rows.filter((r) => r.active), (r) => r.need));
   const additional = Math.max(0, round1(totalNeed - (onGround || 0)));
   const agoCost = additional * dieselPrice;
