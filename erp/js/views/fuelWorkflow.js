@@ -137,7 +137,9 @@ export function renderFuelWorkflow(container,{approvalsOnly=false}={}) {
       if(!r.data.linkedFundRequestId&&['Admin','Accounts'].includes(getCurrentTier())&&!['Submitted','Reviewed','Rejected'].includes(r.status)&&workflowOutstanding(r)>0&&r.data.supplyMethod!=='Site stock') actions.append(button('Record payment',()=>payment(r)));
       if(r.data.linkedFundRequestId) actions.append(el('a',{href:'#/fundRequests'},'Payment handled in '+r.data.linkedFundRequestId));
       list.append(el('article',{class:'approval-request-card'},[
-        el('strong',{},r.id+' · '+r.kind),statusPill(r.status),el('p',{},r.project),
+        el('strong',{},r.id+' · '+r.kind),statusPill(r.status),
+        r.kind==='Fuel'&&(r.events||[]).some(e=>e.type==='collection')?statusPill(workflowOutstanding(r)===0?'Fully Paid':(r.events||[]).some(e=>e.type==='payment')?'Partially Paid':'Awaiting Payment'):null,
+        el('p',{},r.project),
         el('p',{},r.kind==='Fuel'?r.data.station+' · '+formatDate(r.data.supplyDate)+' · '+r.data.supplyMethod:r.data.description+' · Incurred '+formatDate(r.data.incurredDate)),
         el('p',{},'Outstanding: '+formatCurrency(r.data.supplyMethod==='Site stock'?0:workflowOutstanding(r))),actions]));
     }
