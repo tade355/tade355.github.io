@@ -180,6 +180,7 @@ export function renderAgoPlanner(container) {
       `Closing diesel follows the ERP diesel chain as at ${formatDate(closingDate.value)} (opening = previous closing + supplied; used = ${lph.value} L per hour, 20 L per hour after 8 hrs). Correct any figure that differs from the site's count.`,
       'Distributed counts diesel put in the tanks only; diesel given for fixing tracks is not tank fuel.',
       `On ground ${L(plan.onGround)} L: ${defaults?.onGroundNote || ''}.`,
+      ...rowRefs.filter(r=>r.box.checked).map(r=>r.d.name+': '+r.rowHours.value+' target hours; '+L(plan.rows.find(x=>x.name===r.d.name)?.target)+' L target opening.'),
     ];
   }
 
@@ -208,7 +209,7 @@ export function renderAgoPlanner(container) {
   siteSel.addEventListener('change', () => { recipientTouched = false; loadDefaults(); });
   closingDate.addEventListener('change', () => { planDate.value = addDays(closingDate.value || today, 1); supplyDate.value = planDate.value; messageTouched = false; loadDefaults(); });
   planDate.addEventListener('change', () => { supplyDate.value = planDate.value; messageTouched = false; update(); });
-  [hours, lph, reserve].forEach((i) => i.addEventListener('input', () => { targetTouched = false; update(); }));
+  [hours, lph, reserve].forEach((i) => i.addEventListener('input', () => { if(i===hours)rowRefs.forEach(r=>{r.rowHours.value=hours.value;}); targetTouched = false; update(); }));
   target.addEventListener('input', () => { targetTouched = true; update(); });
   autoBtn.addEventListener('click', () => { targetTouched = false; update(); });
   [kegSize, onGround, pmsLitres].forEach((i) => i.addEventListener('input', () => { messageTouched = false; update(); }));
