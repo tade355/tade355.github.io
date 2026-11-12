@@ -18,9 +18,9 @@ function ctx(extra = {}) {
       { project: P, date: '2026-10-10', equipment: 'EMG-1', litres: 30, notes: 'For fixing track, not tank fuel' },
       { project: P, date: '2026-10-12', equipment: 'EMG-1', litres: 100 },
     ],
-    fuelCreditCollections: [{ date: '2026-10-12', fuelType: 'Diesel', litres: 1000, unitPrice: 1900 }],
+    fuelCreditCollections: [{ project: P, date: '2026-10-12', fuelType: 'Diesel', litres: 1000, unitPrice: 1900 }],
     fundRequests: [], maintenanceLogs: [],
-    dieselStockCounts: [{ date: '2026-10-11', countedLitres: 0 }, { date: '2026-10-12', countedLitres: 100 }],
+    dieselStockCounts: [{ project: P, date: '2026-10-11', countedLitres: 0 }, { project: P, date: '2026-10-12', countedLitres: 100 }],
     hourlyRateAsOf: () => 46250, dieselRateAsOf: () => 1900, projectRateAsOf: () => ({ rate: 845000 }),
     operatorAllowanceForRows: () => 0,
     statsFor: () => ({ opsProfit: -1000, totalProfit: -1000, areaCleared: 1.5, pmsCost: 0, pmsUnexplained: 0, supervisorSundayAllowance: 0, dieselLogistics: 5000 }),
@@ -53,8 +53,8 @@ test('fueling request tops dozers up to the 250L target', () => {
 test('diesel sold on is kept out of the collected figure', () => {
   const d = buildDailyDashboard(ctx({
     fuelCreditCollections: [
-      { date: '2026-10-12', fuelType: 'Diesel', litres: 400, unitPrice: 1900, notes: 'Station collection' },
-      { date: '2026-10-12', fuelType: 'Diesel', litres: 600, unitPrice: 1900, notes: 'Sold to the CEO - not site diesel' },
+      { project: P, date: '2026-10-12', fuelType: 'Diesel', litres: 400, unitPrice: 1900, notes: 'Station collection' },
+      { project: P, date: '2026-10-12', fuelType: 'Diesel', litres: 600, unitPrice: 1900, notes: 'Sold to the CEO - not site diesel' },
     ],
   }));
   assert.equal(d.diesel.collectedAgo, 400);
@@ -70,7 +70,7 @@ test('a dozer whose standard use exceeds the diesel it had never asks for more t
 
 test('the diesel, shortfall and cumulative-profit flags are not raised', () => {
   const d = buildDailyDashboard(ctx({
-    fuelCreditCollections: [{ date: '2026-10-12', fuelType: 'Diesel', litres: 1000, unitPrice: 1900 }],
+    fuelCreditCollections: [{ project: P, date: '2026-10-12', fuelType: 'Diesel', litres: 1000, unitPrice: 1900 }],
     distributions: [{ project: P, date: '2026-10-12', equipment: 'EMG-1', litres: 60 }],
     statsFor: () => ({ opsProfit: -1000, totalProfit: -1000, areaCleared: 1.5, pmsCost: 0, pmsUnexplained: 0, supervisorSundayAllowance: 0, dieselLogistics: 0 }),
   }));
@@ -92,11 +92,11 @@ test('the downloadable dashboard is a complete report with all six sections', as
 
 test('diesel on ground rolls the last stock count forward with later collections and distributions', () => {
   const d = buildDailyDashboard(ctx({
-    dieselStockCounts: [{ date: '2026-10-11', countedLitres: 300 }],
+    dieselStockCounts: [{ project: P, date: '2026-10-11', countedLitres: 300 }],
     fuelCreditCollections: [
-      { date: '2026-10-11', fuelType: 'Diesel', litres: 999, unitPrice: 1900 }, // inside the count already
-      { date: '2026-10-12', fuelType: 'Diesel', litres: 1000, unitPrice: 1900 },
-      { date: '2026-10-12', fuelType: 'Diesel', litres: 500, unitPrice: 1900, notes: 'Sold to the CEO' }, // not site diesel
+      { project: P, date: '2026-10-11', fuelType: 'Diesel', litres: 999, unitPrice: 1900 }, // inside the count already
+      { project: P, date: '2026-10-12', fuelType: 'Diesel', litres: 1000, unitPrice: 1900 },
+      { project: P, date: '2026-10-12', fuelType: 'Diesel', litres: 500, unitPrice: 1900, notes: 'Sold to the CEO' }, // not site diesel
     ],
     distributions: [{ project: P, date: '2026-10-12', equipment: 'EMG-1', litres: 240 }],
   }));
@@ -167,13 +167,14 @@ test('diesel against work is reported per dozer for the period', () => {
   d.diesel.efficiency.forEach((r) => assert.ok('litresPerHa' in r && 'high' in r));
 });
 
-test('request window includes three-day boundary and excludes older requests in every state', () => {
+test('request table shows only selected-day requests while cards retain the recent window', () => {
   const req = (id, date, status) => ({ id, date, status, project: P, description: id, items: [{ amount: 100 }] });
   const fundRequests = ['Pending','Approved','Paid'].flatMap((status) => [req('old-'+status,'2026-10-08',status),req('boundary-'+status,'2026-10-09',status),req('today-'+status,'2026-10-12',status)]);
   fundRequests.push(req('future','2026-10-13','Pending'),req('rejected','2026-10-12','Rejected'));
   const d=buildDailyDashboard(ctx({since:'2026-10-01',fundRequests}));
   assert.equal(d.requests.since,'2026-10-09');
-  assert.equal(d.requests.rows.length,6);
+  assert.equal(d.requests.rows.length,3);
+  assert.ok(d.requests.rows.every(r=>r.date==='2026-10-12'));
   assert.ok(d.requests.rows.every(r=>!r.id.startsWith('old-') && r.id!=='future' && r.id!=='rejected'));
   assert.equal(d.requests.pending,200);
   assert.equal(d.requests.approved,200);
