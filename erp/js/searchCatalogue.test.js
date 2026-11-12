@@ -40,7 +40,7 @@ test('features are searchable by their keywords', () => {
 
 test('results the user cannot open are hidden', () => {
   assert.equal(searchCatalogue('payroll', supervisor).length, 0);
-  assert.equal(searchCatalogue('fuel credit', supervisor).length, 0);
+  assert.ok(searchCatalogue('fuel credit', supervisor).every(r=>r.route==='resourceManagement'), 'Managers can find the fuel planner but cannot open Accounts or Purchasing');
   assert.ok(searchCatalogue('ask', supervisor).length > 0);
 });
 
