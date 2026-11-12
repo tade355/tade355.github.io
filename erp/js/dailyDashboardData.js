@@ -267,6 +267,7 @@ export function buildDailyDashboard(ctx) {
     };
   }).sort((a, b) => a.net - b.net);
   const extraRows = [];
+  if(todayStats.otherWorkflowCosts)extraRows.push({label:'Other fuel / reported project costs',cost:todayStats.otherWorkflowCosts});
   if (todayStats.pmsCost) extraRows.push({ label: 'PMS cost', cost: todayStats.pmsCost });
   if (todayStats.supervisorSundayAllowance) extraRows.push({ label: 'Supervisor Sunday allowance', cost: todayStats.supervisorSundayAllowance });
   const unattributedLogistics = todayStats.dieselLogistics - logisticsAttributed;
@@ -323,6 +324,7 @@ export function buildDailyDashboard(ctx) {
 
   // ------------------------------------------------------------------- flags
   const flags = [];
+  if(cumStats.provisionalReportedCosts)flags.push({tone:'warning',text:'Profit includes reported costs awaiting CEO approval: ₦'+cumStats.provisionalReportedCosts.toLocaleString()+'. Review the Fuel & Earlier Costs tab.'});
   const fmt = (n) => `${n < 0 ? '−' : ''}₦${Math.round(Math.abs(n)).toLocaleString()}`;
   if (dayOps.length && todayStats.opsProfit < 0) {
     const below = contribution.filter((c) => c.outputPct !== null && c.breakEvenPct !== null && c.outputPct < c.breakEvenPct);

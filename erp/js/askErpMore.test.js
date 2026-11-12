@@ -19,8 +19,8 @@ const baseCtx = (extra = {}) => ({
   employees: [{ id: 'E1', name: 'Adebayo Tope' }, { id: 'E2', name: 'Paul Joshua' }, { id: 'S1', name: 'Oki Christopher' }],
   distributions: [{ date: '2026-10-14', equipment: 'EMG-004', litres: 250, project: P }],
   fuelCreditCollections: [
-    { date: '2026-10-14', station: 'Midejab Ltd', fuelType: 'Diesel', litres: 500, unitPrice: 1900, notes: '' },
-    { date: '2026-10-15', station: 'Midejab Ltd', fuelType: 'Diesel', litres: 100, unitPrice: 1900, notes: 'Sold to the CEO' },
+    { project: P, date: '2026-10-14', station: 'Midejab Ltd', fuelType: 'Diesel', litres: 500, unitPrice: 1900, notes: '' },
+    { project: P, date: '2026-10-15', station: 'Midejab Ltd', fuelType: 'Diesel', litres: 100, unitPrice: 1900, notes: 'Sold to the CEO' },
   ],
   fuelCreditPayments: [],
   fundRequests: [
@@ -29,7 +29,7 @@ const baseCtx = (extra = {}) => ({
   ],
   expenses: [],
   maintenanceLogs: [{ equipment: 'EMG-006', date: '2026-10-13', type: 'Breakdown', status: 'In Progress', description: 'Hydraulic hose', cost: 30000 }],
-  dieselStockCounts: [{ date: '2026-10-14', countedLitres: 120, notes: '' }],
+  dieselStockCounts: [{ project: P, date: '2026-10-14', countedLitres: 120, notes: '' }],
   invoices: [{ id: 'INV-2024-1', date: '2026-10-01', status: 'Unpaid', customerId: 'C1', project: 'REX Forestry Project - Kangidi', items: [{ description: 'Clearing', qty: 2, price: 50000 }] }],
   invoicePayments: [], fuelingVouchers: [], noticeBoardPosts: [{ title: 'Safety briefing', date: '2026-10-12', body: 'All staff attend' }], trainingPrograms: [],
   leaveRequests: [], customers: [{ id: 'C1', name: 'Rex Forestry' }], suppliers: [], loans: [], purchaseOrders: [], assets: [],

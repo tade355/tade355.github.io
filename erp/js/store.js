@@ -13,6 +13,7 @@ const LAST_BACKUP_KEY = 'emagrims_erp_last_backup';
 // collections that used to store a nested array (invoice line items,
 // payroll lines, etc.) — the child table that now holds those rows.
 const CONFIG = {
+  fuelWorkflows: { table: 'fuel_workflows', prefix: 'FP', optional: true },
   recordSupersessions: { table: 'record_supersessions', prefix: 'DUP' },
   employees: { table: 'employees', prefix: 'EMP' },
   inventory: { table: 'inventory', prefix: 'INV' },
@@ -132,6 +133,7 @@ async function fetchCollection(key) {
   const orderColumn = cfg.orderBy || 'id';
   const data = await fetchAllPages(async (from, to) => {
     const { data: page, error } = await supabase.from(cfg.table).select(selectCols).order(orderColumn).range(from, to);
+    if (error && cfg.optional && ['42P01','PGRST205'].includes(error.code)) return [];
     if (error) throw new Error(`Could not load ${key} (${error.message}).`);
     return page || [];
   });

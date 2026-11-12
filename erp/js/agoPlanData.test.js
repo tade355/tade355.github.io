@@ -67,8 +67,8 @@ test('defaults come from the ERP diesel chain: closing diesel, active dozers, on
     ],
     employees: [{ id: 'E1', name: 'Op One' }, { id: 'S1', name: 'Oki Christopher' }],
     distributions: [{ project: P, date: '2026-10-12', equipment: 'EMG-1', litres: 240 }],
-    fuelCreditCollections: [{ date: '2026-10-11', fuelType: 'PMS', litres: 10, unitPrice: 1400 }],
-    fundRequests: [], maintenanceLogs: [], dieselStockCounts: [{ date: '2026-10-11', countedLitres: 300 }],
+    fuelCreditCollections: [{ project: P, date: '2026-10-11', fuelType: 'PMS', litres: 10, unitPrice: 1400 }],
+    fundRequests: [], maintenanceLogs: [], dieselStockCounts: [{ project: P, date: '2026-10-11', countedLitres: 300 }],
     hourlyRateAsOf: () => 46250, dieselRateAsOf: () => 1900, projectRateAsOf: () => ({ rate: 845000 }), operatorAllowanceForRows: () => 0,
     statsFor: () => ({ opsProfit: 0, totalProfit: 0, areaCleared: 0.5, pmsCost: 0, pmsUnexplained: 0, supervisorSundayAllowance: 0, dieselLogistics: 0 }), stationBalance: 0,
   };

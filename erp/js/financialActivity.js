@@ -7,6 +7,7 @@ export function financialActivity(ctx, basis = 'cash') {
     description: r.description || `Fund request ${r.id}`, amount: basis === 'commitments' ? (Number(r.approvedAmount) || requestTotal(r)) : (Number(r.paidAmount) || requestTotal(r)),
     source: basis === 'commitments' ? 'Approved Commitment' : 'Paid Fund Request' });
   if (basis === 'commitments') return requests.filter((r) => ['Approved', 'Partially Approved'].includes(r.status)).map(requestRow);
+  const workflowRequests=ctx.fuelWorkflows||[];
   const invoices = new Map((ctx.invoices || []).map((i) => [i.id, i]));
   const rows = (ctx.invoicePayments || []).map((p) => {
     const invoice = invoices.get(p.invoiceId);
@@ -22,6 +23,9 @@ export function financialActivity(ctx, basis = 'cash') {
     costHead: e.category || 'Other', description: e.description, amount: e.amount || 0, source: 'Expense' }));
   requests.filter((r) => r.status === 'Paid' && !linkedRequests.has(r.id)).forEach((r) => rows.push(requestRow(r)));
   (ctx.financialEntries || []).forEach((f) => rows.push({ ...f, project: f.project || '', source: 'Manual', record: f }));
+  workflowRequests.filter(r=>r.kind==='Fuel').forEach(r=>(r.events||[]).filter(e=>e.type==='payment').forEach(e=>{
+    rows.push({id:'FUEL-WF:'+r.id+':'+e.token,date:e.date,project:r.project,type:'Expenditure',costHead:'Fuel',description:'Station payment '+r.id,amount:Number(e.amount),source:'Fuel Station Payment'});
+  }));
   return rows;
 }
 

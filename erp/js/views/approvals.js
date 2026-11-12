@@ -1,3 +1,4 @@
+import { renderFuelWorkflow } from './fuelWorkflow.js';
 import { requestSubmissionDate } from '../dateUtils.js';
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el, ico } from '../utils.js';
@@ -81,6 +82,7 @@ export function renderApprovals(container, onRefresh = () => {}) {
   container.innerHTML = '';
   container.appendChild(sectionHeader('Approvals', 'Everything waiting on your decision — fund requests, leave, and fueling vouchers'));
 
+  const fuelPanel=el('div'); container.appendChild(fuelPanel); renderFuelWorkflow(fuelPanel,{approvalsOnly:true});
   const summarySlot = el('div');
   container.appendChild(summarySlot);
   const tableContainer = el('div');

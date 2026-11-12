@@ -1,3 +1,4 @@
+import { workflowCosts } from '../fuelWorkflow.js';
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el, dateInRange, invoiceTotal, ico } from '../utils.js';
 import { weekOf, isSunday } from '../dateUtils.js';
@@ -198,8 +199,9 @@ function pmsProjectForDate(date) {
 export function computeProjectStats(project, from, to) {
   const operations = store.get('operations').filter((o) => o.siteName === project && dateInRange(o.date, from, to));
   const invoices = store.get('invoices').filter((i) => i.project === project && dateInRange(i.date, from, to));
-  const expenses = store.get('expenses').filter((e) => e.project === project && dateInRange(e.date, from, to));
-  const fundRequests = committedFundRequestsFor(project, from, to);
+  const expenses = store.get('expenses').filter((e) => e.project === project && !String(e.id).startsWith('FUEL-WF:') && dateInRange(e.date, from, to));
+  const linkedWorkflowRequests = new Set(store.get('fuelWorkflows').filter(r=>r.kind==='Cost'&&r.status!=='Rejected').map(r=>r.data.linkedFundRequestId).filter(Boolean));
+  const fundRequests = committedFundRequestsFor(project, from, to).filter(r=>!linkedWorkflowRequests.has(r.id));
 
   // Only Ha-unit operation types count as "area cleared" — Road (KM) and
   // Trekking (hrs) use different units and would corrupt this total if summed in.
@@ -220,13 +222,15 @@ export function computeProjectStats(project, from, to) {
   // collection records, a ₦20,000 supervisor Sunday allowance, no ledger
   // requests inside Operations Profit, and maintenance reported under Machine
   // Recovery.
-  const legacyExpenses = expenses.filter((e) => !onDashboardBasis(e.date));
+  const legacyExpenses = expenses.filter((e) => !onDashboardBasis(e.date) && !String(e.id).startsWith('FUEL-WF:'));
   const legacyRequests = fundRequests.filter((r) => !onDashboardBasis(r.date));
   const ownershipByName = new Map(store.get('inventory').map((i) => [i.name, i.ownership]));
   const distributions = store.get('dieselSiteDistributions').filter((d) => d.project === project && dateInRange(d.date, from, to));
-  const actualTransport = rollingTransportCosts(store.get('fundRequests').filter((r) => r.project === project), from, to);
+  const workflow = workflowCosts(store.get('fuelWorkflows'),project,from,to);
+  const actualTransport = rollingTransportCosts(store.get('fundRequests').filter((r) => r.project === project && !linkedWorkflowRequests.has(r.id)), from, to);
+  workflow.dieselDates.forEach(date=>actualTransport.datesWithDiesel.add(date));
   const pmsCollections = store.get('fuelCreditCollections')
-    .filter((c) => c.fuelType === 'PMS' && dateInRange(c.date, from, to) && onDashboardBasis(c.date) && pmsProjectForDate(c.date) === project);
+    .filter((c) => c.fuelType === 'PMS' && !c.workflowId && dateInRange(c.date, from, to) && onDashboardBasis(c.date) && pmsProjectForDate(c.date) === project);
   const pms = pmsBasis(pmsCollections);
   const dieselLogistics = dieselLogisticsBasis(distributions.filter((d) => !actualTransport.datesWithDiesel.has(d.date)), ownershipByName);
   const supervisorSundayAllowance = supervisorSundayAllowanceBasis(operations, store.get('operations').filter((o) => o.siteName === project));
@@ -236,7 +240,7 @@ export function computeProjectStats(project, from, to) {
     + legacyRequests.filter((r) => r.costHead === 'Logistics').reduce((sum, r) => sum + fundRequestTotal(r), 0)
     + commercialBikeLogisticsForRows(operations)
     + tacomaLogisticsForRows(project, from, to, operations)
-    + dieselLogistics + actualTransport.operator + actualTransport.diesel;
+    + dieselLogistics + actualTransport.operator + actualTransport.diesel + workflow.dieselTransport + workflow.workerTransport;
   // Fuel-category expenses/fund requests are excluded here since Diesel Cost above is already
   // derived from actual litres consumed (Daily Operations) x the diesel unit price - counting
   // the fuel purchase too would double-count the same fuel spend. Loan Repayment / Profit
@@ -249,15 +253,15 @@ export function computeProjectStats(project, from, to) {
   const otherCost = legacyExpenses.filter((e) => !NON_OPERATIONS_COST_CATEGORIES.has(e.category) && !isOwnedOperatorAllowancePayment(e.payee, e.category)).reduce((sum, e) => sum + e.amount, 0)
     + legacyRequests.filter((r) => !NON_OPERATIONS_COST_CATEGORIES.has(r.costHead)).reduce((sum, r) => sum + fundRequestTotal(r), 0)
     + managerSundayAllowanceForRows(operations, project)
-    + supervisorSundayAllowance;
+    + supervisorSundayAllowance + workflow.other;
   // PMS (Tacoma + any unexplained litres) on the dashboard basis; PMS used
   // for maintenance is counted under Maintenance Incurred instead.
-  const pmsCost = pms.tacoma + pms.unexplained;
+  const pmsCost = pms.tacoma + pms.unexplained + workflow.pms;
   const totalCost = dozerCost + dieselCost + operatorAllowanceCost + logisticsCost + otherCost + pmsCost;
 
   // Machine Recovery (dashboard basis only).
   const mcRecovered = machineRecoveredBasis(operations, ownershipByName, hourlyRateAsOf);
-  const maintenanceIncurred = maintenanceBasis({ fundRequests, expenses, fundRequestTotal, pms });
+  const maintenanceIncurred = maintenanceBasis({ fundRequests, expenses, fundRequestTotal, pms }) + workflow.maintenance;
 
   const revenue = invoices.reduce((sum, i) => sum + invoiceTotal(i), 0);
   const profit = revenue - totalCost;
@@ -283,8 +287,10 @@ export function computeProjectStats(project, from, to) {
     logisticsCost,
     otherCost,
     dieselLogistics,
-    actualOperatorTransport: actualTransport.operator,
-    actualDieselTransport: actualTransport.diesel,
+    actualOperatorTransport: actualTransport.operator + workflow.workerTransport,
+    actualDieselTransport: actualTransport.diesel + workflow.dieselTransport,
+    provisionalReportedCosts: workflow.provisional,
+    otherWorkflowCosts: workflow.other,
     supervisorSundayAllowance,
     dozerOwned: dozerByOwnership.Company,
     dozerRented: dozerByOwnership.Rented,

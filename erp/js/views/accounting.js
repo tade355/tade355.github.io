@@ -1,3 +1,4 @@
+import { renderFuelWorkflow } from './fuelWorkflow.js';
 import { renderRequestPayments } from './requestPayments.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
@@ -66,6 +67,7 @@ export function renderAccounting(container) {
   tabBar.appendChild(loansTabBtn);
   tabBar.appendChild(budgetsTabBtn);
 
+  const fuelBtn=el('button',{class:'tab-btn',type:'button',onClick:()=>setTab('fuelWorkflow')},'Fuel & Earlier Costs'); tabBar.appendChild(fuelBtn);
   const actionSlot = el('div');
   container.appendChild(sectionHeader('Finance & Accounts', 'Cash, commitments, receivables, payroll payments, operator allowances, loans, expenses, and profitability in one control centre', actionSlot));
   container.appendChild(tabBar);
@@ -75,6 +77,7 @@ export function renderAccounting(container) {
 
   function setTab(next) {
     tab = next;
+    fuelBtn.classList.toggle('active',tab==='fuelWorkflow');
     paymentsTabBtn.classList.toggle('active', tab === 'requestPayments');
     overviewTabBtn.classList.toggle('active', tab === 'overview');
     expensesTabBtn.classList.toggle('active', tab === 'expenses');
@@ -84,7 +87,8 @@ export function renderAccounting(container) {
     profitabilityTabBtn.classList.toggle('active', tab === 'profitability');
     loansTabBtn.classList.toggle('active', tab === 'loans');
     budgetsTabBtn.classList.toggle('active', tab === 'budgets');
-    if (tab === 'requestPayments') { actionSlot.innerHTML=''; body.innerHTML=''; renderRequestPayments(body); }
+    if (tab === 'fuelWorkflow') { actionSlot.innerHTML=''; renderFuelWorkflow(body); }
+    else if (tab === 'requestPayments') { actionSlot.innerHTML=''; body.innerHTML=''; renderRequestPayments(body); }
     else if (tab === 'overview') renderOverviewTab();
     else if (tab === 'expenses') renderExpensesTab();
     else if (tab === 'operatorAllowance') { actionSlot.innerHTML = ''; body.innerHTML = ''; renderDozerPayroll(body); }

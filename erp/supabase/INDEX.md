@@ -61,3 +61,5 @@ Run a new migration once in the Supabase SQL editor, in number order. `schema.sq
 | 0060 | `0060_staff_archive.sql` | Recoverable staff archive; preserves historical employee references. |
 
 - `0061_request_visibility_and_assignments.sql` — staff request tagging and database-enforced personal request visibility; finance-only payment rows.
+
+- `0077_fuel_workflow.sql` — project-scoped fuel planning, CEO approval, numbered releases, atomic credit collections, stock issues, partial settlement and dated earlier costs.

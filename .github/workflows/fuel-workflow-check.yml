@@ -1,0 +1,33 @@
+name: Fuel workflow checks
+on:
+  push:
+    branches: [codex/fuel-workflow-20261112]
+  pull_request:
+    branches: [master]
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm test
+      - name: Database permissions and atomic workflow tests
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f tools/tests/fuel_workflow_fixture.sql
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f erp/supabase/0077_fuel_workflow.sql
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f tools/tests/fuel_workflow_test.sql

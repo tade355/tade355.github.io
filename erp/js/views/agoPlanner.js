@@ -1,3 +1,5 @@
+import { submitFuelPlan, renderFuelWorkflow } from './fuelWorkflow.js';
+import { fuelRequirement } from '../fuelWorkflow.js';
 // AGO Planner (Resource Management → Diesel Management): works out how much
 // diesel the site must be supplied for the next working day from the active
 // dozers, their closing diesel, the target hours and the target opening diesel;
@@ -8,7 +10,7 @@ import { el, ico, formatCurrency, formatDate } from '../utils.js';
 import { sectionHeader, statCard } from '../ui.js';
 import { todayISOString, addDays } from '../dateUtils.js';
 import { FUEL_STATIONS } from '../constants.js';
-import { getCurrentUser } from '../session.js';
+import { getCurrentUser, filterByProject } from '../session.js';
 import { liveContext } from '../reportContext.js';
 import { projectNames } from './profitability.js';
 import { printAgoPlanner } from '../print.js';
@@ -39,7 +41,7 @@ export function renderAgoPlanner(container) {
   container.appendChild(sectionHeader('Planner', 'Plan the diesel to supply for the next working day, download it, and raise the fueling vouchers at the station'));
 
   const today = todayISOString();
-  const projects = projectNames();
+  const projects = filterByProject(store.get('projects'), 'name').map(p=>p.name);
   const station0 = [...store.get('fuelCreditCollections')].sort((a, b) => (a.date < b.date ? 1 : -1))[0]?.station || 'Midejab Ltd';
 
   // ----------------------------------------------------------------- inputs
@@ -65,7 +67,7 @@ export function renderAgoPlanner(container) {
   const tableBody = el('tbody');
   const totalRow = el('tfoot');
   container.appendChild(el('div', { class: 'table-wrap' }, [el('table', { class: 'data-table' }, [
-    el('thead', {}, [el('tr', {}, ['Active', 'Dozer', 'Distributed on closing day (L)', 'Closing diesel (L)', 'Balance needed (L)'].map((h, i) => el('th', { class: i > 1 ? 'dd-num' : undefined }, h)))]),
+    el('thead', {}, [el('tr', {}, ['Active', 'Dozer', 'Distributed on closing day (L)', 'Closing diesel (L)', 'Target hours', 'Balance needed (L)'].map((h, i) => el('th', { class: i > 1 ? 'dd-num' : undefined }, h)))]),
     tableBody, totalRow,
   ])]));
 
@@ -84,6 +86,18 @@ export function renderAgoPlanner(container) {
     summary,
   ]));
 
+  const extraLitres=el('input',{type:'number',min:0,step:0.1,value:0});
+  const extraPurpose=el('select',{},['Repairs','Maintenance','Trekking','Burning debris','Generator'].map(x=>el('option',{value:x},x)));
+  const extraReason=el('input',{placeholder:'Machine / job and reason'});
+  const pmsReason=el('input',{placeholder:'Bikes / vehicles, trips or distance and manager estimate'});
+  const oilLitres=el('input',{type:'number',min:0,step:0.1,value:0});
+  const oilType=el('input',{placeholder:'Oil grade / type'});
+  const oilPrice=el('input',{type:'number',min:0,step:0.01,value:0});
+  const oilReason=el('input',{placeholder:'Dozer code and maintenance job'});
+  container.appendChild(el('div',{class:'dd-tool dd-static'},[
+    el('h3',{},'Other planned uses — recorded separately from production'),
+    el('div',{class:'filter-bar'},[field('Extra AGO litres',extraLitres),field('Purpose',extraPurpose),field('Machine / reason',extraReason),
+      field('PMS movement plan',pmsReason),field('Oil litres',oilLitres),field('Oil type',oilType),field('Oil price per litre',oilPrice),field('Oil job / machine',oilReason)])]));
   // ----------------------------------------------------- message and vouchers
   const stationSel = el('select', {}, FUEL_STATIONS.map((s) => el('option', { value: s }, s)));
   stationSel.value = FUEL_STATIONS.includes(station0) ? station0 : FUEL_STATIONS[0];
@@ -92,11 +106,11 @@ export function renderAgoPlanner(container) {
   const msgNo = el('input', { type: 'number', min: '1', step: '1', value: '1', class: 'dd-small-input' });
   const message = el('textarea', { rows: '6', class: 'dd-message' });
   const status = el('p', { class: 'section-subtitle' }, '');
-  const copyBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Copy message');
-  const voucherBtn = el('button', { type: 'button', class: 'btn btn-primary' }, [ico('upload'), 'Raise fueling voucher']);
+  const copyBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Copy planning draft');
+  const voucherBtn = el('button', { type: 'button', class: 'btn btn-primary' }, [ico('upload'), 'Submit fuel plan']);
   container.appendChild(el('div', { class: 'dd-tool dd-static' }, [
-    el('h3', { class: 'dd-static-title' }, 'Supply message and fueling voucher'),
-    el('p', { class: 'section-subtitle' }, 'The message is worded like the ones sent to the station. Raising the voucher saves one fueling voucher for the AGO and one for the PMS (when PMS is above zero) at the chosen station, for approval in the usual way.'),
+    el('h3', { class: 'dd-static-title' }, 'Fuel plan for approval'),
+    el('p', { class: 'section-subtitle' }, 'This is a planning draft. Submit the plan below; Operations checks it and the CEO approves quantities. The approved station instruction is available in the workflow list.'),
     el('div', { class: 'filter-bar' }, [field('Fuel station', stationSel), field('Supply date', supplyDate), field('Supply to', recipient), field('Message no.', msgNo)]),
     message,
     el('div', { class: 'dd-actions' }, [copyBtn, voucherBtn]),
@@ -121,17 +135,20 @@ export function renderAgoPlanner(container) {
     rowRefs = defaults.dozers.map((d) => {
       const box = el('input', { type: 'checkbox' }); box.checked = d.active;
       const closing = el('input', { type: 'number', min: '0', step: '0.5', class: 'dd-small-input', value: String(d.closing) });
+      const rowHours=el('input',{type:'number',min:0,max:24,step:0.5,value:hours.value,class:'dd-small-input'});
+      rowHours.addEventListener('input',update);
       const need = el('td', { class: 'dd-num' }, '');
       const tr = el('tr', {}, [
         el('td', {}, [box]),
         el('td', {}, [el('strong', {}, d.name), d.operator ? el('span', { class: 'dd-muted' }, ` · ${d.operator}`) : null]),
         el('td', { class: 'dd-num' }, L(d.distributed)),
         el('td', { class: 'dd-num' }, [closing]),
+        el('td', { class: 'dd-num' }, [rowHours]),
         need,
       ]);
       box.addEventListener('change', update); closing.addEventListener('input', update);
       tableBody.appendChild(tr);
-      return { d, box, closing, need, tr };
+      return { d, box, closing, rowHours, need, tr };
     });
     onGround.value = String(defaults.onGround);
     onGroundNote.textContent = defaults.onGroundNote;
@@ -141,11 +158,16 @@ export function renderAgoPlanner(container) {
   }
 
   function current() {
-    const dozers = rowRefs.map((r) => ({ ...r.d, active: r.box.checked, closing: numVal(r.closing) }));
-    return buildPlan({
+    const dozers = rowRefs.map((r) => ({ ...r.d, active: r.box.checked, closing: numVal(r.closing), target: targetTouched ? numVal(target) : fuelRequirement({hours:numVal(r.rowHours),litresPerHour:numVal(lph),reserve:numVal(reserve),closing:0}) }));
+    const plan=buildPlan({
       dozers, target: numVal(target), onGround: numVal(onGround), kegLitres: numVal(kegSize) || DEFAULTS.kegLitres,
       dieselPrice: defaults?.dieselPrice || 0, pmsLitres: numVal(pmsLitres), pmsPrice: defaults?.pmsPrice || 0,
     });
+    plan.extraDiesel=numVal(extraLitres);
+    plan.additional=Math.max(0,plan.totalNeed+plan.extraDiesel-plan.onGround);
+    plan.agoCost=plan.additional*plan.dieselPrice;
+    plan.grandCost=plan.agoCost+plan.pmsCost+numVal(oilLitres)*numVal(oilPrice);
+    return plan;
   }
 
   function notes(plan) {
@@ -158,6 +180,7 @@ export function renderAgoPlanner(container) {
       `Closing diesel follows the ERP diesel chain as at ${formatDate(closingDate.value)} (opening = previous closing + supplied; used = ${lph.value} L per hour, 20 L per hour after 8 hrs). Correct any figure that differs from the site's count.`,
       'Distributed counts diesel put in the tanks only; diesel given for fixing tracks is not tank fuel.',
       `On ground ${L(plan.onGround)} L: ${defaults?.onGroundNote || ''}.`,
+      ...rowRefs.filter(r=>r.box.checked).map(r=>r.d.name+': '+r.rowHours.value+' target hours; '+L(plan.rows.find(x=>x.name===r.d.name)?.target)+' L target opening.'),
     ];
   }
 
@@ -171,7 +194,7 @@ export function renderAgoPlanner(container) {
       r.tr.classList.toggle('dd-row-off', !row.active);
     });
     totalRow.innerHTML = '';
-    totalRow.appendChild(el('tr', {}, [el('td'), el('td', {}, el('strong', {}, 'Total')), el('td', { class: 'dd-num' }, el('strong', {}, L(plan.totalDistributed))), el('td', { class: 'dd-num' }, el('strong', {}, L(plan.totalClosing))), el('td', { class: 'dd-num' }, el('strong', {}, L(plan.totalNeed)))]));
+    totalRow.appendChild(el('tr', {}, [el('td'), el('td', {}, el('strong', {}, 'Total')), el('td', { class: 'dd-num' }, el('strong', {}, L(plan.totalDistributed))), el('td', { class: 'dd-num' }, el('strong', {}, L(plan.totalClosing))), el('td'), el('td', { class: 'dd-num' }, el('strong', {}, L(plan.totalNeed)))]));
     summary.innerHTML = '';
     [
       statCard({ icon: 'fuelCan', label: 'Total for active dozers', value: `${L(plan.totalNeed)} L`, hint: `${plan.activeCount} dozer(s) to ${L(plan.target)} L` }),
@@ -179,14 +202,14 @@ export function renderAgoPlanner(container) {
       statCard({ icon: 'banknote', label: 'AGO cost', value: formatCurrency(plan.agoCost), hint: `at ${formatCurrency(plan.dieselPrice)} per litre` }),
       statCard({ icon: 'wallet', label: 'PMS cost', value: formatCurrency(plan.pmsCost), hint: `${L(plan.pmsLitres)} L at ${formatCurrency(plan.pmsPrice)}` }),
     ].forEach((c) => summary.appendChild(c));
-    if (!messageTouched) message.value = supplyMessage({ recipient: recipient.value.trim(), diesel: plan.additional, pms: plan.pmsLitres, date: supplyDate.value, today, number: numVal(msgNo) || 1 });
+    if (!messageTouched) message.value = 'PLANNING DRAFT — NOT AUTHORISED FOR RELEASE\n\n' + supplyMessage({ recipient: recipient.value.trim(), diesel: plan.additional, pms: plan.pmsLitres, date: supplyDate.value, today, number: numVal(msgNo) || 1 });
   }
 
   // ----------------------------------------------------------------- events
   siteSel.addEventListener('change', () => { recipientTouched = false; loadDefaults(); });
   closingDate.addEventListener('change', () => { planDate.value = addDays(closingDate.value || today, 1); supplyDate.value = planDate.value; messageTouched = false; loadDefaults(); });
   planDate.addEventListener('change', () => { supplyDate.value = planDate.value; messageTouched = false; update(); });
-  [hours, lph, reserve].forEach((i) => i.addEventListener('input', () => { targetTouched = false; update(); }));
+  [hours, lph, reserve].forEach((i) => i.addEventListener('input', () => { if(i===hours)rowRefs.forEach(r=>{r.rowHours.value=hours.value;}); targetTouched = false; update(); }));
   target.addEventListener('input', () => { targetTouched = true; update(); });
   autoBtn.addEventListener('click', () => { targetTouched = false; update(); });
   [kegSize, onGround, pmsLitres].forEach((i) => i.addEventListener('input', () => { messageTouched = false; update(); }));
@@ -198,6 +221,7 @@ export function renderAgoPlanner(container) {
     try { await navigator.clipboard.writeText(message.value); status.textContent = 'Message copied.'; } catch (e) { message.select(); document.execCommand('copy'); status.textContent = 'Message copied.'; }
   });
 
+  const workflowPanel=el('div'); container.appendChild(workflowPanel); renderFuelWorkflow(workflowPanel);
   const meta = (plan) => ({
     siteLabel: siteSel.value.replace(/^REX Forestry Project - /, ''), planDate: planDate.value, closingDate: closingDate.value || today,
     targetHours: numVal(hours), litresPerHour: numVal(lph), reserve: numVal(reserve), targetOverridden: Math.abs(plan.target - autoTarget()) >= 0.05,
@@ -227,27 +251,27 @@ export function renderAgoPlanner(container) {
     printAgoPlanner(plan, { siteLabel: m.siteLabel, planDate: m.planDate, closingDate: m.closingDate, notes: m.notes, message: message.value });
   });
 
-  voucherBtn.addEventListener('click', async () => {
-    const plan = current();
-    const user = getCurrentUser();
-    if (!supplyDate.value) { status.textContent = 'Choose the supply date.'; return; }
-    if (!user) { status.textContent = 'You must be logged in to raise a voucher.'; return; }
-    const drafts = voucherDrafts({ plan, station: stationSel.value, date: supplyDate.value, project: siteSel.value, requestedBy: user.id, message: message.value, today });
-    if (!drafts.length) { status.textContent = 'There is no AGO or PMS to supply, so there is nothing to raise a voucher for.'; return; }
-    const existing = store.get('fuelingVouchers').filter((v) => v.date === supplyDate.value && v.station === stationSel.value && /^Site supply/.test(v.equipment || ''));
-    const lines = drafts.map((d) => `${d.equipment.replace('Site supply ', '')}: ${L(d.litresRequested)} L (${formatCurrency(d.estimatedCost)})`).join('\n');
-    const warn = existing.length ? `\n\nNote: ${existing.length} site supply voucher(s) already exist for this station and date.` : '';
-    if (!window.confirm(`Raise fueling voucher at ${stationSel.value} for ${formatDate(supplyDate.value)}?\n\n${lines}${warn}`)) return;
-    voucherBtn.disabled = true;
+  voucherBtn.addEventListener('click', () => {
     try {
-      for (const d of drafts) await store.add('fuelingVouchers', d);
-      status.innerHTML = '';
-      status.appendChild(document.createTextNode(`Raised ${drafts.length} voucher${drafts.length === 1 ? '' : 's'} at ${stationSel.value} for ${formatDate(supplyDate.value)}, pending approval. `));
-      status.appendChild(el('a', { href: '#', onClick: (e) => { e.preventDefault(); [...document.querySelectorAll('.tab-btn')].find((b) => b.textContent.trim() === 'Vouchers')?.click(); } }, 'Open Fueling Vouchers'));
-    } catch (e) {
-      status.textContent = e.message || 'Could not raise the voucher.';
-    } finally { voucherBtn.disabled = false; }
+      const plan=current();
+      const lines=[];
+      let ground=plan.onGround;
+      for(const row of plan.rows.filter(r=>r.active&&r.need>0)){
+        const used=Math.min(ground,row.need);ground-=used;
+        if(row.need-used>0)lines.push({id:crypto.randomUUID(),product:'Diesel',purpose:'Production',equipment:row.name,
+          quantity:row.need-used,unitPrice:plan.dieselPrice,targetHours:numVal(rowRefs.find(r=>r.d.name===row.name).rowHours),closing:row.closing,reason:'Dozer work plan'});
+      }
+      const other=Math.max(0,numVal(extraLitres)-ground);
+      if(other>0){if(!extraReason.value.trim())throw Error('Explain the extra diesel use.');lines.push({id:crypto.randomUUID(),product:'Diesel',purpose:extraPurpose.value,equipment:extraReason.value,quantity:other,unitPrice:plan.dieselPrice,reason:extraReason.value});}
+      if(plan.pmsLitres>0){if(!pmsReason.value.trim())throw Error('Enter the PMS movement plan.');lines.push({id:crypto.randomUUID(),product:'PMS',purpose:'Vehicles / bikes',quantity:plan.pmsLitres,unitPrice:plan.pmsPrice,reason:pmsReason.value});}
+      if(numVal(oilLitres)>0){if(!oilType.value.trim()||!oilReason.value.trim()||numVal(oilPrice)<=0)throw Error('Enter oil type, price and maintenance reason.');lines.push({id:crypto.randomUUID(),product:'Oil',purpose:'Maintenance',oilType:oilType.value,quantity:numVal(oilLitres),unitPrice:numVal(oilPrice),reason:oilReason.value,equipment:oilReason.value});}
+      if(!lines.length)throw Error('No additional supply is required.');
+      submitFuelPlan({project:siteSel.value,station:stationSel.value,collector:recipient.value,supplyDate:supplyDate.value,lines,
+        closingDate:closingDate.value,onGround:plan.onGround,planningRows:plan.rows,planningNote:notes(plan).join('\n')},
+        ()=>{status.textContent='Fuel plan submitted for review and CEO approval.';renderFuelWorkflow(workflowPanel);});
+    }catch(error){status.textContent=error.message;}
   });
+  [extraLitres,oilLitres,oilPrice].forEach(input=>input.addEventListener('input',update));
 
   loadDefaults();
 }

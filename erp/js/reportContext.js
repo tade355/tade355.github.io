@@ -45,7 +45,7 @@ export function liveContext(project) {
     inventory: store.get('inventory'),
     employees: store.get('employees'),
     distributions: store.get('dieselSiteDistributions'),
-    fuelCreditCollections: store.get('fuelCreditCollections'),
+    fuelCreditCollections: store.get('fuelCreditCollections').map(c=>c.workflowId?{...c,litres:c.deliveredLitres??c.litres}:c),
     fuelCreditPayments: store.get('fuelCreditPayments'),
     fundRequests: store.get('fundRequests'),
     expenses: store.get('expenses'),
