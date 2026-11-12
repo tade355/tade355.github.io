@@ -70,7 +70,19 @@ export function liveContext(project) {
     dieselRateAsOf,
     projectRateAsOf,
     operatorAllowanceForRows,
-    statsFor: (from, to) => computeProjectStats(project, from, to),
+    statsFor: (from, to) => {
+      if (project !== 'all') return computeProjectStats(project, from, to);
+      const names = [...new Set(store.get('projects').map((p) => p.name).filter(Boolean))];
+      const rows = names.map((name) => computeProjectStats(name, from, to));
+      const merged = { project: 'all' };
+      const keys = new Set(rows.flatMap((row) => Object.keys(row)));
+      keys.forEach((key) => {
+        const values = rows.map((row) => row[key]);
+        if (values.every((value) => typeof value === 'number')) merged[key] = values.reduce((sum, value) => sum + value, 0);
+        else if (values.every((value) => typeof value === 'boolean')) merged[key] = values.some(Boolean);
+      });
+      return merged;
+    },
     stationBalance: stationBalances().reduce((s, st) => s + Math.max(0, st.balance), 0),
   };
 }
