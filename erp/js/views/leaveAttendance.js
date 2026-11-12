@@ -95,6 +95,55 @@ function nowTime() {
   return new Date().toTimeString().slice(0, 5);
 }
 
+const ATTENDANCE_QUEUE_KEY = 'emagrims_offline_attendance_queue_v1';
+
+function readAttendanceQueue() {
+  try {
+    const rows = JSON.parse(localStorage.getItem(ATTENDANCE_QUEUE_KEY) || '[]');
+    return Array.isArray(rows) ? rows : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function writeAttendanceQueue(rows) {
+  localStorage.setItem(ATTENDANCE_QUEUE_KEY, JSON.stringify(rows));
+}
+
+function isConnectionFailure(error) {
+  return !navigator.onLine || /network|fetch|offline|connection|load failed/i.test(error?.message || '');
+}
+
+function queueAttendance(operation) {
+  const queue = readAttendanceQueue().filter((row) => !(row.kind === operation.kind
+    && row.employeeId === operation.employeeId && row.date === operation.date));
+  queue.push({ ...operation, localId: operation.localId || `offline-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, queuedAt: new Date().toISOString() });
+  writeAttendanceQueue(queue);
+}
+
+async function syncAttendanceQueue() {
+  const queue = readAttendanceQueue();
+  const remaining = [];
+  let synced = 0;
+  for (let index = 0; index < queue.length; index += 1) {
+    const item = queue[index];
+    try {
+      if (item.kind === 'create') await store.add('attendanceLogs', { ...item.payload, syncedAt: new Date().toISOString(), captureSource: 'offline' });
+      else await store.update('attendanceLogs', item.recordId, { ...item.patch, syncedAt: new Date().toISOString(), captureSource: 'offline' });
+      synced += 1;
+    } catch (error) {
+      remaining.push({ ...item, lastError: error.message || 'Sync failed' });
+      if (isConnectionFailure(error)) {
+        remaining.push(...queue.slice(index + 1));
+        break;
+      }
+    }
+  }
+  writeAttendanceQueue(remaining);
+  if (synced) await store.refreshCollection('attendanceLogs');
+  return { synced, remaining: remaining.length };
+}
+
 export function renderLeaveAttendance(container) {
   container.innerHTML = '';
 
@@ -247,14 +296,18 @@ export function renderLeaveAttendance(container) {
       el('option', { value: '' }, '— Not site-specific —'),
       ...projectOptions().map((p) => el('option', { value: p }, p)),
     ]);
-    const statusNote = el('span', { class: 'clock-status' });
+    const statusNote = el('span', { class: 'clock-status', role: 'status' });
+    const syncBtn = el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => syncNow() }, 'Sync pending');
+    const connectionNote = el('span', { class: 'clock-status', role: 'status' });
 
     const panel = el('div', { class: 'filter-bar' }, [
       el('label', { class: 'filter-field' }, [el('span', {}, 'Employee'), clockEmployee]),
       el('label', { class: 'filter-field' }, [el('span', {}, 'Project / Site'), clockProject]),
       el('button', { class: 'btn btn-primary', type: 'button', onClick: () => clockIn() }, 'Clock In'),
       el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => clockOut() }, 'Clock Out'),
+      syncBtn,
       statusNote,
+      connectionNote,
     ]);
     body.innerHTML = '';
     body.appendChild(panel);
@@ -263,12 +316,26 @@ export function renderLeaveAttendance(container) {
     body.appendChild(tableContainer);
 
     function refresh() {
-      const rows = store.get('attendanceLogs').slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+      const pending = readAttendanceQueue();
+      const overlays = new Map(pending.filter((q) => q.kind === 'update').map((q) => [q.recordId, q]));
+      const serverRows = store.get('attendanceLogs').map((row) => {
+        const queued = overlays.get(row.id);
+        return queued ? { ...row, ...queued.patch, syncStatus: 'Pending Sync', queuedAt: queued.queuedAt } : { ...row, syncStatus: 'Synced' };
+      });
+      const pendingCreates = pending.filter((q) => q.kind === 'create').map((q) => ({
+        ...q.payload, id: q.localId, syncStatus: 'Pending Sync', queuedAt: q.queuedAt,
+      }));
+      const rows = [...serverRows, ...pendingCreates].sort((a, b) => (a.date < b.date ? 1 : (a.date > b.date ? -1 : String(b.clockIn || '').localeCompare(String(a.clockIn || '')))));
+      const pendingCount = pending.length;
+      syncBtn.textContent = pendingCount ? `Sync pending (${pendingCount})` : 'No pending records';
+      syncBtn.disabled = !pendingCount || !navigator.onLine;
+      connectionNote.textContent = navigator.onLine ? 'Online' : 'Offline — attendance will be saved on this device.';
 
       summarySlot.innerHTML = '';
       summarySlot.appendChild(el('div', { class: 'stats-grid' }, [
         statCard({ label: 'Logged Today', value: String(rows.filter((r) => r.date === todayIso()).length) }),
         statCard({ label: 'Total Entries', value: String(rows.length) }),
+        statCard({ label: 'Pending Sync', value: String(pendingCount), tone: pendingCount ? 'warning' : 'good' }),
       ]));
 
       renderTable(tableContainer, {
@@ -278,6 +345,7 @@ export function renderLeaveAttendance(container) {
           { key: 'project', label: 'Project / Site', render: (r) => r.project || '—' },
           { key: 'clockIn', label: 'Clock In', render: (r) => el('span', {}, [r.clockIn || '—', ' ', mapLink(r.clockInLat, r.clockInLng)]) },
           { key: 'clockOut', label: 'Clock Out', render: (r) => el('span', {}, [r.clockOut || '—', ' ', mapLink(r.clockOutLat, r.clockOutLng)]) },
+          { key: 'syncStatus', label: 'Sync', render: (r) => statusPill(r.syncStatus || 'Synced') },
           {
             key: 'actions',
             label: '',
@@ -286,7 +354,8 @@ export function renderLeaveAttendance(container) {
               onDelete: async () => {
                 if (!confirmDelete(`${employeeName(r.employeeId)}'s attendance on ${formatDate(r.date)}`)) return;
                 try {
-                  await store.remove('attendanceLogs', r.id);
+                  if (String(r.id).startsWith('offline-')) writeAttendanceQueue(readAttendanceQueue().filter((q) => q.localId !== r.id));
+                  else await store.remove('attendanceLogs', r.id);
                   refresh();
                 } catch (err) {
                   window.alert(err.message || 'Could not delete this attendance record.');
@@ -304,53 +373,86 @@ export function renderLeaveAttendance(container) {
       const employeeId = clockEmployee.value;
       if (!employeeId) { window.alert('Select an employee first.'); return; }
       const today = todayIso();
-      try {
-        await store.refreshCollection('attendanceLogs');
-        const existing = store.get('attendanceLogs').find((a) => a.employeeId === employeeId && a.date === today);
-        if (existing && existing.clockIn) {
-          window.alert(`${employeeName(employeeId)} already clocked in today at ${existing.clockIn}.`);
-          return;
+      if (navigator.onLine) {
+        try { await store.refreshCollection('attendanceLogs'); } catch (error) {
+          if (!isConnectionFailure(error)) { window.alert(error.message || 'Could not check attendance.'); return; }
         }
-        statusNote.textContent = 'Capturing location…';
-        const loc = await getLocation();
-        statusNote.textContent = loc ? 'Location captured.' : 'Clocked in without location.';
-        const payload = {
-          employeeId, date: today, project: clockProject.value,
-          clockIn: nowTime(), clockInLat: loc?.lat ?? null, clockInLng: loc?.lng ?? null,
-          clockOut: existing?.clockOut || '', clockOutLat: existing?.clockOutLat ?? null, clockOutLng: existing?.clockOutLng ?? null,
-        };
-        if (existing) await store.update('attendanceLogs', existing.id, payload);
-        else await store.add('attendanceLogs', payload);
-        refresh();
-      } catch (err) {
-        statusNote.textContent = '';
-        window.alert(err.message || 'Could not clock in. Please try again.');
       }
+      const pending = readAttendanceQueue().find((q) => q.employeeId === employeeId && q.date === today && q.kind === 'create');
+      const existing = store.get('attendanceLogs').find((a) => a.employeeId === employeeId && a.date === today);
+      if (pending?.payload.clockIn || existing?.clockIn) {
+        window.alert(`${employeeName(employeeId)} already clocked in today at ${pending?.payload.clockIn || existing.clockIn}.`);
+        return;
+      }
+      statusNote.textContent = 'Capturing location…';
+      const capturedAt = new Date().toISOString();
+      const loc = await getLocation();
+      const payload = {
+        employeeId, date: today, project: clockProject.value,
+        clockIn: nowTime(), clockInLat: loc?.lat ?? null, clockInLng: loc?.lng ?? null,
+        clockOut: existing?.clockOut || '', clockOutLat: existing?.clockOutLat ?? null, clockOutLng: existing?.clockOutLng ?? null,
+        capturedAt, syncedAt: navigator.onLine ? capturedAt : null, captureSource: navigator.onLine ? 'online' : 'offline',
+      };
+      try {
+        if (!navigator.onLine) throw new Error('Offline');
+        await store.add('attendanceLogs', payload);
+        statusNote.textContent = loc ? 'Clocked in and synced. Location captured.' : 'Clocked in and synced without location.';
+      } catch (error) {
+        if (!isConnectionFailure(error)) { window.alert(error.message || 'Could not clock in.'); return; }
+        queueAttendance({ kind: 'create', employeeId, date: today, payload });
+        statusNote.textContent = 'Clocked in offline. Pending Sync.';
+      }
+      refresh();
     }
 
     async function clockOut() {
       const employeeId = clockEmployee.value;
       if (!employeeId) { window.alert('Select an employee first.'); return; }
       const today = todayIso();
-      try {
-        await store.refreshCollection('attendanceLogs');
-        const existing = store.get('attendanceLogs').find((a) => a.employeeId === employeeId && a.date === today);
-        if (!existing || !existing.clockIn) {
-          window.alert(`${employeeName(employeeId)} has not clocked in today yet.`);
-          return;
+      const queue = readAttendanceQueue();
+      const pendingCreate = queue.find((q) => q.kind === 'create' && q.employeeId === employeeId && q.date === today);
+      const existing = store.get('attendanceLogs').find((a) => a.employeeId === employeeId && a.date === today);
+      if (!pendingCreate && !existing?.clockIn) { window.alert('Clock in first before clocking out.'); return; }
+      const capturedAt = new Date().toISOString();
+      statusNote.textContent = 'Capturing location…';
+      const loc = await getLocation();
+      const patch = { clockOut: nowTime(), clockOutLat: loc?.lat ?? null, clockOutLng: loc?.lng ?? null, capturedAt };
+      if (pendingCreate) {
+        pendingCreate.payload = { ...pendingCreate.payload, ...patch };
+        writeAttendanceQueue(queue);
+        statusNote.textContent = 'Clocked out offline. Pending Sync.';
+      } else {
+        try {
+          if (!navigator.onLine) throw new Error('Offline');
+          await store.update('attendanceLogs', existing.id, { ...patch, syncedAt: capturedAt, captureSource: 'online' });
+          statusNote.textContent = loc ? 'Clocked out and synced. Location captured.' : 'Clocked out and synced without location.';
+        } catch (error) {
+          if (!isConnectionFailure(error)) { window.alert(error.message || 'Could not clock out.'); return; }
+          queueAttendance({ kind: 'update', recordId: existing.id, employeeId, date: today, patch });
+          statusNote.textContent = 'Clocked out offline. Pending Sync.';
         }
-        statusNote.textContent = 'Capturing location…';
-        const loc = await getLocation();
-        statusNote.textContent = loc ? 'Location captured.' : 'Clocked out without location.';
-        await store.update('attendanceLogs', existing.id, {
-          clockOut: nowTime(), clockOutLat: loc?.lat ?? null, clockOutLng: loc?.lng ?? null,
-        });
-        refresh();
-      } catch (err) {
-        statusNote.textContent = '';
-        window.alert(err.message || 'Could not clock out. Please try again.');
       }
+      refresh();
     }
+
+    async function syncNow() {
+      if (!navigator.onLine) { statusNote.textContent = 'Still offline. Records remain safely stored on this device.'; refresh(); return; }
+      statusNote.textContent = 'Syncing attendance…';
+      try {
+        const result = await syncAttendanceQueue();
+        statusNote.textContent = result.remaining ? `${result.synced} synced; ${result.remaining} still pending.` : (result.synced ? 'All pending attendance synced.' : 'Nothing pending.');
+      } catch (error) {
+        statusNote.textContent = error.message || 'Could not sync attendance yet.';
+      }
+      refresh();
+    }
+
+    const onlineHandler = () => {
+      if (!container.isConnected) { window.removeEventListener('online', onlineHandler); return; }
+      syncNow();
+    };
+    window.addEventListener('online', onlineHandler);
+    if (navigator.onLine && readAttendanceQueue().length) syncNow();
 
     refresh();
   }
