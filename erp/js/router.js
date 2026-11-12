@@ -37,7 +37,7 @@ export const ROUTES = [
   { path: 'dailyStatus', label: 'Machine Status', icon: ICONS.wrench, load: () => import('./views/machineStatusReport.js').then((m) => m.renderMachineStatusReport), tiers: ['Admin', 'Supervisor'] },
   { path: 'dozerIssues', label: 'Dozer Issues & Maintenance', icon: ICONS.alert, load: () => import('./views/dozerIssues.js').then((m) => m.renderDozerIssues), tiers: ['Admin', 'Supervisor', 'Staff'] },
   { path: 'fleet', label: 'Fleet & Assets', icon: ICONS.wrench, load: () => import('./views/fleet.js').then((m) => m.renderFleet), tiers: ['Admin'] },
-  { path: 'resourceManagement', label: 'Resource Management', icon: ICONS.fuelCan, load: () => import('./views/resourceManagement.js').then((m) => m.renderResourceManagement), tiers: ['Admin', 'Accounts'] },
+  { path: 'resourceManagement', label: 'Resource Management', icon: ICONS.fuelCan, load: () => import('./views/resourceManagement.js').then((m) => m.renderResourceManagement), tiers: ['Admin', 'Accounts', 'Supervisor'] },
   // Commercial: money moving with outside parties
   { path: 'sales', label: 'Sales & Invoicing', icon: ICONS.receipt, load: () => import('./views/sales.js').then((m) => m.renderSales), tiers: ['Admin', 'Accounts'] },
   { path: 'purchasing', label: 'Purchasing & Suppliers', icon: ICONS.bag, load: () => import('./views/purchasing.js').then((m) => m.renderPurchasing), tiers: ['Admin', 'Accounts'] },
