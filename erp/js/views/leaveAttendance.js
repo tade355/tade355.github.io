@@ -155,8 +155,8 @@ async function syncAttendanceQueue() {
   for (let index = 0; index < queue.length; index += 1) {
     const item = queue[index];
     try {
-      if (item.kind === 'create') await store.add('attendanceLogs', { ...item.payload, syncedAt: new Date().toISOString(), captureSource: 'offline' });
-      else await store.update('attendanceLogs', item.recordId, { ...item.patch, syncedAt: new Date().toISOString(), captureSource: 'offline' });
+      if (item.kind === 'create') await addAttendance({ ...item.payload, syncedAt: new Date().toISOString(), captureSource: 'offline' });
+      else await updateAttendance(item.recordId, { ...item.patch, syncedAt: new Date().toISOString(), captureSource: 'offline' });
       synced += 1;
     } catch (error) {
       remaining.push({ ...item, lastError: error.message || 'Sync failed' });
