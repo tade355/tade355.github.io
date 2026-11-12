@@ -23,7 +23,7 @@ export function mergeDieselReceipts({ receipts: saved, collections, operations }
   if (!after.length) return saved.length === receipts.length && receipts.every((r, i) => r === saved[i]) ? saved : receipts;
   // The site that has been reporting since the cutoff gets the supply.
   const synthetic = after.map((c) => ({
-    id: c.id, date: c.date, litres: c.litres, unitCost: c.unitPrice, supplier: c.station, station: c.station, project: c.project || '',
+    id: c.id, date: c.date, litres: c.deliveredLitres ?? c.litres, unitCost: c.unitPrice, supplier: c.station, station: c.station, project: c.project || '',
     reference: 'Fuel Credit', notes: c.notes || '', fromFuelCredit: true,
   }));
   return [...receipts, ...synthetic];
