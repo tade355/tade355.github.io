@@ -63,3 +63,5 @@ Run a new migration once in the Supabase SQL editor, in number order. `schema.sq
 - `0061_request_visibility_and_assignments.sql` — staff request tagging and database-enforced personal request visibility; finance-only payment rows.
 
 - `0077_fuel_workflow.sql` — project-scoped fuel planning, CEO approval, numbered releases, atomic credit collections, stock issues, partial settlement and dated earlier costs.
+
+- `0078_fuel_workflow_coo_approval.sql` — COO-only approval for fuel and earlier-cost workflows. Apply after 0077.
