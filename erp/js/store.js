@@ -15,6 +15,7 @@ const LAST_BACKUP_KEY = 'emagrims_erp_last_backup';
 const CONFIG = {
   fuelWorkflows: { table: 'fuel_workflows', prefix: 'FP', optional: true },
   recordSupersessions: { table: 'record_supersessions', prefix: 'DUP' },
+  staffActionItems: { table: 'staff_action_items', prefix: 'ACT', optional: true, direct: true },
   employees: { table: 'employees', prefix: 'EMP' },
   inventory: { table: 'inventory', prefix: 'INV' },
   customers: { table: 'customers', prefix: 'CUS' },
@@ -135,7 +136,8 @@ async function fetchCollection(key) {
   const orderColumn = cfg.orderBy || 'id';
   const data = await fetchAllPages(async (from, to) => {
     const { data: page, error } = await supabase.from(cfg.table).select(selectCols).order(orderColumn).range(from, to);
-    if (error && cfg.optional && ['42P01','PGRST205'].includes(error.code)) return [];
+    if (error && cfg.optional && ['42P01','PGRST205'].includes(error.code)) { unavailableOptionalCollections.add(key); return []; }
+    if (!error) unavailableOptionalCollections.delete(key);
     if (error) throw new Error(`Could not load ${key} (${error.message}).`);
     return page || [];
   });
@@ -150,6 +152,7 @@ async function fetchCollection(key) {
 }
 
 // Missing safety RPCs fail closed; never replace children in separate calls.
+const unavailableOptionalCollections = new Set();
 const isMissingFunction = (error) => error && (error.code === 'PGRST202' || error.code === '42883' || /could not find the function|function .*does not exist/i.test(error.message || ''));
 
 async function upsertRow(key, id, record, { create = false, expectedUpdatedAt = null } = {}) {
@@ -161,6 +164,20 @@ async function upsertRow(key, id, record, { create = false, expectedUpdatedAt = 
 
   const payload = rowToDb({ ...rest, id });
   const items = (childItems || []).filter(Boolean).map((it, idx) => ({ ...rowToDb(it), sort_order: idx }));
+
+  if (cfg.direct) {
+    if (create) {
+      const { error } = await supabase.from(cfg.table).insert(payload);
+      if (error) throw new Error(`Could not save this record (${error.message}).`);
+    } else {
+      const query = supabase.from(cfg.table).update(payload).eq('id', id);
+      if (expectedUpdatedAt) query.eq('updated_at', expectedUpdatedAt);
+      const { data, error } = await query.select('id').maybeSingle();
+      if (error) throw new Error(`Could not save this record (${error.message}).`);
+      if (!data) throw new Error('This record changed or is no longer available. Refresh and try again.');
+    }
+    return;
+  }
 
   // The v2 command checks versions and inserts new records without upserting.
   const { error: v2Error } = await supabase.rpc('save_record_checked', {
@@ -247,7 +264,11 @@ export const store = {
       throw error;
     }
   },
-  getHealth() { return { ...health }; },
+  getHealth() {
+    const snapshot = { ...health };
+    unavailableOptionalCollections.forEach((key) => { snapshot[key] = { ...(snapshot[key] || { ok: true }), optionalUnavailable: true }; });
+    return snapshot;
+  },
   assertComplete() {
     const failed = COLLECTIONS.filter((key) => !health[key]?.ok);
     if (failed.length) throw new Error(`Data is incomplete: ${failed.join(', ')}. Refresh successfully before reporting, exporting or restoring.`);
