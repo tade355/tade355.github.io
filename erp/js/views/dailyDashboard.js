@@ -109,7 +109,7 @@ function downloadHtml(d) {
   document.body.appendChild(a);
   a.click();
   a.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  window.setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 function printPage() {
