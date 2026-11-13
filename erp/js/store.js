@@ -221,8 +221,8 @@ async function readAfterSave(key, id, fallback) {
 }
 
 export const store = {
-  async init() {
-    await supabase.auth?.getSession();
+  async init({ sessionReady = false } = {}) {
+    if (!sessionReady) await supabase.auth?.getSession();
     await store.refreshAll();
   },
 
