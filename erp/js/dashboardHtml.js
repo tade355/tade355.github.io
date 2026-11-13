@@ -7,6 +7,7 @@
 // chart/sort script are the report template, kept verbatim.
 
 import { DIESEL_FILL_LITRES } from './dailyDashboardData.js';
+import { formatDate } from './utils.js';
 import { SUNDAY_BONUS_BASIS_TEXT } from './dashboardBasis.js';
 
 export const DASHBOARD_CSS = String.raw`  :root {
