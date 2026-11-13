@@ -168,7 +168,7 @@ export function renderApprovals(container, onRefresh = () => {}) {
         amount: r.estimatedCost,
         record: r, collection: 'fuelingVouchers',
       })),
-    ].sort((a, b) => (a.date || '').localeCompare(b.date || '') || a.record.id.localeCompare(b.record.id, undefined, { numeric: true }));
+    ].sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.record.id.localeCompare(a.record.id, undefined, { numeric: true }));
 
     summarySlot.innerHTML = '';
     summarySlot.appendChild(el('div', { class: 'stats-grid' }, [
