@@ -10,6 +10,7 @@ import { initThemeSwitch } from './theme.js';
 import { setNavigationUser } from './navigationState.js';
 import { openGlobalSearch, initGlobalSearchShortcut } from './globalSearch.js';
 import { initNotificationCenter } from './notificationCenter.js';
+import { initPushOptIn, disablePushForCurrentDevice } from './pushNotifications.js';
 import { startFieldSync, pendingFieldSyncCount } from './fieldSync.js';
 
 const sidebarNav = document.getElementById('sidebarNav');
@@ -88,6 +89,7 @@ function renderUserBadge() {
         type: 'button',
         class: 'user-badge-switch',
         onClick: async () => {
+          await disablePushForCurrentDevice();
           await logout();
           window.location.reload();
         },
@@ -116,6 +118,7 @@ function initApp() {
   renderUserBadge();
   startUsageMonitor(getCurrentUser());
   initNotificationCenter(document.getElementById('notificationBell'));
+  initPushOptIn();
   startFieldSync(store, ({ pending }) => {
     const bell = document.getElementById('notificationBell');
     if (bell) bell.title = pending ? `${pending} field submission(s) waiting to sync` : 'Notifications';
@@ -185,7 +188,7 @@ function initApp() {
     refreshBtn.replaceChildren(ico('refresh'), 'Refresh Data');
   });
 
-  // This app has no realtime push — data syncs by refetching. Refresh
+  // ERP records still sync by refetching; web push delivers alerts. Refresh
   // whenever the tab regains focus (someone switching back to check on
   // something) and on a slow background timer for tabs left open and
   // visible — but never for a hidden/minimized tab, which has no one
