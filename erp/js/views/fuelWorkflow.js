@@ -28,10 +28,36 @@ export function submitFuelPlan(data, onSaved) {
     onSubmit:async values=>{await fuelCommand(id,'submit',{...data,...values,kind:'Fuel'},token);onSaved?.();}
   });
 }
+export function openEarlierCostForm(onSaved, record = null) {
+  const id=record?.id||'COST-'+uuid();const token=uuid();
+  const d=record?.data||{};
+  openModal({title:record?'Edit Earlier Cost / Reimbursement Request':'Earlier Cost / Reimbursement Request',initial:{
+    project:record?.project||d.project||'',incurredDate:d.incurredDate||todayISOString(),category:d.category||'Other',
+    description:d.description||'',amount:d.amount||'',payee:d.payee||'',evidence:d.evidence||'',lateReason:d.lateReason||'',linkedFundRequestId:d.linkedFundRequestId||''
+  },fields:[
+    {name:'project',label:'Project',type:'select',required:true,options:filterByProject(store.get('projects'),'name').map(p=>({value:p.name,label:p.name}))},
+    {name:'incurredDate',label:'Date the cost happened',type:'date',required:true},
+    {name:'category',label:'Cost type',type:'select',options:['Diesel transport','Worker transport','Maintenance','Other'].map(x=>({value:x,label:x}))},
+    {name:'description',label:'Service / reason',required:true},
+    {name:'amount',label:'Accumulated amount owed (₦)',type:'number',min:0,required:true},
+    {name:'payee',label:'Person or vendor owed',required:true},
+    {name:'evidence',label:'Receipt / service reference',required:true},
+    {name:'lateReason',label:'Reason for later submission',type:'textarea'},
+    {name:'linkedFundRequestId',label:'Existing fund request for this same cost (leave blank if none)'},
+  ],submitLabel:record?'Update reimbursement request':'Submit reimbursement request',onSubmit:async data=>{
+    if(record){
+      const {error}=await supabase.rpc('update_earlier_cost_request',{p_id:id,p_payload:{...data,kind:'Cost'},p_token:token});
+      if(error) throw new Error(error.code==='PGRST202'?'Reimbursement editing has not been enabled by the administrator yet.':error.message);
+      await store.refreshCollection('fuelWorkflows');
+    } else await fuelCommand(id,'submit',{...data,kind:'Cost'},token);
+    onSaved?.();
+  }});
+}
+
 function lineOptions(r) {return r.data.lines.map(l=>({value:l.id,label:l.product+(l.oilType?' · '+l.oilType:'')+' · '+l.purpose+' · '+(l.equipment||'Site') }));}
-export function renderFuelWorkflow(container,{approvalsOnly=false}={}) {
+export function renderFuelWorkflow(container,{approvalsOnly=false,costsOnly=false,allowCreate=true}={}) {
   container.innerHTML='';
-  const heading=el('h3',{},approvalsOnly?'Fuel plans and earlier costs awaiting review':'Fuel requests, station releases and earlier costs');
+  const heading=el('h3',{},approvalsOnly?'Fuel plans and earlier costs awaiting review':costsOnly?'Earlier Cost / Reimbursement Requests':'Fuel requests, station releases and earlier costs');
   const controls=el('div',{class:'filter-bar'});
   const project=el('select',{'aria-label':'Workflow project'},[el('option',{value:''},'All permitted projects'),
     ...filterByProject(store.get('projects'),'name').map(p=>el('option',{value:p.name},p.name))]);
@@ -40,22 +66,8 @@ export function renderFuelWorkflow(container,{approvalsOnly=false}={}) {
   const list=el('div',{class:'approval-card-list'});
   const reload=el('button',{class:'btn btn-ghost',type:'button',onClick:()=>load()},'Refresh workflow');
   controls.append(project,state,reload);
-  if(!approvalsOnly) controls.append(el('button',{class:'btn btn-primary',type:'button',onClick:()=>costForm()},'+ Report earlier cost'));
+  if(!approvalsOnly&&allowCreate) controls.append(el('button',{class:'btn btn-primary',type:'button',onClick:()=>openEarlierCostForm(draw)},'+ Earlier Cost / Reimbursement Request'));
   container.append(heading,controls,message,list);
-  function costForm(){
-    const id='COST-'+uuid();const token=uuid();
-    openModal({title:'Report a cost already incurred',initial:{incurredDate:todayISOString()},fields:[
-      {name:'project',label:'Project',type:'select',required:true,options:filterByProject(store.get('projects'),'name').map(p=>({value:p.name,label:p.name}))},
-      {name:'incurredDate',label:'Date the cost happened',type:'date',required:true},
-      {name:'category',label:'Cost type',type:'select',options:['Diesel transport','Worker transport','Maintenance','Other'].map(x=>({value:x,label:x}))},
-      {name:'description',label:'Service / reason',required:true},
-      {name:'amount',label:'Amount incurred (₦)',type:'number',min:0,required:true},
-      {name:'payee',label:'Person or vendor owed',required:true},
-      {name:'evidence',label:'Receipt / service reference',required:true},
-      {name:'lateReason',label:'Reason for later submission',type:'textarea'},
-      {name:'linkedFundRequestId',label:'Existing fund request for this same cost (leave blank if none)'},
-    ],submitLabel:'Report cost for review',onSubmit:async data=>{await fuelCommand(id,'submit',{...data,kind:'Cost'},token);draw();}});
-  }
   async function load(){try{await store.refreshCollection('fuelWorkflows');draw();}catch(e){message.textContent=e.message;}}
   function button(label,fn){const b=el('button',{class:'btn btn-ghost btn-sm',type:'button',onClick:async()=>{b.disabled=true;try{await fn();}catch(e){message.textContent=e.message;}finally{b.disabled=false;}}},label);return b;}
   function approval(r){
@@ -117,13 +129,18 @@ export function renderFuelWorkflow(container,{approvalsOnly=false}={}) {
     const user=getCurrentUser()||{};
     let rows=filterByProject(store.get('fuelWorkflows'),'project');
     if(approvalsOnly) rows=rows.filter(r=>['Submitted','Reviewed'].includes(r.status));
+    if(costsOnly) rows=rows.filter(r=>r.kind==='Cost');
     if(project.value) rows=rows.filter(r=>r.project===project.value);
     if(state.value!=='All statuses') rows=rows.filter(r=>r.status===state.value);
     rows=rows.slice().sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
     list.replaceChildren();
-    message.textContent='Reported costs affect the date incurred. Unapproved costs are provisional; later payments reduce the payable without adding the cost again.';
+    message.textContent=costsOnly?'You can update your reimbursement request while it awaits approval. Once approved or paid, submit a new request for any additional cost.':'Reported costs affect the date incurred. Unapproved costs are provisional; later payments reduce the payable without adding the cost again.';
     for(const r of rows){
       const actions=el('div',{class:'row-actions'},[button('View details',()=>view(r))]);
+      const hasPayment=(r.events||[]).some(e=>e.type==='payment');
+      if(r.kind==='Cost'&&r.requestedBy===user.id&&['Submitted','Reviewed'].includes(r.status)&&!hasPayment){
+        actions.append(button('Edit request',()=>openEarlierCostForm(draw,r)));
+      }
       if(user.id==='EMP-26' && ['Submitted','Reviewed'].includes(r.status)){
         actions.append(button('Approve',()=>approval(r)));
         actions.append(button('Reject',()=>{openModal({title:'Reject request',fields:[{name:'note',label:'Reason',required:true,type:'textarea'}],onSubmit:async p=>{await fuelCommand(r.id,'reject',p);draw();}});}));
