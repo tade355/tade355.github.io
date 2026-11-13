@@ -149,18 +149,17 @@ export function renderAgoPlanner(container) {
         need,
       ]);
       const ref = { d, box, closing, rowHours, needInput, needAuto, needOverride: null, tr };
-      needInput.addEventListener('change', () => {
+      needInput.addEventListener('input', () => {
         const value = needInput.value.trim();
         if (value && (!Number.isFinite(Number(value)) || Number(value) < 0)) {
           status.textContent = 'Balance needed must be zero or more litres.';
-          needInput.value = ref.needOverride === null ? '' : String(ref.needOverride);
-          update();
           return;
         }
         ref.needOverride = value === '' ? null : Number(value);
         status.textContent = ref.needOverride === null ? '' : `Manual balance set for ${d.name}.`;
-        update();
+        update(needInput);
       });
+      needInput.addEventListener('change', () => update());
       needAuto.addEventListener('click', () => { ref.needOverride = null; status.textContent = `Calculated balance restored for ${d.name}.`; update(); });
       box.addEventListener('change', update); closing.addEventListener('input', update);
       tableBody.appendChild(tr);
@@ -200,7 +199,7 @@ export function renderAgoPlanner(container) {
     ];
   }
 
-  function update() {
+  function update(editingInput = null) {
     if (!defaults) return;
     if (!targetTouched) target.value = String(autoTarget());
     const plan = current();
@@ -208,7 +207,7 @@ export function renderAgoPlanner(container) {
       const row = plan.rows[i];
       r.needInput.disabled = !row.active;
       r.needAuto.disabled = !row.active || !row.needManuallySet;
-      r.needInput.value = row.active ? String(row.need) : '';
+      if (r.needInput !== editingInput) r.needInput.value = row.active ? String(row.need) : '';
       r.needInput.title = row.needManuallySet ? `Manual balance; calculated ${L(row.calculatedNeed)} L` : `Calculated balance: ${L(row.calculatedNeed)} L`;
       r.tr.classList.toggle('dd-row-off', !row.active);
     });
