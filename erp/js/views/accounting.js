@@ -2,7 +2,7 @@ import { renderRequestPayments } from './requestPayments.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, invoiceTotal, el } from '../utils.js';
-import { renderTable, actionButtons, sectionHeader, openModal, confirmDelete, statCard } from '../ui.js';
+import { renderTable, actionButtons, sectionHeader, openModal, openCustomModal, confirmDelete } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
 import { EXPENSE_CATEGORIES } from '../constants.js';
 import { renderLoans } from './loans.js';
@@ -106,7 +106,9 @@ export function renderAccounting(container) {
     const requests = store.get('fundRequests');
     const pending = requests.filter(r => r.status === 'Pending');
     const approved = requests.filter(r => ['Approved', 'Partially Approved'].includes(r.status));
-    const paidUnreconciled = requests.filter(r => r.status === 'Paid' && !store.get('expenses').some(e => e.fundRequestId === r.id));
+    const overlinked = requests.filter(r => r.status === 'Paid' &&
+      store.get('expenses').filter(e => e.fundRequestId === r.id).reduce((sum, e) => sum + Number(e.amount || 0), 0) >
+      (Number(r.paidAmount) || (r.items || []).reduce((sum, item) => sum + Number(item.amount || 0), 0)) + 0.005).length;
     const payments = store.get('invoicePayments');
     const receivables = store.get('invoices').map(invoice => {
       const paid = payments.filter(p => p.invoiceId === invoice.id).reduce((sum, p) => sum + Number(p.amount || 0), 0);
@@ -133,68 +135,75 @@ export function renderAccounting(container) {
     const draftPayroll = store.get('payrollRuns').filter(run => run.status === 'Draft').length
       + store.get('dozerPayrollRuns').filter(run => run.status === 'Draft').length;
 
-    body.appendChild(el('div', { class: 'stats-grid' }, [
-      statCard({ label: 'Cash received', value: formatCurrency(income), tone: 'good' }),
-      statCard({ label: 'Cash paid out', value: formatCurrency(outflow), tone: 'critical' }),
-      statCard({ label: 'Recorded cash balance', value: formatCurrency(income - outflow), tone: income >= outflow ? 'good' : 'critical' }),
-      statCard({ label: 'Approved unpaid requests', value: formatCurrency(commitmentTotal), tone: commitmentTotal ? 'warning' : 'good' }),
-      statCard({ label: 'Customer receivables', value: formatCurrency(receivableTotal), tone: receivableTotal ? 'warning' : 'good' }),
-      statCard({ label: 'Operator allowances owed', value: formatCurrency(operatorTotal), tone: operatorTotal ? 'warning' : 'good' }),
-      statCard({ label: 'Staff salary owed', value: formatCurrency(salaryOutstanding), tone: salaryOutstanding ? 'warning' : 'good' }),
-      statCard({ label: 'Loan balance outstanding', value: formatCurrency(loanTotal), tone: loanTotal ? 'warning' : 'good' }),
-    ]));
-
-    const quick = el('div', { class: 'filter-bar' }, [
-      el('button', { class: 'btn btn-primary', type: 'button', onClick: () => setTab('expenses') }, 'Record expense'),
-      el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => setTab('operatorAllowance') }, 'Manage operator allowances'),
-      el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => setTab('payroll') }, 'Manage payroll payments'),
-      el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => setTab('incomeExpenditure') }, 'Income & expenditure'),
+    const metric = (label, value, hint, target, tone = '') => el('button', {
+      type: 'button', class: 'finance-metric' + (tone ? ' finance-metric-' + tone : ''),
+      onClick: () => setTab(target),
+      title: 'Open ' + label + ' details',
+    }, [
+      el('span', { class: 'finance-metric-label' }, label),
+      el('strong', { class: 'finance-metric-value' }, formatCurrency(value)),
+      el('span', { class: 'finance-metric-hint' }, hint + ' · View details →'),
     ]);
-    body.appendChild(quick);
-    body.appendChild(el('h3', { class: 'subsection-title' }, 'Approved requests awaiting payment'));
-    const paymentQueue = el('div');
-    body.appendChild(paymentQueue);
-    renderRequestPayments(paymentQueue);
-    body.appendChild(el('h3', { class: 'subsection-title' }, 'Other actions required'));
+    const block = (title, subtitle, cards) => {
+      body.appendChild(el('div', { class: 'finance-group-heading' }, [
+        el('h3', {}, title), el('p', {}, subtitle),
+      ]));
+      body.appendChild(el('div', { class: 'finance-metric-grid' }, cards));
+    };
 
-    const actionRows = [
-      ...pending.map(r => ({ priority: 'Approval', item: (r.description || r.id).length > 140 ? `${(r.description || r.id).slice(0, 137)}…` : (r.description || r.id), amount: Number(r.approvedAmount || 0) || (r.items || []).reduce((sum, item) => sum + Number(item.amount || 0), 0), status: 'Pending' })),
-      ...receivables.map(r => ({ priority: 'Collection', item: r.customer || r.id, amount: r.outstanding, status: 'Unpaid invoice' })),
-      ...operatorBalances.map(r => ({ priority: 'Allowance', item: r.name, amount: r.balance, status: 'Owed' })),
-      ...loanRows.map(r => ({ priority: 'Loan', item: r.lender || r.id, amount: r.outstanding, status: r.status || 'Active' })),
+    body.appendChild(el('div', { class: 'finance-intro' }, [
+      el('strong', {}, 'Finance position from ERP records'),
+      el('span', {}, 'All amounts are to date. Recorded cash net is income minus recorded outflow; it is not a bank balance. Reconcile it with the bank statement.'),
+    ]));
+    block('Recorded cash', 'Money recorded as received or paid.', [
+      metric('Received', income, 'Customer and other recorded receipts', 'incomeExpenditure', 'good'),
+      metric('Paid out', outflow, 'Recorded payments and expenses', 'incomeExpenditure', 'critical'),
+      metric('Recorded cash net', income - outflow, 'Received less paid out', 'incomeExpenditure', income >= outflow ? 'good' : 'critical'),
+    ]);
+    block('To pay', 'Approved amounts not yet fully settled. These are separate from cash already paid.', [
+      metric('Approved fund requests', commitmentTotal, 'Awaiting payment', 'requestPayments', 'warning'),
+      metric('Staff salaries', salaryOutstanding, 'Approved payroll still owed', 'payroll', 'warning'),
+      metric('Operator allowances', operatorTotal, 'Allowances still owed', 'operatorAllowance', 'warning'),
+      metric('Loan balances', loanTotal, 'Review loan details and direction', 'loans', 'warning'),
+    ]);
+    block('To collect', 'Amounts customers still owe the company.', [
+      metric('Customer receivables', receivableTotal, 'Unpaid invoice balances', 'incomeExpenditure', 'warning'),
+    ]);
+
+    body.appendChild(el('div', { class: 'finance-section-head' }, [
+      el('div', {}, [el('h3', {}, 'Attention needed'), el('p', {}, 'Follow up on approvals, collections and records that need checking.')]),
+    ]));
+    const checks = [
+      { label: 'Fund requests awaiting approval', count: pending.length, action: 'Open requests', click: () => { window.location.hash = '#/fundRequests?tab=Approvals'; } },
+      { label: 'Approved requests awaiting payment', count: approved.length, action: 'Open payments', click: () => setTab('requestPayments') },
+      { label: 'Unpaid customer invoices', count: receivables.length, action: 'Open sales', click: () => { window.location.hash = '#/sales'; } },
+      { label: 'Draft payroll runs', count: draftPayroll, action: 'Open payroll', click: () => setTab('payroll') },
+      { label: 'Direct expenses without a project', count: store.get('expenses').filter(e => !e.project).length, action: 'Review expenses', click: () => setTab('expenses') },
+      { label: 'Direct expenses without a payee', count: store.get('expenses').filter(e => !e.payee).length, action: 'Review expenses', click: () => setTab('expenses') },
+      { label: 'Linked expenses exceeding the request payment', count: overlinked, action: 'Review expenses', click: () => setTab('expenses') },
     ];
-    const actionsTable = el('div');
-    body.appendChild(actionsTable);
-    renderTable(actionsTable, { columns: [
-      { key: 'priority', label: 'Action' }, { key: 'item', label: 'Record' },
-      { key: 'amount', label: 'Amount', render: row => formatCurrency(row.amount) },
-      { key: 'status', label: 'Status' },
-    ], rows: actionRows, emptyText: 'No finance action is currently outstanding.' });
+    body.appendChild(el('div', { class: 'finance-check-list' }, (checks.some(check => check.count > 0) ? checks.filter(check => check.count > 0) : [{ label: 'No items need attention', count: 0, action: 'Review records', click: () => setTab('expenses') }]).map(check =>
+      el('div', { class: 'finance-check-row' }, [
+        el('span', {}, check.label),
+        el('strong', {}, String(check.count)),
+        el('button', { type: 'button', class: 'btn btn-ghost btn-sm', onClick: check.click }, check.action),
+      ])
+    )));
 
-    body.appendChild(el('h3', { class: 'subsection-title' }, 'Control checks'));
-    const checks = el('div');
-    body.appendChild(checks);
-    renderTable(checks, { columns: [
-      { key: 'check', label: 'Check' }, { key: 'result', label: 'Current result' },
-    ], rows: [
-      { check: 'Requests awaiting approval', result: String(pending.length) },
-      { check: 'Approved requests awaiting payment', result: String(approved.length) },
-      { check: 'Unpaid customer invoices', result: String(receivables.length) },
-      { check: 'Draft payroll runs', result: String(draftPayroll) },
-      { check: 'Expenses missing project', result: String(store.get('expenses').filter(e => !e.project).length) },
-      { check: 'Expenses missing payee', result: String(store.get('expenses').filter(e => !e.payee).length) },
-      { check: 'Paid requests without matched expense', result: String(paidUnreconciled.length) },
-    ], emptyText: '' });
-
-    body.appendChild(el('h3', { class: 'subsection-title' }, 'Recent financial activity'));
+    body.appendChild(el('div', { class: 'finance-section-head' }, [
+      el('div', {}, [el('h3', {}, 'Recent cash activity'), el('p', {}, 'Latest recorded receipts and payments.')]),
+      el('button', { type: 'button', class: 'btn btn-ghost btn-sm', onClick: () => setTab('incomeExpenditure') }, 'See all activity'),
+    ]));
     const recent = el('div');
     body.appendChild(recent);
     renderTable(recent, { columns: [
       { key: 'date', label: 'Date', render: row => formatDate(row.date) },
-      { key: 'type', label: 'Type' }, { key: 'description', label: 'Description' },
+      { key: 'type', label: 'Flow' },
+      { key: 'description', label: 'Description', wrap: true },
       { key: 'amount', label: 'Amount', render: row => formatCurrency(row.amount) },
       { key: 'project', label: 'Project', render: row => row.project || '—' },
-    ], rows: cash.slice().sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 15), emptyText: 'No financial activity recorded.' });
+    ], rows: cash.slice().sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))).slice(0, 8),
+       emptyText: 'No cash activity recorded.' });
   }
 
   function renderLoansTab() {
@@ -217,98 +226,141 @@ export function renderAccounting(container) {
 
   function renderExpensesTab() {
     actionSlot.innerHTML = '';
-    actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openForm() }, '+ Add Expense'));
-
+    actionSlot.appendChild(el('button', { class: 'btn btn-primary', type: 'button', onClick: () => openForm() }, '+ Add Expense'));
     body.innerHTML = '';
-    const summaryGrid = el('div', { class: 'stats-grid' });
-    body.appendChild(summaryGrid);
-    body.appendChild(el('p', { class: 'section-subtitle' }, 'Includes recorded expenses and paid fund requests automatically. Linked records are reconciled using the same cash ledger as the financial reports.'));
 
+    body.appendChild(el('div', { class: 'finance-intro' }, [
+      el('strong', {}, 'Expense register'),
+      el('span', {}, 'Direct expenses and paid fund requests appear here once. Other cash payments, including fuel station settlements, are in Income & Expenditure.'),
+    ]));
 
-    const chartContainer = el('div', { class: 'charts-grid charts-grid-1' });
-    body.appendChild(chartContainer);
-
-    let searchQuery = '';
-    const searchInput = el('input', { type: 'search', placeholder: 'Search reference, description, payee, category or dozer…' });
-    body.appendChild(el('div', { class: 'search-bar' }, [searchInput]));
-    searchInput.addEventListener('input', () => {
-      searchQuery = searchInput.value.trim().toLowerCase();
+    const allRows = expenseLedgerRows(store.all());
+    const filters = { search: '', from: '', to: '', project: '', category: '', source: '' };
+    const filterBar = el('div', { class: 'finance-expense-filters' });
+    const search = el('input', { type: 'search', placeholder: 'Search reference, description, payee or payment reference', 'aria-label': 'Search expenses' });
+    const from = el('input', { type: 'date', 'aria-label': 'From date' });
+    const to = el('input', { type: 'date', 'aria-label': 'To date' });
+    const makeSelect = (label, values) => {
+      const select = el('select', { 'aria-label': label });
+      select.appendChild(el('option', { value: '' }, 'All ' + label.toLowerCase()));
+      values.forEach(value => select.appendChild(el('option', { value }, value)));
+      return select;
+    };
+    const project = makeSelect('Projects', [...new Set(allRows.map(row => row.project).filter(Boolean))].sort());
+    const category = makeSelect('Categories', [...new Set(allRows.map(row => row.category).filter(Boolean))].sort());
+    const source = makeSelect('Sources', ['Expense', 'Paid Fund Request']);
+    const field = (label, control) => el('label', { class: 'finance-filter-field' }, [el('span', {}, label), control]);
+    filterBar.append(
+      field('Search', search), field('From', from), field('To', to),
+      field('Project', project), field('Category', category), field('Source', source),
+    );
+    const reset = el('button', { type: 'button', class: 'btn btn-ghost', onClick: () => {
+      [search, from, to, project, category, source].forEach(control => { control.value = ''; });
+      Object.keys(filters).forEach(key => { filters[key] = ''; });
       refresh();
-    });
+    } }, 'Clear filters');
+    filterBar.appendChild(reset);
+    body.appendChild(filterBar);
+    [[search, 'search'], [from, 'from'], [to, 'to'], [project, 'project'], [category, 'category'], [source, 'source']]
+      .forEach(([control, key]) => control.addEventListener(key === 'search' ? 'input' : 'change', () => {
+        filters[key] = control.value.trim();
+        refresh();
+      }));
 
+    const summary = el('div', { class: 'finance-expense-summary' });
+    body.appendChild(summary);
+    body.appendChild(el('div', { class: 'finance-section-head' }, [
+      el('div', {}, [el('h3', {}, 'Expense records'), el('p', {}, 'Select Details for payment information or use the row actions to correct a direct expense.')]),
+      el('button', { type: 'button', class: 'btn btn-ghost btn-sm', onClick: () => setTab('incomeExpenditure') }, 'View full cash ledger'),
+    ]));
     const tableContainer = el('div');
     body.appendChild(tableContainer);
+    const analysis = el('details', { class: 'finance-expense-analysis' }, [
+      el('summary', {}, 'Expense breakdown by category'),
+    ]);
+    const chartContainer = el('div', { class: 'charts-grid charts-grid-1' });
+    analysis.appendChild(chartContainer);
+    body.appendChild(analysis);
+
+    function openDetails(row) {
+      openCustomModal({ title: 'Expense details · ' + (row.sourceId || row.id), build(modalBody) {
+        const details = [
+          ['Source', row.source], ['Payment date', formatDate(row.date)],
+          ['Category', row.category || '—'], ['Description', row.description || '—'],
+          ['Amount', formatCurrency(row.amount)], ['Paid to', row.payee || '—'],
+          ['Paid by', row.paidBy || '—'], ['Payment reference', row.paymentReference || '—'],
+          ['Project', row.project || '—'], ['Equipment', row.equipment || '—'],
+        ];
+        modalBody.appendChild(el('dl', { class: 'finance-expense-detail-list' },
+          details.flatMap(([label, value]) => [el('dt', {}, label), el('dd', {}, value)])));
+        if (row.source === 'Paid Fund Request') {
+          modalBody.appendChild(el('button', { type: 'button', class: 'btn btn-primary', onClick: () => {
+            const request = store.find('fundRequests', row.fundRequestId);
+            if (request) printFundRequest(request, {
+              submittedByName: store.find('employees', request.submittedBy)?.name || '',
+              approvedByName: store.find('employees', request.approvedBy)?.name || '',
+            });
+          } }, 'View / print fund request'));
+        }
+      } });
+    }
 
     function refresh() {
-      const expenses = expenseLedgerRows(store.all());
-      const cash = financialActivity(store.all());
-      const totalRevenue = cash.filter((r) => r.type === 'Income').reduce((sum, r) => sum + r.amount, 0);
-      const totalExpenses = cash.filter((r) => r.type === 'Expenditure').reduce((sum, r) => sum + r.amount, 0);
-      // Payments since the last bank-transfer upload are recorded as fund requests
-      // (approved or paid), not as expenses; Income & Expenditure counts both.
-      const requestTotal = financialActivity(store.all(), 'commitments').reduce((sum, r) => sum + r.amount, 0);
-      const netPosition = totalRevenue - totalExpenses;
+      let rows = allRows.filter(row => {
+        const date = String(row.date || '').slice(0, 10);
+        if (filters.from && date < filters.from) return false;
+        if (filters.to && date > filters.to) return false;
+        if (filters.project && row.project !== filters.project) return false;
+        if (filters.category && row.category !== filters.category) return false;
+        if (filters.source && row.source !== filters.source) return false;
+        if (filters.search && ![row.sourceId, row.source, row.paymentReference, row.description,
+          row.category, row.payee, row.paidBy, row.project, row.equipment]
+          .join(' ').toLowerCase().includes(filters.search.toLowerCase())) return false;
+        return true;
+      }).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) ||
+        String(b.sourceId || '').localeCompare(String(a.sourceId || ''), undefined, { numeric: true }));
 
-      summaryGrid.innerHTML = '';
-      summaryGrid.appendChild(statCard({ label: 'Recorded Cash Income', value: formatCurrency(totalRevenue), tone: 'good' }));
-      summaryGrid.appendChild(statCard({ label: 'Recorded Cash Outflow', value: formatCurrency(totalExpenses), tone: 'critical', hint: 'Legacy records require reconciliation; see Income & Expenditure' }));
-      summaryGrid.appendChild(statCard({ label: 'Approved Unpaid Commitments', value: formatCurrency(requestTotal), tone: 'warning', hint: 'Excluded from recorded cash net' }));
-      summaryGrid.appendChild(statCard({ label: 'Recorded Cash Net', value: formatCurrency(netPosition), tone: netPosition >= 0 ? 'good' : 'critical', hint: 'Recorded income less recorded outflow' }));
-
-      const categories = [...new Set(expenses.map((e) => e.category))];
-      const bars = categories.map((cat, i) => ({
-        label: cat,
-        value: expenses.filter((e) => e.category === cat).reduce((sum, e) => sum + e.amount, 0),
-        colorVar: CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length],
-      }));
-      renderBarChart(chartContainer, { title: 'Expenses by Category', bars, formatValue: formatCurrency });
-
-      let rows = expenses.slice().sort((a, b) => (a.date < b.date ? 1 : -1));
-      if (searchQuery) {
-        rows = rows.filter((r) => [r.id, r.source, r.paymentReference, r.description, r.category, r.payee, r.paidBy, r.project, r.equipment].join(' ').toLowerCase().includes(searchQuery));
-      }
+      const sum = list => list.reduce((total, row) => total + Number(row.amount || 0), 0);
+      summary.replaceChildren(
+        el('div', {}, [el('span', {}, 'Amount in view'), el('strong', {}, formatCurrency(sum(rows)))]),
+        el('div', {}, [el('span', {}, 'Records in view'), el('strong', {}, String(rows.length))]),
+        el('div', {}, [el('span', {}, 'Direct expenses'), el('strong', {}, formatCurrency(sum(rows.filter(row => row.source === 'Expense'))))]),
+        el('div', {}, [el('span', {}, 'Paid fund requests'), el('strong', {}, formatCurrency(sum(rows.filter(row => row.source === 'Paid Fund Request'))))]),
+      );
       renderTable(tableContainer, {
         columns: [
-          { key: 'sourceId', label: 'Reference' },
-          { key: 'source', label: 'Source' },
-          { key: 'date', label: 'Payment Date', render: (r) => formatDate(r.date) },
-          { key: 'category', label: 'Category' },
+          { key: 'date', label: 'Date', render: row => formatDate(row.date) },
+          { key: 'sourceId', label: 'Record', render: row => el('span', { class: 'finance-expense-record' }, [
+            el('strong', {}, row.sourceId || row.id), el('small', {}, row.source === 'Expense' ? 'Direct expense' : 'Paid request'),
+          ]) },
+          { key: 'category', label: 'Category', render: row => row.category || '—' },
           { key: 'description', label: 'Description', wrap: true },
-          { key: 'amount', label: 'Amount', render: (r) => formatCurrency(r.amount) },
-          { key: 'payee', label: 'Paid To', render: (r) => r.payee || '—' },
-          { key: 'paidBy', label: 'Paid By', render: (r) => r.paidBy || '—' },
-          { key: 'paymentReference', label: 'Payment Reference', render: (r) => r.paymentReference || '—' },
-          { key: 'project', label: 'Project', render: (r) => r.project || '—' },
-          { key: 'equipment', label: 'Equipment', render: (r) => r.equipment || '—' },
-          {
-            key: 'actions',
-            label: '',
-            render: (r) => r.source === 'Paid Fund Request' ? el('button', {
-              class: 'btn btn-ghost btn-sm', type: 'button',
-              onClick: () => {
-                const request = store.find('fundRequests', r.fundRequestId);
-                if (request) printFundRequest(request, {
-                  submittedByName: store.find('employees', request.submittedBy)?.name || '',
-                  approvedByName: store.find('employees', request.approvedBy)?.name || '',
-                });
-              },
-            }, 'View / print request') : actionButtons({
-              onEdit: () => openForm(r),
+          { key: 'payee', label: 'Paid to', render: row => row.payee || '—' },
+          { key: 'project', label: 'Project', render: row => row.project || '—' },
+          { key: 'amount', label: 'Amount', render: row => formatCurrency(row.amount) },
+          { key: 'actions', label: 'Actions', render: row => el('div', { class: 'finance-expense-actions' }, [
+            el('button', { type: 'button', class: 'btn btn-ghost btn-sm', onClick: () => openDetails(row) }, 'Details'),
+            row.source === 'Expense' ? actionButtons({
+              onEdit: () => openForm(row),
               onDelete: async () => {
-                if (!confirmDelete(r.description)) return;
-                try {
-                  await store.remove('expenses', r.id);
-                  refresh();
-                } catch (err) {
-                  window.alert(err.message || 'Could not delete this expense.');
-                }
+                if (!confirmDelete(row.description)) return;
+                try { await store.remove('expenses', row.id); renderExpensesTab(); }
+                catch (error) { window.alert(error.message || 'Could not delete this expense.'); }
               },
-            }),
-          },
+            }) : null,
+          ]) },
         ],
         rows,
-        emptyText: 'No expenses recorded yet.',
+        emptyText: 'No expense records match these filters.',
       });
+      const categories = [...new Set(rows.map(row => row.category || 'Uncategorised'))]
+        .map(name => ({ label: name, value: sum(rows.filter(row => (row.category || 'Uncategorised') === name)) }))
+        .sort((a, b) => b.value - a.value);
+      const bars = categories.slice(0, 7);
+      if (categories.length > 7) bars.push({ label: 'Other categories', value: categories.slice(7).reduce((total, item) => total + item.value, 0) });
+      renderBarChart(chartContainer, { title: 'Amount by category', bars: bars.map((item, index) => ({
+        ...item, colorVar: CATEGORICAL_COLORS[index % CATEGORICAL_COLORS.length],
+      })), formatValue: formatCurrency });
     }
 
     function openForm(record) {
@@ -317,10 +369,10 @@ export function renderAccounting(container) {
         fields: fields(),
         initial: record || { date: todayISOString() },
         submitLabel: record ? 'Save Changes' : 'Add Expense',
-        onSubmit: async (data) => {
+        onSubmit: async data => {
           if (record) await store.update('expenses', record.id, data);
           else await store.add('expenses', data);
-          refresh();
+          renderExpensesTab();
         },
       });
     }
