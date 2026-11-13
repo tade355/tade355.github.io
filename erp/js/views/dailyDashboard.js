@@ -274,7 +274,7 @@ function dieselSection(d) {
     { label: 'Opening (L)', num: true, render: (r) => lit(r.opening), sortValue: (r) => r.opening },
     { label: 'Distributed (L)', num: true, render: (r) => lit(r.distributed), sortValue: (r) => r.distributed },
     { label: 'Used (L)', num: true, render: (r) => lit(r.used), sortValue: (r) => r.used },
-    { label: 'Closing (L)', num: true, render: (r) => lit(r.closing), sortValue: (r) => r.closing },
+    { label: 'Closing (L)', num: true, render: (r) => lit(r.reportedClosing ?? r.closing), sortValue: (r) => r.reportedClosing ?? r.closing },
     { label: 'Efficiency (L/ha)', num: true, render: (r) => num(r.efficiency), sortValue: (r) => r.efficiency ?? -1 },
     { label: 'Status', render: (r) => statusPill(r.status === 'Closing restated' ? `Closing restated (reported ${num(r.reportedClosing, 0)}L)` : r.status), text: (r) => r.status },
   ], x.rows, { rowClass: (r) => (r.status === 'Closing restated' ? 'row-warning' : undefined) });
