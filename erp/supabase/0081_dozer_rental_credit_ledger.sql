@@ -48,14 +48,18 @@ create policy "authenticated read rental credits" on public.dozer_rental_credits
   for select to authenticated using (true);
 drop policy if exists "authenticated manage rental credits" on public.dozer_rental_credits;
 create policy "authenticated manage rental credits" on public.dozer_rental_credits
-  for all to authenticated using (true) with check (true);
+  for all to authenticated
+  using (public.current_employee_tier() in ('Admin', 'Accounts'))
+  with check (public.current_employee_tier() in ('Admin', 'Accounts'));
 
 drop policy if exists "authenticated read rental transfers" on public.dozer_rental_transfers;
 create policy "authenticated read rental transfers" on public.dozer_rental_transfers
   for select to authenticated using (true);
 drop policy if exists "authenticated manage rental transfers" on public.dozer_rental_transfers;
 create policy "authenticated manage rental transfers" on public.dozer_rental_transfers
-  for all to authenticated using (true) with check (true);
+  for all to authenticated
+  using (public.current_employee_tier() in ('Admin', 'Accounts'))
+  with check (public.current_employee_tier() in ('Admin', 'Accounts'));
 
 grant select, insert, update, delete on public.dozer_rental_credits to authenticated;
 grant select, insert, update, delete on public.dozer_rental_transfers to authenticated;
