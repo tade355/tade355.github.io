@@ -1771,12 +1771,12 @@ a.btn { text-decoration: none; }
 /* Action Center */
 .action-center-controls, .action-card-head, .action-card-buttons { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .action-center-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 14px; margin-top: 18px; }
-.action-card { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); padding: 18px; box-shadow: var(--shadow-sm); }
+.action-card { border: 1px solid var(--border); border-radius: 14px; background: var(--surface-1); padding: 18px; box-shadow: 0 2px 8px var(--shadow-color); }
 .action-card-head { justify-content: space-between; align-items: flex-start; }
 .action-card-head h3 { margin: 0; font-size: 1.05rem; line-height: 1.4; }
 .action-card-details { white-space: pre-wrap; line-height: 1.5; color: var(--text-secondary); }
 .action-card-meta { font-size: .88rem; color: var(--text-muted); line-height: 1.5; }
-.action-card-overdue { color: var(--danger); font-weight: 700; }
+.action-card-overdue { color: var(--critical); font-weight: 700; }
 .action-card-buttons { margin-top: 14px; }
 .action-extract-help, .action-extract-status { color: var(--text-secondary); line-height: 1.5; }
 .action-extract-list { display: grid; gap: 10px; margin: 14px 0; }
@@ -1784,7 +1784,7 @@ a.btn { text-decoration: none; }
 .action-extract-candidate { display: grid; gap: 5px; }
 .action-extract-candidate span { color: var(--text-muted); font-size: .86rem; }
 .action-extract-assignee { display: grid; gap: 5px; font-size: .84rem; color: var(--text-muted); }
-.action-extract-assignee .field-control, .field-control { min-width: 0; }
+.action-extract-assignee .field-control, .field-control { min-width: 0; max-width: 100%; padding: .55rem .65rem; border: 1px solid var(--border); border-radius: 8px; background: var(--page-plane); color: var(--text-primary); font: inherit; }
 .form-draft-status { margin-right: auto; color: var(--text-muted); font-size: .84rem; line-height: 1.4; }
 @media (max-width: 760px) {
   .action-center-controls { width: 100%; }
