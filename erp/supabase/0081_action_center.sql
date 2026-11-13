@@ -59,10 +59,21 @@ begin
     end if;
     return new;
   end if;
+  if new.assignee_id is distinct from old.assignee_id and not exists (
+    select 1 from employees where id = new.assignee_id and status = 'Active' and archived_at is null
+  ) then
+    raise exception 'Actions can only be assigned to active staff';
+  end if;
   if tier not in ('Admin','Accounts','Supervisor') and old.assignee_id = actor then
     if (to_jsonb(new) - array['status','viewed_at','completed_at','updated_at']) is distinct from
        (to_jsonb(old) - array['status','viewed_at','completed_at','updated_at']) then
       raise exception 'Only management may edit action details';
+    end if;
+    if new.status is distinct from old.status and not (
+      (old.status = 'Open' and new.status = 'In Progress') or
+      (old.status = 'In Progress' and new.status = 'Completed')
+    ) then
+      raise exception 'Complete actions in order: Open, In Progress, then Completed';
     end if;
   elsif tier not in ('Admin','Accounts','Supervisor') then
     raise exception 'Only the assigned staff member may update this action';
