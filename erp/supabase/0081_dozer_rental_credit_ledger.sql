@@ -63,3 +63,20 @@ create policy "authenticated manage rental transfers" on public.dozer_rental_tra
 
 grant select, insert, update, delete on public.dozer_rental_credits to authenticated;
 grant select, insert, update, delete on public.dozer_rental_transfers to authenticated;
+
+
+-- Add the two new tables to the central checked-save allowlist without
+-- replacing any mappings introduced by earlier or later migrations.
+do $do$
+declare s text;
+begin
+  select pg_get_functiondef(p.oid) into s
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'public' and p.proname = 'erp_save_mapping';
+  if s not like '%dozer_rental_credits%' then
+    s := replace(s, 'else null end;',
+      'when ''dozer_rental_credits'' then ''[]''::jsonb when ''dozer_rental_transfers'' then ''[]''::jsonb else null end;');
+    execute s;
+  end if;
+end
+$do$;
