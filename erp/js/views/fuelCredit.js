@@ -253,7 +253,7 @@ export function renderFuelCredit(container) {
       fields: collectionFields(),
       initial: record ? {
         ...record,
-        pmsUse: record.fuelType === 'PMS' ? ({ tacoma: 'Tacoma', bikes: 'Bikes', maintenance: 'Maintenance' }[pmsKind(record)] || '') : '',
+        pmsUse: record.fuelType === 'PMS' ? ({ tacoma: 'Tacoma', bikes: 'Bikes', maintenance: 'Maintenance', unexplained: /^\\[PMS use: Other\\]/i.test(record.notes || '') ? 'Other' : '' }[pmsKind(record)] || '') : '',
         notes: String(record.notes || '').replace(/^\\[PMS use: (?:Tacoma|Bikes|Maintenance|Other)\\]\\s*/i, ''),
       } : { date: todayISOString(), fuelType: 'Diesel' },
       submitLabel: record ? 'Save Changes' : 'Log Collection',
