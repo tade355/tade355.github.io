@@ -12,7 +12,7 @@ function projectOptions() {
 }
 
 function employeeOptions() {
-  return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
+  return store.get('employees').filter((e) => e.status !== 'Disengaged' && !e.archivedAt).map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
 }
 
 function employeeName(id) {
@@ -34,7 +34,7 @@ function usedLeaveDaysThisYear(leaveRows, employeeId) {
 
 function leaveBalanceRows(leaveRows) {
   const tier = getCurrentTier();
-  let employees = store.get('employees').filter((e) => e.status !== 'Disengaged');
+  let employees = store.get('employees').filter((e) => e.status !== 'Disengaged' && !e.archivedAt);
   if (tier === 'Supervisor') {
     const project = getAssignedProject();
     if (project) employees = employees.filter((e) => e.assignedProject === project);
