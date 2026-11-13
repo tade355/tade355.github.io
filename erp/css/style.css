@@ -1028,6 +1028,12 @@ th[aria-sort=descending] .table-sort::after { content: '↓'; opacity: 1; }
 #printArea { display: none; }
 
 @media print {
+  /* Preserve branded fills, chart colours and icons in PDF output. */
+  body, #printArea, #printArea *, .dd-body, .dd-body * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  img, svg { break-inside: avoid; }
   /* Print documents (receipts, statements, reports) are rendered into
      #printArea. The rest of the app is taken out of the layout entirely with
      display:none — hiding it with visibility:hidden left its full height in
