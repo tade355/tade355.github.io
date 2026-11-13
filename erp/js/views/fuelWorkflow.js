@@ -28,6 +28,21 @@ export function submitFuelPlan(data, onSaved) {
     onSubmit:async values=>{await fuelCommand(id,'submit',{...data,...values,kind:'Fuel'},token);onSaved?.();}
   });
 }
+export function openEarlierCostForm(onSaved) {
+  const id='COST-'+uuid();const token=uuid();
+  openModal({title:'Earlier Cost / Reimbursement Request',initial:{incurredDate:todayISOString()},fields:[
+    {name:'project',label:'Project',type:'select',required:true,options:filterByProject(store.get('projects'),'name').map(p=>({value:p.name,label:p.name}))},
+    {name:'incurredDate',label:'Date the cost happened',type:'date',required:true},
+    {name:'category',label:'Cost type',type:'select',options:['Diesel transport','Worker transport','Maintenance','Other'].map(x=>({value:x,label:x}))},
+    {name:'description',label:'Service / reason',required:true},
+    {name:'amount',label:'Amount incurred (₦)',type:'number',min:0,required:true},
+    {name:'payee',label:'Person or vendor owed',required:true},
+    {name:'evidence',label:'Receipt / service reference',required:true},
+    {name:'lateReason',label:'Reason for later submission',type:'textarea'},
+    {name:'linkedFundRequestId',label:'Existing fund request for this same cost (leave blank if none)'},
+  ],submitLabel:'Submit reimbursement request',onSubmit:async data=>{await fuelCommand(id,'submit',{...data,kind:'Cost'},token);onSaved?.();}});
+}
+
 function lineOptions(r) {return r.data.lines.map(l=>({value:l.id,label:l.product+(l.oilType?' · '+l.oilType:'')+' · '+l.purpose+' · '+(l.equipment||'Site') }));}
 export function renderFuelWorkflow(container,{approvalsOnly=false}={}) {
   container.innerHTML='';
@@ -40,22 +55,8 @@ export function renderFuelWorkflow(container,{approvalsOnly=false}={}) {
   const list=el('div',{class:'approval-card-list'});
   const reload=el('button',{class:'btn btn-ghost',type:'button',onClick:()=>load()},'Refresh workflow');
   controls.append(project,state,reload);
-  if(!approvalsOnly) controls.append(el('button',{class:'btn btn-primary',type:'button',onClick:()=>costForm()},'+ Report earlier cost'));
+  if(!approvalsOnly) controls.append(el('button',{class:'btn btn-primary',type:'button',onClick:()=>openEarlierCostForm(draw)},'+ Earlier Cost / Reimbursement Request'));
   container.append(heading,controls,message,list);
-  function costForm(){
-    const id='COST-'+uuid();const token=uuid();
-    openModal({title:'Report a cost already incurred',initial:{incurredDate:todayISOString()},fields:[
-      {name:'project',label:'Project',type:'select',required:true,options:filterByProject(store.get('projects'),'name').map(p=>({value:p.name,label:p.name}))},
-      {name:'incurredDate',label:'Date the cost happened',type:'date',required:true},
-      {name:'category',label:'Cost type',type:'select',options:['Diesel transport','Worker transport','Maintenance','Other'].map(x=>({value:x,label:x}))},
-      {name:'description',label:'Service / reason',required:true},
-      {name:'amount',label:'Amount incurred (₦)',type:'number',min:0,required:true},
-      {name:'payee',label:'Person or vendor owed',required:true},
-      {name:'evidence',label:'Receipt / service reference',required:true},
-      {name:'lateReason',label:'Reason for later submission',type:'textarea'},
-      {name:'linkedFundRequestId',label:'Existing fund request for this same cost (leave blank if none)'},
-    ],submitLabel:'Report cost for review',onSubmit:async data=>{await fuelCommand(id,'submit',{...data,kind:'Cost'},token);draw();}});
-  }
   async function load(){try{await store.refreshCollection('fuelWorkflows');draw();}catch(e){message.textContent=e.message;}}
   function button(label,fn){const b=el('button',{class:'btn btn-ghost btn-sm',type:'button',onClick:async()=>{b.disabled=true;try{await fn();}catch(e){message.textContent=e.message;}finally{b.disabled=false;}}},label);return b;}
   function approval(r){
