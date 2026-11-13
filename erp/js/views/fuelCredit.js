@@ -8,6 +8,16 @@ import { printFuelCreditStatement } from '../print.js';
 function collectionFields() {
   return [
     { name: 'date', label: 'Date', type: 'date', required: true },
+    { name: 'project', label: 'Project / Site', type: 'select', required: true, options: [
+      'REX Forestry Project - Kangidi',
+      'REX Forestry Project - Kajola',
+      'Blue Sky Project - Ajue-Ore',
+      'Enugu Palm Project',
+      'FAYUS Project',
+      'Delta State Project',
+      'SAO Project',
+      'Other',
+    ].map((p) => ({ value: p, label: p })) },
     { name: 'station', label: 'Filling Station', type: 'select', required: true, options: FUEL_STATIONS.map((s) => ({ value: s, label: s })) },
     { name: 'fuelType', label: 'Fuel Type', type: 'select', required: true, options: FUEL_TYPES.map((t) => ({ value: t, label: t })) },
     { name: 'litres', label: 'Litres Collected', type: 'number', required: true, min: 0 },
@@ -242,7 +252,7 @@ export function renderFuelCredit(container) {
     openModal({
       title: record ? 'Edit Collection' : 'Log Collection',
       fields: collectionFields(),
-      initial: record || { date: todayISOString(), fuelType: 'Diesel' },
+      initial: record || { date: todayISOString(), project: 'REX Forestry Project - Kangidi', fuelType: 'Diesel' },
       submitLabel: record ? 'Save Changes' : 'Log Collection',
       onSubmit: async (data) => {
         if (record) await store.update('fuelCreditCollections', record.id, data);
