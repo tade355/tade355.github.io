@@ -387,7 +387,10 @@ export function buildDashboardHtml(d, { expectedHaPer8 = 1.3, idealStart = '7:00
     ['Dozer Cost — Owned', 'dozerOwned', 'Hours × hourly rate'],
     ['Dozer Cost — Rented', 'dozerRented', 'Hours × hourly rate'],
     ['Dozer Cost — Partnership', 'dozerPartnership', 'Hours × hourly rate'],
-    ['PMS — Tacoma', 'pmsTacoma', 'PMS collected at the station'],
+    ['PMS — Tacoma', 'pmsTacoma', 'Station PMS assigned to Tacoma'],
+    ['PMS — Bikes', 'pmsBikes', 'Station PMS assigned to bikes'],
+    ['PMS — Unallocated / other', 'pmsUnexplained', 'Older or other PMS; review collection notes'],
+    ['PMS — Fuel requests', 'pmsWorkflow', 'PMS issued through the fuel workflow'],
   ];
   const flagRow = 'style="font-weight:700;background:var(--serious-bg)"';
   const goodRow = 'style="font-weight:700;background:var(--good-bg)"';
