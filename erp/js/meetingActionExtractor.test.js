@@ -16,10 +16,11 @@ test('extracts action lines and assigns a clearly named owner', () => {
   assert.equal(rows[1].assigneeId, 'EMP-2');
 });
 
-test('does not guess an owner or include inactive staff', () => {
+test('leaves an unclear or inactive owner unassigned', () => {
   const rows = extractMeetingActions('The supervisor will coordinate the site inspection next week.\nFormer Staff: Complete the maintenance report.', staff);
-  assert.equal(rows.length, 1);
+  assert.equal(rows.length, 2);
   assert.equal(rows[0].assigneeId, '');
+  assert.equal(rows[1].assigneeId, '');
 });
 
 test('skips headings and removes duplicate action lines', () => {
