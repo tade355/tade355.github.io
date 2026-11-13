@@ -428,8 +428,10 @@ function profitSection(d) {
     ['Dozer Cost — Owned', 'dozerOwned', 'Hours × hourly rate'],
     ['Dozer Cost — Rented', 'dozerRented', 'Hours × hourly rate'],
     ['Dozer Cost — Partnership', 'dozerPartnership', 'Hours × hourly rate'],
-    ['PMS — Tacoma', 'pmsTacoma', 'PMS collected at the station'],
-    ['PMS cost', 'pmsCost', 'PMS purchases charged to the selected period'],
+    ['PMS — Tacoma', 'pmsTacoma', 'Station PMS assigned to Tacoma'],
+    ['PMS — Bikes', 'pmsBikes', 'Station PMS assigned to bikes'],
+    ['PMS — Unallocated / other', 'pmsUnexplained', 'Older or other PMS; review collection notes'],
+    ['PMS — Fuel requests', 'pmsWorkflow', 'PMS issued through the fuel workflow'],
   ];
   const otherT = t.otherCost - t.supervisorSundayAllowance; const otherC = c.otherCost - c.supervisorSundayAllowance;
   const lineRows = lines.map(([label, key, basis]) => ({ label, today: t[key], cumulative: c[key], basis }));
