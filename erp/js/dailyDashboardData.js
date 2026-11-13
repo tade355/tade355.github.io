@@ -162,21 +162,32 @@ export function buildDailyDashboard(ctx) {
   }).filter((r) => r.opening || r.distributed || r.used || r.closing || r.worked)
     .sort((a, b) => (b.worked - a.worked) || a.equipment.localeCompare(b.equipment));
 
-  // Fueling request for tomorrow: top each dozer up to DIESEL_FILL_LITRES.
-  // Default list = dozers that worked today plus dozers listed Active that
-  // have worked on this site since the cumulative start date, plus any dozer
-  // that was given tank diesel today (it is going back to work).
-  const defaultRequestDozers = new Set([
+  // Offer every currently active dozer assigned to this project, even when it
+  // has no report or diesel distribution in the selected dashboard period.
+  // BIG-001 is the former fleet name for EMG-005; historical fuel rows can
+  // still supply its closing balance, but the checklist uses the current name.
+  const currentDozerName = (name) => name === 'BIG-001' && inv.some((i) => i.name === 'EMG-005') ? 'EMG-005' : name;
+  const activeRequestFleet = inv.filter((i) => {
+    if ((i.fleetStatus || 'Active') !== 'Active') return false;
+    if (i.name === 'BIG-001' && inv.some((item) => item.name === 'EMG-005')) return false;
+    if (allProjects) return true;
+    if (i.currentProjectSince) return equipmentBelongs(i.name);
+    return i.currentProject ? i.currentProject === project : equipmentBelongs(i.name);
+  });
+  const activeRequestNames = new Set(activeRequestFleet.map((i) => i.name));
+  const suggestedRequestNames = new Set([
     ...workingDozers,
     ...dist.filter((d) => aldDay(d) && !/not tank fuel|maintenance diesel/i.test(d.notes || '')).map((d) => d.equipment),
-    ...inv.filter((i) => equipmentBelongs(i.name) && i.fleetStatus === 'Active' && rangeOps.some((o) => o.equipment === i.name)).map((i) => i.name),
-  ]);
-  const fuelingRequest = [...defaultRequestDozers].sort().map((name) => {
-    const row = diesel.find((d) => d.equipment === name);
-    // A closing reported by the site is the physical tank level, so it wins over the calculated one.
+    ...activeRequestFleet.filter((i) => rangeOps.some((o) => currentDozerName(o.equipment) === i.name)).map((i) => i.name),
+  ].map(currentDozerName));
+  const fuelingChoices = [...activeRequestNames].sort().map((name) => {
+    const row = diesel.find((d) => d.equipment === name)
+      || diesel.find((d) => currentDozerName(d.equipment) === name);
+    // A site-reported closing is the physical tank level and takes precedence.
     const closing = Math.max(0, row?.reportedClosing ?? row?.closing ?? 0);
     return { equipment: name, closing, need: Math.max(0, DIESEL_FILL_LITRES - closing) };
   });
+  const fuelingRequest = fuelingChoices.filter((row) => suggestedRequestNames.has(row.equipment));
   const stationBalance = ctx.stationBalance;
 
   // --------------------------------------------------------------------- fleet
@@ -352,7 +363,7 @@ export function buildDailyDashboard(ctx) {
   return {
     project, date, since,
     operations: { rows: operations, reporting: operations.filter((o) => o.reported).length, fleetCount: operations.length, todayHa, todayHours, cumulativeHa: cumStats.areaCleared },
-    diesel: { chainSince: dieselSince, efficiency, normLitresPerHa: NORM_LITRES_PER_HA, collectedAgo, soldAgo, collectedPms, distributedToday, usedToday, usedCost: usedToday * dieselRate, dieselRate, onGround, onGroundDate: latestCount?.date || null, onGroundBase: latestCount ? latestCount.countedLitres : null, onGroundIn: rolledIn, onGroundOut: rolledOut, rows: diesel, fuelingRequest, stationBalance, distributionChart: dist.filter(aldDay).map((d) => ({ label: d.equipment, value: d.litres })) },
+    diesel: { chainSince: dieselSince, efficiency, normLitresPerHa: NORM_LITRES_PER_HA, collectedAgo, soldAgo, collectedPms, distributedToday, usedToday, usedCost: usedToday * dieselRate, dieselRate, onGround, onGroundDate: latestCount?.date || null, onGroundBase: latestCount ? latestCount.countedLitres : null, onGroundIn: rolledIn, onGroundOut: rolledOut, rows: diesel, fuelingChoices, fuelingRequest, stationBalance, distributionChart: dist.filter(aldDay).map((d) => ({ label: d.equipment, value: d.litres })) },
     fleet, vendorAccrual, requests,
     profit: { today: todayStats, cumulative: cumStats, contribution, extraRows },
     staff, flags,
