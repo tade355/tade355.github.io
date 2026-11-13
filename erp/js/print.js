@@ -1,26 +1,27 @@
-import { formatCurrency, formatDate, formatMonthLong, poTotal } from './utils.js';
-
-function render(html) {
+// Build the print document, then wait for its images and fonts before the
+// browser snapshots it for Print / Save as PDF. A short cap avoids blocking
+// printing when a remote map tile is unavailable.
+async function render(html) {
   const area = document.getElementById('printArea');
   area.innerHTML = html;
+  const images = [...area.querySelectorAll('img, image')];
+  const ready = Promise.all([
+    ...images.map((img) => {
+      if (img instanceof HTMLImageElement && img.complete) return Promise.resolve();
+      return new Promise((resolve) => {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+      });
+    }),
+    document.fonts?.ready?.catch(() => {}) ?? Promise.resolve(),
+  ]);
+  await Promise.race([ready, new Promise((resolve) => setTimeout(resolve, 6000))]);
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   window.print();
 }
 
-// Same as render(), but for documents with embedded map tile images — waits
-// for every <image>/<img> to finish loading (or a 6s cap, so one slow/dead
-// tile can't hang the print forever) before opening the print dialog,
-// otherwise unloaded tiles would print as blank squares.
-function renderAndWaitForImages(html) {
-  const area = document.getElementById('printArea');
-  area.innerHTML = html;
-  const images = [...area.querySelectorAll('image, img')];
-  const loaded = Promise.all(images.map((img) => new Promise((resolve) => {
-    img.addEventListener('load', resolve, { once: true });
-    img.addEventListener('error', resolve, { once: true });
-  })));
-  const timeout = new Promise((resolve) => setTimeout(resolve, 6000));
-  return Promise.race([loaded, timeout]).then(() => window.print());
-}
+// Map documents use the same image-ready print path as all other documents.
+const renderAndWaitForImages = render;
 
 function letterhead(docTitle, docNumber) {
   return `
