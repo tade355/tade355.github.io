@@ -1,3 +1,5 @@
+import { formatCurrency, formatDate, formatMonthLong, poTotal } from './utils.js';
+
 // Build the print document, then wait for its images and fonts before the
 // browser snapshots it for Print / Save as PDF. A short cap avoids blocking
 // printing when a remote map tile is unavailable.
