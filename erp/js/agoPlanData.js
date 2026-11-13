@@ -31,12 +31,7 @@ export function planDefaults(ctx, project, closingDate, since = DASHBOARD_BASIS_
   const rowBy = new Map(dash.diesel.rows.map((r) => [r.equipment, r]));
   const activeDefault = new Set(dash.diesel.fuelingRequest.map((r) => r.equipment));
   const siteOps = ctx.operations.filter((o) => o.siteName === project);
-  const plannedFleet = new Set(buildDailyDashboard({ ...ctx, project, date: addDays(closingDate, 1), since: since > closingDate ? closingDate : since }).fleet.map(r => r.equipment));
-  const names = [...new Set([
-    ...ctx.inventory.filter((i) => i.category === 'Heavy Equipment' && i.currentProject === project).map((i) => i.name),
-    ...siteOps.map((o) => o.equipment).filter(Boolean),
-    ...dash.diesel.fuelingRequest.map((r) => r.equipment),
-  ])].filter((n) => plannedFleet.has(n) && ctx.inventory.some((i) => i.name === n && i.category === 'Heavy Equipment')).sort();
+  const names = dash.diesel.fuelingChoices.map((row) => row.equipment);
   const operatorOf = (name) => {
     const last = siteOps.filter((o) => o.equipment === name && o.operatorId).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
     return last ? ctx.employees.find((e) => e.id === last.operatorId)?.name || null : null;
