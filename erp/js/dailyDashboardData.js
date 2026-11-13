@@ -61,6 +61,7 @@ export function buildDailyDashboard(ctx) {
   // currentProjectSince marks a redeployment; older dates fall back to the
   // latest operation logged on or before that date.
   const equipmentProjectAsOf = (name) => {
+    if (name === 'BIG-001' && invByName.has('EMG-005')) return equipmentProjectAsOf('EMG-005');
     const item = invByName.get(name);
     const known = KNOWN_PROJECT_REDEPLOYMENTS[name];
     const effective = item?.currentProjectSince || known?.since;
@@ -170,9 +171,7 @@ export function buildDailyDashboard(ctx) {
   const activeRequestFleet = inv.filter((i) => {
     if ((i.fleetStatus || 'Active') !== 'Active') return false;
     if (i.name === 'BIG-001' && inv.some((item) => item.name === 'EMG-005')) return false;
-    if (allProjects) return true;
-    if (i.currentProjectSince) return equipmentBelongs(i.name);
-    return i.currentProject ? i.currentProject === project : equipmentBelongs(i.name);
+    return equipmentBelongs(i.name);
   });
   const activeRequestNames = new Set(activeRequestFleet.map((i) => i.name));
   const suggestedRequestNames = new Set([
