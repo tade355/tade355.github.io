@@ -1766,3 +1766,30 @@ a.btn { text-decoration: none; }
   .data-table { min-width: 680px; font-size: 0.84rem; }
   .data-table th, .data-table td { padding: 0.65rem 0.7rem; }
 }
+
+
+/* Action Center */
+.action-center-controls, .action-card-head, .action-card-buttons { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.action-center-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 14px; margin-top: 18px; }
+.action-card { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); padding: 18px; box-shadow: var(--shadow-sm); }
+.action-card-head { justify-content: space-between; align-items: flex-start; }
+.action-card-head h3 { margin: 0; font-size: 1.05rem; line-height: 1.4; }
+.action-card-details { white-space: pre-wrap; line-height: 1.5; color: var(--text-secondary); }
+.action-card-meta { font-size: .88rem; color: var(--text-muted); line-height: 1.5; }
+.action-card-overdue { color: var(--danger); font-weight: 700; }
+.action-card-buttons { margin-top: 14px; }
+.action-extract-help, .action-extract-status { color: var(--text-secondary); line-height: 1.5; }
+.action-extract-list { display: grid; gap: 10px; margin: 14px 0; }
+.action-extract-row { display: grid; grid-template-columns: auto minmax(180px, 1fr) minmax(170px, 220px) minmax(150px, 190px); align-items: center; gap: 12px; border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: var(--surface); }
+.action-extract-candidate { display: grid; gap: 5px; }
+.action-extract-candidate span { color: var(--text-muted); font-size: .86rem; }
+.action-extract-assignee { display: grid; gap: 5px; font-size: .84rem; color: var(--text-muted); }
+.action-extract-assignee .field-control, .field-control { min-width: 0; }
+.form-draft-status { margin-right: auto; color: var(--text-muted); font-size: .84rem; line-height: 1.4; }
+@media (max-width: 760px) {
+  .action-center-controls { width: 100%; }
+  .action-center-controls > button { flex: 1 1 auto; }
+  .action-extract-row { grid-template-columns: auto 1fr; }
+  .action-extract-candidate, .action-extract-assignee { grid-column: 2; }
+  .form-draft-status { flex: 1 1 100%; }
+}
