@@ -8,16 +8,7 @@ import { printFuelCreditStatement } from '../print.js';
 function collectionFields() {
   return [
     { name: 'date', label: 'Date', type: 'date', required: true },
-    { name: 'project', label: 'Project / Site', type: 'select', required: true, options: [
-      'REX Forestry Project - Kangidi',
-      'REX Forestry Project - Kajola',
-      'Blue Sky Project - Ajue-Ore',
-      'Enugu Palm Project',
-      'FAYUS Project',
-      'Delta State Project',
-      'SAO Project',
-      'Other',
-    ].map((p) => ({ value: p, label: p })) },
+    { name: 'project', label: 'Project / Site', type: 'select', required: true, options: store.get('projects').filter((p) => p.status === 'Active').map((p) => ({ value: p.name, label: p.name })) },
     { name: 'station', label: 'Filling Station', type: 'select', required: true, options: FUEL_STATIONS.map((s) => ({ value: s, label: s })) },
     { name: 'fuelType', label: 'Fuel Type', type: 'select', required: true, options: FUEL_TYPES.map((t) => ({ value: t, label: t })) },
     { name: 'litres', label: 'Litres Collected', type: 'number', required: true, min: 0 },
