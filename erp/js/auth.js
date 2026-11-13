@@ -16,13 +16,13 @@ function employeeForAuthUser(userId) {
   return store.get('employees').find((e) => e.authUserId === userId) || null;
 }
 
-export async function restoreSession() {
+export async function restoreSession({ employeesLoaded = false } = {}) {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return null;
   // The employees cache from store.init() may have been fetched before this
   // session was attached to the client (or under different RLS visibility),
   // so re-fetch under the now-authenticated request before matching.
-  await store.refreshCollection('employees');
+  if (!employeesLoaded) await store.refreshCollection('employees');
   const employee = employeeForAuthUser(session.user.id);
   if (!employee) return null;
   setCurrentEmployeeId(employee.id);
