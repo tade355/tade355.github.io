@@ -1,3 +1,15 @@
+    // Fleet health is read from the current Fleet Roster so these cards
+    // always agree with Fleet & Assets. Daily reports remain available in
+    // the operations views, but must not override the roster summary.
+    const dozers = fleetItems();
+    const fleetStatus = (d) => String(d.fleetStatus || 'Idle').trim().toLowerCase();
+    const activeFleetCount = dozers.filter((d) => fleetStatus(d) === 'active').length;
+    const downFleetCount = dozers.filter((d) => fleetStatus(d) === 'down' || fleetStatus(d) === 'under maintenance').length;
+    const machineAvailability = dozers.length ? (activeFleetCount / dozers.length) * 100 : null;
+    const serviceStatuses = dozers.map((d) => serviceStatusFor(d).status);
+    const overdueServiceCount = serviceStatuses.filter((s) => s === 'Overdue').length;
+    const dueSoonServiceCount = serviceStatuses.filter((s) => s === 'Due Soon').length;
+
 import { renderOperatorDashboard } from './operatorDashboard.js';
 import { isOperatorAccount } from '../operatorPortalData.js';
 import { store } from '../store.js';
