@@ -15,7 +15,7 @@ import { renderPersonHistory } from './personHistory.js';
 const MEMO_TYPES = ['Memo', 'Notice', 'Warning Letter', 'Query Letter', 'Commendation Letter', 'Confirmation Letter', 'Other'];
 
 function projectOptions() {
-  return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
+  return store.get('projects').filter((p) => p.status !== 'Completed').map((p) => ({ value: p.name, label: p.name }));
 }
 
 function trainingProgramOptions() {
@@ -23,7 +23,7 @@ function trainingProgramOptions() {
 }
 
 function employeeOptions() {
-  return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
+  return store.get('employees').filter((e) => e.status !== 'Disengaged' && !e.archivedAt).map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
 }
 
 
