@@ -15,6 +15,7 @@ export const CATALOGUE = [
   { kind: 'Page', route: 'dashboard', label: 'Dashboard', words: 'overview home headline profit kpi' },
   { kind: 'Page', route: 'dailyDashboard', label: 'Daily Operations Dashboard', words: 'daily dashboard html flags fueling diesel start times output daily report' },
   { kind: 'Page', route: 'askErp', label: 'Ask the ERP', words: 'ask question assistant ai chat prompt query answer' },
+  { kind: 'Page', route: 'actionCenter', label: 'Action Center', words: 'meeting actions tasks assigned to me follow up due date track action items' },
   { kind: 'Page', route: 'dataImport', label: 'Data Import', words: 'upload excel xlsx import load data template spreadsheet bulk' },
   { kind: 'Page', route: 'pasteEntry', label: 'Paste Entry', words: 'paste whatsapp message report diesel distribution fund request midejab station analysis preview confirm save' },
   { kind: 'Page', route: 'noticeBoard', label: 'Documents and Notices', words: 'notice board documents memo announcements' },
@@ -78,6 +79,7 @@ export const CATALOGUE = [
   { kind: 'Tab', route: 'leave', tabs: ['Leave Requests'], label: 'Leave Requests', words: 'leave request' },
   { kind: 'Tab', route: 'leave', tabs: ['Attendance'], label: 'Attendance', words: 'attendance sign in' },
 
+  { kind: 'Feature', route: 'noticeBoard', label: 'Create action items from meeting minutes', words: 'meeting minutes extract action items assign tasks action center uploaded minutes pdf' },
   // ---- features -----------------------------------------------------------
   { kind: 'Feature', route: 'dailyDashboard', label: 'Download the daily dashboard (HTML)', words: 'download html daily dashboard file same design' },
   { kind: 'Feature', route: 'dailyDashboard', label: 'Print the daily dashboard', words: 'print pdf daily dashboard' },
