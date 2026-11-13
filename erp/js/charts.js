@@ -52,6 +52,22 @@ export function renderBarChart(container, { title, subtitle, bars, formatValue =
     wrap.appendChild(s);
   }
 
+  if (bars.some((b) => b.colorVar) && bars.length > 1) {
+    const legend = document.createElement('div');
+    legend.className = 'chart-legend';
+    bars.forEach((b) => {
+      const item = document.createElement('span');
+      item.className = 'chart-legend-item';
+      const swatch = document.createElement('span');
+      swatch.className = 'chart-legend-swatch';
+      swatch.style.background = b.colorVar || defaultColor;
+      item.appendChild(swatch);
+      item.appendChild(document.createTextNode(`${b.label}: ${formatValue(b.value)}`));
+      legend.appendChild(item);
+    });
+    wrap.appendChild(legend);
+  }
+
   const root = document.createElement('div');
   root.className = 'chart-root';
   wrap.appendChild(root);
@@ -93,6 +109,9 @@ export function renderBarChart(container, { title, subtitle, bars, formatValue =
     chart.appendChild(rect);
 
     if (bars.length <= 8) {
+      const valueLabel = svg('text', { x: x + barW / 2, y: Math.max(14, y - 6), class: 'chart-value-label', 'text-anchor': 'middle' });
+      valueLabel.textContent = formatValue(b.value);
+      chart.appendChild(valueLabel);
       const label = svg('text', {
         x: x + barW / 2, y: height - 10, class: 'chart-axis-label', 'text-anchor': 'middle',
       });
