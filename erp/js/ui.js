@@ -168,6 +168,7 @@ export function openModal({ title, fields, initial = {}, onSubmit, submitLabel =
       submitBtn.disabled = true;
       submitBtn.textContent = 'Saving…';
       await onSubmit(record);
+      clearTimeout(draftTimer);
       if (key) { try { localStorage.removeItem(key); } catch { /* storage may be disabled */ } }
       modalDraftSaver = null;
       closeModal();
