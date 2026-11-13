@@ -1058,3 +1058,56 @@ export function printAgoPlanner(plan, { siteLabel, planDate, closingDate, notes 
 export function printHtmlDocument(html) {
   render(html);
 }
+
+
+export function printDozerRentalStatement(row) {
+  const workByDate = new Map();
+  (row.work || []).forEach((work) => {
+    const current = workByDate.get(work.date) || { date: work.date, hours: 0, projects: new Set() };
+    current.hours += Number(work.hoursWorked || 0);
+    if (work.project) current.projects.add(work.project);
+    workByDate.set(work.date, current);
+  });
+  const movements = [
+    ...(row.credits || []).map((credit) => ({
+      date: credit.paymentDate, type: 'Rental payment', days: '+' + Number(credit.daysPaid).toFixed(2),
+      details: (credit.fundRequestId || 'No fund request') + ' · ' + formatCurrency(credit.amountPaid) + (credit.paymentReference ? ' · Ref: ' + credit.paymentReference : ''),
+    })),
+    ...(row.transfers || []).map((transfer) => {
+      const incoming = transfer.toEquipment === row.equipment;
+      return {
+        date: transfer.transferDate, type: incoming ? 'Transfer in' : 'Transfer out',
+        days: (incoming ? '+' : '-') + Number(transfer.daysTransferred).toFixed(2),
+        details: (incoming ? 'From ' + transfer.fromEquipment : 'To ' + transfer.toEquipment) + ' · ' + transfer.reason,
+      };
+    }),
+  ].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const html = `
+    ${letterhead('DOZER RENTAL STATEMENT', row.equipment)}
+    <div class="print-meta-grid">
+      <div><strong>Vendor:</strong> ${row.vendor}</div>
+      <div><strong>Dozer:</strong> ${row.equipment}</div>
+      <div><strong>Daily Rate:</strong> ${formatCurrency(row.rate)}</div>
+      <div><strong>Tracking From:</strong> ${formatDate(row.firstDate)}</div>
+      <div><strong>Days Paid:</strong> ${row.daysPaid.toFixed(2)}</div>
+      <div><strong>Worked Days:</strong> ${row.workedDays}</div>
+      <div><strong>Total Hours:</strong> ${row.hoursWorked.toFixed(1)} hrs</div>
+      <div><strong>Rental Left:</strong> ${row.remainingDays.toFixed(2)} days (${formatCurrency(row.remainingValue)})</div>
+    </div>
+    <div class="print-block"><strong>Counting rule:</strong> Each distinct date with recorded productive work consumes one rental day. Hours are displayed as supporting evidence. Transfers retain their date and reason.</div>
+    <h3>Payments and Day Transfers</h3>
+    <table class="print-table">
+      <thead><tr><th>Date</th><th>Entry</th><th>Days</th><th>Details</th></tr></thead>
+      <tbody>${movements.length ? movements.map((item) => `<tr><td>${formatDate(item.date)}</td><td>${item.type}</td><td>${item.days}</td><td>${item.details}</td></tr>`).join('') : '<tr><td colspan="4">No payment or transfer entries recorded.</td></tr>'}</tbody>
+    </table>
+    <h3>Work Evidence</h3>
+    <table class="print-table">
+      <thead><tr><th>Date</th><th>Hours Worked</th><th>Project(s)</th><th>Rental Days Used</th></tr></thead>
+      <tbody>${workByDate.size ? [...workByDate.values()].map((item) => `<tr><td>${formatDate(item.date)}</td><td>${item.hours.toFixed(1)} hrs</td><td>${[...item.projects].join(', ') || '—'}</td><td>1.00</td></tr>`).join('') : '<tr><td colspan="4">No work recorded from the first rental credit date.</td></tr>'}</tbody>
+      <tfoot><tr><td>Total</td><td>${row.hoursWorked.toFixed(1)} hrs</td><td></td><td>${row.workedDays.toFixed(2)}</td></tr></tfoot>
+    </table>
+    <div class="print-block"><strong>Remaining rental:</strong> ${row.remainingDays.toFixed(2)} days · ${formatCurrency(row.remainingValue)}</div>
+    ${signatureBlock(['Prepared By', 'Vendor / Representative'])}
+  `;
+  render(html);
+}
