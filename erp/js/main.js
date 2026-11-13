@@ -2,6 +2,7 @@ import { startUsageMonitor } from './usageMonitor.js';
 import { ROUTES, initRouter } from './router.js';
 import { initModalRoot, initToastRoot, openModal } from './ui.js';
 import { store } from './store.js';
+import { supabase } from './supabaseClient.js';
 import { el, ico } from './utils.js';
 import { getCurrentUser, getCurrentTier, canAccessRoute } from './session.js';
 import { showLoginForm } from './userGate.js';
@@ -204,22 +205,29 @@ function initApp() {
 
 async function boot() {
   try {
+    // A signed-out user only needs the login form. Loading the full ERP
+    // database first makes the sign-in screen wait on dozens of tables.
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    if (!session) {
+      loadingScreen.classList.remove('open');
+      showLoginForm(() => window.location.reload());
+      return;
+    }
     await store.init();
+    const employee = await restoreSession({ employeesLoaded: true });
+    loadingScreen.classList.remove('open');
+    if (!employee) {
+      showLoginForm(() => window.location.reload());
+      return;
+    }
+    initApp();
   } catch (err) {
     loadingMessage.textContent = 'Could not connect. Check your connection and try again.';
     const retryBtn = el('button', { type: 'button', class: 'btn btn-primary btn-block' }, 'Retry');
     retryBtn.addEventListener('click', () => window.location.reload());
     loadingScreen.querySelector('.gate-card').appendChild(retryBtn);
-    return;
   }
-  loadingScreen.classList.remove('open');
-
-  const employee = await restoreSession();
-  if (!employee) {
-    showLoginForm(() => window.location.reload());
-    return;
-  }
-  initApp();
 }
 
 boot();
