@@ -140,7 +140,7 @@ async function pdfAttachmentText(attachment) {
     });
     pages.push([...rows.entries()].sort((a, b) => b[0] - a[0])
       .map(([, items]) => items.sort((a, b) => a.x - b.x).map((item) => item.text).join(' ').trim())
-      .filter(Boolean).join('\\n'));
+      .filter(Boolean).join('\n'));
   }
   return pages.join('\n');
 }
