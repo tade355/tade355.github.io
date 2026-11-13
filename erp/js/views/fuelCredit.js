@@ -9,10 +9,11 @@ import { pmsKind } from '../dashboardBasis.js';
 function collectionFields() {
   return [
     { name: 'date', label: 'Date', type: 'date', required: true },
-    { name: 'project', label: 'Project / Site', type: 'select', required: true, options: store.get('projects').map((p) => ({ value: p.name, label: p.name })) },
+    { name: 'project', label: 'Project / Site', type: 'select', required: true, options: [{ value: '', label: '— Select project —' }, ...store.get('projects').map((p) => ({ value: p.name, label: p.name }))] },
     { name: 'station', label: 'Filling Station', type: 'select', required: true, options: FUEL_STATIONS.map((s) => ({ value: s, label: s })) },
     { name: 'fuelType', label: 'Fuel Type', type: 'select', required: true, options: FUEL_TYPES.map((t) => ({ value: t, label: t })) },
     { name: 'pmsUse', label: 'PMS used for (required for PMS)', type: 'select', options: [
+      { value: '', label: '— Select PMS use —' },
       { value: 'Tacoma', label: 'Tacoma vehicle' }, { value: 'Bikes', label: 'Bikes / motorcycles' },
       { value: 'Maintenance', label: 'Repairs / maintenance' }, { value: 'Other', label: 'Other / specify in notes' },
     ] },
