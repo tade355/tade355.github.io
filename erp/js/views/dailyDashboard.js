@@ -98,17 +98,15 @@ function flagsBanner(flags) {
 // the print dialog closes.
 // Saves the dashboard as the same single-file HTML report that is shared daily:
 // the current Fueling Request selection and on-ground figure are included.
-function downloadHtml(d) {
-  if (!d) return;
+function downloadHtml(d, link, event) {
+  if (!d) { event.preventDefault(); return; }
   const html = buildDashboardHtml(d, { fueling: d.diesel.fuelingState });
-  // Use a Blob URL so large reports are not rejected by browser data-URL limits.
+  // Let the browser handle the user's direct link click. Synthetic clicks on
+  // detached links can be ignored by embedded browsers and download blockers.
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
-  const a = el('a', { href: url, download: dashboardFileName(d.date) });
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  link.href = url;
+  link.download = dashboardFileName(d.date);
   window.setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
@@ -158,7 +156,7 @@ export function renderDailyDashboard(container) {
   });
   const printBtn = el('button', { type: 'button', class: 'btn btn-ghost', onClick: printPage }, [el('span', { html: ICONS.printer }), 'Print']);
   let current = null;
-  const downloadBtn = el('button', { type: 'button', class: 'btn btn-primary', title: 'Download this dashboard as a single HTML file (same format as the daily dashboard report)', onClick: () => downloadHtml(current) }, [el('span', { html: ICONS.download }), 'Download HTML']);
+  const downloadBtn = el('a', { href: '#', download: 'daily-dashboard.html', class: 'btn btn-primary', title: 'Download this dashboard as a single HTML file (same format as the daily dashboard report)', onClick: (event) => downloadHtml(current, downloadBtn, event) }, [el('span', { html: ICONS.download }), 'Download HTML']);
 
   container.appendChild(el('div', { class: 'section-header' }, [el('div', {}, [
     el('h2', {}, 'Daily Operations Dashboard'),
