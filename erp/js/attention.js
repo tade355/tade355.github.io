@@ -10,6 +10,7 @@ import { findDuplicateRequests, requestTotal } from './requestDuplicates.js';
 import { REQUEST_WAIT_DAYS, VOUCHER_WAIT_DAYS, STOCK_COUNT_MAX_AGE_DAYS, BACKUP_MAX_AGE_DAYS } from './rules.js';
 
 const DAY = 86400000;
+export const DASHBOARD_ALERT_REFERENCE_FROM = '2026-11-11';
 const ms = (iso) => { const [y, m, d] = String(iso).slice(0, 10).split('-').map(Number); return Date.UTC(y, m - 1, d); };
 const daysBetween = (a, b) => Math.round((ms(b) - ms(a)) / DAY);
 const naira = (n) => `₦${Math.round(n).toLocaleString('en-US')}`;
@@ -31,7 +32,7 @@ export function buildAttention(ctx, { date, lastBackupAt } = {}) {
   }
 
   // Two open requests that look like the same one (the site manager resends them).
-  const open = (ctx.fundRequests || []).filter((r) => r.status === 'Pending' || r.status === 'Approved');
+  const open = (ctx.fundRequests || []).filter((r) => r.date >= DASHBOARD_ALERT_REFERENCE_FROM && (r.status === 'Pending' || r.status === 'Approved'));
   const pairs = [];
   open.forEach((r, i) => {
     findDuplicateRequests(r, open.slice(i + 1), { days: 14 }).forEach((d) => pairs.push(`${r.id} and ${d.id}`));
@@ -43,7 +44,7 @@ export function buildAttention(ctx, { date, lastBackupAt } = {}) {
   if (vouchers.length) flags.push({ tone: 'warning', text: `${vouchers.length} fueling voucher(s) are still waiting for approval: ${vouchers.slice(0, 4).map((v) => `${v.id} (${dmy(v.date)})`).join(', ')}.`, action: 'The station cannot be paid against an unapproved voucher.' });
 
   // The diesel on ground is a calculation; flag it when the last count is old.
-  const counts = (ctx.dieselStockCounts || []).filter((c) => c.date <= date).sort((a, b) => (a.date < b.date ? 1 : -1));
+  const counts = (ctx.dieselStockCounts || []).filter((c) => c.date >= DASHBOARD_ALERT_REFERENCE_FROM && c.date <= date).sort((a, b) => (a.date < b.date ? 1 : -1));
   if (counts.length && daysBetween(counts[0].date, date) > STOCK_COUNT_MAX_AGE_DAYS) {
     flags.push({ tone: 'warning', text: `The last diesel stock count was ${dmy(counts[0].date)} (${daysBetween(counts[0].date, date)} days ago), so diesel on ground is a calculation, not a count.`, action: 'Ask the site manager to count the tank stock.' });
   }
