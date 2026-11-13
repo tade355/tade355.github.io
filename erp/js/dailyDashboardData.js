@@ -116,7 +116,11 @@ export function buildDailyDashboard(ctx) {
   // recorded as its own collection row whose notes say "sold to"; it is not
   // site diesel, so it is shown separately and left out of the site figures.
   const soldNote = (c) => /sold to/i.test(c.notes || '');
-  const scopedCollections = ctx.fuelCreditCollections.filter((c) => allProjects || recordProject(c) === project);
+  // Station collections entered before project allocation have no project field.
+  // Midejab's current station ledger feeds the Kangidi site dashboard until a
+  // manager allocates a collection to another project.
+  const scopedCollections = ctx.fuelCreditCollections.filter((c) =>
+    allProjects || recordProject(c) === project || (!recordProject(c) && project === 'REX Forestry Project - Kangidi'));
   const dayAgo = scopedCollections.filter((c) => c.date === date && ago(c));
   const collectedAgo = sum(dayAgo.filter((c) => !soldNote(c)), (c) => c.litres);
   const soldAgo = sum(dayAgo.filter(soldNote), (c) => c.litres);
