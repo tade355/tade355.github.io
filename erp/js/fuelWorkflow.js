@@ -17,16 +17,34 @@ export function workflowOutstanding(record) {
     : (record.events || []).filter(e=>e.type==='collection').reduce((s,e)=>s+Number(e.quantity)*Number(e.unitPrice),0);
   return Math.max(0,value-(record.events||[]).filter(e=>e.type==='payment').reduce((s,e)=>s+Number(e.amount),0));
 }
+function dayNumber(date) { return Math.floor(new Date(date+'T00:00:00Z').getTime()/86400000); }
+export function workflowCostAmountInRange(record, from, to) {
+  if (record?.kind !== 'Cost' || record.status === 'Rejected') return 0;
+  const start=record.data.incurredDate;
+  const end=record.data.incurredTo||start;
+  if(!start||!end) return 0;
+  const rangeStart=from||start; const rangeEnd=to||end;
+  const overlapStart=rangeStart>start?rangeStart:start;
+  const overlapEnd=rangeEnd<end?rangeEnd:end;
+  if(overlapEnd<overlapStart)return 0;
+  const totalDays=Math.max(1,dayNumber(end)-dayNumber(start)+1);
+  const overlapDays=dayNumber(overlapEnd)-dayNumber(overlapStart)+1;
+  return Number(record.data.approvedAmount??record.data.amount??0)*(overlapDays/totalDays);
+}
+function coveredDates(start,end){const out=[];for(let n=dayNumber(start);n<=dayNumber(end);n++)out.push(new Date(n*86400000).toISOString().slice(0,10));return out;}
 export function workflowCosts(records, project, from, to) {
   const result = { dieselTransport:0, workerTransport:0, other:0, maintenance:0, pms:0, provisional:0, dieselDates:[], workerDates:[] };
   const inRange = date => (!from || date >= from) && (!to || date <= to);
   for (const r of records || []) {
     if (r.project !== project || r.status === 'Rejected') continue;
-    if (r.kind === 'Cost' && inRange(r.data.incurredDate)) {
-      const amount = Number(r.data.approvedAmount ?? r.data.amount ?? 0);
+    if (r.kind === 'Cost') {
+      const amount = workflowCostAmountInRange(r,from,to);
+      if (amount <= 0) continue;
+      const start=r.data.incurredDate; const end=r.data.incurredTo||start;
+      const dates=coveredDates(start,end).filter(inRange);
       if (r.status === 'Submitted' || r.status === 'Reviewed') result.provisional += amount;
-      if (r.data.category === 'Diesel transport') { result.dieselTransport += amount; result.dieselDates.push(r.data.incurredDate); }
-      else if (r.data.category === 'Worker transport') { result.workerTransport += amount; result.workerDates.push(r.data.incurredDate); }
+      if (r.data.category === 'Diesel transport') { result.dieselTransport += amount; result.dieselDates.push(...dates); }
+      else if (r.data.category === 'Worker transport') { result.workerTransport += amount; result.workerDates.push(...dates); }
       else if (r.data.category === 'Maintenance') result.maintenance += amount;
       else result.other += amount;
     }

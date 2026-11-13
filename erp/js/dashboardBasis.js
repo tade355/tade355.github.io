@@ -116,7 +116,7 @@ export function maintenanceBasis({ fundRequests, expenses, fundRequestTotal, pms
     .filter((r) => onDashboardBasis(r.date) && (r.status === 'Approved' || r.status === 'Paid') && r.costHead === 'Maintenance')
     .reduce((sum, r) => sum + fundRequestTotal(r), 0);
   const fromExpenses = expenses
-    .filter((e) => onDashboardBasis(e.date) && e.category === 'Maintenance')
+    .filter((e) => onDashboardBasis(e.date) && e.category === 'Maintenance' && !String(e.id || '').startsWith('FUEL-WF:'))
     .reduce((sum, e) => sum + (e.amount || 0), 0);
   return fromRequests + fromExpenses + pms.maintenance;
 }

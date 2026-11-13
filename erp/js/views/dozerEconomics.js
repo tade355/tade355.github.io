@@ -1,3 +1,4 @@
+import { workflowCostAmountInRange } from '../fuelWorkflow.js';
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
 import { sectionHeader, statCard, renderTable, statusPill, dateRangeFields } from '../ui.js';
@@ -12,9 +13,13 @@ function ledgerDozers() {
 }
 
 function maintenanceCostFor(equipment, from, to) {
-  return store.get('maintenanceLogs')
+  const logged = store.get('maintenanceLogs')
     .filter((m) => m.equipment === equipment && dateInRange(m.date, from, to))
     .reduce((sum, m) => sum + m.cost, 0);
+  const reimbursed = store.get('fuelWorkflows')
+    .filter((r) => r.kind === 'Cost' && r.data?.category === 'Maintenance' && r.data?.equipment === equipment)
+    .reduce((sum, r) => sum + workflowCostAmountInRange(r, from, to), 0);
+  return logged + reimbursed;
 }
 
 function renderCompanyPerformance(container, from, to) {

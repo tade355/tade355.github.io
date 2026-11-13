@@ -32,12 +32,14 @@ export function openEarlierCostForm(onSaved, record = null) {
   const id=record?.id||'COST-'+uuid();const token=uuid();
   const d=record?.data||{};
   openModal({title:record?'Edit Earlier Cost / Reimbursement Request':'Earlier Cost / Reimbursement Request',initial:{
-    project:record?.project||d.project||'',incurredDate:d.incurredDate||todayISOString(),category:d.category||'Other',
+    project:record?.project||d.project||'',incurredDate:d.incurredDate||todayISOString(),incurredTo:d.incurredTo||d.incurredDate||todayISOString(),category:d.category||'Other',equipment:d.equipment||'',
     description:d.description||'',amount:d.amount||'',payee:d.payee||'',evidence:d.evidence||'',lateReason:d.lateReason||'',linkedFundRequestId:d.linkedFundRequestId||''
   },fields:[
     {name:'project',label:'Project',type:'select',required:true,options:filterByProject(store.get('projects'),'name').map(p=>({value:p.name,label:p.name}))},
-    {name:'incurredDate',label:'Date the cost happened',type:'date',required:true},
+    {name:'incurredDate',label:'Cost period start',type:'date',required:true},
+    {name:'incurredTo',label:'Cost period end',type:'date',required:true},
     {name:'category',label:'Cost type',type:'select',options:['Diesel transport','Worker transport','Maintenance','Other'].map(x=>({value:x,label:x}))},
+    {name:'equipment',label:'Dozer code (required for maintenance)',type:'select',options:[{value:'',label:'— Not a dozer maintenance cost —'},...store.get('inventory').filter(i=>i.category==='Heavy Equipment').map(i=>({value:i.name,label:[i.assetCode||i.sku,i.name].filter(Boolean).join(' — ')}))]},
     {name:'description',label:'Service / reason',required:true},
     {name:'amount',label:'Accumulated amount owed (₦)',type:'number',min:0,required:true},
     {name:'payee',label:'Person or vendor owed',required:true},
@@ -45,6 +47,8 @@ export function openEarlierCostForm(onSaved, record = null) {
     {name:'lateReason',label:'Reason for later submission',type:'textarea'},
     {name:'linkedFundRequestId',label:'Existing fund request for this same cost (leave blank if none)'},
   ],submitLabel:record?'Update reimbursement request':'Submit reimbursement request',onSubmit:async data=>{
+    if(data.incurredTo<data.incurredDate) throw new Error('The cost period end cannot be before the start date.');
+    if(data.category==='Maintenance'&&!data.equipment) throw new Error('Select the dozer code for a maintenance reimbursement.');
     if(record){
       const {error}=await supabase.rpc('update_earlier_cost_request',{p_id:id,p_payload:{...data,kind:'Cost'},p_token:token});
       if(error) throw new Error(error.code==='PGRST202'?'Reimbursement editing has not been enabled by the administrator yet.':error.message);
@@ -118,7 +122,7 @@ export function renderFuelWorkflow(container,{approvalsOnly=false,costsOnly=fals
           {key:'quantity',label:'Requested litres'},{key:'approvedQuantity',label:'Approved litres'},
           {key:'collected',label:'Collected'},{key:'delivered',label:'Delivered'},{key:'issued',label:'Issued'},{key:'stock',label:'Stock remaining'}],
           rows:r.data.lines.map(l=>{const b=lineBalance(r,l.id);return {...l,...b,stock:b.delivered-b.issued,approvedQuantity:l.approvedQuantity??'Awaiting approval'};})});
-      } else body.append(el('p',{},r.data.description+' · Incurred '+formatDate(r.data.incurredDate)+' · '+formatCurrency(r.data.approvedAmount??r.data.amount)),
+      } else body.append(el('p',{},r.data.description+' · Incurred '+formatDate(r.data.incurredDate)+(r.data.incurredTo&&r.data.incurredTo!==r.data.incurredDate?' to '+formatDate(r.data.incurredTo):'')+(r.data.equipment?' · '+r.data.equipment:'')+' · '+formatCurrency(r.data.approvedAmount??r.data.amount)),
           el('p',{},'Evidence: '+r.data.evidence+' · Late submission: '+(r.data.lateReason||'Same day')));
       body.append(el('p',{},'Outstanding payable: '+formatCurrency(workflowOutstanding(r))));
       for(const e of r.events) body.append(el('p',{},new Date(e.at).toLocaleString()+' · '+e.type+' · '+(store.find('employees',e.actor)?.name||e.actor)
@@ -156,7 +160,7 @@ export function renderFuelWorkflow(container,{approvalsOnly=false,costsOnly=fals
         el('strong',{},r.id+' · '+r.kind),statusPill(r.status),
         r.kind==='Fuel'&&(r.events||[]).some(e=>e.type==='collection')?statusPill(workflowOutstanding(r)===0?'Fully Paid':(r.events||[]).some(e=>e.type==='payment')?'Partially Paid':'Awaiting Payment'):null,
         el('p',{},r.project),
-        el('p',{},r.kind==='Fuel'?r.data.station+' · '+formatDate(r.data.supplyDate)+' · '+r.data.supplyMethod:r.data.description+' · Incurred '+formatDate(r.data.incurredDate)),
+        el('p',{},r.kind==='Fuel'?r.data.station+' · '+formatDate(r.data.supplyDate)+' · '+r.data.supplyMethod:r.data.description+' · Incurred '+formatDate(r.data.incurredDate)+(r.data.incurredTo&&r.data.incurredTo!==r.data.incurredDate?' to '+formatDate(r.data.incurredTo):'')+(r.data.equipment?' · '+r.data.equipment:'')),
         el('p',{},'Outstanding: '+formatCurrency(r.data.supplyMethod==='Site stock'?0:workflowOutstanding(r))),actions]));
     }
     if(!rows.length)list.append(el('p',{},'No matching workflow records.'));

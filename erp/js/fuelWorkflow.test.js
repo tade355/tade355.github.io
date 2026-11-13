@@ -32,3 +32,12 @@ test('collections create debt, only nonproduction usage adds fuel cost, partial 
 test('unapproved requests cannot generate station release',()=>{
  assert.throws(()=>stationRelease({kind:'Fuel',status:'Submitted'}));
 });
+
+test('multi-day reimbursements are spread across incurred days and replace estimated diesel logistics',()=>{
+ const r={kind:'Cost',project:'Site A',status:'Submitted',data:{incurredDate:'2026-11-10',incurredTo:'2026-11-12',category:'Diesel transport',amount:90000},events:[]};
+ const oneDay=workflowCosts([r],'Site A','2026-11-11','2026-11-11');
+ assert.equal(oneDay.dieselTransport,30000);
+ assert.deepEqual(oneDay.dieselDates,['2026-11-11']);
+ assert.equal(oneDay.provisional,30000);
+ assert.equal(workflowCosts([r],'Site A','2026-11-10','2026-11-12').dieselTransport,90000);
+});
