@@ -91,13 +91,19 @@ export function supervisorSundayAllowanceBasis(rows, weekRows = rows) {
 // that has no explanation yet; everything else is the Tacoma vehicle.
 export function pmsKind(collection) {
   const notes = collection.notes || '';
-  if (/wash|maintenance/i.test(notes)) return 'maintenance';
-  if (/unexplained/i.test(notes)) return 'unexplained';
-  return 'tacoma';
+  const explicit = notes.match(/^\[PMS use: (Tacoma|Bikes|Maintenance|Other)\]/i)?.[1]?.toLowerCase();
+  if (explicit === 'other') return 'unexplained';
+  if (explicit) return explicit;
+  // Older records have no dedicated use field. Use only clear evidence in
+  // their notes; keep everything else unallocated instead of calling it Tacoma.
+  if (/bike|motorcycle/i.test(notes)) return 'bikes';
+  if (/wash|maintenance|repair/i.test(notes)) return 'maintenance';
+  if (/tacoma/i.test(notes)) return 'tacoma';
+  return 'unexplained';
 }
 
 export function pmsBasis(collections) {
-  const out = { tacoma: 0, unexplained: 0, maintenance: 0, tacomaLitres: 0, unexplainedLitres: 0, maintenanceLitres: 0 };
+  const out = { tacoma: 0, bikes: 0, unexplained: 0, maintenance: 0, tacomaLitres: 0, bikesLitres: 0, unexplainedLitres: 0, maintenanceLitres: 0 };
   collections.forEach((c) => {
     if (c.fuelType !== 'PMS' || !onDashboardBasis(c.date)) return;
     const kind = pmsKind(c);
