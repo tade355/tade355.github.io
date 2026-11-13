@@ -304,8 +304,8 @@ function fuelingRequestCard(d) {
   const x = d.diesel;
   const chosen = new Set(x.fuelingRequest.map((r) => r.equipment));
   // A closing reported by the site is the physical tank level, so it wins over the calculated one.
-  const closingOf = (name) => { const r = x.rows.find((row) => row.equipment === name); return Math.max(0, r?.reportedClosing ?? r?.closing ?? 0); };
-  const names = [...new Set([...x.rows.map((r) => r.equipment), ...x.fuelingRequest.map((r) => r.equipment)])].sort();
+  const closingOf = (name) => x.fuelingChoices.find((row) => row.equipment === name)?.closing ?? 0;
+  const names = x.fuelingChoices.map((row) => row.equipment);
   const onGroundInput = el('input', { type: 'number', min: '0', step: '1', value: x.onGround ?? 0, class: 'dd-small-input' });
   const list = el('div', { class: 'dd-kv' });
   const totals = el('div', { class: 'dd-kv' });
@@ -333,7 +333,7 @@ function fuelingRequestCard(d) {
   redraw();
   return el('div', { class: 'chart-card' }, [
     el('h4', { class: 'chart-title' }, `Fueling Request — ${formatDate(addDays(d.date, 1))}`),
-    el('p', { class: 'section-subtitle' }, `Need = ${DIESEL_FILL_LITRES}L − closing diesel. Pre-selected: dozers that worked today plus dozers listed Active that have worked since the start date; tick or untick to match tomorrow's list.`),
+    el('p', { class: 'section-subtitle' }, `Need = ${DIESEL_FILL_LITRES}L − closing diesel. All active dozers assigned to this project are listed. Recent work and tank fueling suggest the ticked dozers; tick or untick to match tomorrow's plan.`),
     list,
     el('label', { class: 'dd-kv-row' }, [el('span', {}, 'On ground (L)'), onGroundInput]),
     totals,
