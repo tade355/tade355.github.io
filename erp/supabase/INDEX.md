@@ -68,3 +68,5 @@ Run a new migration once in the Supabase SQL editor, in number order. `schema.sq
 
 
 - `0079_edit_pending_reimbursement.sql` — lets the original submitter update an earlier-cost/reimbursement request while it is awaiting approval. Approved or paid requests remain locked.
+
+- `0080_reimbursement_profit_period.sql` — validates reimbursement cost periods and requires a dozer code for maintenance reimbursements so costs can be allocated correctly.
