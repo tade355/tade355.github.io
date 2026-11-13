@@ -13,7 +13,7 @@ function projectOptions() {
 }
 
 function employeeOptions() {
-  return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
+  return store.get('employees').filter((e) => e.status !== 'Disengaged' && !e.archivedAt).map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
 }
 
 function customerOptions() {
