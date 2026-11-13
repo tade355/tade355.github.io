@@ -9,6 +9,7 @@ import { createAttachmentPicker } from '../attachments.js';
 import { notifyNewFundRequest, notifyFundRequestDecision } from '../notifications.js';
 import { EXPENSE_CATEGORIES } from '../constants.js';
 import { renderApprovals } from './approvals.js';
+import { renderFuelWorkflow } from './fuelWorkflow.js';
 import { findDuplicateRequests, requestTotal } from '../requestDuplicates.js';
 import { canDecideFundRequests, canDecideLeave } from '../access.js';
 
@@ -328,6 +329,9 @@ export function renderFundRequests(container) {
   const requestsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('requests') }, ['Staff','Supervisor'].includes(getCurrentTier()) ? 'My Requests' : 'Requests');
   requestsTabBtn.dataset.tabLabel = 'Requests';
   tabBar.appendChild(requestsTabBtn);
+  const fuelTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('fuelWorkflow') }, 'Fuel & Earlier Costs');
+  fuelTabBtn.dataset.tabLabel = 'Fuel & Earlier Costs';
+  tabBar.appendChild(fuelTabBtn);
   let approvalsTabBtn;
   if (canApprove) {
     approvalsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('approvals') }, 'Approvals');
@@ -352,9 +356,11 @@ export function renderFundRequests(container) {
   function setTab(next) {
     tab = next;
     requestsTabBtn.classList.toggle('active', tab === 'requests');
+    fuelTabBtn.classList.toggle('active', tab === 'fuelWorkflow');
     if (approvalsTabBtn) approvalsTabBtn.classList.toggle('active', tab === 'approvals');
     body.innerHTML = '';
     if (tab === 'requests') renderRequestsTab(body, updatePendingCount);
+    else if (tab === 'fuelWorkflow') renderFuelWorkflow(body);
     else renderApprovals(body, updatePendingCount);
   }
 

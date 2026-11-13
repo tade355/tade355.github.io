@@ -13,15 +13,18 @@ begin
  begin
   perform fuel_workflow_command('TEST-FUEL','approve','{}','bad-approval');
   raise exception 'Manager unexpectedly approved fuel';
- exception when others then if sqlerrm not like 'Only the CEO%' then raise; end if; end;
+ exception when others then if sqlerrm not like 'Only the COO%' then raise; end if; end;
  perform set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000003',true);
  begin
   perform fuel_workflow_command('TEST-FUEL','collection','{}','wrong-project');
   raise exception 'Unrelated project accessed fuel';
  exception when others then if sqlerrm not like 'Request is outside%' then raise; end if; end;
- perform set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000026',true);
- perform fuel_workflow_command('TEST-FUEL','review','{}','review-test');
  perform set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000028',true);
+ begin
+  perform fuel_workflow_command('TEST-FUEL','approve','{}','ceo-not-approver');
+  raise exception 'CEO unexpectedly approved fuel';
+ exception when others then if sqlerrm not like 'Only the COO%' then raise; end if; end;
+ perform set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000026',true);
  perform fuel_workflow_command('TEST-FUEL','approve','{}','approve-test');
  perform set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',true);
  data:=jsonb_build_object('lineId','one','date',current_date,'quantity',40,'delivered',40,'unitPrice',10,'reference','test receipt');
