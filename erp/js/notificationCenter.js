@@ -21,22 +21,39 @@ export function initNotificationCenter(container) {
   async function refresh() {
     const userId = getCurrentUserId();
     if (!userId) return;
-    const [items, total] = await Promise.all([
+    const [items, total, tasks, unreadTasks] = await Promise.all([
       supabase.from('erp_notifications').select('id,title,message,target_path,created_at,read_at')
         .eq('recipient_id', userId).order('created_at', { ascending: false }).limit(100),
       supabase.from('erp_notifications').select('id', { count: 'exact', head: true })
         .eq('recipient_id', userId).is('read_at', null),
+      supabase.from('staff_action_items').select('id,title,description,source_title,due_date,created_at,viewed_at')
+        .eq('assignee_id', userId).order('created_at', { ascending: false }).limit(100),
+      supabase.from('staff_action_items').select('id', { count: 'exact', head: true })
+        .eq('assignee_id', userId).is('viewed_at', null),
     ]);
+    const optionalTaskError = (result) => result.error && ['42P01', 'PGRST205'].includes(result.error.code);
     if (items.error || total.error) {
       button.title = 'Notifications unavailable. Contact the administrator.';
       return;
     }
-    rows = items.data || [];
-    unread = total.count || 0;
+    if (tasks.error && !optionalTaskError(tasks)) {
+      button.title = 'Task alerts unavailable. Contact the administrator.';
+    }
+    const taskRows = tasks.error ? [] : (tasks.data || []).map((task) => ({
+      id: 'action:' + task.id,
+      action_id: task.id,
+      title: 'Action assigned: ' + task.title,
+      message: [task.description || task.source_title || '', task.due_date ? 'Due ' + task.due_date : ''].filter(Boolean).join(' · '),
+      target_path: '#/actionCenter',
+      created_at: task.created_at,
+      read_at: task.viewed_at,
+    }));
+    rows = [...(items.data || []), ...taskRows].sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+    unread = (total.count || 0) + (unreadTasks.error && !optionalTaskError(unreadTasks) ? 0 : (unreadTasks.count || 0));
     count.textContent = unread > 99 ? '99+' : String(unread);
     count.hidden = unread === 0;
-    button.setAttribute('aria-label', unread ? `Notifications, ${unread} unread` : 'Notifications');
-    button.title = unread ? `${unread} unread notification${unread === 1 ? '' : 's'}` : 'Notifications';
+    button.setAttribute('aria-label', unread ? 'Notifications, ' + unread + ' unread' : 'Notifications');
+    button.title = unread ? unread + ' unread notification' + (unread === 1 ? '' : 's') : 'Notifications';
   }
 
   button.addEventListener('click', async () => {
@@ -52,12 +69,15 @@ export function initNotificationCenter(container) {
       const markAll = el('button', { type: 'button', class: 'btn btn-ghost', onClick: async () => {
         markAll.disabled = true;
         feedback.textContent = '';
-        const { error } = await supabase.from('erp_notifications')
-          .update({ read_at: new Date().toISOString() })
-          .eq('recipient_id', getCurrentUserId()).is('read_at', null);
-        if (error) feedback.textContent = 'Could not mark notifications as read. Please try again.';
+        const now = new Date().toISOString();
+        const results = await Promise.all([
+          supabase.from('erp_notifications').update({ read_at: now }).eq('recipient_id', getCurrentUserId()).is('read_at', null),
+          supabase.from('staff_action_items').update({ viewed_at: now }).eq('assignee_id', getCurrentUserId()).is('viewed_at', null),
+        ]);
+        const blocked = results.some((result) => result.error && !['42P01', 'PGRST205'].includes(result.error.code));
+        if (blocked) feedback.textContent = 'Could not mark notifications as read. Please try again.';
         else {
-          rows.forEach((row) => { row.read_at ||= new Date().toISOString(); });
+          rows.forEach((row) => { row.read_at ||= now; });
           await refresh();
         }
         markAll.disabled = false;
@@ -82,8 +102,10 @@ export function initNotificationCenter(container) {
           const link = el('button', { type: 'button', class: 'btn btn-ghost notification-item', onClick: async () => {
             if (!row.read_at) {
               const now = new Date().toISOString();
-              const { error } = await supabase.from('erp_notifications').update({ read_at: now }).eq('id', row.id);
-              if (!error) row.read_at = now;
+              const result = row.action_id
+                ? await supabase.from('staff_action_items').update({ viewed_at: now }).eq('id', row.action_id)
+                : await supabase.from('erp_notifications').update({ read_at: now }).eq('id', row.id);
+              if (!result.error) row.read_at = now;
             }
             close();
             await refresh();
@@ -106,6 +128,7 @@ export function initNotificationCenter(container) {
       render();
     } });
   });
+  window.addEventListener('erp-action-assigned', refresh);
   refresh();
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refresh(); });
   setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 10000);
