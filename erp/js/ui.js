@@ -4,16 +4,39 @@ import { createAttachmentPicker } from './attachments.js';
 import { renderSparkline } from './charts.js';
 import { todayISOString, addDays, mondayOf } from './dateUtils.js';
 import { downloadCSV } from './csv.js';
+import { getCurrentUserId } from './session.js';
 import { sortRows } from './tableSort.js';
 import { readPreference, writePreference } from './navigationState.js';
 
 let modalRoot = null;
+let modalDraftSaver = null;
+const DRAFT_PREFIX = 'emagrims_erp_form_draft_v1';
+
+function modalDraftKey(title, initial) {
+  if (!getCurrentUserId() || /password/i.test(title || '')) return '';
+  const route = (window.location.hash || '').replace(/^#\/?/, '').split('?')[0] || 'home';
+  const name = String(title || 'form').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return [DRAFT_PREFIX, getCurrentUserId(), route, name, initial?.id || 'new'].join(':');
+}
+
+function readModalDraft(key) {
+  if (!key) return null;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const saved = JSON.parse(raw);
+    if (!saved.savedAt || Date.now() - saved.savedAt > 7 * 24 * 60 * 60 * 1000) { localStorage.removeItem(key); return null; }
+    return saved;
+  } catch { return null; }
+}
 
 export function initModalRoot() {
   modalRoot = document.getElementById('modalRoot');
 }
 
 export function closeModal() {
+  if (modalDraftSaver) modalDraftSaver();
+  modalDraftSaver = null;
   if (modalRoot) modalRoot.innerHTML = '';
 }
 
@@ -37,6 +60,8 @@ export function showToast(message, tone = 'good', duration = 3200) {
 
 export function openCustomModal({ title, build, wide }) {
   if (!modalRoot) return;
+  if (modalDraftSaver) modalDraftSaver();
+  modalDraftSaver = null;
   modalRoot.innerHTML = '';
 
   const bodyContainer = el('div', { class: 'modal-form' });
@@ -59,8 +84,14 @@ export function openCustomModal({ title, build, wide }) {
 
 export function openModal({ title, fields, initial = {}, onSubmit, submitLabel = 'Save' }) {
   if (!modalRoot) return;
+  if (modalDraftSaver) modalDraftSaver();
+  modalDraftSaver = null;
   modalRoot.innerHTML = '';
 
+  const draftable = fields.filter((field) => field.type !== 'attachments' && field.type !== 'readonly' && field.type !== 'password');
+  const key = modalDraftKey(title, initial);
+  const savedDraft = readModalDraft(key);
+  const values = { ...initial, ...(savedDraft?.values || {}) };
   const form = el('form', { class: 'modal-form' });
   const attachmentPickers = {};
 
@@ -74,12 +105,12 @@ export function openModal({ title, fields, initial = {}, onSubmit, submitLabel =
       input = el('select', { name: f.name, required: f.required ? 'required' : undefined });
       (f.options || []).forEach((opt) => {
         const optionEl = el('option', { value: opt.value }, opt.label);
-        if (String(initial[f.name]) === String(opt.value)) optionEl.setAttribute('selected', 'selected');
+        if (String(values[f.name]) === String(opt.value)) optionEl.setAttribute('selected', 'selected');
         input.appendChild(optionEl);
       });
     } else if (f.type === 'textarea') {
       input = el('textarea', { name: f.name, rows: f.rows || 3 });
-      input.value = initial[f.name] ?? '';
+      input.value = values[f.name] ?? '';
     } else if (f.type === 'attachments') {
       const picker = createAttachmentPicker(initial[f.name] || []);
       attachmentPickers[f.name] = picker;
@@ -103,14 +134,17 @@ export function openModal({ title, fields, initial = {}, onSubmit, submitLabel =
         step: f.step,
         min: f.min,
       });
-      input.value = initial[f.name] ?? (f.type === 'number' ? 0 : '');
+      input.value = values[f.name] ?? (f.type === 'number' ? 0 : '');
     }
     fieldWrap.appendChild(input);
     form.appendChild(fieldWrap);
   });
 
+  const draftStatus = el('span', { class: 'form-draft-status', role: 'status' }, savedDraft ? 'Draft restored from this device.' : (key ? 'Entries save automatically on this device.' : ''));
+  if (fields.some((field) => field.type === 'attachments') && key) draftStatus.textContent += ' Attachments may need to be added again after a refresh.';
   const actions = el('div', { class: 'modal-actions' }, [
-    el('button', { type: 'button', class: 'btn btn-ghost', onClick: closeModal }, 'Cancel'),
+    draftStatus,
+    el('button', { type: 'button', class: 'btn btn-ghost', onClick: closeModal }, key ? 'Close and keep draft' : 'Cancel'),
     el('button', { type: 'submit', class: 'btn btn-primary' }, submitLabel),
   ]);
   form.appendChild(actions);
@@ -134,6 +168,8 @@ export function openModal({ title, fields, initial = {}, onSubmit, submitLabel =
       submitBtn.disabled = true;
       submitBtn.textContent = 'Saving…';
       await onSubmit(record);
+      if (key) { try { localStorage.removeItem(key); } catch { /* storage may be disabled */ } }
+      modalDraftSaver = null;
       closeModal();
     } catch (err) {
       window.alert(err.message || 'Something went wrong while saving. Please try again.');
@@ -141,6 +177,34 @@ export function openModal({ title, fields, initial = {}, onSubmit, submitLabel =
       submitBtn.textContent = submitLabel;
     }
   });
+
+  function saveDraft() {
+    if (!key || !draftable.length || !form.isConnected) return;
+    try {
+      const submitted = new FormData(form);
+      const draftValues = {};
+      draftable.forEach((field) => {
+        const value = submitted.get(field.name);
+        if (value !== null) draftValues[field.name] = value;
+      });
+      const raw = JSON.stringify({ savedAt: Date.now(), values: draftValues });
+      if (raw.length > 180000) { draftStatus.textContent = 'This form is too large to save here. Copy your entries before refreshing.'; return; }
+      localStorage.setItem(key, raw);
+      draftStatus.textContent = 'Draft saved on this device.';
+    } catch {
+      draftStatus.textContent = 'Draft could not be saved here. Copy your entries before refreshing.';
+    }
+  }
+  let draftTimer = null;
+  const scheduleDraft = () => {
+    if (!key) return;
+    draftStatus.textContent = 'Saving draft…';
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(saveDraft, 250);
+  };
+  form.addEventListener('input', scheduleDraft);
+  form.addEventListener('change', scheduleDraft);
+  modalDraftSaver = () => { clearTimeout(draftTimer); saveDraft(); };
 
   const dialog = el('div', { class: 'modal-dialog' }, [
     el('div', { class: 'modal-header' }, [
