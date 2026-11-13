@@ -61,7 +61,7 @@ export function renderAgoPlanner(container) {
     field('Target hours', hours), field('Diesel per hour (L)', lph), field('Reserve in tank (L)', reserve),
     field('Target opening diesel (L)', target), el('div', { class: 'filter-field' }, [el('span', {}, ' '), autoBtn]), field('Keg size (L)', kegSize),
   ]));
-  container.appendChild(el('p', { class: 'section-subtitle' }, 'Target opening diesel = target hours × diesel per hour + the reserve left in the tank (8 × 25 + 50 = 250 L). Type over it to set a different target. Tick the dozers that will work, and correct any closing diesel that differs from what the site reports.'));
+  container.appendChild(el('p', { class: 'section-subtitle' }, 'Target opening diesel = target hours × diesel per hour + the reserve left in the tank (8 × 25 + 50 = 250 L). Type over it to set a different target. Tick the dozers that will work, correct any closing diesel, or type a different Balance needed for a dozer. Auto beside that row restores the calculated balance.'));
 
   // ----------------------------------------------------------------- dozers
   const tableBody = el('tbody');
@@ -137,7 +137,9 @@ export function renderAgoPlanner(container) {
       const closing = el('input', { type: 'number', min: '0', step: '0.5', class: 'dd-small-input', value: String(d.closing) });
       const rowHours=el('input',{type:'number',min:0,max:24,step:0.5,value:hours.value,class:'dd-small-input'});
       rowHours.addEventListener('input',update);
-      const need = el('td', { class: 'dd-num' }, '');
+      const needInput = el('input', { type: 'number', min: '0', step: '0.1', class: 'dd-small-input', 'aria-label': `${d.name} balance needed in litres` });
+      const needAuto = el('button', { type: 'button', class: 'btn btn-ghost', title: `Restore calculated balance for ${d.name}` }, 'Auto');
+      const need = el('td', { class: 'dd-num' }, el('div', { class: 'ago-need-edit' }, [needInput, needAuto]));
       const tr = el('tr', {}, [
         el('td', {}, [box]),
         el('td', {}, [el('strong', {}, d.name), d.operator ? el('span', { class: 'dd-muted' }, ` · ${d.operator}`) : null]),
@@ -146,9 +148,23 @@ export function renderAgoPlanner(container) {
         el('td', { class: 'dd-num' }, [rowHours]),
         need,
       ]);
+      const ref = { d, box, closing, rowHours, needInput, needAuto, needOverride: null, tr };
+      needInput.addEventListener('change', () => {
+        const value = needInput.value.trim();
+        if (value && (!Number.isFinite(Number(value)) || Number(value) < 0)) {
+          status.textContent = 'Balance needed must be zero or more litres.';
+          needInput.value = ref.needOverride === null ? '' : String(ref.needOverride);
+          update();
+          return;
+        }
+        ref.needOverride = value === '' ? null : Number(value);
+        status.textContent = ref.needOverride === null ? '' : `Manual balance set for ${d.name}.`;
+        update();
+      });
+      needAuto.addEventListener('click', () => { ref.needOverride = null; status.textContent = `Calculated balance restored for ${d.name}.`; update(); });
       box.addEventListener('change', update); closing.addEventListener('input', update);
       tableBody.appendChild(tr);
-      return { d, box, closing, rowHours, need, tr };
+      return ref;
     });
     onGround.value = String(defaults.onGround);
     onGroundNote.textContent = defaults.onGroundNote;
@@ -158,7 +174,7 @@ export function renderAgoPlanner(container) {
   }
 
   function current() {
-    const dozers = rowRefs.map((r) => ({ ...r.d, active: r.box.checked, closing: numVal(r.closing), target: targetTouched ? numVal(target) : fuelRequirement({hours:numVal(r.rowHours),litresPerHour:numVal(lph),reserve:numVal(reserve),closing:0}) }));
+    const dozers = rowRefs.map((r) => ({ ...r.d, active: r.box.checked, closing: numVal(r.closing), needOverride: r.needOverride, target: targetTouched ? numVal(target) : fuelRequirement({hours:numVal(r.rowHours),litresPerHour:numVal(lph),reserve:numVal(reserve),closing:0}) }));
     const plan=buildPlan({
       dozers, target: numVal(target), onGround: numVal(onGround), kegLitres: numVal(kegSize) || DEFAULTS.kegLitres,
       dieselPrice: defaults?.dieselPrice || 0, pmsLitres: numVal(pmsLitres), pmsPrice: defaults?.pmsPrice || 0,
@@ -180,7 +196,7 @@ export function renderAgoPlanner(container) {
       `Closing diesel follows the ERP diesel chain as at ${formatDate(closingDate.value)} (opening = previous closing + supplied; used = ${lph.value} L per hour, 20 L per hour after 8 hrs). Correct any figure that differs from the site's count.`,
       'Distributed counts diesel put in the tanks only; diesel given for fixing tracks is not tank fuel.',
       `On ground ${L(plan.onGround)} L: ${defaults?.onGroundNote || ''}.`,
-      ...rowRefs.filter(r=>r.box.checked).map(r=>r.d.name+': '+r.rowHours.value+' target hours; '+L(plan.rows.find(x=>x.name===r.d.name)?.target)+' L target opening.'),
+      ...rowRefs.filter(r=>r.box.checked).map(r=>{const row=plan.rows.find(x=>x.name===r.d.name);return r.d.name+': '+r.rowHours.value+' target hours; '+L(row?.target)+' L target opening; '+L(row?.need)+' L balance needed'+(row?.needManuallySet?' (manual; calculated '+L(row.calculatedNeed)+' L)':'')+'.';}),
     ];
   }
 
@@ -190,7 +206,10 @@ export function renderAgoPlanner(container) {
     const plan = current();
     rowRefs.forEach((r, i) => {
       const row = plan.rows[i];
-      r.need.textContent = row.active ? L(row.need) : '—';
+      r.needInput.disabled = !row.active;
+      r.needAuto.disabled = !row.active || !row.needManuallySet;
+      r.needInput.value = row.active ? String(row.need) : '';
+      r.needInput.title = row.needManuallySet ? `Manual balance; calculated ${L(row.calculatedNeed)} L` : `Calculated balance: ${L(row.calculatedNeed)} L`;
       r.tr.classList.toggle('dd-row-off', !row.active);
     });
     totalRow.innerHTML = '';
