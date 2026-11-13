@@ -15,20 +15,20 @@ test('requests older than a week are chased, newer ones are not', () => {
 });
 
 test('a resent request is flagged as a possible duplicate', () => {
-  const f = buildAttention(base({ fundRequests: [req('FR-78', '2026-10-11', 'Pending', 'Oil for Tope', 100000), req('FR-112', '2026-10-17', 'Pending', 'Oil for Tope', 100000), req('FR-5', '2026-10-17', 'Pending', 'Different', 100000)] }), { date: on, lastBackupAt: on });
+  const f = buildAttention(base({ fundRequests: [req('FR-78', '2026-11-11', 'Pending', 'Oil for Tope', 100000), req('FR-112', '2026-11-17', 'Pending', 'Oil for Tope', 100000), req('FR-5', '2026-11-17', 'Pending', 'Different', 100000)] }), { date: '2026-11-19', lastBackupAt: '2026-11-19' });
   assert.match(f.find((x) => /duplicate/i.test(x.text)).text, /FR-78 and FR-112/);
 });
 
-test('vouchers waiting for approval, an old stock count and a missing report are flagged', () => {
+test('vouchers, post-baseline stock counts and missing reports are flagged', () => {
   const ctx = base({
-    fuelingVouchers: [{ id: 'FV-28', date: '2026-10-17', status: 'Pending Approval' }, { id: 'FV-1', date: '2026-10-19', status: 'Pending Approval' }, { id: 'FV-2', date: '2026-10-10', status: 'Approved' }],
-    dieselStockCounts: [{ date: '2026-10-14', countedLitres: 10 }],
-    operations: [{ siteName: 'P', date: '2026-10-17', hoursWorked: 8 }],
+    fuelingVouchers: [{ id: 'FV-28', date: '2026-11-17', status: 'Pending Approval' }, { id: 'FV-1', date: '2026-11-19', status: 'Pending Approval' }, { id: 'FV-2', date: '2026-11-10', status: 'Approved' }],
+    dieselStockCounts: [{ date: '2026-11-14', countedLitres: 10 }, { date: '2026-10-22', countedLitres: 20 }],
+    operations: [{ siteName: 'P', date: '2026-11-17', hoursWorked: 8 }],
   });
-  const f = buildAttention(ctx, { date: on, lastBackupAt: on });
+  const f = buildAttention(ctx, { date: '2026-11-19', lastBackupAt: '2026-11-19' });
   assert.match(f.find((x) => /voucher/.test(x.text)).text, /1 fueling voucher\(s\).*FV-28/);
   assert.match(f.find((x) => /stock count/.test(x.text)).text, /5 days ago/);
-  assert.match(f.find((x) => /end-of-day report/.test(x.text)).text, /18 Oct 2026/);
+  assert.match(f.find((x) => /end-of-day report/.test(x.text)).text, /18 Nov 2026/);
 });
 
 test('backup reminder: never, stale, recent', () => {
@@ -36,4 +36,10 @@ test('backup reminder: never, stale, recent', () => {
   assert.match(buildAttention(base(), { date: on, lastBackupAt: '2026-10-05T10:00:00Z' })[0].text, /14 days ago/);
   assert.equal(buildAttention(base(), { date: on, lastBackupAt: '2026-10-15T10:00:00Z' }).length, 0);
   assert.equal(buildAttention(base(), { date: on, lastBackupAt: undefined }).length, 0, 'no backup information supplied: say nothing');
+});
+
+test('duplicate and stock warnings ignore records before the 11 November dashboard reference', () => {
+  const f=buildAttention(base({fundRequests:[req('FR-185','2026-11-10','Pending','Bike 006',13700),req('FR-203','2026-11-10','Pending','Bike 006',13700)],dieselStockCounts:[{date:'2026-10-22',countedLitres:20}]}),{date:'2026-11-12',lastBackupAt:'2026-11-12'});
+  assert.equal(f.some(x=>/duplicate/i.test(x.text)),false);
+  assert.equal(f.some(x=>/stock count/i.test(x.text)),false);
 });
