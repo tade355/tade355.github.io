@@ -1793,3 +1793,12 @@ a.btn { text-decoration: none; }
   .action-extract-candidate, .action-extract-assignee { grid-column: 2; }
   .form-draft-status { flex: 1 1 100%; }
 }
+
+/* Optional web push invitation, shown only after a staff member signs in. */
+.push-opt-in { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:16px 24px 0; padding:14px 18px; border:1px solid #b9d8c6; border-radius:12px; background:#eff8f2; color:#173d2b; box-shadow:0 2px 8px rgba(15,55,32,.06); }
+.push-opt-in-copy { display:flex; flex-direction:column; gap:3px; line-height:1.4; }
+.push-opt-in-copy strong { font-size:14px; }
+.push-opt-in-copy span { font-size:13px; }
+.push-opt-in-actions { display:flex; flex-wrap:wrap; gap:8px; flex-shrink:0; }
+.push-opt-in-actions .btn { min-height:36px; }
+@media (max-width:700px) { .push-opt-in { margin:12px 12px 0; flex-direction:column; align-items:stretch; } .push-opt-in-actions .btn { flex:1; } }
