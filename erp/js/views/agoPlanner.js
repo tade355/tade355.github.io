@@ -1,4 +1,4 @@
-import { submitFuelPlan, renderFuelWorkflow } from './fuelWorkflow.js';
+import { submitFuelPlan } from './fuelWorkflow.js';
 import { fuelRequirement } from '../fuelWorkflow.js';
 // AGO Planner (Resource Management → Diesel Management): works out how much
 // diesel the site must be supplied for the next working day from the active
@@ -221,7 +221,6 @@ export function renderAgoPlanner(container) {
     try { await navigator.clipboard.writeText(message.value); status.textContent = 'Message copied.'; } catch (e) { message.select(); document.execCommand('copy'); status.textContent = 'Message copied.'; }
   });
 
-  const workflowPanel=el('div'); container.appendChild(workflowPanel); renderFuelWorkflow(workflowPanel);
   const meta = (plan) => ({
     siteLabel: siteSel.value.replace(/^REX Forestry Project - /, ''), planDate: planDate.value, closingDate: closingDate.value || today,
     targetHours: numVal(hours), litresPerHour: numVal(lph), reserve: numVal(reserve), targetOverridden: Math.abs(plan.target - autoTarget()) >= 0.05,
@@ -268,7 +267,7 @@ export function renderAgoPlanner(container) {
       if(!lines.length)throw Error('No additional supply is required.');
       submitFuelPlan({project:siteSel.value,station:stationSel.value,collector:recipient.value,supplyDate:supplyDate.value,lines,
         closingDate:closingDate.value,onGround:plan.onGround,planningRows:plan.rows,planningNote:notes(plan).join('\n')},
-        ()=>{status.textContent='Fuel plan submitted for review and CEO approval.';renderFuelWorkflow(workflowPanel);});
+        ()=>{status.textContent='Fuel plan submitted. Open Fund Requests & Approvals → Fuel & Earlier Costs to review it.';});
     }catch(error){status.textContent=error.message;}
   });
   [extraLitres,oilLitres,oilPrice].forEach(input=>input.addEventListener('input',update));
