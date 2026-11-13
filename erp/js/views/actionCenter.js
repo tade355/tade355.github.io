@@ -132,7 +132,15 @@ async function pdfAttachmentText(attachment) {
   for (let number = 1; number <= pdf.numPages; number += 1) {
     const page = await pdf.getPage(number);
     const content = await page.getTextContent();
-    pages.push(content.items.map((item) => item.str).join(' '));
+    const rows = new Map();
+    content.items.forEach((item) => {
+      const line = Math.round(item.transform?.[5] || 0);
+      if (!rows.has(line)) rows.set(line, []);
+      rows.get(line).push({ x: item.transform?.[4] || 0, text: item.str });
+    });
+    pages.push([...rows.entries()].sort((a, b) => b[0] - a[0])
+      .map(([, items]) => items.sort((a, b) => a.x - b.x).map((item) => item.text).join(' ').trim())
+      .filter(Boolean).join('\\n'));
   }
   return pages.join('\n');
 }
