@@ -64,7 +64,11 @@ export function planDefaults(ctx, project, closingDate, since = DASHBOARD_BASIS_
 
 // dozers: [{ name, operator, distributed, closing, active }]
 export function buildPlan({ dozers, target, onGround = 0, kegLitres = DEFAULTS.kegLitres, dieselPrice = 0, pmsLitres = 0, pmsPrice = 0 }) {
-  const rows = dozers.map((d) => ({ ...d, need: d.active ? Math.max(0, round1((d.target ?? target) - (d.closing || 0))) : null }));
+  const rows = dozers.map((d) => {
+    const calculatedNeed = Math.max(0, round1((d.target ?? target) - (d.closing || 0)));
+    const manual = d.needOverride !== null && d.needOverride !== undefined && Number.isFinite(Number(d.needOverride));
+    return { ...d, calculatedNeed, need: d.active ? (manual ? Math.max(0, round1(Number(d.needOverride))) : calculatedNeed) : null, needManuallySet: manual };
+  });
   const totalNeed = round1(sum(rows.filter((r) => r.active), (r) => r.need));
   const additional = Math.max(0, round1(totalNeed - (onGround || 0)));
   const agoCost = additional * dieselPrice;
