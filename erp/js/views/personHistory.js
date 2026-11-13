@@ -18,7 +18,7 @@ export function renderPersonHistory(container) {
   const today = todayISOString();
   const select = el('select', {}, [
     el('option', { value: '' }, '— Choose a person —'),
-    ...store.get('employees').slice().sort((a, b) => (a.name < b.name ? -1 : 1)).map((e) => el('option', { value: e.id }, `${e.name} (${e.role})`)),
+    ...store.get('employees').filter((e) => e.status !== 'Disengaged' && !e.archivedAt).slice().sort((a, b) => (a.name < b.name ? -1 : 1)).map((e) => el('option', { value: e.id }, `${e.name} (${e.role})`)),
   ]);
   const range = dateRangeFields({ from: `${today.slice(0, 7)}-01`, to: today, onChange: () => render() });
   select.addEventListener('change', () => render());
