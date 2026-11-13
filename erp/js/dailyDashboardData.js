@@ -147,17 +147,27 @@ export function buildDailyDashboard(ctx) {
   const chainOps = allOps.filter((o) => o.date >= dieselSince);
   const chainNames = [...new Set([...tankDist.map((d) => d.equipment), ...chainOps.map((o) => o.equipment)])].filter(equipmentBelongs);
   const diesel = chainNames.map((name) => {
-    const closingBefore = sum(tankDist.filter((d) => d.equipment === name && d.date < date), (d) => d.litres)
-      - sum(chainOps.filter((o) => o.equipment === name && o.date < date), (o) => o.fuelUsed);
+    // A submitted tank dip is the last known physical balance. Carry it
+    // forward with later tank distributions and usage instead of restarting
+    // every day from the unadjusted, zero-based ledger.
+    const lastReading = chainOps
+      .filter((o) => o.equipment === name && o.date < date && o.closingDiesel !== null && o.closingDiesel !== undefined && Number.isFinite(Number(o.closingDiesel)))
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
+    const afterReading = (row) => !lastReading || row.date > lastReading.date;
+    const closingBefore = (lastReading ? Number(lastReading.closingDiesel) : 0)
+      + sum(tankDist.filter((d) => d.equipment === name && d.date < date && afterReading(d)), (d) => d.litres)
+      - sum(chainOps.filter((o) => o.equipment === name && o.date < date && afterReading(o)), (o) => o.fuelUsed);
     const distributed = sum(tankDist.filter((d) => d.equipment === name && d.date === date), (d) => d.litres);
     const rows = dayOps.filter((o) => o.equipment === name);
     const used = sum(rows, (o) => o.fuelUsed);
     const ha = sum(rows, (o) => o.quantity);
     const opening = closingBefore + distributed;
-    const closing = opening - used;
-    const reportedClosing = rows.find((o) => o.closingDiesel !== null && o.closingDiesel !== undefined)?.closingDiesel;
+    const calculatedClosing = opening - used;
+    const reading = rows.find((o) => o.closingDiesel !== null && o.closingDiesel !== undefined && Number.isFinite(Number(o.closingDiesel)));
+    const reportedClosing = reading ? Number(reading.closingDiesel) : undefined;
+    const closing = reportedClosing ?? calculatedClosing;
     let status = 'Idle';
-    if (rows.length) status = reportedClosing !== undefined && Math.abs(reportedClosing - closing) > 0.5 ? 'Closing restated' : 'Reconciled';
+    if (rows.length) status = reportedClosing !== undefined && Math.abs(reportedClosing - calculatedClosing) > 0.5 ? 'Closing restated' : 'Reconciled';
     else if (!opening && !closing) status = 'No balance';
     return { equipment: name, opening, distributed, used, closing, efficiency: ha > 0 ? used / ha : null, status, reportedClosing, worked: rows.length > 0 };
   }).filter((r) => r.opening || r.distributed || r.used || r.closing || r.worked)
