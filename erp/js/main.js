@@ -130,7 +130,7 @@ function initApp() {
     ['Fleet & Resources', ['fleet','resourceManagement']],
     ['Commercial', ['sales','purchasing']],
     ['Finance', ['accounting','fundRequests']],
-    ['People', ['hr','leave','mySalary','training','noticeBoard']],
+    ['People', ['hr','leave','mySalary','training','actionCenter','noticeBoard']],
     ['Data Tools', ['pasteEntry','dataImport']],
   ];
   groups.forEach(([label, paths]) => {
