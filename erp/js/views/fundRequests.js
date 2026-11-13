@@ -9,7 +9,7 @@ import { createAttachmentPicker } from '../attachments.js';
 import { notifyNewFundRequest, notifyFundRequestDecision } from '../notifications.js';
 import { EXPENSE_CATEGORIES } from '../constants.js';
 import { renderApprovals } from './approvals.js';
-import { renderFuelWorkflow } from './fuelWorkflow.js';
+import { openEarlierCostForm, renderFuelWorkflow } from './fuelWorkflow.js';
 import { findDuplicateRequests, requestTotal } from '../requestDuplicates.js';
 import { canDecideFundRequests, canDecideLeave } from '../access.js';
 
@@ -329,9 +329,6 @@ export function renderFundRequests(container) {
   const requestsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('requests') }, ['Staff','Supervisor'].includes(getCurrentTier()) ? 'My Requests' : 'Requests');
   requestsTabBtn.dataset.tabLabel = 'Requests';
   tabBar.appendChild(requestsTabBtn);
-  const fuelTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('fuelWorkflow') }, 'Fuel & Earlier Costs');
-  fuelTabBtn.dataset.tabLabel = 'Fuel & Earlier Costs';
-  tabBar.appendChild(fuelTabBtn);
   let approvalsTabBtn;
   if (canApprove) {
     approvalsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('approvals') }, 'Approvals');
@@ -356,11 +353,9 @@ export function renderFundRequests(container) {
   function setTab(next) {
     tab = next;
     requestsTabBtn.classList.toggle('active', tab === 'requests');
-    fuelTabBtn.classList.toggle('active', tab === 'fuelWorkflow');
     if (approvalsTabBtn) approvalsTabBtn.classList.toggle('active', tab === 'approvals');
     body.innerHTML = '';
     if (tab === 'requests') renderRequestsTab(body, updatePendingCount);
-    else if (tab === 'fuelWorkflow') renderFuelWorkflow(body);
     else renderApprovals(body, updatePendingCount);
   }
 
@@ -368,8 +363,11 @@ export function renderFundRequests(container) {
 }
 
 function renderRequestsTab(container, onRefresh = () => {}) {
-  const addBtn = el('button', { class: 'btn btn-primary', onClick: () => openRequestForm(null, refresh) }, '+ Submit Fund Request');
-  container.appendChild(sectionHeader('Fund Requests', 'Staff requests for funds, with approval and payee details', addBtn));
+  const requestActions = el('div', { class: 'row-actions' }, [
+    el('button', { class: 'btn btn-primary', onClick: () => openRequestForm(null, refresh) }, '+ Submit Fund Request'),
+    el('button', { class: 'btn btn-secondary', onClick: () => openEarlierCostForm(refresh) }, '+ Earlier Cost / Reimbursement Request'),
+  ]);
+  container.appendChild(sectionHeader('Fund Requests', 'Staff requests for funds, with approval and payee details', requestActions));
 
   const summarySlot = el('div');
   container.appendChild(summarySlot);
@@ -401,6 +399,10 @@ function renderRequestsTab(container, onRefresh = () => {}) {
 
   const tableContainer = el('div');
   container.appendChild(tableContainer);
+
+  const earlierCosts = el('div');
+  container.appendChild(earlierCosts);
+  renderFuelWorkflow(earlierCosts, { costsOnly: true, allowCreate: false });
 
   function totalOf(request) {
     return request.items.reduce((sum, it) => sum + it.amount, 0);
