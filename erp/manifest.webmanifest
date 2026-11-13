@@ -1,0 +1,16 @@
+{
+  "name": "Emagrims ERP",
+  "short_name": "Emagrims ERP",
+  "start_url": "/erp/",
+  "scope": "/erp/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#123b2b",
+  "icons": [
+    {
+      "src": "/erp/assets/logo.png",
+      "sizes": "any",
+      "type": "image/png"
+    }
+  ]
+}
