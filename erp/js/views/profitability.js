@@ -230,7 +230,7 @@ export function computeProjectStats(project, from, to) {
   const actualTransport = rollingTransportCosts(store.get('fundRequests').filter((r) => r.project === project && !linkedWorkflowRequests.has(r.id)), from, to);
   workflow.dieselDates.forEach(date=>actualTransport.datesWithDiesel.add(date));
   const pmsCollections = store.get('fuelCreditCollections')
-    .filter((c) => c.fuelType === 'PMS' && !c.workflowId && dateInRange(c.date, from, to) && onDashboardBasis(c.date) && pmsProjectForDate(c.date) === project);
+    .filter((c) => c.fuelType === 'PMS' && !c.workflowId && dateInRange(c.date, from, to) && onDashboardBasis(c.date) && (c.project || pmsProjectForDate(c.date)) === project);
   const pms = pmsBasis(pmsCollections);
   const dieselLogistics = dieselLogisticsBasis(distributions.filter((d) => !actualTransport.datesWithDiesel.has(d.date)), ownershipByName);
   const supervisorSundayAllowance = supervisorSundayAllowanceBasis(operations, store.get('operations').filter((o) => o.siteName === project));
@@ -256,7 +256,7 @@ export function computeProjectStats(project, from, to) {
     + supervisorSundayAllowance + workflow.other;
   // PMS (Tacoma + any unexplained litres) on the dashboard basis; PMS used
   // for maintenance is counted under Maintenance Incurred instead.
-  const pmsCost = pms.tacoma + pms.unexplained + workflow.pms;
+  const pmsCost = pms.tacoma + pms.bikes + pms.unexplained + workflow.pms;
   const totalCost = dozerCost + dieselCost + operatorAllowanceCost + logisticsCost + otherCost + pmsCost;
 
   // Machine Recovery (dashboard basis only).
