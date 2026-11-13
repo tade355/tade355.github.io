@@ -4,13 +4,18 @@ import { formatCurrency, formatDate, el, dateInRange, ico } from '../utils.js';
 import { sectionHeader, statCard, statusPill, renderTable, actionButtons, openModal, confirmDelete, dateRangeFields } from '../ui.js';
 import { FUEL_STATIONS, FUEL_TYPES } from '../constants.js';
 import { printFuelCreditStatement } from '../print.js';
+import { pmsKind } from '../dashboardBasis.js';
 
 function collectionFields() {
   return [
     { name: 'date', label: 'Date', type: 'date', required: true },
-    { name: 'project', label: 'Project / Site', type: 'select', required: true, options: store.get('projects').filter((p) => p.status === 'Active').map((p) => ({ value: p.name, label: p.name })) },
+    { name: 'project', label: 'Project / Site', type: 'select', required: true, options: store.get('projects').map((p) => ({ value: p.name, label: p.name })) },
     { name: 'station', label: 'Filling Station', type: 'select', required: true, options: FUEL_STATIONS.map((s) => ({ value: s, label: s })) },
     { name: 'fuelType', label: 'Fuel Type', type: 'select', required: true, options: FUEL_TYPES.map((t) => ({ value: t, label: t })) },
+    { name: 'pmsUse', label: 'PMS used for (required for PMS)', type: 'select', options: [
+      { value: 'Tacoma', label: 'Tacoma vehicle' }, { value: 'Bikes', label: 'Bikes / motorcycles' },
+      { value: 'Maintenance', label: 'Repairs / maintenance' }, { value: 'Other', label: 'Other / specify in notes' },
+    ] },
     { name: 'litres', label: 'Litres Collected', type: 'number', required: true, min: 0 },
     { name: 'unitPrice', label: 'Unit Price (₦/litre)', type: 'number', required: true, min: 0 },
     { name: 'reference', label: 'Reference (waybill, invoice #, etc.)' },
@@ -184,6 +189,8 @@ export function renderFuelCredit(container) {
         { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
         { key: 'station', label: 'Station' },
         { key: 'fuelType', label: 'Fuel Type' },
+        { key: 'project', label: 'Project', render: (r) => r.project || 'Unassigned (older record)' },
+        { key: 'pmsUse', label: 'PMS Used For', render: (r) => r.fuelType === 'PMS' ? ({ tacoma: 'Tacoma', bikes: 'Bikes', maintenance: 'Maintenance', unexplained: 'Unallocated / other' }[pmsKind(r)]) : '—' },
         { key: 'litres', label: 'Litres', render: (r) => `${r.litres.toLocaleString()} L` },
         { key: 'unitPrice', label: 'Unit Price', render: (r) => formatCurrency(r.unitPrice) },
         { key: 'amount', label: 'Amount', render: (r) => formatCurrency(collectionAmount(r)) },
@@ -243,11 +250,21 @@ export function renderFuelCredit(container) {
     openModal({
       title: record ? 'Edit Collection' : 'Log Collection',
       fields: collectionFields(),
-      initial: record || { date: todayISOString(), project: 'REX Forestry Project - Kangidi', fuelType: 'Diesel' },
+      initial: record ? {
+        ...record,
+        pmsUse: record.fuelType === 'PMS' ? ({ tacoma: 'Tacoma', bikes: 'Bikes', maintenance: 'Maintenance' }[pmsKind(record)] || '') : '',
+        notes: String(record.notes || '').replace(/^\\[PMS use: (?:Tacoma|Bikes|Maintenance|Other)\\]\\s*/i, ''),
+      } : { date: todayISOString(), fuelType: 'Diesel' },
       submitLabel: record ? 'Save Changes' : 'Log Collection',
       onSubmit: async (data) => {
-        if (record) await store.update('fuelCreditCollections', record.id, data);
-        else await store.add('fuelCreditCollections', data);
+        if (data.fuelType === 'PMS' && !data.pmsUse) throw new Error('Choose what this PMS was used for.');
+        if (data.fuelType === 'PMS' && data.pmsUse === 'Other' && !String(data.notes || '').trim()) throw new Error('Describe the other PMS use in Notes.');
+        const { pmsUse, ...collection } = data;
+        collection.notes = data.fuelType === 'PMS'
+          ? `[PMS use: ${pmsUse}] ${String(data.notes || '').trim()}`.trim()
+          : String(data.notes || '').trim();
+        if (record) await store.update('fuelCreditCollections', record.id, collection);
+        else await store.add('fuelCreditCollections', collection);
         refresh();
       },
     });
