@@ -214,7 +214,12 @@ async function boot() {
       showLoginForm(() => window.location.reload());
       return;
     }
-    await store.init();
+    // Fetch the requested page's code while the database loads, so its
+    // network and parsing time do not add another wait after the data arrives.
+    const requestedPath = window.location.hash.replace('#/', '').split('?')[0];
+    const requestedRoute = ROUTES.find((route) => route.path === requestedPath);
+    if (requestedRoute) void requestedRoute.load().catch(() => {});
+    await store.init({ sessionReady: true });
     const employee = await restoreSession({ employeesLoaded: true });
     loadingScreen.classList.remove('open');
     if (!employee) {
