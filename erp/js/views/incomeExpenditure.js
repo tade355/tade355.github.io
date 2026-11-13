@@ -78,6 +78,10 @@ export function renderIncomeExpenditure(container) {
   const expenditureChartContainer = el('div');
   chartsGrid.appendChild(incomeChartContainer);
   chartsGrid.appendChild(expenditureChartContainer);
+  container.appendChild(el('div', { class: 'finance-chart-legend', role: 'note' }, [
+    el('strong', {}, 'Chart key'),
+    el('span', {}, 'Colours identify cost heads. Hover a bar for the exact amount.'),
+  ]));
 
   const tableContainer = el('div');
   container.appendChild(tableContainer);
@@ -102,12 +106,13 @@ export function renderIncomeExpenditure(container) {
 
     summaryGrid.innerHTML = '';
     summaryGrid.appendChild(statCard({ label: 'Total Income', value: formatCurrency(totalIncome), tone: 'good' }));
+    summaryGrid.appendChild(statCard({ label: 'Records in View', value: String(rows.length) }));
     summaryGrid.appendChild(statCard({ label: basisSelect.value === 'cash' ? 'Recorded Cash Outflow' : 'Unpaid Commitments', value: formatCurrency(totalExpenditure), tone: 'critical' }));
     summaryGrid.appendChild(statCard({ label: basisSelect.value === 'cash' ? 'Recorded Cash Net' : 'Commitment Impact', value: formatCurrency(net), tone: net >= 0 ? 'good' : 'critical' }));
 
     const incomeByHead = [...new Set(rows.filter((r) => r.type === 'Income').map((r) => r.costHead))];
     renderBarChart(incomeChartContainer, {
-      title: 'Income by Cost Head',
+      title: 'Income by Cost Head (₦)',
       bars: incomeByHead.map((h, i) => ({
         label: h,
         value: rows.filter((r) => r.type === 'Income' && r.costHead === h).reduce((sum, r) => sum + r.amount, 0),
@@ -118,7 +123,7 @@ export function renderIncomeExpenditure(container) {
 
     const expenditureByHead = [...new Set(rows.filter((r) => r.type === 'Expenditure').map((r) => r.costHead))];
     renderBarChart(expenditureChartContainer, {
-      title: 'Expenditure by Cost Head',
+      title: 'Expenditure by Cost Head (₦)',
       bars: expenditureByHead.map((h, i) => ({
         label: h,
         value: rows.filter((r) => r.type === 'Expenditure' && r.costHead === h).reduce((sum, r) => sum + r.amount, 0),
