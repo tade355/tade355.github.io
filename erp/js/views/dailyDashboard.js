@@ -101,12 +101,15 @@ function flagsBanner(flags) {
 function downloadHtml(d) {
   if (!d) return;
   const html = buildDashboardHtml(d, { fueling: d.diesel.fuelingState });
-  // Data URLs work in embedded browsers that block blob downloads.
-  const url = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
-  const a = el('a', { href: url, download: dashboardFileName(d.date), target: '_blank', rel: 'noopener' });
+  // Use a Blob URL so large reports are not rejected by browser data-URL limits.
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = el('a', { href: url, download: dashboardFileName(d.date) });
+  a.style.display = 'none';
   document.body.appendChild(a);
   a.click();
   a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function printPage() {
