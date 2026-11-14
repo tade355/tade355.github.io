@@ -1,3 +1,4 @@
+import { selectableProjects, selectableEmployees, selectableMachines } from '../selectionOptions.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, ico } from '../utils.js';
@@ -8,15 +9,15 @@ import { fleetItems } from './fleet.js';
 import { getCurrentTier } from '../session.js';
 
 function projectOptions() {
-  return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
+  return selectableProjects(store.get('projects')).map((p) => ({ value: p.name, label: p.name }));
 }
 
 function fleetOptions() {
-  return fleetItems().map((i) => ({ value: i.name, label: i.name }));
+  return selectableMachines(fleetItems()).map((i) => ({ value: i.name, label: i.name }));
 }
 
 function employeeOptions() {
-  return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
+  return selectableEmployees(store.get('employees')).map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
 }
 
 function employeeName(id) {
