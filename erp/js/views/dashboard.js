@@ -182,7 +182,11 @@ export function renderDashboard(container) {
     const dozers = fleetItems();
     const fleetStatus = (item) => reportedFleetStatusFor(item, viewISO)?.status || 'Unreported';
     const activeFleetCount = dozers.filter((item) => fleetStatus(item) === 'Active').length;
-    const downFleetCount = dozers.filter((item) => ['Down', 'Under Maintenance'].includes(fleetStatus(item))).length;
+    const downOnlyCount = dozers.filter((item) => fleetStatus(item) === 'Down').length;
+    const maintenanceCount = dozers.filter((item) => fleetStatus(item) === 'Under Maintenance').length;
+    const idleCount = dozers.filter((item) => fleetStatus(item) === 'Idle').length;
+    const unreportedCount = dozers.filter((item) => fleetStatus(item) === 'Unreported').length;
+    const downFleetCount = downOnlyCount + maintenanceCount;
     const machineAvailability = dozers.length ? activeFleetCount / dozers.length * 100 : null;
     const serviceStatuses = dozers.map((item) => serviceStatusFor(item).status);
     const overdueServiceCount = serviceStatuses.filter((status) => status === 'Overdue').length;
@@ -224,10 +228,12 @@ export function renderDashboard(container) {
     const kpiGrid = el('div', { class: 'kpi-grid' }, [
       statCard({
         icon: 'gauge', label: 'Machine Availability', value: machineAvailability === null ? '—' : `${machineAvailability.toFixed(0)}%`,
-        hint: `${activeFleetCount} active of ${dozers.length} in Fleet Roster`, target: 'Target: 85%', tone: machineAvailability !== null && machineAvailability < 85 ? 'warning' : 'good', href: '#/fleet',
+        hint: `${activeFleetCount} active of ${dozers.length} in Fleet Roster · ${idleCount} idle · ${unreportedCount} unreported`, target: 'Target: 85%', tone: machineAvailability !== null && machineAvailability < 85 ? 'warning' : 'good', href: '#/fleet',
       }),
       statCard({ icon: 'checkCircle', label: 'Active Machines', value: String(activeFleetCount), tone: 'good', href: '#/fleet' }),
-      statCard({ icon: 'wrench', label: 'Down / Under Maintenance', value: String(downFleetCount), tone: downFleetCount ? 'warning' : 'good', href: '#/fleet' }),
+      statCard({ icon: 'alert', label: 'Down', value: String(downOnlyCount), tone: downOnlyCount ? 'warning' : 'good', href: '#/fleet' }),
+      statCard({ icon: 'wrench', label: 'Under Maintenance', value: String(maintenanceCount), tone: maintenanceCount ? 'warning' : 'good', href: '#/fleet' }),
+      statCard({ icon: 'gauge', label: 'Idle / Not Active', value: String(idleCount), tone: idleCount ? 'warning' : 'neutral', href: '#/fleet' }),
       statCard({
         icon: 'banknote', label: `${dayLabel}'s Revenue (Tentative)`, value: formatCurrency(viewStats.provisionalRevenue), href: '#/projects',
         hint: `${dayLabel}'s submitted reports x contract rate — not yet invoiced`,
