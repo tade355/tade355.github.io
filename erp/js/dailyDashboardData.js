@@ -57,17 +57,19 @@ export function buildDailyDashboard(ctx) {
   const dieselSince = rexFortnightStart(project, date) ? DASHBOARD_BASIS_FROM : since;
   const inv = ctx.inventory.filter((i) => i.category === 'Heavy Equipment');
   const invByName = new Map(ctx.inventory.map((i) => [i.name, i]));
+  // BIG-001 is the former record name of the machine now listed as EMG-005.
+  // Normalize report and distribution names before joining dashboard sections.
+  const currentDozerName = (name) => name === 'BIG-001' && invByName.has('EMG-005') ? 'EMG-005' : name;
   // A dozer belongs to the project it was assigned to on the viewed date.
   // currentProjectSince marks a redeployment; older dates fall back to the
   // latest operation logged on or before that date.
   const equipmentProjectAsOf = (name) => {
-    if (name === 'BIG-001' && invByName.has('EMG-005')) return equipmentProjectAsOf('EMG-005');
     const item = invByName.get(name);
     const known = KNOWN_PROJECT_REDEPLOYMENTS[name];
     const effective = item?.currentProjectSince || known?.since;
     const destination = known?.project || item?.currentProject;
     if (destination && effective && date >= effective) return destination;
-    const latest = ctx.operations.filter((o) => o.equipment === name && o.date <= date)
+    const latest = ctx.operations.filter((o) => currentDozerName(o.equipment) === name && o.date <= date)
       .slice().sort((a, b) => (a.date < b.date ? 1 : -1))[0];
     if (latest?.siteName) return latest.siteName;
     if (destination && !effective) return destination;
@@ -76,7 +78,8 @@ export function buildDailyDashboard(ctx) {
   const equipmentBelongs = (name) => allProjects || equipmentProjectAsOf(name) === project;
   const empName = (id) => ctx.employees.find((e) => e.id === id)?.name || null;
 
-  const allOps = ctx.operations.filter((o) => belongsToProject(o.siteName));
+  const allOps = ctx.operations.filter((o) => belongsToProject(o.siteName))
+    .map((o) => currentDozerName(o.equipment) === o.equipment ? o : { ...o, equipment: currentDozerName(o.equipment) });
   const dayOps = allOps.filter((o) => o.date === date);
   const rangeOps = allOps.filter((o) => o.date >= since && o.date <= date);
   const workingDozers = [...new Set(dayOps.map((o) => o.equipment))];
@@ -110,7 +113,8 @@ export function buildDailyDashboard(ctx) {
   const todayHours = sum(dayOps, (o) => o.hoursWorked);
 
   // -------------------------------------------------------------------- diesel
-  const dist = ctx.distributions.filter((d) => belongsToProject(d.project));
+  const dist = ctx.distributions.filter((d) => belongsToProject(d.project))
+    .map((d) => currentDozerName(d.equipment) === d.equipment ? d : { ...d, equipment: currentDozerName(d.equipment) });
   const aldDay = (d) => d.date === date;
   const ago = (c) => c.fuelType === 'Diesel';
   // Diesel collected at the station and then sold on (e.g. to the CEO) is
@@ -177,7 +181,6 @@ export function buildDailyDashboard(ctx) {
   // has no report or diesel distribution in the selected dashboard period.
   // BIG-001 is the former fleet name for EMG-005; historical fuel rows can
   // still supply its closing balance, but the checklist uses the current name.
-  const currentDozerName = (name) => name === 'BIG-001' && inv.some((i) => i.name === 'EMG-005') ? 'EMG-005' : name;
   const activeRequestFleet = inv.filter((i) => {
     if ((i.fleetStatus || 'Active') !== 'Active') return false;
     if (i.name === 'BIG-001' && inv.some((item) => item.name === 'EMG-005')) return false;
