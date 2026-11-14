@@ -1,3 +1,4 @@
+import { selectableProjects } from '../selectionOptions.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
@@ -23,7 +24,7 @@ function manualEntryFields() {
     ] },
     { name: 'project', label: 'Project', type: 'select', options: [
       { value: '', label: '— Not linked to a project —' },
-      ...projectNames().map((p) => ({ value: p, label: p })),
+      ...selectableProjects(store.get('projects')).map((p) => ({ value: p.name, label: p.name })),
     ] },
     { name: 'costHead', label: 'Cost Head', type: 'select', required: true, options: costHeadOptions().map((c) => ({ value: c, label: c })) },
     { name: 'amount', label: 'Amount (₦)', type: 'number', required: true, min: 0 },
