@@ -1,10 +1,10 @@
 import { selectableProjects, selectableEmployees, selectableMachines } from '../selectionOptions.js';
 // Daily "General Machine Status Report" — the site manager's day-to-day
-// Active / Not Active / Breakdown call on every dozer, exactly like the
+// Active / Idle / Under Maintenance call on every dozer, exactly like the
 // WhatsApp pattern this was built to replace ("GENERAL MACHINE REPORT ...").
 // This is the direct, site-manager-reported signal the Dashboard prefers
 // for its fleet-health KPIs (see reportedStatusAsOf() in fleet.js) ahead of
-// inferring status from Operations/Maintenance Logs. A Breakdown line here
+// inferring status from Operations/Maintenance Logs. An Under Maintenance line here
 // also opens a Maintenance Log entry automatically (if one isn't already
 // open for that machine); marking a machine Active again closes one out —
 // this is what was reported by the mechanic/site team, so it should be
@@ -47,23 +47,23 @@ async function syncMaintenanceLogFor(equipment, status, date, notes) {
     .filter((m) => m.equipment === equipment && m.status !== 'Completed')
     .sort((a, b) => (a.date < b.date ? 1 : -1))[0];
 
-  if ((status === 'Breakdown' || status === 'Under Maintenance') && !openLog) {
+  if (status === 'Under Maintenance' && !openLog) {
     await store.add('maintenanceLogs', {
       date,
       equipment,
-      type: status === 'Under Maintenance' ? 'Repair' : 'Breakdown',
+      type: 'Repair',
       description: notes || `Reported as ${status} on the daily machine status report.`,
       cost: 0,
       status: 'In Progress',
     });
-  } else if (status === 'Active' && openLog) {
+  } else if ((status === 'Active' || status === 'Idle') && openLog) {
     await store.update('maintenanceLogs', openLog.id, { status: 'Completed' });
   }
 }
 
 export function renderMachineStatusReport(container) {
   container.innerHTML = '';
-  container.appendChild(sectionHeader('Daily Machine Status Report', "Report the status of every dozer assigned to the selected project. Breakdown or Under Maintenance opens a Maintenance Log entry; marking it Active closes one out."));
+  container.appendChild(sectionHeader('Daily Machine Status Report', "Report the status of every dozer assigned to the selected project. Under Maintenance opens a Maintenance Log entry; marking the machine Active or Idle closes it."));
 
   const formContainer = el('div');
   container.appendChild(formContainer);
@@ -104,8 +104,7 @@ export function renderMachineStatusReport(container) {
       { value: '', label: '— Select status —' },
       { value: 'Active', label: 'Active' },
       { value: 'Under Maintenance', label: 'Under Maintenance' },
-      { value: 'Not Active', label: 'Not Active' },
-      { value: 'Breakdown', label: 'Breakdown' },
+      { value: 'Idle', label: 'Idle' },
     ];
 
     let rowEls = [];
@@ -119,7 +118,8 @@ export function renderMachineStatusReport(container) {
       rowsContainer.replaceChildren();
       rowEls = selectableMachines(fleetItems()).filter((item) => item.currentProject === projectSelect.value).map((item) => {
         const existing = linesByEquipment[item.name];
-        const statusSelect = selectEl(statusOptions, existing?.status || '');
+        const legacyStatus = existing?.status === 'Breakdown' ? 'Under Maintenance' : existing?.status === 'Not Active' ? 'Idle' : existing?.status;
+        const statusSelect = selectEl(statusOptions, legacyStatus || '');
         const notesInput = el('input', { type: 'text', placeholder: 'Notes (fault details, etc.)' });
         notesInput.value = existing?.notes || '';
         const row = el('div', { class: 'form-grid-2', style: 'grid-template-columns: 1fr 1fr 2fr; align-items: center;' }, [
@@ -187,11 +187,8 @@ export function renderMachineStatusReport(container) {
         { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
         { key: 'project', label: 'Project' },
         { key: 'submittedBy', label: 'Submitted By', render: (r) => employeeName(r.submittedBy) },
-        { key: 'breakdowns', label: 'Breakdowns', render: (r) => {
-          const count = (r.lines || []).filter((l) => l.status === 'Breakdown').length;
-          return count ? statusPill('Down') : '—';
-        } },
-        { key: 'notActive', label: 'Not Active', render: (r) => String((r.lines || []).filter((l) => l.status === 'Not Active').length) },
+        { key: 'maintenance', label: 'Under Maintenance', render: (r) => String((r.lines || []).filter((l) => ['Under Maintenance', 'Breakdown'].includes(l.status)).length) },
+        { key: 'idle', label: 'Idle', render: (r) => String((r.lines || []).filter((l) => ['Idle', 'Not Active'].includes(l.status)).length) },
         {
           key: 'actions',
           label: '',
