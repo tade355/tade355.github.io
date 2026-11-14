@@ -1,3 +1,4 @@
+import { selectableProjects, selectableEmployees, selectableMachines } from '../selectionOptions.js';
 import { renderFuelWorkflow } from './fuelWorkflow.js';
 import { stationAdvanceBalances, siteFuelIssues } from '../fuelLedger.js';
 import { store } from '../store.js';
@@ -14,15 +15,15 @@ import { stationBalances as creditBalances } from './fuelCredit.js';
 import { getCurrentTier, filterByProject } from '../session.js';
 
 function projectOptions() {
-  return filterByProject(store.get('projects'), 'name').map((p) => ({ value: p.name, label: p.name }));
+  return filterByProject(selectableProjects(store.get('projects')), 'name').map((p) => ({ value: p.name, label: p.name }));
 }
 
 function fleetOptions() {
-  return fleetItems().map((i) => ({ value: i.name, label: i.name }));
+  return selectableMachines(fleetItems()).map((i) => ({ value: i.name, label: i.name }));
 }
 
 function employeeOptions() {
-  return [{ value: '', label: '— Not specified —' }, ...store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }))];
+  return [{ value: '', label: '— Not specified —' }, ...selectableEmployees(store.get('employees')).map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }))];
 }
 
 function employeeName(id) {
