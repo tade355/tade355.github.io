@@ -1,3 +1,4 @@
+import { selectableProjects, selectableEmployees, selectableMachines } from '../selectionOptions.js';
 import { operationMilestones } from '../operationMilestones.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
@@ -9,11 +10,11 @@ import { createAttachmentPicker } from '../attachments.js';
 import { formatClock, clockToStorage } from '../clockFormat.js';
 
 function projectOptions() {
-  return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
+  return selectableProjects(store.get('projects')).map((p) => ({ value: p.name, label: p.name }));
 }
 
 function employeeOptions() {
-  return store.get('employees').filter((e) => e.status !== 'Disengaged' && !e.archivedAt).map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
+  return selectableEmployees(store.get('employees')).filter((e) => e.status !== 'Disengaged' && !e.archivedAt).map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
 }
 
 function customerOptions() {
@@ -21,7 +22,7 @@ function customerOptions() {
 }
 
 function equipmentOptions() {
-  const items = store.get('inventory').filter((i) => ['Heavy Equipment', 'Tools', 'Vehicles'].includes(i.category));
+  const items = selectableMachines(store.get('inventory')).filter((i) => ['Heavy Equipment', 'Tools', 'Vehicles'].includes(i.category));
   return items.length
     ? items.map((i) => ({ value: i.name, label: i.name }))
     : [{ value: '', label: 'No equipment in inventory' }];
