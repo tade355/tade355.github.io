@@ -1,3 +1,4 @@
+import { selectableProjects, selectableMachines } from '../selectionOptions.js';
 import { store } from '../store.js';
 import { supabase } from '../supabaseClient.js';
 import { el, formatCurrency, formatDate } from '../utils.js';
@@ -35,11 +36,11 @@ export function openEarlierCostForm(onSaved, record = null) {
     project:record?.project||d.project||'',incurredDate:d.incurredDate||todayISOString(),incurredTo:d.incurredTo||d.incurredDate||todayISOString(),category:d.category||'Other',equipment:d.equipment||'',
     description:d.description||'',amount:d.amount||'',payee:d.payee||'',evidence:d.evidence||'',lateReason:d.lateReason||'',linkedFundRequestId:d.linkedFundRequestId||''
   },fields:[
-    {name:'project',label:'Project',type:'select',required:true,options:filterByProject(store.get('projects'),'name').map(p=>({value:p.name,label:p.name}))},
+    {name:'project',label:'Project',type:'select',required:true,options:filterByProject(selectableProjects(store.get('projects')),'name').map(p=>({value:p.name,label:p.name}))},
     {name:'incurredDate',label:'Cost period start',type:'date',required:true},
     {name:'incurredTo',label:'Cost period end',type:'date',required:true},
     {name:'category',label:'Cost type',type:'select',options:['Diesel transport','Worker transport','Maintenance','Other'].map(x=>({value:x,label:x}))},
-    {name:'equipment',label:'Dozer code (required for maintenance)',type:'select',options:[{value:'',label:'— Not a dozer maintenance cost —'},...store.get('inventory').filter(i=>i.category==='Heavy Equipment').map(i=>({value:i.name,label:[i.assetCode||i.sku,i.name].filter(Boolean).join(' — ')}))]},
+    {name:'equipment',label:'Dozer code (required for maintenance)',type:'select',options:[{value:'',label:'— Not a dozer maintenance cost —'},...selectableMachines(store.get('inventory')).filter(i=>i.category==='Heavy Equipment').map(i=>({value:i.name,label:[i.assetCode||i.sku,i.name].filter(Boolean).join(' — ')}))]},
     {name:'description',label:'Service / reason',required:true},
     {name:'amount',label:'Accumulated amount owed (₦)',type:'number',min:0,required:true},
     {name:'payee',label:'Person or vendor owed',required:true},
