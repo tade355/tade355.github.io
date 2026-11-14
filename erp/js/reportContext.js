@@ -42,6 +42,8 @@ export function dailyDashboardForCurrentUser(project, date, since = DASHBOARD_BA
 export function liveContext(project) {
   return {
     project,
+    today: todayISOString(),
+    machineStatusReports: store.get('machineStatusReports'),
     operations: store.get('operations'),
     inventory: store.get('inventory'),
     employees: store.get('employees'),
