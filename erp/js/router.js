@@ -1,4 +1,4 @@
-import { getCurrentUserId } from './session.js';
+import { canViewStaffActivity } from './session.js';
 import { closeModal } from './ui.js';
 import { el } from './utils.js';
 import { canAccessRoute, getCurrentTier, defaultRouteForTier } from './session.js';
@@ -21,7 +21,7 @@ import { enhanceViewNavigation } from './navigationState.js';
 // Rent Payments / Lubricants & Consumables inside Resource Management —
 // all as tabs, not routes. See each view file's own tab bar for those.
 export const ROUTES = [
-  { path:'staffActivity', label:'Staff Activity Monitor', icon:ICONS.activity, load:()=>import('./views/staffActivity.js').then(m=>m.renderUsageMonitor), tiers:['Admin'], guard:()=>getCurrentUserId()==='EMP-26', hideFromNav:true },
+  { path:'staffActivity', label:'Staff Activity Monitor', icon:ICONS.activity, load:()=>import('./views/staffActivity.js').then(m=>m.renderUsageMonitor), tiers:['Admin'], guard:canViewStaffActivity, hideFromNav:true },
   // Overview
   { path: 'dashboard', label: 'Dashboard', icon: ICONS.dashboard, load: () => import('./views/dashboardFleet2.js').then((m) => m.renderDashboard), tiers: ['Admin', 'Accounts'] },
   { path: 'dailyDashboard', label: 'Daily Operations Dashboard', icon: ICONS.barChart, load: () => import('./views/dailyDashboard.js').then((m) => m.renderDailyDashboard), tiers: ['Admin', 'Accounts', 'Supervisor', 'Staff'] },
