@@ -138,6 +138,19 @@ export function reportedStatusAsOf(asOfDate) {
   return statusByEquipment;
 }
 
+// A dated report is the source of operational status. The roster displays the
+// latest reported state; historical dashboards use the same lookup as of their day.
+export function reportedFleetStatusFor(item, asOfDate) {
+  const status = reportedStatusAsOf(asOfDate)[item.name];
+  if (!status) return null;
+  return {
+    status: status === 'Breakdown' ? 'Down'
+      : status === 'Under Maintenance' ? 'Under Maintenance'
+      : status === 'Not Active' ? 'Idle' : 'Active',
+    reported: true,
+  };
+}
+
 function lastMaintenanceFor(name) {
   const logs = store.get('maintenanceLogs')
     .filter((m) => m.equipment === name && m.status === 'Completed')
@@ -166,7 +179,7 @@ function fleetFields() {
     { name: 'assetCode', label: 'Stable Asset ID (used across operations, maintenance and custody)' },
     { name: 'ownership', label: 'Ownership', type: 'select', required: true, options: OWNERSHIP_CATEGORIES.map((o) => ({ value: o, label: OWNERSHIP_LABELS[o] })) },
     { name: 'ownerName', label: 'Owner / Contractor Name (Partnership/Rented)' },
-    { name: 'fleetStatus', label: 'Status', type: 'select', required: true, options: [
+    { name: 'fleetStatus', label: 'Initial status (daily reports become the source of truth)', type: 'select', required: true, options: [
       { value: 'Active', label: 'Active' },
       { value: 'Under Maintenance', label: 'Under Maintenance' },
       { value: 'Idle', label: 'Idle' },
@@ -366,8 +379,13 @@ export function renderFleet(container) {
     actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openAssetForm() }, '+ Add Fleet Asset'));
 
     function refresh() {
-      const priority = { Down: 0, 'Under Maintenance': 1, Idle: 2, Active: 3 };
-      const rows = fleetItems().slice().sort((a,b) => (priority[a.fleetStatus] ?? 3) - (priority[b.fleetStatus] ?? 3) || a.name.localeCompare(b.name, undefined, { numeric: true }));
+      const asOf = todayISOString();
+      const withStatus = fleetItems().map((item) => ({
+        ...item,
+        fleetStatus: reportedFleetStatusFor(item, asOf)?.status || 'Unreported',
+      }));
+      const priority = { Down: 0, 'Under Maintenance': 1, Idle: 2, Active: 3, Unreported: 4 };
+      const rows = withStatus.sort((a,b) => (priority[a.fleetStatus] ?? 4) - (priority[b.fleetStatus] ?? 4) || a.name.localeCompare(b.name, undefined, { numeric: true }));
       const companyCount = rows.filter((r) => r.ownership === 'Company' || !r.ownership).length;
       const partnershipCount = rows.filter((r) => r.ownership === 'Partnership').length;
       const rentedCount = rows.filter((r) => r.ownership === 'Rented').length;
@@ -391,7 +409,7 @@ export function renderFleet(container) {
           { key: 'assetCode', label: 'Asset ID', render: (r) => r.assetCode || r.sku || '—' },
           { key: 'ownership', label: 'Ownership', render: (r) => statusPill(r.ownership || 'Company') },
           { key: 'ownerName', label: 'Owner', render: (r) => (r.ownership && r.ownership !== 'Company' ? (r.ownerName || '—') : '—') },
-          { key: 'fleetStatus', label: 'Status', render: (r) => statusPill(r.fleetStatus || 'Active') },
+          { key: 'fleetStatus', label: 'Status', render: (r) => statusPill(r.fleetStatus || 'Unreported') },
           { key: 'currentProject', label: 'Current Project', render: (r) => r.currentProject || '—' },
           { key: 'assignedStaffId', label: 'Custodian', render: (r) => store.find('employees', r.assignedStaffId)?.name || '—' },
           { key: 'deployedTo', label: 'Deployed To', render: (r) => r.deployedTo || r.location || '—' },
