@@ -8,6 +8,8 @@ import { printDieselReplenishmentRequest, printDieselStationReport } from '../pr
 import { fleetItems } from './fleet.js';
 import { allDieselReceipts } from '../dieselSupplyStore.js';
 import { getCurrentTier } from '../session.js';
+import { siteFuelIssues } from '../fuelLedger.js';
+import { reconcileSiteDay } from '../dieselReconciliation.js';
 
 function projectOptions() {
   return selectableProjects(store.get('projects')).map((p) => ({ value: p.name, label: p.name }));
@@ -59,12 +61,6 @@ function latestClosingDieselFor(name) {
   return rows.length ? rows[0].closingDiesel : null;
 }
 
-function dieselBalanceAsOf(date) {
-  const received = allDieselReceipts().filter((r) => r.date <= date).reduce((sum, r) => sum + r.litres, 0);
-  const issued = store.get('operations').filter((o) => o.date <= date).reduce((sum, o) => sum + o.fuelUsed, 0);
-  return received - issued;
-}
-
 function receiptFields() {
   return [
     { name: 'date', label: 'Date', type: 'date', required: true },
@@ -89,6 +85,7 @@ function receiptFields() {
 function countFields() {
   return [
     { name: 'date', label: 'Date', type: 'date', required: true },
+    { name: 'project', label: 'Site / Project', type: 'select', required: true, options: projectOptions() },
     { name: 'countedLitres', label: 'Counted Litres (physical tank reading)', type: 'number', required: true, min: 0 },
     { name: 'countedBy', label: 'Counted By', type: 'select', required: true, options: employeeOptions() },
     { name: 'notes', label: 'Notes', type: 'textarea' },
@@ -105,7 +102,7 @@ export function renderDieselTracking(container) {
     actionSlot,
   ));
   actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openReceiptForm() }, '+ Log Diesel Receipt'));
-  actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openCountForm() }, '+ Log Stock Count'));
+  if (['Admin', 'Supervisor'].includes(getCurrentTier())) actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openCountForm() }, '+ Log Stock Count'));
 
   const summarySlot = el('div');
   container.appendChild(summarySlot);
@@ -116,23 +113,24 @@ export function renderDieselTracking(container) {
     const receipts = allDieselReceipts();
     const counts = store.get('dieselStockCounts').slice().sort((a, b) => (a.date < b.date ? 1 : -1));
     const totalReceived = receipts.reduce((sum, r) => sum + r.litres, 0);
-    const totalIssued = store.get('operations').reduce((sum, o) => sum + o.fuelUsed, 0);
+    const totalIssued = siteFuelIssues(store.get('dieselSiteDistributions'), store.get('operations')).reduce((sum, o) => sum + Number(o.litres || 0), 0);
     const expectedBalance = totalReceived - totalIssued;
-    const latestCount = counts[0];
-    const latestExpected = latestCount ? dieselBalanceAsOf(latestCount.date) : null;
-    const variance = latestCount ? latestCount.countedLitres - latestExpected : null;
+    const latestCount = counts.find((row) => row.project);
+    const latestSite = latestCount ? reconcileSiteDay({ project: latestCount.project, date: latestCount.date,
+      receipts, distributions: store.get('dieselSiteDistributions'), operations: store.get('operations'), counts }) : null;
+    const variance = latestSite?.variance ?? null;
 
     summarySlot.innerHTML = '';
     const grid = el('div', { class: 'stats-grid' }, [
       statCard({ label: 'Total Received (All-Time)', value: `${totalReceived.toLocaleString()} L` }),
-      statCard({ label: 'Total Issued (from Daily Logs)', value: `${totalIssued.toLocaleString()} L` }),
-      statCard({ label: 'Expected Balance', value: `${expectedBalance.toLocaleString()} L` }),
+      statCard({ label: 'Total Distributed to Dozers', value: `${totalIssued.toLocaleString()} L` }),
+      statCard({ label: 'Calculated Site Balance, All Projects', value: `${expectedBalance.toLocaleString()} L`, hint: 'Includes unassigned receipts; verify each site with a physical count.' }),
       latestCount
         ? statCard({
-          label: `Last Count (${formatDate(latestCount.date)}) Variance`,
+          label: `Last ${latestCount.project} Count (${formatDate(latestCount.date)}) Variance`,
           value: `${variance > 0 ? '+' : ''}${variance.toLocaleString()} L`,
-          hint: Math.abs(variance) < 1 ? 'Fully accounted for' : (variance < 0 ? 'Litres unaccounted for' : 'More than expected'),
-          tone: Math.abs(variance) < 1 ? 'good' : (Math.abs(variance) > (latestExpected * 0.02) ? 'critical' : 'warning'),
+          hint: latestSite.verified ? (Math.abs(variance) < 1 ? 'Fully accounted for' : 'Review count and movement records') : 'Provisional: no earlier project stock count',
+          tone: Math.abs(variance) < 1 ? 'good' : (Math.abs(variance) > Math.abs(latestSite.expected * 0.02) ? 'critical' : 'warning'),
         })
         : statCard({ label: 'Last Physical Count', value: 'None logged', hint: 'Log a stock count to reconcile' }),
     ]);
@@ -208,13 +206,15 @@ export function renderDieselTracking(container) {
     renderTable(countsContainer, {
       columns: [
         { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
+        { key: 'project', label: 'Project', render: (r) => r.project || 'Legacy — project unknown' },
         { key: 'countedLitres', label: 'Counted', render: (r) => `${r.countedLitres.toLocaleString()} L` },
-        { key: 'expected', label: 'Expected (as of date)', render: (r) => `${dieselBalanceAsOf(r.date).toLocaleString()} L` },
+        { key: 'expected', label: 'Expected site balance', render: (r) => r.project ? `${reconcileSiteDay({ project: r.project, date: r.date, receipts, distributions: store.get('dieselSiteDistributions'), operations: store.get('operations'), counts }).expected.toLocaleString()} L` : '—' },
         {
           key: 'variance',
           label: 'Variance',
           render: (r) => {
-            const v = r.countedLitres - dieselBalanceAsOf(r.date);
+            if (!r.project) return 'Project required';
+            const v = reconcileSiteDay({ project: r.project, date: r.date, receipts, distributions: store.get('dieselSiteDistributions'), operations: store.get('operations'), counts }).variance;
             const label = `${v > 0 ? '+' : ''}${v.toLocaleString()} L`;
             const pillStatus = Math.abs(v) < 1 ? 'Completed' : (v < 0 ? 'Down' : 'Under Maintenance');
             return el('span', { class: `pill ${statusPillClass(pillStatus)}` }, label);
@@ -397,3 +397,5 @@ export function renderDieselTracking(container) {
 
   refresh();
 }
+
+

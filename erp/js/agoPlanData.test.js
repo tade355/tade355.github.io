@@ -78,7 +78,7 @@ test('defaults come from the ERP diesel chain: closing diesel, active dozers, on
   assert.equal(e1.distributed, 240);
   assert.equal(e1.active, true);
   assert.equal(e1.operator, 'Op One');
-  assert.equal(d.dozers.find((x) => x.name === 'EMG-2').active, false);
+  assert.equal(d.dozers.some((x) => x.name === 'EMG-2'), false, 'down machines are excluded from the active fueling checklist');
   assert.equal(d.onGround, 60); // 300 counted - 240 distributed since
   assert.equal(d.recipient, 'Oki Christopher');
   assert.equal(d.pmsPrice, 1400);
@@ -107,3 +107,5 @@ test('the Excel planner has live formulas, totals and notes', async () => {
   assert.ok(buf.byteLength > 3000);
   assert.equal(agoFileName('2026-10-17'), 'AGO_Planner_17Oct2026.xlsx');
 });
+
+
