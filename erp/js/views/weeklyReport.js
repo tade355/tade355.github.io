@@ -1,3 +1,4 @@
+import { selectableProjects } from '../selectionOptions.js';
 import { store } from '../store.js';
 import { todayISOString, mondayOf, addDays } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, dateInRange, ico } from '../utils.js';
@@ -12,7 +13,7 @@ import { collectEntries } from './incomeExpenditure.js';
 const WEEKDAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function projectOptions() {
-  return store.get('projects').map((p) => p.name);
+  return selectableProjects(store.get('projects')).map((p) => p.name);
 }
 
 function fleetForProject(project) {
