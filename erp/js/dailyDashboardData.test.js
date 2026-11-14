@@ -193,3 +193,26 @@ test('REX honors the selected cumulative date and preserves tank carry-over', ()
 });
 
 
+
+test('moved dozer appears without work and maintenance excludes it from fueling', () => {
+  const inputs = ctx({ project:'New Site', date:'2026-11-14', today:'2026-11-14',
+    inventory:[{name:'EMG-006',category:'Heavy Equipment',currentProject:'New Site',fleetStatus:'Active'}],
+    operations:[op({date:'2026-11-05',equipment:'EMG-006',siteName:'Old Site',quantity:1,hoursWorked:8})],
+    machineStatusReports:[{date:'2026-11-14',project:'New Site',lines:[{equipment:'EMG-006',status:'Breakdown'}]}] });
+  const d=buildDailyDashboard(inputs);
+  assert.ok(d.operations.rows.some(r=>r.equipment==='EMG-006'&&r.hours===0));
+  assert.equal(d.fleet[0].status,'Under Maintenance');
+  assert.ok(!d.diesel.fuelingChoices.some(r=>r.equipment==='EMG-006'));
+  assert.ok(d.flags.some(r=>r.text.includes('EMG-006')));
+  assert.ok(!buildDailyDashboard({...inputs,project:'Old Site'}).fleet.some(r=>r.equipment==='EMG-006'));
+});
+test('roster redeployment appears before first report', () => {
+ const d=buildDailyDashboard(ctx({project:'New Site',date:'2026-11-14',today:'2026-11-14',inventory:[{name:'Moved',category:'Heavy Equipment',currentProject:'New Site',fleetStatus:'Active'}],
+ operations:[op({date:'2026-11-05',siteName:'Old Site',equipment:'Moved'})]}));
+ assert.ok(d.fleet.some(r=>r.equipment==='Moved'));assert.ok(d.diesel.fuelingChoices.some(r=>r.equipment==='Moved'));
+});
+test('current status overrides stale roster condition for fueling', () => {
+ const d=buildDailyDashboard(ctx({machineStatusReports:[{date:'2026-10-12',project:P,lines:[{equipment:'EMG-1',status:'Active'}]}],
+ inventory:[{name:'EMG-1',category:'Heavy Equipment',currentProject:P,fleetStatus:'Under Maintenance'}]}));
+ assert.equal(d.fleet[0].fleetStatus,'Active');assert.ok(d.diesel.fuelingChoices.some(r=>r.equipment==='EMG-1'));
+});
