@@ -1,3 +1,4 @@
+import { selectableEmployees } from '../selectionOptions.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el } from '../utils.js';
@@ -29,7 +30,7 @@ function consumablesCatalog() {
 }
 
 function employeeOptions() {
-  return [{ value: '', label: '— Not specified —' }, ...store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }))];
+  return [{ value: '', label: '— Not specified —' }, ...selectableEmployees(store.get('employees')).map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }))];
 }
 
 function employeeName(id) {
