@@ -3,7 +3,9 @@
 export function managerImprestLedger(records = []) {
   const wallets = new Map();
   for (const record of records) {
-    if (record.kind !== 'Cost' || record.status === 'Rejected') continue;
+    // Linked fund requests have their own payment ledger; including them here
+    // would overstate the manager balance.
+    if (record.kind !== 'Cost' || record.status === 'Rejected' || record.data?.linkedFundRequestId) continue;
     const manager = String(record.data?.payee || '').trim();
     if (!manager) continue;
     const key = manager.toLocaleLowerCase();
@@ -13,7 +15,7 @@ export function managerImprestLedger(records = []) {
     const pending = ['Submitted','Reviewed'].includes(record.status);
     const approved = pending ? 0 : Number(record.data.approvedAmount ?? requested) || 0;
     const paid = (record.events || []).filter(event => event.type === 'payment').reduce((sum, event) => sum + (Number(event.amount) || 0), 0);
-    const batch = { id: record.id, project: record.project, status: record.status, incurredDate: record.data.incurredDate, description: record.data.description, requested, approved, paid, outstanding: Math.max(0, approved - paid), payments: (record.events || []).filter(event => event.type === 'payment'), record };
+    const batch = { id: record.id, project: record.project, status: record.status, incurredDate: record.data.incurredDate, description: record.data.description, providers: record.data.serviceProviders || '', requested, approved, paid, outstanding: Math.max(0, approved - paid), payments: (record.events || []).filter(event => event.type === 'payment'), record };
     wallet.reported += requested;
     wallet.awaitingApproval += pending ? requested : 0;
     wallet.approved += approved;
