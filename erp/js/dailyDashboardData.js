@@ -173,7 +173,7 @@ export function buildDailyDashboard(ctx) {
     let status = 'Idle';
     if (rows.length) status = reportedClosing !== undefined && Math.abs(reportedClosing - calculatedClosing) > 0.5 ? 'Closing restated' : 'Reconciled';
     else if (!opening && !closing) status = 'No balance';
-    return { equipment: name, opening, distributed, used, closing, efficiency: ha > 0 ? used / ha : null, status, reportedClosing, worked: rows.length > 0 };
+    return { equipment: name, opening, distributed, used, closing, calculatedClosing, efficiency: ha > 0 ? used / ha : null, status, reportedClosing, worked: rows.length > 0 };
   }).filter((r) => r.opening || r.distributed || r.used || r.closing || r.worked)
     .sort((a, b) => (b.worked - a.worked) || a.equipment.localeCompare(b.equipment));
 
@@ -364,7 +364,7 @@ export function buildDailyDashboard(ctx) {
   const corrections = dayOps.filter((o) => (o.hoursWorked || 0) > 0 && !(o.quantity > 0));
   if (corrections.length) flags.push({ tone: 'warning', text: `Zero output despite hours worked (correction day): ${corrections.map((o) => `${o.equipment} ${o.hoursWorked} hrs`).join(', ')}.` });
   const restated = diesel.filter((r) => r.status === 'Closing restated');
-  if (restated.length) flags.push({ tone: 'warning', text: `Closing diesel differs from the reported closing: ${restated.map((r) => `${r.equipment} reported ${r.reportedClosing} L vs calculated ${Math.round(r.closing * 10) / 10} L (${r.reportedClosing - r.closing > 0 ? '+' : '−'}${Math.round(Math.abs(r.reportedClosing - r.closing) * 10) / 10} L)`).join(', ')}.`, action: 'Confirm the physical tank levels; the fueling request uses the reported closing.' });
+  if (restated.length) flags.push({ tone: 'warning', text: `Closing diesel differs from the calculated closing: ${restated.map((r) => `${r.equipment} reported ${r.reportedClosing} L vs calculated ${Math.round(r.calculatedClosing * 10) / 10} L (${r.reportedClosing - r.calculatedClosing > 0 ? '+' : '−'}${Math.round(Math.abs(r.reportedClosing - r.calculatedClosing) * 10) / 10} L)`).join(', ')}.`, action: 'Confirm the physical tank levels; the fueling request uses the reported closing.' });
   // Diesel against work over the whole period (not just today). Shown as a table with the high burners highlighted; no flag is raised for diesel (see the test).
   const efficiency = fuelEfficiency(rangeOps);
   const down = fleet.filter((f) => f.fleetStatus === 'Down' || f.fleetStatus === 'Under Maintenance');
@@ -381,4 +381,6 @@ export function buildDailyDashboard(ctx) {
     staff, flags,
   };
 }
+
+
 
