@@ -1,3 +1,4 @@
+import { selectableProjects, selectableEmployees, selectableMachines } from '../selectionOptions.js';
 import { engineServiceStatus } from '../serviceTracking.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
@@ -21,7 +22,7 @@ const OWNERSHIP_LABELS = {
 const FLEET_CATEGORIES = ['Heavy Equipment'];
 
 function projectOptions() {
-  return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
+  return selectableProjects(store.get('projects')).map((p) => ({ value: p.name, label: p.name }));
 }
 
 export function fleetItems() {
@@ -29,11 +30,11 @@ export function fleetItems() {
 }
 
 function fleetOptions() {
-  return fleetItems().map((i) => ({ value: i.name, label: i.name }));
+  return selectableMachines(fleetItems()).map((i) => ({ value: i.name, label: i.name }));
 }
 
 function employeeOptions() {
-  return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
+  return selectableEmployees(store.get('employees')).map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
 }
 
 function totalHoursFor(name) {
