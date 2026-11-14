@@ -11,6 +11,7 @@ import { notifyNewFundRequest, notifyFundRequestDecision } from '../notification
 import { EXPENSE_CATEGORIES } from '../constants.js';
 import { renderApprovals } from './approvals.js';
 import { openEarlierCostForm, renderFuelWorkflow } from './fuelWorkflow.js';
+import { managerImprestLedger } from '../imprestLedger.js';
 import { findDuplicateRequests, requestTotal } from '../requestDuplicates.js';
 import { canDecideFundRequests, canDecideLeave } from '../access.js';
 
@@ -330,6 +331,8 @@ export function renderFundRequests(container) {
   const requestsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('requests') }, ['Staff','Supervisor'].includes(getCurrentTier()) ? 'My Requests' : 'Requests');
   requestsTabBtn.dataset.tabLabel = 'Requests';
   tabBar.appendChild(requestsTabBtn);
+  const imprestTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('imprests') }, 'Manager Imprests');
+  tabBar.appendChild(imprestTabBtn);
   let approvalsTabBtn;
   if (canApprove) {
     approvalsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('approvals') }, 'Approvals');
@@ -354,13 +357,47 @@ export function renderFundRequests(container) {
   function setTab(next) {
     tab = next;
     requestsTabBtn.classList.toggle('active', tab === 'requests');
+    imprestTabBtn.classList.toggle('active', tab === 'imprests');
     if (approvalsTabBtn) approvalsTabBtn.classList.toggle('active', tab === 'approvals');
     body.innerHTML = '';
     if (tab === 'requests') renderRequestsTab(body, updatePendingCount);
+    else if (tab === 'imprests') renderManagerImprests(body);
     else renderApprovals(body, updatePendingCount);
   }
 
   setTab(tab);
+}
+
+function renderManagerImprests(container) {
+  container.replaceChildren();
+  const note = el('p', { class: 'section-subtitle' }, 'Costs are dated to when they happened. Each approved request is locked; later costs open a new request. Accounts may record several payments against the approved balance.');
+  const list = el('div', { class: 'approval-card-list' });
+  const refresh = el('button', { class: 'btn btn-ghost', type: 'button', onClick: async () => { try { await store.refreshCollection('fuelWorkflows'); draw(); } catch (error) { note.textContent = error.message; } } }, 'Refresh balances');
+  container.append(sectionHeader('Manager Imprests', 'Costs incurred by managers, money received and remaining balances', refresh), note, list);
+  function draw() {
+    list.replaceChildren();
+    const records = filterByProject(store.get('fuelWorkflows'), 'project');
+    const userId = getCurrentUserId();
+    const visible = ['Admin','Accounts'].includes(getCurrentTier()) ? records : records.filter(record => record.requestedBy === userId);
+    const wallets = managerImprestLedger(visible);
+    if (!wallets.length) { list.append(el('p', {}, 'No earlier-cost balances have been submitted yet.')); return; }
+    for (const wallet of wallets) {
+      const card = el('article', { class: 'approval-request-card' });
+      card.append(el('h3', {}, wallet.manager),
+        el('p', {}, 'Awaiting approval: ' + formatCurrency(wallet.awaitingApproval) + ' · Approved: ' + formatCurrency(wallet.approved) + ' · Paid to manager: ' + formatCurrency(wallet.paid) + ' · Balance owed: ' + formatCurrency(wallet.outstanding)));
+      const detail = el('div');
+      renderTable(detail, { columns: [
+        { key: 'id', label: 'Batch' }, { key: 'project', label: 'Project' }, { key: 'incurredDate', label: 'Cost date' },
+        { key: 'description', label: 'Purpose / providers' }, { key: 'status', label: 'Status' },
+        { key: 'requested', label: 'Reported' }, { key: 'approved', label: 'Approved' },
+        { key: 'paid', label: 'Paid' }, { key: 'outstanding', label: 'Still owed' },
+      ], rows: wallet.batches.map(batch => ({ ...batch, incurredDate: formatDate(batch.incurredDate), requested: formatCurrency(batch.requested), approved: formatCurrency(batch.approved), paid: formatCurrency(batch.paid), outstanding: formatCurrency(batch.outstanding) })) });
+      card.append(detail);
+      for (const batch of wallet.batches) if (batch.payments.length) card.append(el('p', {}, batch.id + ' payments: ' + batch.payments.map(payment => formatDate(payment.date) + ' ' + formatCurrency(payment.amount) + ' ' + (payment.reference || '')).join(' · ')));
+      list.append(card);
+    }
+  }
+  draw();
 }
 
 function renderRequestsTab(container, onRefresh = () => {}) {
@@ -472,4 +509,6 @@ function renderRequestsTab(container, onRefresh = () => {}) {
 
   refresh();
 }
+
+
 
