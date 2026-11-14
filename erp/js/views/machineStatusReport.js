@@ -63,7 +63,7 @@ async function syncMaintenanceLogFor(equipment, status, date, notes) {
 
 export function renderMachineStatusReport(container) {
   container.innerHTML = '';
-  container.appendChild(sectionHeader('Daily Machine Status Report', "Report the status of every dozer assigned to the selected project. Breakdown or Under Maintenance opens a Maintenance Log entry; marking it Active closes one out."));
+  container.appendChild(sectionHeader('Daily Machine Status Report', "Report the status of every dozer assigned to the selected project. Select Active, Idle or Under Maintenance for each assigned dozer."));
 
   const formContainer = el('div');
   container.appendChild(formContainer);
@@ -103,9 +103,8 @@ export function renderMachineStatusReport(container) {
     const statusOptions = [
       { value: '', label: '— Select status —' },
       { value: 'Active', label: 'Active' },
-      { value: 'Under Maintenance', label: 'Under Maintenance' },
-      { value: 'Not Active', label: 'Not Active' },
-      { value: 'Breakdown', label: 'Breakdown' },
+      { value: 'Breakdown', label: 'Under Maintenance' },
+      { value: 'Not Active', label: 'Idle' },
     ];
 
     let rowEls = [];
@@ -119,7 +118,9 @@ export function renderMachineStatusReport(container) {
       rowsContainer.replaceChildren();
       rowEls = selectableMachines(fleetItems()).filter((item) => item.currentProject === projectSelect.value).map((item) => {
         const existing = linesByEquipment[item.name];
-        const statusSelect = selectEl(statusOptions, existing?.status || '');
+        // Keep the database's established status codes; labels use field terminology.
+        const storedStatus = { 'Under Maintenance': 'Breakdown', Idle: 'Not Active' }[existing?.status] || existing?.status || '';
+        const statusSelect = selectEl(statusOptions, storedStatus);
         const notesInput = el('input', { type: 'text', placeholder: 'Notes (fault details, etc.)' });
         notesInput.value = existing?.notes || '';
         const row = el('div', { class: 'form-grid-2', style: 'grid-template-columns: 1fr 1fr 2fr; align-items: center;' }, [
@@ -139,10 +140,11 @@ export function renderMachineStatusReport(container) {
     notesTextarea.value = record?.notes || '';
     formContainer.appendChild(el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'General Notes'), notesTextarea]));
 
+    const saveMessage = el('p', { role: 'status', 'aria-live': 'polite' });
     const submitBtn = el('button', { type: 'button', class: 'btn btn-primary' }, editingId ? 'Save Changes' : 'Submit Report');
     const cancelBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancel Edit');
     const actionsRow = el('div', { class: 'modal-actions' }, editingId ? [cancelBtn, submitBtn] : [submitBtn]);
-    formContainer.appendChild(actionsRow);
+    formContainer.append(actionsRow, saveMessage);
 
     cancelBtn.addEventListener('click', () => { editingId = null; renderForm(); });
 
@@ -167,15 +169,22 @@ export function renderMachineStatusReport(container) {
         notes: notesTextarea.value || null,
         lines,
       };
+      submitBtn.disabled = true;
+      saveMessage.textContent = 'Saving report…';
+      let saved = false;
       try {
         if (editingId) await store.update('machineStatusReports', editingId, payload);
         else await store.add('machineStatusReports', payload);
+        saved = true;
         await Promise.all(lines.map((l) => syncMaintenanceLogFor(l.equipment, l.status, dateInput.value, l.notes)));
         editingId = null;
         renderForm();
         refreshHistory();
       } catch (err) {
-        window.alert(err.message || 'Could not save this report.');
+        saveMessage.textContent = saved ? 'Report saved. Maintenance records need refreshing; do not submit it again.' : (err.message || 'Could not save this report. Your entries are still here.');
+        if (saved) refreshHistory();
+      } finally {
+        submitBtn.disabled = false;
       }
     });
   }
@@ -187,11 +196,11 @@ export function renderMachineStatusReport(container) {
         { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
         { key: 'project', label: 'Project' },
         { key: 'submittedBy', label: 'Submitted By', render: (r) => employeeName(r.submittedBy) },
-        { key: 'breakdowns', label: 'Breakdowns', render: (r) => {
+        { key: 'breakdowns', label: 'Under Maintenance', render: (r) => {
           const count = (r.lines || []).filter((l) => l.status === 'Breakdown').length;
           return count ? statusPill('Down') : '—';
         } },
-        { key: 'notActive', label: 'Not Active', render: (r) => String((r.lines || []).filter((l) => l.status === 'Not Active').length) },
+        { key: 'notActive', label: 'Idle', render: (r) => String((r.lines || []).filter((l) => l.status === 'Not Active').length) },
         {
           key: 'actions',
           label: '',
