@@ -313,7 +313,7 @@ function renderDailyReconciliationTab(container) {
       statCard({ label: 'Distributed to dozers', value: `${site.distributed.toLocaleString()} L` }),
       statCard({ label: 'Expected on ground', value: `${site.expected.toLocaleString()} L`, tone: site.expected < 0 ? 'critical' : undefined }),
       statCard({ label: 'Physical count', value: site.measured === null ? 'Not recorded' : `${site.measured.toLocaleString()} L` }),
-      statCard({ label: 'Site check', value: site.status, hint: site.variance === null ? 'Count the tank to confirm the balance.' : `Count variance: ${site.variance.toLocaleString()} L`, tone: site.status.includes('investigate') || site.status.includes('Over-allocated') ? 'critical' : undefined }),
+      statCard({ label: 'Site variance', value: site.variance === null ? 'Not verified' : `${site.variance.toLocaleString()} L`, hint: site.status, tone: site.status.includes('investigate') || site.status.includes('Over-allocated') ? 'critical' : undefined }),
     ]);
     result.appendChild(cards);
     const unassigned = allDieselReceipts().filter((r) => r.date === date && !r.project);
