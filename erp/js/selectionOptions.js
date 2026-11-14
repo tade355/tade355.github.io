@@ -32,7 +32,7 @@ function latestMachineReport(item, date, reports = []) {
 // Current roster assignments populate today's portal even before the first
 // work report. Historical dates use dated deployment/report evidence.
 export function machineProjectAsOf(item, date, operations = [], reports = [], today = '', known = null) {
-  const effective = item.currentProjectSince || (known?.project === item.currentProject ? known.since : '');
+  const effective = item.currentProjectSince || (known && known.project === item.currentProject ? known.since : '');
   if (item.currentProject && !effective && today && date >= today) return item.currentProject;
   const events = operations.filter(o => o.equipment === item.name && o.date <= date && o.siteName)
     .map(o => ({ date: o.date, project: o.siteName, rank: 0 }));
