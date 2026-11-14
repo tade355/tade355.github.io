@@ -1,3 +1,4 @@
+import { selectableProjects, selectableEmployees } from '../selectionOptions.js';
 import { employmentCategory } from '../employmentCategory.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
@@ -15,7 +16,7 @@ import { renderPersonHistory } from './personHistory.js';
 const MEMO_TYPES = ['Memo', 'Notice', 'Warning Letter', 'Query Letter', 'Commendation Letter', 'Confirmation Letter', 'Other'];
 
 function projectOptions() {
-  return store.get('projects').filter((p) => p.status !== 'Completed').map((p) => ({ value: p.name, label: p.name }));
+  return selectableProjects(store.get('projects')).filter((p) => p.status !== 'Completed').map((p) => ({ value: p.name, label: p.name }));
 }
 
 function trainingProgramOptions() {
@@ -23,7 +24,7 @@ function trainingProgramOptions() {
 }
 
 function employeeOptions() {
-  return store.get('employees').filter((e) => e.status !== 'Disengaged' && !e.archivedAt).map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
+  return selectableEmployees(store.get('employees')).filter((e) => e.status !== 'Disengaged' && !e.archivedAt).map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
 }
 
 
