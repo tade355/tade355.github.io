@@ -1,15 +1,3 @@
-    // Fleet health is read from the current Fleet Roster so these cards
-    // always agree with Fleet & Assets. Daily reports remain available in
-    // the operations views, but must not override the roster summary.
-    const dozers = fleetItems();
-    const fleetStatus = (d) => String(d.fleetStatus || 'Idle').trim().toLowerCase();
-    const activeFleetCount = dozers.filter((d) => fleetStatus(d) === 'active').length;
-    const downFleetCount = dozers.filter((d) => fleetStatus(d) === 'down' || fleetStatus(d) === 'under maintenance').length;
-    const machineAvailability = dozers.length ? (activeFleetCount / dozers.length) * 100 : null;
-    const serviceStatuses = dozers.map((d) => serviceStatusFor(d).status);
-    const overdueServiceCount = serviceStatuses.filter((s) => s === 'Overdue').length;
-    const dueSoonServiceCount = serviceStatuses.filter((s) => s === 'Due Soon').length;
-
 import { renderOperatorDashboard } from './operatorDashboard.js';
 import { isOperatorAccount } from '../operatorPortalData.js';
 import { store } from '../store.js';
@@ -190,27 +178,15 @@ export function renderDashboard(container) {
     const viewROI = viewStats.totalCost ? (viewStats.tentativeProfit / viewStats.totalCost) * 100 : null;
     const prevDayROI = prevDayStats.totalCost ? (prevDayStats.tentativeProfit / prevDayStats.totalCost) * 100 : null;
 
-    // Fleet health — feeds both the KPI row and the Executive Alert Center.
-    // Driven by actual daily records instead of the Fleet Roster's
-    // fleet_status field, which only changes when someone remembers to go
-    // edit it by hand and otherwise sits frozen. First choice is the site
-    // manager's own Daily Machine Status Report for the viewed day (or the
-    // nearest one before it) — the direct, reported source of truth. Where
-    // a dozer has no such report yet, fall back to inferring: "Active" =
-    // logged an Operations/EOD entry for the viewed day; "Under Repair" =
-    // has an open (non-Completed) Maintenance Log entry as of that day.
+    // Current fleet cards use the exact roster statuses shown in Fleet & Assets.
     const dozers = fleetItems();
-    const reportedStatus = reportedStatusAsOf(viewISO);
-    const underRepairEquipment = equipmentUnderRepair(viewISO);
-    const workedTodayEquipment = new Set(daysOps.map((o) => o.equipment));
-    const isUnderRepair = (name) => (reportedStatus[name] ? reportedStatus[name] === 'Breakdown' : underRepairEquipment.has(name));
-    const isActive = (name) => (reportedStatus[name] ? reportedStatus[name] === 'Active' : workedTodayEquipment.has(name) && !underRepairEquipment.has(name));
-    const activeFleetCount = dozers.filter((d) => isActive(d.name)).length;
-    const downFleetCount = dozers.filter((d) => isUnderRepair(d.name)).length;
-    const machineAvailability = dozers.length ? ((dozers.length - downFleetCount) / dozers.length) * 100 : null;
-    const serviceStatuses = dozers.map((d) => serviceStatusFor(d).status);
-    const overdueServiceCount = serviceStatuses.filter((s) => s === 'Overdue').length;
-    const dueSoonServiceCount = serviceStatuses.filter((s) => s === 'Due Soon').length;
+    const rosterStatus = (item) => String(item.fleetStatus || 'Idle').trim().toLowerCase();
+    const activeFleetCount = dozers.filter((item) => rosterStatus(item) === 'active').length;
+    const downFleetCount = dozers.filter((item) => ['down', 'under maintenance'].includes(rosterStatus(item))).length;
+    const machineAvailability = dozers.length ? activeFleetCount / dozers.length * 100 : null;
+    const serviceStatuses = dozers.map((item) => serviceStatusFor(item).status);
+    const overdueServiceCount = serviceStatuses.filter((status) => status === 'Overdue').length;
+    const dueSoonServiceCount = serviceStatuses.filter((status) => status === 'Due Soon').length;
 
     // Approvals + money-owed signals — feed both the Outstanding Approvals
     // KPI and the Executive Alert Center below. Also a live/current
@@ -248,10 +224,10 @@ export function renderDashboard(container) {
     const kpiGrid = el('div', { class: 'kpi-grid' }, [
       statCard({
         icon: 'gauge', label: 'Machine Availability', value: machineAvailability === null ? '—' : `${machineAvailability.toFixed(0)}%`,
-        hint: `${dozers.length} in fleet`, target: 'Target: 85%', tone: machineAvailability !== null && machineAvailability < 85 ? 'warning' : 'good', href: '#/fleet',
+        hint: `${activeFleetCount} active of ${dozers.length} in Fleet Roster`, target: 'Target: 85%', tone: machineAvailability !== null && machineAvailability < 85 ? 'warning' : 'good', href: '#/fleet',
       }),
       statCard({ icon: 'checkCircle', label: 'Active Machines', value: String(activeFleetCount), tone: 'good', href: '#/fleet' }),
-      statCard({ icon: 'wrench', label: 'Machines Under Repair', value: String(downFleetCount), tone: downFleetCount ? 'warning' : 'good', href: '#/fleet' }),
+      statCard({ icon: 'wrench', label: 'Down / Under Maintenance', value: String(downFleetCount), tone: downFleetCount ? 'warning' : 'good', href: '#/fleet' }),
       statCard({
         icon: 'banknote', label: `${dayLabel}'s Revenue (Tentative)`, value: formatCurrency(viewStats.provisionalRevenue), href: '#/projects',
         hint: `${dayLabel}'s submitted reports x contract rate — not yet invoiced`,
