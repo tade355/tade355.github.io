@@ -38,9 +38,12 @@ export function paymentCard(request) {
     return [JSON.stringify(payee), payee];
   })).values()];
   if (!recipients.length) recipients.push({ accountName: '', accountNumber: '', bankName: '' });
-  const amount = Number(request.approvedAmount ?? (request.items || []).reduce((sum, row) => sum + Number(row.amount || 0), 0));
+  const approvedAmount = Number(request.approvedAmount ?? (request.items || []).reduce((sum, row) => sum + Number(row.amount || 0), 0));
+  const paidAmount = Math.max(0, Number(request.paidAmount || 0));
+  const amount = Math.max(0, approvedAmount - paidAmount);
   return el('section', { class: 'payment-card', 'aria-label': 'Beneficiary account details' }, [
     el('strong', {}, 'Pay to — beneficiary details'),
+    paidAmount > 0 ? el('p', {}, `Already paid: ${formatCurrency(paidAmount)}. Remaining to pay: ${formatCurrency(amount)}.`) : null,
     ...recipients.map(item => {
       const missing = !item.accountName || !item.accountNumber || !item.bankName;
       const all = 'Amount: ₦' + amount.toLocaleString() + '\nAccount Number: ' + item.accountNumber + '\nAccount Name: ' + item.accountName + '\nBank: ' + item.bankName + '\nNarration: ' + (request.description || request.id) + '\nReference: ' + request.id;
@@ -56,7 +59,7 @@ export function paymentCard(request) {
           item.accountNumber ? copyPaymentButton('Copy account no.', item.accountNumber) : null,
           item.accountName ? copyPaymentButton('Copy account name', item.accountName) : null,
           item.bankName ? copyPaymentButton('Copy bank', item.bankName) : null,
-          copyPaymentButton('Copy amount', amount),
+          copyPaymentButton('Copy remaining amount', amount),
           copyPaymentButton('Copy all', all),
         ]) : null,
       ]);
