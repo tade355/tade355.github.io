@@ -182,11 +182,10 @@ export function renderDashboard(container) {
     const dozers = fleetItems();
     const fleetStatus = (item) => reportedFleetStatusFor(item, viewISO)?.status || 'Unreported';
     const activeFleetCount = dozers.filter((item) => fleetStatus(item) === 'Active').length;
-    const downOnlyCount = dozers.filter((item) => fleetStatus(item) === 'Down').length;
     const maintenanceCount = dozers.filter((item) => fleetStatus(item) === 'Under Maintenance').length;
     const idleCount = dozers.filter((item) => fleetStatus(item) === 'Idle').length;
     const unreportedCount = dozers.filter((item) => fleetStatus(item) === 'Unreported').length;
-    const downFleetCount = downOnlyCount + maintenanceCount;
+    const downFleetCount = maintenanceCount;
     const machineAvailability = dozers.length ? activeFleetCount / dozers.length * 100 : null;
     const serviceStatuses = dozers.map((item) => serviceStatusFor(item).status);
     const overdueServiceCount = serviceStatuses.filter((status) => status === 'Overdue').length;
@@ -231,9 +230,8 @@ export function renderDashboard(container) {
         hint: `${activeFleetCount} active of ${dozers.length} in Fleet Roster · ${idleCount} idle · ${unreportedCount} unreported`, target: 'Target: 85%', tone: machineAvailability !== null && machineAvailability < 85 ? 'warning' : 'good', href: '#/fleet',
       }),
       statCard({ icon: 'checkCircle', label: 'Active Machines', value: String(activeFleetCount), tone: 'good', href: '#/fleet' }),
-      statCard({ icon: 'alert', label: 'Down', value: String(downOnlyCount), tone: downOnlyCount ? 'warning' : 'good', href: '#/fleet' }),
       statCard({ icon: 'wrench', label: 'Under Maintenance', value: String(maintenanceCount), tone: maintenanceCount ? 'warning' : 'good', href: '#/fleet' }),
-      statCard({ icon: 'gauge', label: 'Idle / Not Active', value: String(idleCount), tone: idleCount ? 'warning' : 'neutral', href: '#/fleet' }),
+      statCard({ icon: 'gauge', label: 'Idle', value: String(idleCount), tone: idleCount ? 'warning' : 'neutral', href: '#/fleet' }),
       statCard({
         icon: 'banknote', label: `${dayLabel}'s Revenue (Tentative)`, value: formatCurrency(viewStats.provisionalRevenue), href: '#/projects',
         hint: `${dayLabel}'s submitted reports x contract rate — not yet invoiced`,
@@ -275,7 +273,7 @@ export function renderDashboard(container) {
     if (overdueLoans.length) actionItems.push({ tone: 'critical', icon: 'bank', text: `${overdueLoans.length} loan repayment${overdueLoans.length > 1 ? 's' : ''} overdue — ${formatCurrency(overdueLoansTotal)} outstanding`, href: '#/accounting' });
     if (outOfStock.length) actionItems.push({ tone: 'critical', icon: 'bag', text: `${outOfStock.length} item${outOfStock.length > 1 ? 's' : ''} out of stock`, href: '#/fleet' });
     if (lowStock.length - outOfStock.length > 0) actionItems.push({ tone: 'warning', icon: 'bag', text: `${lowStock.length - outOfStock.length} item${lowStock.length - outOfStock.length > 1 ? 's' : ''} at or below reorder level`, href: '#/fleet' });
-    if (downFleetCount) actionItems.push({ tone: 'warning', icon: 'alert', text: `${downFleetCount} dozer${downFleetCount > 1 ? 's' : ''} down or under maintenance`, href: '#/fleet' });
+    if (downFleetCount) actionItems.push({ tone: 'warning', icon: 'alert', text: `${downFleetCount} dozer${downFleetCount > 1 ? 's' : ''} under maintenance`, href: '#/fleet' });
     if (dueSoonServiceCount) actionItems.push({ tone: 'warning', icon: 'wrench', text: `${dueSoonServiceCount} dozer${dueSoonServiceCount > 1 ? 's' : ''} due soon for service`, href: '#/fleet' });
     if (fuelCreditOwed) actionItems.push({ tone: 'warning', icon: 'fuelCan', text: `${formatCurrency(fuelCreditOwed)} fuel credit owed to stations`, href: '#/purchasing' });
     if (ownerSettlementsOwed) actionItems.push({ tone: 'warning', icon: 'users', text: `${formatCurrency(ownerSettlementsOwed)} owed to dozer owners`, href: '#/resourceManagement' });
