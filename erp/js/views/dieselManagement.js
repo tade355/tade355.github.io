@@ -13,6 +13,7 @@ import { renderAgoPlanner } from './agoPlanner.js';
 import { allDieselReceipts } from '../dieselSupplyStore.js';
 import { stationBalances as creditBalances } from './fuelCredit.js';
 import { getCurrentTier, filterByProject } from '../session.js';
+import { reconcileSiteDay, reconcileDozerDay } from '../dieselReconciliation.js';
 
 function projectOptions() {
   return filterByProject(selectableProjects(store.get('projects')), 'name').map((p) => ({ value: p.name, label: p.name }));
@@ -199,7 +200,7 @@ function renderSiteDistributionTab(container) {
   const actionSlot = el('div');
   container.appendChild(sectionHeader(
     'Site Distribution — Level 2',
-    "Site stock: opening balance + deliveries − distribution = closing balance.",
+    "Calculated site stock: opening balance + deliveries − distribution = closing balance. Confirm it in Daily Reconciliation with a physical count.",
     actionSlot,
   ));
   actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openDistributionForm() }, '+ Log Distribution'));
@@ -277,6 +278,73 @@ function renderSiteDistributionTab(container) {
     });
   }
 
+  refresh();
+}
+
+function renderDailyReconciliationTab(container) {
+  container.innerHTML = '';
+  container.appendChild(sectionHeader('Daily Diesel Reconciliation',
+    'Check project deliveries against dozer distributions and a physical site-tank count. Dozer closing figures come from daily reports.'));
+  const controls = el('div', { class: 'filter-bar' });
+  const dateInput = el('input', { type: 'date', value: todayISOString() });
+  const projectSelect = el('select', {}, projectOptions().map((p) => el('option', { value: p.value }, p.label)));
+  controls.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Date'), dateInput]));
+  controls.appendChild(el('label', { class: 'filter-field' }, [el('span', {}, 'Project'), projectSelect]));
+  if (['Admin', 'Supervisor'].includes(getCurrentTier())) controls.appendChild(el('button', { class: 'btn btn-primary', type: 'button', onClick: () => openCountForm() }, '+ Record Physical Site Count'));
+  container.appendChild(controls);
+  const result = el('div');
+  container.appendChild(result);
+
+  function refresh() {
+    result.innerHTML = '';
+    const project = projectSelect.value;
+    const date = dateInput.value;
+    if (!project || !date) return;
+    const distributions = store.get('dieselSiteDistributions');
+    const operations = store.get('operations');
+    const counts = store.get('dieselStockCounts');
+    const site = reconcileSiteDay({ project, date, receipts: allDieselReceipts(), distributions, operations, counts });
+    result.appendChild(el('p', { class: 'section-subtitle' }, site.verified
+      ? `Opening is based on the last physical site count (${formatDate(site.lastCountDate)}), plus later movements.`
+      : 'No earlier project stock count is available. Opening is provisional from recorded movements.'));
+    const cards = el('div', { class: 'stats-grid' }, [
+      statCard({ label: 'Opening on site', value: `${site.opening.toLocaleString()} L` }),
+      statCard({ label: 'Supplied today', value: `${site.supplied.toLocaleString()} L` }),
+      statCard({ label: 'Distributed to dozers', value: `${site.distributed.toLocaleString()} L` }),
+      statCard({ label: 'Expected on ground', value: `${site.expected.toLocaleString()} L`, tone: site.expected < 0 ? 'critical' : undefined }),
+      statCard({ label: 'Physical count', value: site.measured === null ? 'Not recorded' : `${site.measured.toLocaleString()} L` }),
+      statCard({ label: 'Site check', value: site.status, hint: site.variance === null ? 'Count the tank to confirm the balance.' : `Count variance: ${site.variance.toLocaleString()} L`, tone: site.status.includes('investigate') || site.status.includes('Over-allocated') ? 'critical' : undefined }),
+    ]);
+    result.appendChild(cards);
+    const unassigned = allDieselReceipts().filter((r) => r.date === date && !r.project);
+    if (unassigned.length) result.appendChild(el('p', { class: 'section-subtitle text-warning' },
+      `${unassigned.length} delivery record(s) (${unassigned.reduce((n, r) => n + Number(r.litres || 0), 0).toLocaleString()} L) have no project. Assign them in Purchase & Supply before reconciliation.`));
+    result.appendChild(el('h3', { class: 'subsection-title' }, 'Dozer accountability'));
+    result.appendChild(el('p', { class: 'section-subtitle' }, 'Reported closing can be auto-calculated in Daily Operations. Verify unusual figures with an actual tank reading and the work report before drawing conclusions.'));
+    const table = el('div'); result.appendChild(table);
+    renderTable(table, { columns: [
+      { key: 'equipment', label: 'Dozer' },
+      { key: 'opening', label: 'Opening in tank', render: (r) => r.opening === null ? '—' : `${r.opening.toLocaleString()} L` },
+      { key: 'issued', label: 'Distribution log', render: (r) => `${r.issued.toLocaleString()} L` },
+      { key: 'reportIssued', label: 'Daily report supply', render: (r) => `${r.reportIssued.toLocaleString()} L` },
+      { key: 'used', label: 'Used', render: (r) => `${r.used.toLocaleString()} L` },
+      { key: 'expected', label: 'Expected closing', render: (r) => r.expected === null ? '—' : `${r.expected.toLocaleString()} L` },
+      { key: 'reported', label: 'Reported closing', render: (r) => r.reported === null ? '—' : `${r.reported.toLocaleString()} L` },
+      { key: 'status', label: 'Review', render: (r) => r.status },
+    ], rows: reconcileDozerDay({ project, date, distributions, operations, fleet: fleetItems() }), emptyText: 'No dozer distribution or daily report for this project and date.' });
+  }
+  function openCountForm() {
+    openModal({ title: 'Record Physical Site Count', fields: [
+      { name: 'date', label: 'Date', type: 'date', required: true },
+      { name: 'project', label: 'Project', type: 'select', required: true, options: projectOptions() },
+      { name: 'countedLitres', label: 'Litres physically on ground', type: 'number', required: true, min: 0 },
+      { name: 'countedBy', label: 'Counted by', type: 'select', required: true, options: employeeOptions().filter((e) => e.value) },
+      { name: 'notes', label: 'Method / notes', type: 'textarea' },
+    ], initial: { date: dateInput.value, project: projectSelect.value }, submitLabel: 'Save Count',
+    onSubmit: async (data) => { await store.add('dieselStockCounts', data); refresh(); } });
+  }
+  dateInput.addEventListener('change', refresh);
+  projectSelect.addEventListener('change', refresh);
   refresh();
 }
 
@@ -372,6 +440,7 @@ export function renderDieselManagement(container) {
   const stationTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('station') }, 'Station Ledger');
   const siteTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('site') }, 'Site Distribution');
   const reportTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('report') }, 'Variances');
+  const reconcileTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('reconcile') }, 'Daily Reconciliation');
   const trackingTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('tracking') }, 'Tracking');
   const vouchersTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('vouchers') }, 'Vouchers');
   const workflowTabBtn=el('button',{class:'tab-btn',type:'button',onClick:()=>setTab('workflow')},'Fuel Workflow');
@@ -381,6 +450,7 @@ export function renderDieselManagement(container) {
   tabBar.appendChild(vouchersTabBtn);
   if (canViewFinance) tabBar.appendChild(stationTabBtn);
   tabBar.appendChild(siteTabBtn);
+  tabBar.appendChild(reconcileTabBtn);
   tabBar.appendChild(trackingTabBtn);
   tabBar.appendChild(reportTabBtn);
   container.appendChild(tabBar);
@@ -394,12 +464,14 @@ export function renderDieselManagement(container) {
     stationTabBtn.classList.toggle('active', tab === 'station');
     siteTabBtn.classList.toggle('active', tab === 'site');
     reportTabBtn.classList.toggle('active', tab === 'report');
+    reconcileTabBtn.classList.toggle('active', tab === 'reconcile');
     trackingTabBtn.classList.toggle('active', tab === 'tracking');
     vouchersTabBtn.classList.toggle('active', tab === 'vouchers');
     plannerTabBtn.classList.toggle('active', tab === 'planner');
     if (tab==='workflow') renderFuelWorkflow(body);
     else if (tab === 'station') renderStationLedgerTab(body);
     else if (tab === 'site') renderSiteDistributionTab(body);
+    else if (tab === 'reconcile') renderDailyReconciliationTab(body);
     else if (tab === 'report') renderDiscrepancyReportTab(body);
     else if (tab === 'tracking') renderDieselTracking(body);
     else if (tab === 'planner') renderAgoPlanner(body);
@@ -408,3 +480,5 @@ export function renderDieselManagement(container) {
 
   setTab(tab);
 }
+
+
