@@ -1,3 +1,4 @@
+import { selectableProjects, selectableEmployees } from '../selectionOptions.js';
 // Daily "General Machine Status Report" — the site manager's day-to-day
 // Active / Not Active / Breakdown call on every dozer, exactly like the
 // WhatsApp pattern this was built to replace ("GENERAL MACHINE REPORT ...").
@@ -18,11 +19,11 @@ import { getCurrentUser, getCurrentTier } from '../session.js';
 function projectOptions() {
   const user = getCurrentUser();
   const assigned = getCurrentTier() === 'Supervisor' && !user?.canManageAllProjects ? user?.assignedProject : '';
-  return store.get('projects').filter((p) => !assigned || p.name === assigned).map((p) => ({ value: p.name, label: p.name }));
+  return selectableProjects(store.get('projects')).filter((p) => !assigned || p.name === assigned).map((p) => ({ value: p.name, label: p.name }));
 }
 
 function employeeOptions() {
-  return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
+  return selectableEmployees(store.get('employees')).map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
 }
 
 function employeeName(id) {
