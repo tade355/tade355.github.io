@@ -15,6 +15,11 @@ export function getCurrentUserId() {
   return currentEmployeeId;
 }
 
+export function canViewStaffActivity() {
+  const user = getCurrentUser();
+  return user?.id === 'EMP-26' || /^agrimo\b/i.test(String(user?.name || '').trim());
+}
+
 export function getCurrentUser() {
   if (!currentEmployeeId) return null;
   return store.find('employees', currentEmployeeId);
