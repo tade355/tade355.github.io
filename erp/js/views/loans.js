@@ -1,3 +1,4 @@
+import { selectableProjects } from '../selectionOptions.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el } from '../utils.js';
@@ -11,7 +12,7 @@ import { printLoanStatement } from '../print.js';
 const LOAN_STATUSES = ['Active', 'Partially Repaid', 'Repaid', 'Restructured', 'Defaulted', 'Written Off'];
 
 function projectOptions() {
-  return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
+  return selectableProjects(store.get('projects')).map((p) => ({ value: p.name, label: p.name }));
 }
 
 function selectField(name, label, options, value) {
