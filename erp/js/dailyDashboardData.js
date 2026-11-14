@@ -1,3 +1,4 @@
+import { machineProjectAsOf, machineStateAsOf } from './selectionOptions.js';
 // Data behind the Daily Operations Dashboard view (views/dailyDashboard.js):
 // the same six sections as the HTML Daily Operations Dashboards — Operations,
 // Diesel, Fleet, Requests & Expenses, Profitability, Staff Performance — plus
@@ -63,18 +64,9 @@ export function buildDailyDashboard(ctx) {
   // A dozer belongs to the project it was assigned to on the viewed date.
   // currentProjectSince marks a redeployment; older dates fall back to the
   // latest operation logged on or before that date.
-  const equipmentProjectAsOf = (name) => {
-    const item = invByName.get(name);
-    const known = KNOWN_PROJECT_REDEPLOYMENTS[name];
-    const effective = item?.currentProjectSince || known?.since;
-    const destination = known?.project || item?.currentProject;
-    if (destination && effective && date >= effective) return destination;
-    const latest = ctx.operations.filter((o) => currentDozerName(o.equipment) === name && o.date <= date)
-      .slice().sort((a, b) => (a.date < b.date ? 1 : -1))[0];
-    if (latest?.siteName) return latest.siteName;
-    if (destination && !effective) return destination;
-    return null;
-  };
+  const equipmentProjectAsOf = (name) => machineProjectAsOf(invByName.get(name) || { name }, date,
+    ctx.operations.map(o => ({ ...o, equipment: currentDozerName(o.equipment) })), ctx.machineStatusReports || [], ctx.today || '', KNOWN_PROJECT_REDEPLOYMENTS[name]);
+  const fleetState = (item) => machineStateAsOf(item, date, ctx.machineStatusReports || [])?.status || item.fleetStatus || 'Active';
   const equipmentBelongs = (name) => allProjects || equipmentProjectAsOf(name) === project;
   const empName = (id) => ctx.employees.find((e) => e.id === id)?.name || null;
 
@@ -182,7 +174,7 @@ export function buildDailyDashboard(ctx) {
   // BIG-001 is the former fleet name for EMG-005; historical fuel rows can
   // still supply its closing balance, but the checklist uses the current name.
   const activeRequestFleet = inv.filter((i) => {
-    if ((i.fleetStatus || 'Active') !== 'Active') return false;
+    if (fleetState(i) !== 'Active') return false;
     if (i.name === 'BIG-001' && inv.some((item) => item.name === 'EMG-005')) return false;
     return equipmentBelongs(i.name);
   });
@@ -210,7 +202,7 @@ export function buildDailyDashboard(ctx) {
     const rows = dayOps.filter((r) => r.equipment === i.name);
     const start = rows.map((r) => toMinutes(r.timeResumed)).filter((v) => v !== null).sort((a, b) => a - b)[0];
     const stop = rows.map((r) => toMinutes(r.timeClosed)).filter((v) => v !== null).sort((a, b) => b - a)[0];
-    let status = i.fleetStatus || 'Active';
+    let status = fleetState(i);
     if (o?.reported) status = 'Working';
     else if (status === 'Active') status = 'Not reporting';
     const recent = lastLog && (new Date(date) - new Date(lastLog.date)) / 86400000 <= 14 ? lastLog : null;
@@ -222,7 +214,7 @@ export function buildDailyDashboard(ctx) {
     ].filter(Boolean).join(' ');
     return {
       equipment: i.name, ownership: i.ownership || 'Company', ownerName: i.ownerName || null, hourlyRate: ctx.hourlyRateAsOf(i.name, date),
-      status, fleetStatus: i.fleetStatus || 'Active', hours: o?.hours || 0, optimization: o?.reported ? o.pctExpected : null, remarks: remarks || '—',
+      status, fleetStatus: fleetState(i), hours: o?.hours || 0, optimization: o?.reported ? o.pctExpected : null, remarks: remarks || '—',
     };
   }).sort((a, b) => a.equipment.localeCompare(b.equipment));
 
@@ -359,7 +351,7 @@ export function buildDailyDashboard(ctx) {
   }
   const late = staff.filter((s) => s.role !== 'Supervisor' && s.lateMinutesToday !== null && s.lateMinutesToday >= LATE_FLAG_MINUTES);
   if (late.length) flags.push({ tone: 'warning', text: `Late starts (ideal ${IDEAL_START} AM): ${late.map((s) => `${s.name} ${s.lateToday} late`).join(', ')}.` });
-  const silent = inv.filter((i) => i.fleetStatus === 'Active' && i.currentProject === project && !workingDozers.includes(i.name) && (i.ownership || 'Company') === 'Company');
+  const silent = inv.filter((i) => fleetState(i) === 'Active' && equipmentBelongs(i.name) && !workingDozers.includes(i.name) && (i.ownership || 'Company') === 'Company');
   if (dayOps.length && silent.length) flags.push({ tone: 'warning', text: `${silent.map((i) => i.name).join(', ')} listed active but no report today.`, action: 'Send the end-of-day report, or confirm the machine did not work.' });
   const corrections = dayOps.filter((o) => (o.hoursWorked || 0) > 0 && !(o.quantity > 0));
   if (corrections.length) flags.push({ tone: 'warning', text: `Zero output despite hours worked (correction day): ${corrections.map((o) => `${o.equipment} ${o.hoursWorked} hrs`).join(', ')}.` });
