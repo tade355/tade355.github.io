@@ -154,11 +154,18 @@ export function reportedFleetStatusFor(item, asOfDate) {
     });
   });
   if (!latest) return null;
+  // A generic “Not Active” report says the machine did not work, but does not
+  // say whether it was broken, in repair, or simply idle. Retain a specific
+  // Fleet condition only if that condition was recorded by the viewed date.
+  const savedDate = String(item.updatedAt || '').slice(0, 10);
+  const savedCondition = savedDate && savedDate <= asOfDate
+    && ['Down', 'Under Maintenance'].includes(item.fleetStatus) ? item.fleetStatus : '';
   return {
     status: latest.rawStatus === 'Breakdown' ? 'Down'
       : latest.rawStatus === 'Under Maintenance' ? 'Under Maintenance'
-      : latest.rawStatus === 'Not Active' ? 'Idle' : 'Active',
+      : latest.rawStatus === 'Not Active' ? (savedCondition || 'Idle') : 'Active',
     date: latest.date,
+    source: latest.rawStatus === 'Not Active' && savedCondition ? 'Fleet condition' : 'Machine status report',
   };
 }
 
