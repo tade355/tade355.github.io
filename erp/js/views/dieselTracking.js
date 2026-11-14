@@ -1,3 +1,4 @@
+import { selectableProjects, selectableEmployees } from '../selectionOptions.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, statusPillClass, dateInRange, ico } from '../utils.js';
@@ -9,11 +10,11 @@ import { allDieselReceipts } from '../dieselSupplyStore.js';
 import { getCurrentTier } from '../session.js';
 
 function projectOptions() {
-  return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
+  return selectableProjects(store.get('projects')).map((p) => ({ value: p.name, label: p.name }));
 }
 
 function employeeOptions() {
-  return store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
+  return selectableEmployees(store.get('employees')).map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
 }
 
 function supplierOptions() {
