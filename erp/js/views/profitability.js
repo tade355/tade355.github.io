@@ -1,4 +1,5 @@
 import { workflowCosts } from '../fuelWorkflow.js';
+import { ordinaryProjectLogistics } from '../projectLogistics.js';
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el, dateInRange, invoiceTotal, ico } from '../utils.js';
 import { weekOf, isSunday } from '../dateUtils.js';
@@ -228,6 +229,8 @@ export function computeProjectStats(project, from, to) {
   const distributions = store.get('dieselSiteDistributions').filter((d) => d.project === project && dateInRange(d.date, from, to));
   const workflow = workflowCosts(store.get('fuelWorkflows'),project,from,to);
   const actualTransport = rollingTransportCosts(store.get('fundRequests').filter((r) => r.project === project && !linkedWorkflowRequests.has(r.id)), from, to);
+  const ordinaryLogistics = ordinaryProjectLogistics(store.get('fundRequests').filter((r) => r.project === project && onDashboardBasis(r.date)), from, to, linkedWorkflowRequests);
+  ordinaryLogistics.datesWithDiesel.forEach(date => actualTransport.datesWithDiesel.add(date));
   workflow.dieselDates.forEach(date=>actualTransport.datesWithDiesel.add(date));
   const pmsCollections = store.get('fuelCreditCollections')
     .filter((c) => c.fuelType === 'PMS' && !c.workflowId && dateInRange(c.date, from, to) && onDashboardBasis(c.date) && (c.project || pmsProjectForDate(c.date)) === project);
@@ -240,7 +243,7 @@ export function computeProjectStats(project, from, to) {
     + legacyRequests.filter((r) => r.costHead === 'Logistics').reduce((sum, r) => sum + fundRequestTotal(r), 0)
     + commercialBikeLogisticsForRows(operations)
     + tacomaLogisticsForRows(project, from, to, operations)
-    + dieselLogistics + actualTransport.operator + actualTransport.diesel + workflow.dieselTransport + workflow.workerTransport;
+    + dieselLogistics + actualTransport.operator + actualTransport.diesel + ordinaryLogistics.total + workflow.dieselTransport + workflow.workerTransport;
   // Fuel-category expenses/fund requests are excluded here since Diesel Cost above is already
   // derived from actual litres consumed (Daily Operations) x the diesel unit price - counting
   // the fuel purchase too would double-count the same fuel spend. Loan Repayment / Profit
@@ -287,9 +290,9 @@ export function computeProjectStats(project, from, to) {
     logisticsCost,
     otherCost,
     dieselLogistics,
-    actualOperatorTransport: actualTransport.operator + workflow.workerTransport,
-    actualDieselTransport: actualTransport.diesel + workflow.dieselTransport,
-    provisionalReportedCosts: workflow.provisional,
+    actualOperatorTransport: actualTransport.operator + ordinaryLogistics.operator + workflow.workerTransport,
+    actualDieselTransport: actualTransport.diesel + ordinaryLogistics.diesel + workflow.dieselTransport,
+    provisionalReportedCosts: workflow.provisional + ordinaryLogistics.provisional,
     otherWorkflowCosts: workflow.other,
     supervisorSundayAllowance,
     dozerOwned: dozerByOwnership.Company,
