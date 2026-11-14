@@ -1,4 +1,4 @@
-import { selectableProjects, selectableEmployees } from '../selectionOptions.js';
+import { selectableProjects, selectableEmployees, selectableMachines } from '../selectionOptions.js';
 // Daily "General Machine Status Report" — the site manager's day-to-day
 // Active / Not Active / Breakdown call on every dozer, exactly like the
 // WhatsApp pattern this was built to replace ("GENERAL MACHINE REPORT ...").
