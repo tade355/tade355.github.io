@@ -2,7 +2,6 @@
 const CURRENT_PROJECTS = new Set([
   'rex forestry project - kangidi',
   'blue sky project - ajue-ore',
-  'rex forestry project - kajola',
 ]);
 export function selectableProjects(projects) {
   return projects.filter((project) => CURRENT_PROJECTS.has(String(project.name || '').trim().toLowerCase())
