@@ -1,3 +1,4 @@
+import { selectableProjects, selectableEmployees } from '../selectionOptions.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatDate, el, ico } from '../utils.js';
@@ -8,11 +9,11 @@ import { notifyNewLeaveRequest, notifyLeaveRequestDecision } from '../notificati
 import { canDecideLeave } from '../access.js';
 
 function projectOptions() {
-  return store.get('projects').map((p) => p.name);
+  return selectableProjects(store.get('projects')).map((p) => p.name);
 }
 
 function employeeOptions() {
-  return store.get('employees').filter((e) => e.status !== 'Disengaged' && !e.archivedAt).map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
+  return selectableEmployees(store.get('employees')).filter((e) => e.status !== 'Disengaged' && !e.archivedAt).map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
 }
 
 function employeeName(id) {
