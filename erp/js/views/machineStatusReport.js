@@ -13,9 +13,12 @@ import { todayISOString } from '../dateUtils.js';
 import { formatDate, el } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, confirmDelete } from '../ui.js';
 import { fleetItems } from './fleet.js';
+import { getCurrentUser, getCurrentTier } from '../session.js';
 
 function projectOptions() {
-  return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
+  const user = getCurrentUser();
+  const assigned = getCurrentTier() === 'Supervisor' && !user?.canManageAllProjects ? user?.assignedProject : '';
+  return store.get('projects').filter((p) => !assigned || p.name === assigned).map((p) => ({ value: p.name, label: p.name }));
 }
 
 function employeeOptions() {
@@ -59,7 +62,7 @@ async function syncMaintenanceLogFor(equipment, status, date, notes) {
 
 export function renderMachineStatusReport(container) {
   container.innerHTML = '';
-  container.appendChild(sectionHeader('Daily Machine Status Report', "Site manager's daily Active / Not Active / Breakdown call for every dozer. A Breakdown line opens a Maintenance Log entry automatically; marking a dozer Active again closes one out."));
+  container.appendChild(sectionHeader('Daily Machine Status Report', "Report the status of every dozer assigned to the selected project. Breakdown or Under Maintenance opens a Maintenance Log entry; marking it Active closes one out."));
 
   const formContainer = el('div');
   container.appendChild(formContainer);
@@ -81,7 +84,9 @@ export function renderMachineStatusReport(container) {
     const dateInput = el('input', { type: 'date' });
     dateInput.value = record?.date || todayISOString();
     const projectSelect = selectEl(projectOptions(), record?.project);
-    const submittedBySelect = selectEl([{ value: '', label: '— Select —' }, ...employeeOptions()], record?.submittedBy || '');
+    const supervisor = getCurrentTier() === 'Supervisor';
+    const submittedBySelect = selectEl(supervisor ? employeeOptions().filter((e) => e.value === getCurrentUser()?.id) : [{ value: '', label: '— Select —' }, ...employeeOptions()], supervisor ? getCurrentUser()?.id : (record?.submittedBy || ''));
+    submittedBySelect.disabled = supervisor;
 
     const headerGrid = el('div', { class: 'form-grid-2' }, [
       el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Date *'), dateInput]),
