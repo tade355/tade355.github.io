@@ -184,7 +184,8 @@ export function renderDashboard(container) {
     const fleetStatuses = dozers.map((item) => reportedFleetStatusFor(item, viewDateISO)?.status || 'Unreported');
     const reportedFleetCount = fleetStatuses.filter((status) => status !== 'Unreported').length;
     const activeFleetCount = fleetStatuses.filter((status) => status === 'Active').length;
-    const downFleetCount = fleetStatuses.filter((status) => status === 'Down' || status === 'Under Maintenance').length;
+    const downFleetCount = fleetStatuses.filter((status) => status === 'Down').length;
+    const maintenanceFleetCount = fleetStatuses.filter((status) => status === 'Under Maintenance').length;
     const machineAvailability = reportedFleetCount ? activeFleetCount / reportedFleetCount * 100 : null;
     const serviceStatuses = dozers.map((item) => serviceStatusFor(item).status);
     const overdueServiceCount = serviceStatuses.filter((status) => status === 'Overdue').length;
@@ -229,7 +230,8 @@ export function renderDashboard(container) {
         hint: `${activeFleetCount} active of ${reportedFleetCount} reported · ${dozers.length - reportedFleetCount} unreported`, target: 'Target: 85%', tone: machineAvailability !== null && machineAvailability < 85 ? 'warning' : 'good', href: '#/fleet',
       }),
       statCard({ icon: 'checkCircle', label: 'Active Machines', value: String(activeFleetCount), tone: 'good', href: '#/fleet' }),
-      statCard({ icon: 'wrench', label: 'Down / Under Maintenance', value: String(downFleetCount), tone: downFleetCount ? 'warning' : 'good', href: '#/fleet' }),
+      statCard({ icon: 'alert', label: 'Down', value: String(downFleetCount), tone: downFleetCount ? 'warning' : 'good', href: '#/fleet' }),
+      statCard({ icon: 'wrench', label: 'Under Maintenance', value: String(maintenanceFleetCount), tone: maintenanceFleetCount ? 'warning' : 'good', href: '#/fleet' }),
       statCard({
         icon: 'banknote', label: `${dayLabel}'s Revenue (Tentative)`, value: formatCurrency(viewStats.provisionalRevenue), href: '#/projects',
         hint: `${dayLabel}'s submitted reports x contract rate — not yet invoiced`,
