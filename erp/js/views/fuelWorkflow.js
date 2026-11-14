@@ -34,16 +34,17 @@ export function openEarlierCostForm(onSaved, record = null) {
   const d=record?.data||{};
   openModal({title:record?'Edit Earlier Cost / Reimbursement Request':'Earlier Cost / Reimbursement Request',initial:{
     project:record?.project||d.project||'',incurredDate:d.incurredDate||todayISOString(),incurredTo:d.incurredTo||d.incurredDate||todayISOString(),category:d.category||'Other',equipment:d.equipment||'',
-    description:d.description||'',amount:d.amount||'',payee:d.payee||'',evidence:d.evidence||'',lateReason:d.lateReason||'',linkedFundRequestId:d.linkedFundRequestId||''
+    description:d.description||'',amount:d.amount||'',payee:d.payee||'',serviceProviders:d.serviceProviders||'',evidence:d.evidence||'',lateReason:d.lateReason||'',linkedFundRequestId:d.linkedFundRequestId||''
   },fields:[
     {name:'project',label:'Project',type:'select',required:true,options:filterByProject(selectableProjects(store.get('projects')),'name').map(p=>({value:p.name,label:p.name}))},
     {name:'incurredDate',label:'Cost period start',type:'date',required:true},
     {name:'incurredTo',label:'Cost period end',type:'date',required:true},
     {name:'category',label:'Cost type',type:'select',options:['Diesel transport','Worker transport','Maintenance','Other'].map(x=>({value:x,label:x}))},
     {name:'equipment',label:'Dozer code (required for maintenance)',type:'select',options:[{value:'',label:'— Not a dozer maintenance cost —'},...selectableMachines(store.get('inventory')).filter(i=>i.category==='Heavy Equipment').map(i=>({value:i.name,label:[i.assetCode||i.sku,i.name].filter(Boolean).join(' — ')}))]},
-    {name:'description',label:'Service / reason',required:true},
+    {name:'description',label:'Cost details (include each date, provider and amount)',type:'textarea',required:true},
     {name:'amount',label:'Accumulated amount owed (₦)',type:'number',min:0,required:true},
-    {name:'payee',label:'Person or vendor owed',required:true},
+    {name:'payee',label:'Manager who receives the reimbursement',required:true},
+    {name:'serviceProviders',label:'Service providers the manager will pay (and amounts)',type:'textarea'},
     {name:'evidence',label:'Receipt / service reference',required:true},
     {name:'lateReason',label:'Reason for later submission',type:'textarea'},
     {name:'linkedFundRequestId',label:'Existing fund request for this same cost (leave blank if none)'},
@@ -168,3 +169,5 @@ export function renderFuelWorkflow(container,{approvalsOnly=false,costsOnly=fals
   }
   project.addEventListener('change',draw);state.addEventListener('change',draw);load();
 }
+
+

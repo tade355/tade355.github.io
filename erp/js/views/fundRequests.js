@@ -3,7 +3,8 @@ import { requestSubmissionDate } from '../dateUtils.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, ico } from '../utils.js';
-import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
+import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, openModal, closeModal, confirmDelete, statCard } from '../ui.js';
+import { supabase } from '../supabaseClient.js';
 import { printFundRequest } from '../print.js';
 import { filterLeaveRequests, filterByProject, filterFundRequests, getCurrentUserId, getCurrentTier } from '../session.js';
 import { createAttachmentPicker } from '../attachments.js';
@@ -11,6 +12,7 @@ import { notifyNewFundRequest, notifyFundRequestDecision } from '../notification
 import { EXPENSE_CATEGORIES } from '../constants.js';
 import { renderApprovals } from './approvals.js';
 import { openEarlierCostForm, renderFuelWorkflow } from './fuelWorkflow.js';
+import { managerImprestLedger } from '../imprestLedger.js';
 import { findDuplicateRequests, requestTotal } from '../requestDuplicates.js';
 import { canDecideFundRequests, canDecideLeave } from '../access.js';
 
@@ -330,6 +332,8 @@ export function renderFundRequests(container) {
   const requestsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('requests') }, ['Staff','Supervisor'].includes(getCurrentTier()) ? 'My Requests' : 'Requests');
   requestsTabBtn.dataset.tabLabel = 'Requests';
   tabBar.appendChild(requestsTabBtn);
+  const imprestTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('imprests') }, 'Manager Imprests');
+  tabBar.appendChild(imprestTabBtn);
   let approvalsTabBtn;
   if (canApprove) {
     approvalsTabBtn = el('button', { class: 'tab-btn', type: 'button', onClick: () => setTab('approvals') }, 'Approvals');
@@ -354,13 +358,74 @@ export function renderFundRequests(container) {
   function setTab(next) {
     tab = next;
     requestsTabBtn.classList.toggle('active', tab === 'requests');
+    imprestTabBtn.classList.toggle('active', tab === 'imprests');
     if (approvalsTabBtn) approvalsTabBtn.classList.toggle('active', tab === 'approvals');
     body.innerHTML = '';
     if (tab === 'requests') renderRequestsTab(body, updatePendingCount);
+    else if (tab === 'imprests') renderManagerImprests(body);
     else renderApprovals(body, updatePendingCount);
   }
 
   setTab(tab);
+}
+
+function renderManagerImprests(container) {
+  container.replaceChildren();
+  const note = el('p', { class: 'section-subtitle' }, 'Costs are dated to when they happened. Each approved request is locked; later costs open a new request. Accounts may record several payments against the approved balance.');
+  const list = el('div', { class: 'approval-card-list' });
+  const refresh = el('button', { class: 'btn btn-ghost', type: 'button', onClick: async () => { try { await store.refreshCollection('fuelWorkflows'); draw(); } catch (error) { note.textContent = error.message; } } }, 'Refresh balances');
+  container.append(sectionHeader('Manager Imprests', 'Costs incurred by managers, money received and remaining balances', refresh), note, list);
+  function draw() {
+    list.replaceChildren();
+    const records = filterByProject(store.get('fuelWorkflows'), 'project');
+    const userId = getCurrentUserId();
+    const visible = ['Admin','Accounts'].includes(getCurrentTier()) ? records : records.filter(record => record.requestedBy === userId);
+    const wallets = managerImprestLedger(visible);
+    if (!wallets.length) { list.append(el('p', {}, 'No earlier-cost balances have been submitted yet.')); return; }
+    for (const wallet of wallets) {
+      const card = el('article', { class: 'approval-request-card' });
+      card.append(el('h3', {}, wallet.manager),
+        el('p', {}, 'Awaiting approval: ' + formatCurrency(wallet.awaitingApproval) + ' · Approved: ' + formatCurrency(wallet.approved) + ' · Paid to manager: ' + formatCurrency(wallet.paid) + ' · Still owed to manager: ' + formatCurrency(wallet.outstanding)),
+        el('p', {}, 'Paid onward to providers: ' + formatCurrency(wallet.distributed) + ' · Held by manager: ' + formatCurrency(Math.max(0, wallet.paid - wallet.distributed))));
+      const detail = el('div');
+      renderTable(detail, { columns: [
+        { key: 'id', label: 'Batch' }, { key: 'project', label: 'Project' }, { key: 'incurredDate', label: 'Cost date' },
+        { key: 'description', label: 'Purpose' }, { key: 'providers', label: 'Providers to pay' }, { key: 'status', label: 'Status' },
+        { key: 'requested', label: 'Reported' }, { key: 'approved', label: 'Approved' },
+        { key: 'paid', label: 'Paid to manager' }, { key: 'distributed', label: 'Paid to providers' },
+        { key: 'held', label: 'Held by manager' }, { key: 'outstanding', label: 'Still owed' },
+      ], rows: wallet.batches.map(batch => ({ ...batch, incurredDate: formatDate(batch.incurredDate), requested: formatCurrency(batch.requested), approved: formatCurrency(batch.approved), paid: formatCurrency(batch.paid), distributed: formatCurrency(batch.distributed), held: formatCurrency(batch.held), outstanding: formatCurrency(batch.outstanding) })) });
+      card.append(detail);
+      for (const batch of wallet.batches) {
+        if (batch.payments.length) card.append(el('p', {}, batch.id + ' paid to manager: ' + batch.payments.map(payment => formatDate(payment.date) + ' ' + formatCurrency(payment.amount) + ' ' + (payment.reference || '')).join(' · ')));
+        if (batch.distributions.length) card.append(el('p', {}, batch.id + ' paid to providers: ' + batch.distributions.map(event => formatDate(event.date) + ' ' + event.provider + ' ' + formatCurrency(event.amount) + ' ' + (event.reference || '')).join(' · ')));
+        if (batch.held > 0 && (batch.record.requestedBy === userId || ['Admin','Accounts'].includes(getCurrentTier()))) {
+          card.append(el('button', { class: 'btn btn-secondary', type: 'button', onClick: () => openModal({
+            title: 'Record provider payment · ' + batch.id,
+            initial: { date: todayISOString() },
+            fields: [
+              { name: 'provider', label: 'Service provider paid', required: true },
+              { name: 'amount', label: 'Amount paid (₦), available ' + formatCurrency(batch.held), type: 'number', min: 0, required: true },
+              { name: 'date', label: 'Date paid', type: 'date', required: true },
+              { name: 'reference', label: 'Receipt / transfer reference', required: true },
+            ],
+            submitLabel: 'Record provider payment',
+            onSubmit: async values => {
+              const { error } = await supabase.rpc('record_manager_imprest_distribution', {
+                p_id: batch.id, p_provider: values.provider, p_amount: Number(values.amount), p_date: values.date,
+                p_reference: values.reference, p_token: crypto.randomUUID(),
+              });
+              if (error) throw error;
+              await store.refreshCollection('fuelWorkflows');
+              draw();
+            },
+          }) }, 'Record provider payment · ' + batch.id));
+        }
+      }
+      list.append(card);
+    }
+  }
+  draw();
 }
 
 function renderRequestsTab(container, onRefresh = () => {}) {
@@ -472,4 +537,6 @@ function renderRequestsTab(container, onRefresh = () => {}) {
 
   refresh();
 }
+
+
 
