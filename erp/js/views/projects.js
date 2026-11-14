@@ -1,3 +1,4 @@
+import { selectableProjects } from '../selectionOptions.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, el } from '../utils.js';
@@ -176,7 +177,7 @@ export function renderProjects(container) {
       openModal({
         title: record ? 'Edit Rate Change' : 'Log Rate Change',
         fields: [
-          { name: 'project', label: 'Project', type: 'select', required: true, options: store.get('projects').map((p) => ({ value: p.name, label: p.name })) },
+          { name: 'project', label: 'Project', type: 'select', required: true, options: selectableProjects(store.get('projects')).map((p) => ({ value: p.name, label: p.name })) },
           { name: 'operationType', label: 'Operation Type', type: 'select', options: [
             { value: '', label: '— General (all operations) —' },
             ...OPERATION_TYPES.map((t) => ({ value: t.value, label: t.value })),
