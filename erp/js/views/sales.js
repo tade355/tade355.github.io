@@ -1,3 +1,4 @@
+import { selectableProjects } from '../selectionOptions.js';
 import { store } from '../store.js';
 import { renderWorkOrderInvoices } from './workOrderInvoices.js';
 import { todayISOString } from '../dateUtils.js';
@@ -22,7 +23,7 @@ function customerOptions() {
 }
 
 function projectOptions() {
-  return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
+  return selectableProjects(store.get('projects')).map((p) => ({ value: p.name, label: p.name }));
 }
 
 function selectField(name, label, options, value) {
