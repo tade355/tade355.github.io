@@ -10,7 +10,7 @@ import { amountOutstanding as loanAmountOutstanding, agingDays as loanAgingDays 
 import { statCard, sectionHeader } from '../ui.js';
 import { renderBarChart, renderLineChart, renderMultiLineChart, CATEGORICAL_COLORS } from '../charts.js';
 import { isHaOperationType } from '../constants.js';
-import { fleetItems, serviceStatusFor, equipmentUnderRepair, reportedStatusAsOf } from './fleet.js';
+import { fleetItems, serviceStatusFor, equipmentUnderRepair, reportedFleetStatusFor } from './fleet.js';
 import { stationBalances } from './fuelCredit.js';
 import { ownerSettlementBalances } from './dozerRentPayments.js';
 import { projectNames, computeProjectStats, companyWideStats } from './profitability.js';
@@ -178,12 +178,14 @@ export function renderDashboard(container) {
     const viewROI = viewStats.totalCost ? (viewStats.tentativeProfit / viewStats.totalCost) * 100 : null;
     const prevDayROI = prevDayStats.totalCost ? (prevDayStats.tentativeProfit / prevDayStats.totalCost) * 100 : null;
 
-    // Current fleet cards use the exact roster statuses shown in Fleet & Assets.
+    // Use the same dated machine reports as the Fleet Roster. Unreported
+    // machines are excluded from the availability rate, not assumed active.
     const dozers = fleetItems();
-    const rosterStatus = (item) => String(item.fleetStatus || 'Idle').trim().toLowerCase();
-    const activeFleetCount = dozers.filter((item) => rosterStatus(item) === 'active').length;
-    const downFleetCount = dozers.filter((item) => ['down', 'under maintenance'].includes(rosterStatus(item))).length;
-    const machineAvailability = dozers.length ? activeFleetCount / dozers.length * 100 : null;
+    const fleetStatuses = dozers.map((item) => reportedFleetStatusFor(item, viewDateISO)?.status || 'Unreported');
+    const reportedFleetCount = fleetStatuses.filter((status) => status !== 'Unreported').length;
+    const activeFleetCount = fleetStatuses.filter((status) => status === 'Active').length;
+    const downFleetCount = fleetStatuses.filter((status) => status === 'Down' || status === 'Under Maintenance').length;
+    const machineAvailability = reportedFleetCount ? activeFleetCount / reportedFleetCount * 100 : null;
     const serviceStatuses = dozers.map((item) => serviceStatusFor(item).status);
     const overdueServiceCount = serviceStatuses.filter((status) => status === 'Overdue').length;
     const dueSoonServiceCount = serviceStatuses.filter((status) => status === 'Due Soon').length;
@@ -224,7 +226,7 @@ export function renderDashboard(container) {
     const kpiGrid = el('div', { class: 'kpi-grid' }, [
       statCard({
         icon: 'gauge', label: 'Machine Availability', value: machineAvailability === null ? '—' : `${machineAvailability.toFixed(0)}%`,
-        hint: `${activeFleetCount} active of ${dozers.length} in Fleet Roster`, target: 'Target: 85%', tone: machineAvailability !== null && machineAvailability < 85 ? 'warning' : 'good', href: '#/fleet',
+        hint: `${activeFleetCount} active of ${reportedFleetCount} reported · ${dozers.length - reportedFleetCount} unreported`, target: 'Target: 85%', tone: machineAvailability !== null && machineAvailability < 85 ? 'warning' : 'good', href: '#/fleet',
       }),
       statCard({ icon: 'checkCircle', label: 'Active Machines', value: String(activeFleetCount), tone: 'good', href: '#/fleet' }),
       statCard({ icon: 'wrench', label: 'Down / Under Maintenance', value: String(downFleetCount), tone: downFleetCount ? 'warning' : 'good', href: '#/fleet' }),
