@@ -9,6 +9,9 @@ export function ordinaryProjectLogistics(requests, from, to, linkedWorkflowReque
     if (linkedWorkflowRequestIds.has(request.id)) continue;
     const description = `${request.description || ''} ${(request.items || []).map(item => item.description || '').join(' ')}`;
     if (!/transport|waybill|delivery|t-far|t\s*far|fare/i.test(description)) continue;
+    // A pending request can be for planned work. Count it as a provisional
+    // incurred cost only when the submitter explicitly marks the work done.
+    if (request.status === 'Pending' && !/\bincurred\b/i.test(description)) continue;
     // Rolling balance requests are itemised by service day elsewhere. Their
     // headline total includes old debt and must never be treated as a new cost.
     if ((request.items || []).some(item => /carried balance|outstanding carried/i.test(item.description || ''))
