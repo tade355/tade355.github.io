@@ -1,3 +1,4 @@
+import { selectableMachines } from '../selectionOptions.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, poTotal, el } from '../utils.js';
@@ -19,7 +20,7 @@ function supplierOptions() {
 }
 
 function stockableInventoryOptions() {
-  return store.get('inventory').map((i) => ({ value: i.name, label: `${i.name} (${i.quantity} ${i.unit || ''} in stock)`.trim() }));
+  return selectableMachines(store.get('inventory')).map((i) => ({ value: i.name, label: `${i.name} (${i.quantity} ${i.unit || ''} in stock)`.trim() }));
 }
 
 function poFields() {
