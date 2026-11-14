@@ -40,7 +40,10 @@ export function reconcileDozerDay({ project, date, distributions, operations, fl
   const reports = operations.filter((row) => row.siteName === project && row.date === date);
   const machines = [...new Set([...issues.map((row) => row.equipment), ...reports.map((row) => row.equipment)])].filter(Boolean);
   return machines.map((equipment) => {
-    const issued = sum(issues.filter((row) => row.equipment === equipment), 'litres');
+    const machineIssues = issues.filter((row) => row.equipment === equipment);
+    const nonTank = (row) => /not tank fuel|maintenance diesel/i.test(row.notes || '');
+    const issued = sum(machineIssues.filter((row) => !nonTank(row)), 'litres');
+    const otherUse = sum(machineIssues.filter(nonTank), 'litres');
     const rows = reports.filter((row) => row.equipment === equipment);
     const reportIssued = sum(rows, 'dieselSupplied');
     const hasExplicitIssue = distributions.some((row) => row.project === project && row.date === date && row.equipment === equipment);
@@ -49,18 +52,20 @@ export function reconcileDozerDay({ project, date, distributions, operations, fl
     const normative = rows.reduce((total, row) => total + dieselUsedFor(asset, row.operationType, litres(row.hoursWorked)), 0);
     const overConsumption = normative > 0 && used > Math.max(normative * 1.25, normative + 20);
     const last = rows[rows.length - 1];
-    const opening = last ? litres(last.openingDiesel) - litres(last.dieselSupplied) : null;
+    const opening = last?.openingDiesel == null ? null : litres(last.openingDiesel) - litres(last.dieselSupplied);
     const expected = opening === null ? null : opening + issued - used;
     const reported = last?.closingDiesel == null ? null : litres(last.closingDiesel);
     const variance = reported === null || expected === null ? null : reported - expected;
     const tolerance = Math.max(5, Math.abs(expected || 0) * 0.02);
     return {
-      equipment, issued, reportIssued, used, opening, expected, reported, variance, normative,
-      status: !last ? 'Daily report needed'
+      equipment, issued, otherUse, reportIssued, used, opening, expected, reported, variance, normative,
+      status: !last ? (otherUse && !issued ? 'Maintenance/non-tank issue — verify supporting record' : 'Daily report needed')
         : hasExplicitIssue && Math.abs(issued - reportIssued) > 1 ? 'Distribution/report mismatch'
+        : opening === null ? 'Opening reading needed'
         : expected < -tolerance ? 'Consumption exceeds available fuel'
           : Math.abs(variance || 0) > tolerance ? 'Closing variance — investigate'
             : overConsumption ? 'High reported use — review hours/rate'
+              : reported === null ? 'Closing reading needed'
             : 'Reported balance agrees',
     };
   });
