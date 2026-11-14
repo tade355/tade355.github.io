@@ -10,7 +10,7 @@ import { amountOutstanding as loanAmountOutstanding, agingDays as loanAgingDays 
 import { statCard, sectionHeader } from '../ui.js';
 import { renderBarChart, renderLineChart, renderMultiLineChart, CATEGORICAL_COLORS } from '../charts.js';
 import { isHaOperationType } from '../constants.js';
-import { fleetItems, serviceStatusFor, equipmentUnderRepair, reportedStatusAsOf } from './fleet.js';
+import { fleetItems, serviceStatusFor, reportedFleetStatusFor } from './fleet.js';
 import { stationBalances } from './fuelCredit.js';
 import { ownerSettlementBalances } from './dozerRentPayments.js';
 import { projectNames, computeProjectStats, companyWideStats } from './profitability.js';
@@ -178,11 +178,11 @@ export function renderDashboard(container) {
     const viewROI = viewStats.totalCost ? (viewStats.tentativeProfit / viewStats.totalCost) * 100 : null;
     const prevDayROI = prevDayStats.totalCost ? (prevDayStats.tentativeProfit / prevDayStats.totalCost) * 100 : null;
 
-    // Current fleet cards use the exact roster statuses shown in Fleet & Assets.
+    // Match the Fleet Roster's latest machine-status report as of the viewed day.
     const dozers = fleetItems();
-    const rosterStatus = (item) => String(item.fleetStatus || 'Idle').trim().toLowerCase();
-    const activeFleetCount = dozers.filter((item) => rosterStatus(item) === 'active').length;
-    const downFleetCount = dozers.filter((item) => ['down', 'under maintenance'].includes(rosterStatus(item))).length;
+    const fleetStatus = (item) => reportedFleetStatusFor(item, viewISO)?.status || 'Unreported';
+    const activeFleetCount = dozers.filter((item) => fleetStatus(item) === 'Active').length;
+    const downFleetCount = dozers.filter((item) => ['Down', 'Under Maintenance'].includes(fleetStatus(item))).length;
     const machineAvailability = dozers.length ? activeFleetCount / dozers.length * 100 : null;
     const serviceStatuses = dozers.map((item) => serviceStatusFor(item).status);
     const overdueServiceCount = serviceStatuses.filter((status) => status === 'Overdue').length;
