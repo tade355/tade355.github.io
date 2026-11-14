@@ -86,7 +86,7 @@ test('the downloadable dashboard is a complete report with all six sections', as
   assert.ok(html.startsWith('<!doctype html>'));
   ['operations', 'diesel', 'fleet', 'requests', 'profitability', 'staff'].forEach((id) => assert.ok(html.includes(`<section id="${id}">`), id));
   assert.ok(html.includes('Prepared by ERP Software'));
-  assert.ok(!/undefined|NaN(?!\()/.test(html.replace(/isNaN/g, '')), 'no undefined/NaN values in the markup');
+  assert.ok(!/undefined|NaN(?!\()/.test(html.replace(/isNaN/g, '')), `no undefined/NaN values in the markup: ${html.match(/.{0,80}(?:undefined|NaN).{0,80}/g)}`);
   assert.equal(dashboardFileName('2026-10-15'), 'Daily_Dashboard_15Oct2026.html');
 });
 
@@ -155,7 +155,8 @@ test('a reported closing that differs from the calculated one is flagged and dri
   }));
   const row = d.diesel.rows.find((r) => r.equipment === 'EMG-1');
   assert.equal(row.status, 'Closing restated');
-  assert.equal(row.closing, 20);
+  assert.equal(row.closing, 10);
+  assert.equal(row.calculatedClosing, 20);
   assert.ok(d.flags.some((f) => /reported 10 L vs calculated 20 L/.test(f.text)));
   assert.equal(d.diesel.fuelingRequest.find((r) => r.equipment === 'EMG-1').closing, 10);
 });
@@ -190,3 +191,5 @@ test('REX honors the selected cumulative date and preserves tank carry-over', ()
   const following=buildDailyDashboard(ctx({project:'REX Forestry Project - Kangidi',date:'2026-11-05',since:'2026-10-22'}));
   assert.equal(following.since,'2026-10-22');
 });
+
+
