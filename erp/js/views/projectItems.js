@@ -1,3 +1,4 @@
+import { selectableProjects, selectableEmployees } from '../selectionOptions.js';
 // Bikes, cars, and other vehicles — moved out of the dozer-focused Fleet
 // Roster (erp/js/views/fleet.js) because none of that roster's fields
 // (hourly rate, diesel consumption tiers, service interval) apply to them.
@@ -10,11 +11,11 @@ import { renderTable, actionButtons, statusPill, sectionHeader, openModal, confi
 const PROJECT_ITEM_CATEGORY = 'Vehicles';
 
 function projectOptions() {
-  return [{ value: '', label: '— Unassigned —' }, ...store.get('projects').map((p) => ({ value: p.name, label: p.name }))];
+  return [{ value: '', label: '— Unassigned —' }, ...selectableProjects(store.get('projects')).map((p) => ({ value: p.name, label: p.name }))];
 }
 
 function employeeOptions() {
-  return [{ value: '', label: '— Unassigned —' }, ...store.get('employees').map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }))];
+  return [{ value: '', label: '— Unassigned —' }, ...selectableEmployees(store.get('employees')).map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }))];
 }
 
 function managerName(id) {
