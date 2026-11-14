@@ -43,7 +43,7 @@ async function syncMaintenanceLogFor(equipment, status, date, notes) {
     .filter((m) => m.equipment === equipment && m.status !== 'Completed')
     .sort((a, b) => (a.date < b.date ? 1 : -1))[0];
 
-  if (status === 'Breakdown' && !openLog) {
+  if ((status === 'Breakdown' || status === 'Under Maintenance') && !openLog) {
     await store.add('maintenanceLogs', {
       date,
       equipment,
@@ -95,29 +95,39 @@ export function renderMachineStatusReport(container) {
     (record?.lines || []).forEach((l) => { linesByEquipment[l.equipment] = l; });
 
     const statusOptions = [
+      { value: '', label: '— Select status —' },
       { value: 'Active', label: 'Active' },
+      { value: 'Under Maintenance', label: 'Under Maintenance' },
       { value: 'Not Active', label: 'Not Active' },
       { value: 'Breakdown', label: 'Breakdown' },
     ];
 
-    const rowEls = fleetItems().map((item) => {
-      const existing = linesByEquipment[item.name];
-      const statusSelect = selectEl(statusOptions, existing?.status || 'Active');
-      const notesInput = el('input', { type: 'text', placeholder: 'Notes (fault details, etc.)' });
-      notesInput.value = existing?.notes || '';
-      const row = el('div', { class: 'form-grid-2', style: 'grid-template-columns: 1fr 1fr 2fr; align-items: center;' }, [
-        el('span', {}, item.name),
-        el('span', { class: 'field' }, statusSelect),
-        el('span', { class: 'field' }, notesInput),
-      ]);
-      return { equipment: item.name, statusSelect, notesInput, row };
-    });
-
+    let rowEls = [];
     const linesHeader = el('div', { class: 'form-grid-2', style: 'grid-template-columns: 1fr 1fr 2fr; font-weight: 600;' }, [
       el('span', {}, 'Dozer'), el('span', {}, 'Status'), el('span', {}, 'Notes'),
     ]);
+    const rowsContainer = el('div');
     formContainer.appendChild(linesHeader);
-    rowEls.forEach((r) => formContainer.appendChild(r.row));
+    formContainer.appendChild(rowsContainer);
+    function renderProjectMachines() {
+      rowsContainer.replaceChildren();
+      rowEls = fleetItems().filter((item) => item.currentProject === projectSelect.value).map((item) => {
+        const existing = linesByEquipment[item.name];
+        const statusSelect = selectEl(statusOptions, existing?.status || '');
+        const notesInput = el('input', { type: 'text', placeholder: 'Notes (fault details, etc.)' });
+        notesInput.value = existing?.notes || '';
+        const row = el('div', { class: 'form-grid-2', style: 'grid-template-columns: 1fr 1fr 2fr; align-items: center;' }, [
+          el('span', {}, item.name),
+          el('span', { class: 'field' }, statusSelect),
+          el('span', { class: 'field' }, notesInput),
+        ]);
+        rowsContainer.appendChild(row);
+        return { equipment: item.name, statusSelect, notesInput };
+      });
+      if (!rowEls.length) rowsContainer.appendChild(el('p', { class: 'section-subtitle' }, 'No dozers are assigned to this project in the Fleet Roster.'));
+    }
+    projectSelect.addEventListener('change', renderProjectMachines);
+    renderProjectMachines();
 
     const notesTextarea = el('textarea', { placeholder: 'General notes for this report (optional)' });
     notesTextarea.value = record?.notes || '';
@@ -133,6 +143,10 @@ export function renderMachineStatusReport(container) {
     submitBtn.addEventListener('click', async () => {
       if (!projectSelect.value || !submittedBySelect.value || !dateInput.value) {
         window.alert('Date, Project, and Submitted By are required.');
+        return;
+      }
+      if (!rowEls.length || rowEls.some((r) => !r.statusSelect.value)) {
+        window.alert('Select a status for every dozer assigned to this project.');
         return;
       }
       const lines = rowEls.map((r) => ({
