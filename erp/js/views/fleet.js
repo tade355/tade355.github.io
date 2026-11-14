@@ -1,4 +1,4 @@
-import { selectableProjects, selectableEmployees, selectableMachines } from '../selectionOptions.js';
+import { selectableProjects, selectableEmployees, selectableMachines, machineStateAsOf } from '../selectionOptions.js';
 import { engineServiceStatus } from '../serviceTracking.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
@@ -142,31 +142,7 @@ export function reportedStatusAsOf(asOfDate) {
 // A dated report is the source of operational status. The roster displays the
 // latest reported state; historical dashboards use the same lookup as of their day.
 export function reportedFleetStatusFor(item, asOfDate) {
-  const names = new Set([item.name, item.assetCode, item.sku].filter(Boolean).map((name) => String(name).trim().toLowerCase()));
-  // EMG-005 was previously recorded as BIG-001 / Big Fish.
-  if (String(item.name).toUpperCase() === 'EMG-005') ['big-001', 'big-01', 'big 01', 'big fish'].forEach((name) => names.add(name));
-  let latest = null;
-  store.get('machineStatusReports').forEach((report) => {
-    if (report.date > asOfDate) return;
-    (report.lines || []).forEach((line) => {
-      if (!names.has(String(line.equipment || '').trim().toLowerCase())) return;
-      if (!latest || report.date >= latest.date) latest = { date: report.date, rawStatus: line.status };
-    });
-  });
-  if (!latest) return null;
-  // A generic “Not Active” report says the machine did not work, but does not
-  // say whether it was broken, in repair, or simply idle. Retain a specific
-  // Fleet condition only if that condition was recorded by the viewed date.
-  const savedDate = String(item.updatedAt || '').slice(0, 10);
-  const savedCondition = savedDate && savedDate <= asOfDate
-    && ['Down', 'Under Maintenance'].includes(item.fleetStatus) ? item.fleetStatus : '';
-  return {
-    status: latest.rawStatus === 'Breakdown' ? 'Down'
-      : latest.rawStatus === 'Under Maintenance' ? 'Under Maintenance'
-      : latest.rawStatus === 'Not Active' ? (savedCondition || 'Idle') : 'Active',
-    date: latest.date,
-    source: latest.rawStatus === 'Not Active' && savedCondition ? 'Fleet condition' : 'Machine status report',
-  };
+  return machineStateAsOf(item, asOfDate, store.get('machineStatusReports'));
 }
 
 function lastMaintenanceFor(name) {
