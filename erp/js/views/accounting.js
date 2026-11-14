@@ -1,3 +1,4 @@
+import { selectableProjects, selectableMachines } from '../selectionOptions.js';
 import { renderRequestPayments } from './requestPayments.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
@@ -16,11 +17,11 @@ import { amountOutstanding } from '../loanPayments.js';
 import { renderBudgets } from './budgets.js';
 
 function projectOptions() {
-  return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
+  return selectableProjects(store.get('projects')).map((p) => ({ value: p.name, label: p.name }));
 }
 
 function equipmentOptions() {
-  const items = store.get('inventory').filter((i) => ['Heavy Equipment', 'Tools', 'Vehicles'].includes(i.category));
+  const items = selectableMachines(store.get('inventory')).filter((i) => ['Heavy Equipment', 'Tools', 'Vehicles'].includes(i.category));
   return [{ value: '', label: '— Not linked to equipment —' }, ...items.map((i) => ({ value: i.name, label: i.name }))];
 }
 
