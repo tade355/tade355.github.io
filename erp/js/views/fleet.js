@@ -177,7 +177,6 @@ function fleetFields() {
       { value: 'Active', label: 'Active' },
       { value: 'Under Maintenance', label: 'Under Maintenance' },
       { value: 'Idle', label: 'Idle' },
-      { value: 'Down', label: 'Down' },
     ] },
     { name: 'hourlyRate', label: 'Hourly Rate (₦) — internal operating cost/value used for project profitability', type: 'number', required: true, min: 0 },
     { name: 'rentalRatePerDay', label: 'Rental Rate/Day (₦) — Partnership or Rented dozers', type: 'number', min: 0 },
@@ -379,12 +378,12 @@ export function renderFleet(container) {
         fleetStatus: reportedFleetStatusFor(item, asOf)?.status || 'Unreported',
         lastStatusReportDate: reportedFleetStatusFor(item, asOf)?.date || '',
       }));
-      const priority = { Down: 0, 'Under Maintenance': 1, Idle: 2, Active: 3, Unreported: 4 };
+      const priority = { 'Under Maintenance': 0, Idle: 1, Active: 2, Unreported: 3 };
       const rows = withStatus.sort((a,b) => (priority[a.fleetStatus] ?? 4) - (priority[b.fleetStatus] ?? 4) || a.name.localeCompare(b.name, undefined, { numeric: true }));
       const companyCount = rows.filter((r) => r.ownership === 'Company' || !r.ownership).length;
       const partnershipCount = rows.filter((r) => r.ownership === 'Partnership').length;
       const rentedCount = rows.filter((r) => r.ownership === 'Rented').length;
-      const downCount = rows.filter((r) => r.fleetStatus === 'Down' || r.fleetStatus === 'Under Maintenance').length;
+      const maintenanceCount = rows.filter((r) => r.fleetStatus === 'Under Maintenance').length;
       const dueForServiceCount = rows.filter((r) => serviceStatusFor(r).status !== 'OK').length;
 
       summarySlot.innerHTML = '';
@@ -393,7 +392,7 @@ export function renderFleet(container) {
         statCard({ label: 'Company Owned', value: String(companyCount) }),
         statCard({ label: 'Partnership', value: String(partnershipCount) }),
         statCard({ label: 'Rented', value: String(rentedCount) }),
-        statCard({ label: 'Down / Under Maintenance', value: String(downCount), tone: downCount ? 'warning' : 'good' }),
+        statCard({ label: 'Under Maintenance', value: String(maintenanceCount), tone: maintenanceCount ? 'warning' : 'good' }),
         statCard({ label: 'Due for Service', value: String(dueForServiceCount), tone: dueForServiceCount ? 'warning' : 'good' }),
       ]);
       summarySlot.appendChild(grid);
@@ -447,7 +446,7 @@ export function renderFleet(container) {
         ],
         rows,
         emptyText: 'No fleet assets yet.',
-        rowClass: (r) => (r.fleetStatus === 'Down' ? 'row-critical' : r.fleetStatus === 'Under Maintenance' ? 'row-warning' : undefined),
+        rowClass: (r) => (r.fleetStatus === 'Under Maintenance' ? 'row-warning' : undefined),
       });
     }
 
