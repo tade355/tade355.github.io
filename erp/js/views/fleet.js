@@ -141,13 +141,23 @@ export function reportedStatusAsOf(asOfDate) {
 // A dated report is the source of operational status. The roster displays the
 // latest reported state; historical dashboards use the same lookup as of their day.
 export function reportedFleetStatusFor(item, asOfDate) {
-  const status = reportedStatusAsOf(asOfDate)[item.name];
-  if (!status) return null;
+  const names = new Set([item.name, item.assetCode, item.sku].filter(Boolean).map((name) => String(name).trim().toLowerCase()));
+  // EMG-005 was previously recorded as BIG-001 / Big Fish.
+  if (String(item.name).toUpperCase() === 'EMG-005') ['big-001', 'big-01', 'big 01', 'big fish'].forEach((name) => names.add(name));
+  let latest = null;
+  store.get('machineStatusReports').forEach((report) => {
+    if (report.date > asOfDate) return;
+    (report.lines || []).forEach((line) => {
+      if (!names.has(String(line.equipment || '').trim().toLowerCase())) return;
+      if (!latest || report.date >= latest.date) latest = { date: report.date, rawStatus: line.status };
+    });
+  });
+  if (!latest) return null;
   return {
-    status: status === 'Breakdown' ? 'Down'
-      : status === 'Under Maintenance' ? 'Under Maintenance'
-      : status === 'Not Active' ? 'Idle' : 'Active',
-    reported: true,
+    status: latest.rawStatus === 'Breakdown' ? 'Down'
+      : latest.rawStatus === 'Under Maintenance' ? 'Under Maintenance'
+      : latest.rawStatus === 'Not Active' ? 'Idle' : 'Active',
+    date: latest.date,
   };
 }
 
@@ -383,6 +393,7 @@ export function renderFleet(container) {
       const withStatus = fleetItems().map((item) => ({
         ...item,
         fleetStatus: reportedFleetStatusFor(item, asOf)?.status || 'Unreported',
+        lastStatusReportDate: reportedFleetStatusFor(item, asOf)?.date || '',
       }));
       const priority = { Down: 0, 'Under Maintenance': 1, Idle: 2, Active: 3, Unreported: 4 };
       const rows = withStatus.sort((a,b) => (priority[a.fleetStatus] ?? 4) - (priority[b.fleetStatus] ?? 4) || a.name.localeCompare(b.name, undefined, { numeric: true }));
@@ -410,6 +421,7 @@ export function renderFleet(container) {
           { key: 'ownership', label: 'Ownership', render: (r) => statusPill(r.ownership || 'Company') },
           { key: 'ownerName', label: 'Owner', render: (r) => (r.ownership && r.ownership !== 'Company' ? (r.ownerName || '—') : '—') },
           { key: 'fleetStatus', label: 'Status', render: (r) => statusPill(r.fleetStatus || 'Unreported') },
+          { key: 'lastStatusReportDate', label: 'Reported On', render: (r) => r.lastStatusReportDate ? formatDate(r.lastStatusReportDate) : '—' },
           { key: 'currentProject', label: 'Current Project', render: (r) => r.currentProject || '—' },
           { key: 'assignedStaffId', label: 'Custodian', render: (r) => store.find('employees', r.assignedStaffId)?.name || '—' },
           { key: 'deployedTo', label: 'Deployed To', render: (r) => r.deployedTo || r.location || '—' },
