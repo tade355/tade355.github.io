@@ -9,6 +9,8 @@ import { DASHBOARD_BASIS_FROM, onDashboardBasis, dozerCostFor, DIESEL_LOGISTICS_
 import { isSunday, addDays, requestSubmissionDate, rexFortnightStart } from './dateUtils.js';
 import { buildAttention } from './attention.js';
 import { fuelEfficiency, NORM_LITRES_PER_HA } from './fuelEfficiency.js';
+import { mergeDieselReceipts } from './dieselSupply.js';
+import { siteFuelIssues } from './fuelLedger.js';
 
 import { EXPECTED_HA_PER_8HRS, IDEAL_START, DIESEL_FILL_LITRES, LATE_FLAG_MINUTES } from './rules.js';
 
@@ -134,14 +136,20 @@ export function buildDailyDashboard(ctx) {
   const usedToday = sum(dayOps, (o) => o.fuelUsed);
   const dieselRate = ctx.dieselRateAsOf(date);
   const counts = ctx.dieselStockCounts.filter((c) => (allProjects || recordProject(c) === project) && c.date <= date).sort((a, b) => (a.date < b.date ? 1 : -1));
-  const latestCount = counts[0] || null;
-  // The last stock count rolled forward to the viewed day: plus site diesel
-  // collected since, minus diesel distributed to dozers since. (A count made on
-  // the viewed day itself is used as it is.)
-  const afterCount = (x) => !!latestCount && x.date > latestCount.date && x.date <= date;
-  const rolledIn = latestCount ? sum(scopedCollections.filter((c) => afterCount(c) && ago(c) && !soldNote(c)), (c) => c.litres) : 0;
-  const rolledOut = latestCount ? sum(dist.filter(afterCount), (d) => d.litres) : 0;
-  const onGround = latestCount ? Math.max(0, latestCount.countedLitres + rolledIn - rolledOut) : null;
+  const latestCount = allProjects ? null : counts[0] || null;
+  // Use the same receipt and issue ledger as Resource Management. A missing
+  // physical count makes this a provisional movement balance, not zero stock.
+  const stockReceipts = mergeDieselReceipts({
+    receipts: ctx.dieselReceipts || [],
+    collections: ctx.fuelCreditCollections,
+    operations: ctx.operations,
+  }).filter((r) => (allProjects || r.project === project) && r.date <= date);
+  const stockIssues = siteFuelIssues(ctx.distributions, ctx.operations)
+    .filter((r) => (allProjects || r.project === project) && r.date <= date);
+  const afterCount = (x) => !!latestCount && x.date > latestCount.date;
+  const rolledIn = sum(stockReceipts.filter((r) => !latestCount || afterCount(r)), (r) => r.litres);
+  const rolledOut = sum(stockIssues.filter((r) => !latestCount || afterCount(r)), (r) => r.litres);
+  const onGround = (latestCount ? Number(latestCount.countedLitres || 0) : 0) + rolledIn - rolledOut;
   // The diesel chain starts on the "since" date with each dozer at zero, the
   // way the dashboards track it (opening = previous closing + diesel
   // distributed, used = standard litres, closing = opening − used). Diesel
