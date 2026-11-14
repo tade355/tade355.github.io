@@ -117,7 +117,7 @@ export function renderMachineStatusReport(container) {
     formContainer.appendChild(rowsContainer);
     function renderProjectMachines() {
       rowsContainer.replaceChildren();
-      rowEls = fleetItems().filter((item) => item.currentProject === projectSelect.value).map((item) => {
+      rowEls = selectableMachines(fleetItems()).filter((item) => item.currentProject === projectSelect.value).map((item) => {
         const existing = linesByEquipment[item.name];
         const statusSelect = selectEl(statusOptions, existing?.status || '');
         const notesInput = el('input', { type: 'text', placeholder: 'Notes (fault details, etc.)' });
