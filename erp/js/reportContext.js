@@ -36,7 +36,7 @@ export function dailyDashboardForCurrentUser(project, date, since = DASHBOARD_BA
     ? ctx.operations.filter((o) => assignedProject && o.siteName === assignedProject)
     : own;
   const scopedProject = tier === 'Supervisor' && assignedProject ? assignedProject : project;
-  return buildDailyDashboard({ ...ctx, project: scopedProject, operations: scoped, employees: ctx.employees.filter((e) => e.id === getCurrentUserId() || (assignedProject && e.assignedProject === assignedProject)), fundRequests: [], expenses: [], fuelCreditCollections: [], fuelCreditPayments: [], dieselStockCounts: [], invoices: [], purchaseOrders: [], loans: [], invoicePayments: [], scopedView: true, date, since: since <= date ? since : date });
+  return buildDailyDashboard({ ...ctx, project: scopedProject, operations: scoped, employees: ctx.employees.filter((e) => e.id === getCurrentUserId() || (assignedProject && e.assignedProject === assignedProject)), fundRequests: [], expenses: [], fuelCreditCollections: [], fuelCreditPayments: [], dieselReceipts: [], dieselStockCounts: [], invoices: [], purchaseOrders: [], loans: [], invoicePayments: [], scopedView: true, date, since: since <= date ? since : date });
 }
 
 export function liveContext(project) {
@@ -48,6 +48,7 @@ export function liveContext(project) {
     inventory: store.get('inventory'),
     employees: store.get('employees'),
     distributions: store.get('dieselSiteDistributions'),
+    dieselReceipts: store.get('dieselReceipts'),
     fuelCreditCollections: store.get('fuelCreditCollections').map(c=>c.workflowId?{...c,litres:c.deliveredLitres??c.litres}:c),
     fuelCreditPayments: store.get('fuelCreditPayments'),
     fundRequests: store.get('fundRequests'),
