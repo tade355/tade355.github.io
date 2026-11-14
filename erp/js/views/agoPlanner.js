@@ -1,3 +1,4 @@
+import { selectableProjects } from '../selectionOptions.js';
 import { submitFuelPlan } from './fuelWorkflow.js';
 import { fuelRequirement } from '../fuelWorkflow.js';
 // AGO Planner (Resource Management → Diesel Management): works out how much
@@ -41,7 +42,7 @@ export function renderAgoPlanner(container) {
   container.appendChild(sectionHeader('Planner', 'Plan the diesel to supply for the next working day, download it, and raise the fueling vouchers at the station'));
 
   const today = todayISOString();
-  const projects = filterByProject(store.get('projects'), 'name').map(p=>p.name);
+  const projects = filterByProject(selectableProjects(store.get('projects')), 'name').map(p=>p.name);
   const station0 = [...store.get('fuelCreditCollections')].sort((a, b) => (a.date < b.date ? 1 : -1))[0]?.station || 'Midejab Ltd';
 
   // ----------------------------------------------------------------- inputs
