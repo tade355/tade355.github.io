@@ -1,12 +1,12 @@
 import { supabase } from '../supabaseClient.js';
 import { store } from '../store.js';
-import { getCurrentUserId } from '../session.js';
+import { canViewStaffActivity } from '../session.js';
 import { el,formatDate } from '../utils.js';
 import { sectionHeader,renderTable,statCard } from '../ui.js';
 const when=value=>new Date(value).toLocaleString('en-GB',{timeZone:'Africa/Lagos',day:'2-digit',month:'short',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit',hour12:true});
 export function renderUsageMonitor(container) {
  container.replaceChildren();
- if(getCurrentUserId()!=='EMP-26'){container.appendChild(el('p',{},'This monitor is reserved for Olumide.'));return;}
+ if(!canViewStaffActivity()){container.appendChild(el('p',{},'You do not have access to this monitor.'));return;}
  container.appendChild(sectionHeader('Staff Activity Monitor','Visits, modules and estimated active time · Nigeria time (WAT)'));
  const from=el('input',{type:'date','aria-label':'From date'});from.value=new Date(Date.now()-6*86400000).toISOString().slice(0,10);
  const to=el('input',{type:'date','aria-label':'To date'});to.value=new Date().toISOString().slice(0,10);
