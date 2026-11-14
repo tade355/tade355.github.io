@@ -351,7 +351,7 @@ export function buildDailyDashboard(ctx) {
 
   // ------------------------------------------------------------------- flags
   const flags = [];
-  if(cumStats.provisionalReportedCosts)flags.push({tone:'warning',text:'Profit includes reported costs awaiting CEO approval: ₦'+cumStats.provisionalReportedCosts.toLocaleString()+'. Review the Fuel & Earlier Costs tab.'});
+  if(cumStats.provisionalReportedCosts)flags.push({tone:'warning',text:'Profit includes provisional costs awaiting approval: ₦'+cumStats.provisionalReportedCosts.toLocaleString()+'. Review pending fund requests and reported costs.'});
   const fmt = (n) => `${n < 0 ? '−' : ''}₦${Math.round(Math.abs(n)).toLocaleString()}`;
   if (dayOps.length && todayStats.opsProfit < 0) {
     const below = contribution.filter((c) => c.outputPct !== null && c.breakEvenPct !== null && c.outputPct < c.breakEvenPct);
