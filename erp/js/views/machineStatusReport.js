@@ -50,8 +50,8 @@ async function syncMaintenanceLogFor(equipment, status, date, notes) {
     await store.add('maintenanceLogs', {
       date,
       equipment,
-      type: 'Breakdown',
-      description: notes || 'Reported as Breakdown on the daily machine status report.',
+      type: status === 'Under Maintenance' ? 'Repair' : 'Breakdown',
+      description: notes || `Reported as ${status} on the daily machine status report.`,
       cost: 0,
       status: 'In Progress',
     });
