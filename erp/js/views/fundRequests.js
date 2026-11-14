@@ -388,7 +388,7 @@ function renderManagerImprests(container) {
       const detail = el('div');
       renderTable(detail, { columns: [
         { key: 'id', label: 'Batch' }, { key: 'project', label: 'Project' }, { key: 'incurredDate', label: 'Cost date' },
-        { key: 'description', label: 'Purpose / providers' }, { key: 'status', label: 'Status' },
+        { key: 'description', label: 'Purpose' }, { key: 'providers', label: 'Providers to pay' }, { key: 'status', label: 'Status' },
         { key: 'requested', label: 'Reported' }, { key: 'approved', label: 'Approved' },
         { key: 'paid', label: 'Paid' }, { key: 'outstanding', label: 'Still owed' },
       ], rows: wallet.batches.map(batch => ({ ...batch, incurredDate: formatDate(batch.incurredDate), requested: formatCurrency(batch.requested), approved: formatCurrency(batch.approved), paid: formatCurrency(batch.paid), outstanding: formatCurrency(batch.outstanding) })) });
