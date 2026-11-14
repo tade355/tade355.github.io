@@ -394,7 +394,7 @@ export function buildDashboardHtml(d, { expectedHaPer8 = 1.3, idealStart = '7:00
   ];
   const flagRow = 'style="font-weight:700;background:var(--serious-bg)"';
   const goodRow = 'style="font-weight:700;background:var(--good-bg)"';
-  const lineRows = lineDefs.map(([l, k, b]) => `      <tr><td>${l}</td><td class="num">${fmt(t[k])}</td><td class="num">${fmt(c[k])}</td><td>${b}</td></tr>`);
+  const lineRows = lineDefs.map(([l, k, b]) => `      <tr><td>${l}</td><td class="num">${fmt(t[k] ?? 0)}</td><td class="num">${fmt(c[k] ?? 0)}</td><td>${b}</td></tr>`);
   const otherT = t.otherCost - t.supervisorSundayAllowance; const otherC = c.otherCost - c.supervisorSundayAllowance;
   if (Math.abs(otherT) > 0.5 || Math.abs(otherC) > 0.5) lineRows.splice(4, 0, `      <tr><td>Other costs (earlier rules)</td><td class="num">${fmt(otherT)}</td><td class="num">${fmt(otherC)}</td><td>Requests, manager Sunday allowance (before 10 Oct 2026)</td></tr>`);
   lineRows.push(`      <tr ${flagRow}><td>Operations Profit</td><td class="num">${signed(t.opsProfit)}</td><td class="num">${signed(c.opsProfit)}</td><td>Revenue less all costs above</td></tr>`);
@@ -705,3 +705,5 @@ export function dashboardFileName(dateISO) {
   const [y, m, d] = dateISO.split('-').map(Number);
   return `Daily_Dashboard_${d}${MONTHS[m - 1].slice(0, 3)}${y}.html`;
 }
+
+
