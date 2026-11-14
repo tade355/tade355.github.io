@@ -17,7 +17,8 @@ begin
   if actor.id is null or actor.status is distinct from 'Active' then raise exception 'An active staff login is required'; end if;
   select * into r from public.fuel_workflows where id=p_id for update;
   if not found or r.kind<>'Cost' then raise exception 'Earlier-cost request not found'; end if;
-  if actor.id<>r.requested_by and actor.access_tier not in ('Admin','Accounts') then raise exception 'Only the submitter or Accounts may record provider payouts'; end if;
+  if actor.id<>r.requested_by and coalesce(actor.access_tier,'') not in ('Admin','Accounts') then raise exception 'Only the submitter or Accounts may record provider payouts'; end if;
+  if r.status not in ('Partially Paid','Paid') then raise exception 'Record payment to the manager before a provider payout'; end if;
   if nullif(p_token,'') is null or nullif(trim(p_provider),'') is null or nullif(trim(p_reference),'') is null
     or p_amount is null or p_amount<=0 or p_date is null or p_date>business_today then
     raise exception 'Enter provider, positive amount, actual date and reference';
