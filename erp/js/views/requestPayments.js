@@ -61,13 +61,23 @@ export function renderRequestPayments(container) {
         el('button',{type:'button',class:'btn btn-primary',onClick:()=>{
           if(!recipient.accountNumber||!recipient.bankName){window.alert('Recipient bank details are incomplete. Resolve these before payment.');return;}
           openModal({title:'Record completed payment · '+r.id,fields:[
+            {name:'amount',label:'Amount actually transferred (₦)',type:'number',min:0,required:true},
             {name:'paidAt',label:'Payment date',type:'date',required:true},
             {name:'paymentReference',label:'Bank transfer reference / receipt reference',required:true},
-          ],initial:{paidAt:todayISOString()},submitLabel:'Confirm payment recorded',
+          ],initial:{amount:due,paidAt:todayISOString()},submitLabel:'Confirm payment recorded',
           onSubmit:async(data)=>{
             const current=store.find('fundRequests',r.id);
             if(!current||!['Approved','Partially Approved'].includes(current.status)) throw new Error('This request has already changed. Refresh before recording payment.');
-            const saved=await store.update('fundRequests',r.id,{status:'Paid',paidAt:data.paidAt,paidAmount:approved,paymentReference:data.paymentReference});
+            const totalApproved=Number(current.approvedAmount??(current.items||[]).reduce((sum,item)=>sum+Number(item.amount||0),0));
+            const previousPaid=Number(current.paidAmount||0);
+            const amount=Number(data.amount);
+            if(!Number.isFinite(amount)||amount<=0||amount>totalApproved-previousPaid+0.005) throw new Error('Enter a positive amount no greater than the remaining approved balance.');
+            await store.add('fundRequestPayments',{requestId:r.id,date:data.paidAt,amount,reference:data.paymentReference,notes:'Payment recorded in Finance & Accounts'});
+            const totalPaid=previousPaid+amount;
+            const saved=await store.update('fundRequests',r.id,{
+              status:totalPaid+0.005>=totalApproved?'Paid':'Approved',
+              paidAt:data.paidAt,paidAmount:totalPaid,paymentReference:data.paymentReference,
+            });
             notifyFundRequestDecision(saved,'Accounts').catch(()=>{});
             refresh();
           }});
