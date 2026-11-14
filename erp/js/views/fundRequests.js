@@ -1,3 +1,4 @@
+import { selectableProjects, selectableEmployees } from '../selectionOptions.js';
 import { requestSubmissionDate } from '../dateUtils.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
@@ -18,11 +19,11 @@ function costHeadOptions() {
 }
 
 function projectOptions() {
-  return store.get('projects').map((p) => ({ value: p.name, label: p.name }));
+  return selectableProjects(store.get('projects')).map((p) => ({ value: p.name, label: p.name }));
 }
 
 function employeeOptions() {
-  return store.get('employees').filter((e) => e.status !== 'Disengaged' && !e.archivedAt).map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
+  return selectableEmployees(store.get('employees')).filter((e) => e.status !== 'Disengaged' && !e.archivedAt).map((e) => ({ value: e.id, label: `${e.name} (${e.role})` }));
 }
 
 function employeeName(id) {
