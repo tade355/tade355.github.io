@@ -320,12 +320,13 @@ function renderDailyReconciliationTab(container) {
     if (unassigned.length) result.appendChild(el('p', { class: 'section-subtitle text-warning' },
       `${unassigned.length} delivery record(s) (${unassigned.reduce((n, r) => n + Number(r.litres || 0), 0).toLocaleString()} L) have no project. Assign them in Purchase & Supply before reconciliation.`));
     result.appendChild(el('h3', { class: 'subsection-title' }, 'Dozer accountability'));
-    result.appendChild(el('p', { class: 'section-subtitle' }, 'Reported closing can be auto-calculated in Daily Operations. Verify unusual figures with an actual tank reading and the work report before drawing conclusions.'));
+    result.appendChild(el('p', { class: 'section-subtitle' }, 'Reported closing can be auto-calculated in Daily Operations. Verify unusual figures with an actual tank reading and the work report. Site-count tolerance: 5 L or 2%, whichever is higher. Mark non-tank repair issues with “maintenance diesel” in the distribution notes and keep a supporting maintenance record.'));
     const table = el('div'); result.appendChild(table);
     renderTable(table, { columns: [
       { key: 'equipment', label: 'Dozer' },
       { key: 'opening', label: 'Opening in tank', render: (r) => r.opening === null ? '—' : `${r.opening.toLocaleString()} L` },
       { key: 'issued', label: 'Distribution log', render: (r) => `${r.issued.toLocaleString()} L` },
+      { key: 'otherUse', label: 'Non-tank issue', render: (r) => `${r.otherUse.toLocaleString()} L` },
       { key: 'reportIssued', label: 'Daily report supply', render: (r) => `${r.reportIssued.toLocaleString()} L` },
       { key: 'used', label: 'Used', render: (r) => `${r.used.toLocaleString()} L` },
       { key: 'expected', label: 'Expected closing', render: (r) => r.expected === null ? '—' : `${r.expected.toLocaleString()} L` },
