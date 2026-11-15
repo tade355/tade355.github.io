@@ -381,7 +381,7 @@ export function buildDashboardHtml(d, { expectedHaPer8 = 1.3, idealStart = '7:00
   const lineDefs = [
     ['Revenue', 'provisionalRevenue', 'Ha × ₦845,000/ha'],
     ['Diesel Cost', 'dieselCost', 'Litres used × diesel price'],
-    ['Diesel Logistics', 'logisticsCost', '₦50/L supplied (Company and Rented dozers)'],
+    ['Diesel Logistics', 'logisticsCost', 'Dated project diesel transport rate'],
     ['Operator Allowance', 'operatorAllowanceCost', 'Owned EMG operators, day rate per 8 hrs'],
     ['Supervisor Sunday Allowance', 'supervisorSundayAllowance', SUNDAY_BONUS_BASIS_TEXT],
     ['Dozer Cost — Owned', 'dozerOwned', 'Hours × hourly rate'],
