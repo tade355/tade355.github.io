@@ -462,7 +462,7 @@ function renderDailyReconciliationTab(container) {
       statCard({ label: 'To dozers', value: `${site.dozerIssued.toLocaleString()} L` }),
       statCard({ label: 'Other site uses', value: `${site.otherIssued.toLocaleString()} L` }),
       statCard({ label: 'Expected on ground', value: `${site.expected.toLocaleString()} L`, tone: site.expected < 0 ? 'critical' : undefined }),
-      statCard({ label: 'Physical count', value: site.measured === null ? 'Not recorded' : `${site.measured.toLocaleString()} L` }),
+      statCard({ label: 'Physical count', value: site.measured === null ? 'Not recorded' : `${site.measured.toLocaleString()} L`, hint: site.postCountSupply ? `Before ${site.postCountSupply.toLocaleString()} L delivery; closing is projected` : undefined }),
       statCard({ label: 'Site variance', value: site.variance === null ? 'Not verified' : `${site.variance.toLocaleString()} L`, hint: site.status, tone: site.status.includes('investigate') || site.status.includes('Over-allocated') ? 'critical' : undefined }),
     ]);
     result.appendChild(cards);
