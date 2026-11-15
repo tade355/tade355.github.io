@@ -1,5 +1,6 @@
 import { siteFuelIssues } from './fuelLedger.js';
 import { dieselUsedFor } from './constants.js';
+import { compareDieselReports, lastDieselReading } from './dieselReportChain.js';
 
 const litres = (value) => Number(value) || 0;
 const sum = (rows, key) => rows.reduce((total, row) => total + litres(row[key]), 0);
@@ -68,15 +69,16 @@ export function reconcileDozerDay({ project, date, distributions, operations, fl
     const nonTank = (row) => /not tank fuel|maintenance diesel/i.test(row.notes || '');
     const issued = sum(machineIssues.filter((row) => !nonTank(row)), 'litres');
     const otherUse = sum(machineIssues.filter(nonTank), 'litres');
-    const rows = reports.filter((row) => row.equipment === equipment);
+    const rows = reports.filter((row) => row.equipment === equipment).sort(compareDieselReports);
     const reportIssued = sum(rows, 'dieselSupplied');
     const hasExplicitIssue = distributions.some((row) => row.project === project && row.date === date && row.equipment === equipment);
     const used = sum(rows, 'fuelUsed');
     const asset = fleet.find((row) => row.name === equipment);
     const normative = rows.reduce((total, row) => total + dieselUsedFor(asset, row.operationType, litres(row.hoursWorked)), 0);
     const overConsumption = normative > 0 && used > Math.max(normative * 1.25, normative + 20);
-    const last = rows[rows.length - 1];
-    const opening = last?.openingDiesel == null ? null : litres(last.openingDiesel) - litres(last.dieselSupplied);
+    const last = lastDieselReading(rows) || rows[rows.length - 1];
+    const first = rows[0];
+    const opening = first?.openingDiesel == null ? null : litres(first.openingDiesel) - litres(first.dieselSupplied);
     const expected = opening === null ? null : opening + issued - used;
     const reported = last?.closingDiesel == null ? null : litres(last.closingDiesel);
     const variance = reported === null || expected === null ? null : reported - expected;
