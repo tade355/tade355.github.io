@@ -12,6 +12,7 @@ import { buildAttention } from './attention.js';
 import { fuelEfficiency, NORM_LITRES_PER_HA } from './fuelEfficiency.js';
 import { mergeDieselReceipts } from './dieselSupply.js';
 import { siteFuelIssues } from './fuelLedger.js';
+import { latestDieselStockCount } from './dieselReconciliation.js';
 
 import { EXPECTED_HA_PER_8HRS, IDEAL_START, DIESEL_FILL_LITRES, LATE_FLAG_MINUTES } from './rules.js';
 
@@ -129,8 +130,7 @@ export function buildDailyDashboard(ctx) {
   const otherUseToday = sum(otherSiteIssues.filter(aldDay), (d) => d.litres);
   const usedToday = sum(dayOps, (o) => o.fuelUsed);
   const dieselRate = ctx.dieselRateAsOf(date);
-  const counts = ctx.dieselStockCounts.filter((r) => !allProjects && recordProject(r) === project && r.date <= date).sort((a, b) => b.date.localeCompare(a.date));
-  const latestCount = counts[0] || null;
+  const latestCount = latestDieselStockCount(ctx.dieselStockCounts.filter((r) => !allProjects && recordProject(r) === project && r.date <= date));
   // Reconcile the same receipts and site issues used in Resource Management.
   // With no physical count, movement from zero is provisional, not a measured balance.
   const stockReceipts = mergeDieselReceipts({
