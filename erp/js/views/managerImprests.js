@@ -73,9 +73,11 @@ export function fundRequestImprestEntries(requests, payments, employees) {
     const recorded = payments.filter(payment => payment.requestId === request.id);
     const credits = recorded.length ? recorded : Number(request.paidAmount || 0) > 0
       ? [{ id: `${request.id}:paid`, date: request.paidAt, amount: request.paidAmount, reference: request.paymentReference }] : [];
+    const requestTotal = items.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const remaining = Math.max(0, requestTotal - credits.reduce((sum, payment) => sum + Number(payment.amount || 0), 0));
     credits.forEach((payment, index) => entries.push({ id: `${request.id}:payment:${payment.id || index}`,
       managerId: manager.id, managerName: manager.name, date: payment.date || request.paidAt || request.date,
-      project: request.project, site: '', allocation: '', purpose: `Payment to ${manager.name} for ${request.id}`,
+      project: request.project, site: '', allocation: '', purpose: `Payment to ${manager.name} for ${request.id} · FR-195 remaining ${formatCurrency(remaining)}`,
       category: '', sourceOfCredit: payment.reference || payment.notes || request.paymentReference || '',
       debit: 0, credit: Number(payment.amount || 0), categoryAmounts: {}, reference: request.id,
       status: 'Paid', source: 'Fund request payment (existing)', order: 2 }));
