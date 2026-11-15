@@ -18,13 +18,16 @@ export function reconcileSiteDay({ project, date, receipts, distributions, opera
     + sum(siteReceipts.filter((row) => row.date < date && sincePrior(row)), 'litres')
     - sum(issues.filter((row) => row.date < date && sincePrior(row)), 'litres');
   const supplied = sum(siteReceipts.filter((row) => row.date === date), 'litres');
-  const distributed = sum(issues.filter((row) => row.date === date), 'litres');
+  const dayIssues = issues.filter((row) => row.date === date);
+  const dozerIssued = sum(dayIssues.filter((row) => !!row.equipment), 'litres');
+  const otherIssued = sum(dayIssues.filter((row) => !row.equipment), 'litres');
+  const distributed = dozerIssued + otherIssued;
   const expected = opening + supplied - distributed;
   const measured = count ? litres(count.countedLitres) : null;
   const variance = measured === null ? null : measured - expected;
   const tolerance = Math.max(5, Math.abs(expected) * 0.02);
   return {
-    project, date, opening, supplied, distributed, expected, measured, variance,
+    project, date, opening, supplied, distributed, dozerIssued, otherIssued, expected, measured, variance,
     verified: !!prior, lastCountDate: prior?.date || null,
     status: expected < -tolerance ? 'Over-allocated — review records'
       : !prior && variance !== null && Math.abs(variance) > tolerance ? 'Provisional variance — verify opening'
@@ -36,7 +39,7 @@ export function reconcileSiteDay({ project, date, receipts, distributions, opera
 }
 
 export function reconcileDozerDay({ project, date, distributions, operations, fleet = [] }) {
-  const issues = siteFuelIssues(distributions, operations).filter((row) => row.project === project && row.date === date);
+  const issues = siteFuelIssues(distributions, operations).filter((row) => row.project === project && row.date === date && row.equipment);
   const reports = operations.filter((row) => row.siteName === project && row.date === date);
   const machines = [...new Set([...issues.map((row) => row.equipment), ...reports.map((row) => row.equipment)])].filter(Boolean);
   return machines.map((equipment) => {
