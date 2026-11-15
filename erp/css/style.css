@@ -1869,3 +1869,25 @@ a.btn { text-decoration: none; }
 @media (max-width: 580px) {
   .dashboard-priority-grid, .dashboard-support-grid { grid-template-columns: 1fr; }
 }
+
+/* Readable dashboard trend cards and accessible full-size chart view. */
+.dashboard-charts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 1.25rem; }
+.dashboard-chart-host { min-width: 0; }
+.dashboard-chart-host .chart-card { padding: 1.3rem 1.35rem 1rem; min-height: 360px; }
+.dashboard-chart-host .chart-title { font-size: 1.08rem; padding-right: 9rem; }
+.dashboard-chart-host .chart-subtitle { font-size: 0.86rem; padding-right: 9rem; }
+.dashboard-chart-host .chart-legend { max-height: 4.8rem; overflow: auto; }
+.dashboard-chart-expand { position: absolute; top: 0.9rem; right: 1rem; font-size: 0.8rem; }
+.dashboard-chart-dialog { width: min(96vw, 1050px); max-height: 92vh; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-1); color: var(--text-primary); padding: 1.2rem; overflow: auto; }
+.dashboard-chart-dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+.dashboard-chart-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.8rem; }
+.dashboard-chart-dialog-head h2 { margin: 0; }
+.dashboard-chart-full .chart-card { border: 0; padding: 0; }
+.dashboard-chart-full .chart-title { display: none; }
+.dashboard-chart-full .chart-legend { max-height: 7rem; overflow: auto; }
+.dashboard-chart-table-wrap { overflow: auto; margin-top: 1rem; }
+.dashboard-chart-data { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.dashboard-chart-data th, .dashboard-chart-data td { padding: 0.55rem 0.7rem; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.dashboard-chart-data th { color: var(--text-secondary); }
+@media (max-width: 900px) { .dashboard-charts-grid { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .dashboard-chart-host .chart-title, .dashboard-chart-host .chart-subtitle { padding-right: 0; } .dashboard-chart-expand { position: static; margin: 0.5rem 0; } .dashboard-chart-dialog { padding: 0.7rem; } }
