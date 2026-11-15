@@ -216,3 +216,9 @@ test('current status overrides stale roster condition for fueling', () => {
  inventory:[{name:'EMG-1',category:'Heavy Equipment',currentProject:P,fleetStatus:'Under Maintenance'}]}));
  assert.equal(d.fleet[0].fleetStatus,'Active');assert.ok(d.diesel.fuelingChoices.some(r=>r.equipment==='EMG-1'));
 });
+
+test('daily fleet status is unreported without a dated machine report', () => {
+  const d = buildDailyDashboard(ctx({ machineStatusReports: [] }));
+  assert.equal(d.fleet[0].fleetStatus, 'Unreported');
+  assert.ok(d.diesel.fuelingChoices.some((row) => row.equipment === 'EMG-1'));
+});

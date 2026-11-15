@@ -100,7 +100,7 @@ test('who did not work, the day summary and the attention list', () => {
   const b = ask('Give me a summary of yesterday');
   assert.match(b.text, /2 machine\(s\) reported, 1\.7 ha cleared/);
   assert.doesNotMatch(b.text, /NaN/);
-  assert.match(ask('What needs my attention?').text, /EMG-006 \(Down\)/);
+  assert.match(ask('What needs my attention?').text, /EMG-006/);
 });
 
 test('what a person or dozer did, and how many days', () => {

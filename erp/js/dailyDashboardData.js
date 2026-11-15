@@ -69,7 +69,10 @@ export function buildDailyDashboard(ctx) {
   // latest operation logged on or before that date.
   const equipmentProjectAsOf = (name) => machineProjectAsOf(invByName.get(name) || { name }, date,
     ctx.operations.map(o => ({ ...o, equipment: currentDozerName(o.equipment) })), ctx.machineStatusReports || [], ctx.today || '', KNOWN_PROJECT_REDEPLOYMENTS[name]);
-  const fleetState = (item) => machineStateAsOf(item, date, ctx.machineStatusReports || [])?.status || item.fleetStatus || 'Active';
+  const fleetState = (item) => machineStateAsOf(item, date, ctx.machineStatusReports || [])?.status || 'Unreported';
+  // The fueling planner may suggest a newly assigned machine before its first
+  // status report, but the daily dashboard must not call that status reported.
+  const planningState = (item) => machineStateAsOf(item, date, ctx.machineStatusReports || [])?.status || item.fleetStatus || 'Active';
   const equipmentBelongs = (name) => allProjects || equipmentProjectAsOf(name) === project;
   const empName = (id) => ctx.employees.find((e) => e.id === id)?.name || null;
 
@@ -184,7 +187,7 @@ export function buildDailyDashboard(ctx) {
   // BIG-001 is the former fleet name for EMG-005; historical fuel rows can
   // still supply its closing balance, but the checklist uses the current name.
   const activeRequestFleet = inv.filter((i) => {
-    if (fleetState(i) !== 'Active') return false;
+    if (planningState(i) !== 'Active') return false;
     if (i.name === 'BIG-001' && inv.some((item) => item.name === 'EMG-005')) return false;
     return equipmentBelongs(i.name);
   });
