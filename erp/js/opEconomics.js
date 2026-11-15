@@ -3,7 +3,7 @@
 // reports can group them by dozer, operator, supervisor or day.
 //
 // Pure: everything comes in through `ctx` (see reportContext.js).
-import { onDashboardBasis, dozerCostFor, DIESEL_LOGISTICS_PER_LITRE } from './dashboardBasis.js';
+import { onDashboardBasis, dozerCostFor, dieselLogisticsCost } from './dashboardBasis.js';
 
 export const EXPECTED_HA_PER_8HRS = 1.3;
 
@@ -33,7 +33,7 @@ export function economicsByOp(ctx, project, ops) {
     const key = `${o.date}|${o.equipment}`;
     if (onDashboardBasis(o.date) && ownership !== 'Partnership' && !assigned.has(key)) {
       const litres = dist.filter((d) => d.date === o.date && d.equipment === o.equipment).reduce((s, d) => s + (d.litres || 0), 0);
-      logistics = litres * DIESEL_LOGISTICS_PER_LITRE;
+      logistics = dieselLogisticsCost(litres, project, o.date);
       assigned.add(key);
     }
     const allowance = ctx.operatorAllowanceForRows([o]);
