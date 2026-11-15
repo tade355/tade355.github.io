@@ -56,12 +56,10 @@ drop trigger if exists validate_imprest_manager on public.fuel_workflows;
 create trigger validate_imprest_manager before insert or update of data on public.fuel_workflows
   for each row execute function public.validate_imprest_manager();
 
-drop policy if exists fuel_workflows_read on public.fuel_workflows;
-create policy fuel_workflows_read on public.fuel_workflows for select to authenticated using (
+drop policy if exists fuel_workflows_imprest_manager_read on public.fuel_workflows;
+create policy fuel_workflows_imprest_manager_read on public.fuel_workflows for select to authenticated using (
   exists(select 1 from public.employees actor where actor.auth_user_id=auth.uid()
-    and actor.status='Active' and (actor.access_tier in ('Admin','Accounts')
-      or actor.id=requested_by or actor.assigned_project=project
-      or actor.id=data->>'imprestManagerId'))
+    and actor.status='Active' and kind='Cost' and actor.id=data->>'imprestManagerId')
 );
 
 create or replace function public.import_manager_imprest_entries(p_entries jsonb)
