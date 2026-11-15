@@ -6,7 +6,7 @@ import { printDozerSettlement, printDozerRentalStatement } from '../print.js';
 import { getCurrentTier, getCurrentUserId } from '../session.js';
 import { dozerRatesAsOf } from '../rateHistory.js';
 import { currentOwnerSettlements } from '../rentSettlementBasis.js';
-import { officeRentalUsage, matchesRentalEquipment } from '../rentalHours.js';
+import { officeRentalUsage, matchesRentalEquipment, rentalDailyLedger } from '../rentalHours.js';
 
 function rentedDozers() {
   return store.get('inventory').filter((item) => item.ownership === 'Rented');
@@ -220,6 +220,39 @@ function renderRentalCreditLedger(container, refresh) {
       { key: 'print', label: '', render: (r) => el('button', { class: 'btn btn-ghost btn-sm', onClick: () => printDozerRentalStatement(r) }, 'Print Statement') },
     ], rows, emptyText: 'No rented dozers are configured yet.',
   });
+  if (canManage) {
+    container.appendChild(el('h3', { class: 'subsection-title' }, 'Daily Rental Depletion — Internal'));
+    container.appendChild(el('p', { class: 'section-subtitle' }, 'One rental day = 8 office hours. Business work is shown separately for management and does not reduce rental balance or appear on the owner statement.'));
+    const picker = el('select', {}, [
+      el('option', { value: '' }, 'All rented dozers'),
+      ...rows.map((r) => el('option', { value: r.equipment }, r.equipment)),
+    ]);
+    const dailyTable = el('div');
+    container.appendChild(el('div', { class: 'filter-bar' }, [el('label', { class: 'filter-field' }, [el('span', {}, 'Dozer'), picker])]));
+    container.appendChild(dailyTable);
+    const showDaily = () => {
+      const daily = rentedDozers().filter((d) => !picker.value || d.name === picker.value)
+        .flatMap((d) => rentalDailyLedger(store.get('operations'), store.get('dozerRentalCredits'), store.get('dozerRentalTransfers'), d.name)
+          .map((entry) => ({ ...entry, equipment: d.name })))
+        .sort((a, b) => b.date.localeCompare(a.date) || a.equipment.localeCompare(b.equipment));
+      renderTable(dailyTable, {
+        columns: [
+          { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
+          { key: 'equipment', label: 'Dozer' },
+          { key: 'paidDays', label: 'Days Paid', render: (r) => r.paidDays ? '+' + r.paidDays.toFixed(2) : '—' },
+          { key: 'officeHours', label: 'Office Hours', render: (r) => r.officeHours.toFixed(1) + ' hrs' },
+          { key: 'usedDays', label: 'Rental Used', render: (r) => r.usedDays.toFixed(2) + ' days' },
+          { key: 'businessHours', label: 'Business Hours', render: (r) => r.businessHours.toFixed(1) + ' hrs' },
+          { key: 'businessDays', label: 'Business Day', render: (r) => r.businessDays ? 'Yes' : 'No' },
+          { key: 'daysIn', label: 'Days In', render: (r) => r.daysIn ? '+' + r.daysIn.toFixed(2) : '—' },
+          { key: 'daysOut', label: 'Days Out', render: (r) => r.daysOut ? '-' + r.daysOut.toFixed(2) : '—' },
+          { key: 'balanceDays', label: 'Rental Left', render: (r) => r.balanceDays.toFixed(2) + ' days' },
+        ], rows: daily, emptyText: 'No rental payment or daily work recorded for these dozers yet.',
+      });
+    };
+    picker.addEventListener('change', showDaily);
+    showDaily();
+  }
   container.appendChild(el('h3', { class: 'subsection-title' }, 'Rental Payment & Transfer History'));
   const history = [
     ...store.get('dozerRentalCredits').map((r) => ({ ...r, entryDate: r.paymentDate, entryType: 'Payment', detail: r.daysPaid + ' days paid · ' + formatCurrency(r.amountPaid), movement: '+' + r.daysPaid })),
