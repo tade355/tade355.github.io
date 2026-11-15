@@ -61,7 +61,12 @@ export function renderManagerImprestImport(container, onImported) {
     preview.replaceChildren();
     const chosen = parsed.filter(sheet => selections.get(sheet.sheetName)?.checked);
     const incomplete = chosen.filter(sheet => !selections.get(sheet.sheetName)?.manager);
-    const unresolved = chosen.filter(sheet => sheet.variance && !selections.get(sheet.sheetName)?.reviewed);
+    const mismatchedNames = chosen.filter(sheet => {
+      const named = sheet.title.match(/\(([^)]+)\)/)?.[1];
+      const selectedManager = managers.find(person => person.id === selections.get(sheet.sheetName)?.manager);
+      return named && selectedManager && named.toLowerCase().replace(/[^a-z]/g, '') !== selectedManager.name.toLowerCase().replace(/[^a-z]/g, '');
+    });
+    const unresolved = chosen.filter(sheet => (sheet.variance || mismatchedNames.includes(sheet)) && !selections.get(sheet.sheetName)?.reviewed);
     const selected = selectedRows();
     const rows = selected.filter(row => !alreadyInERP(row));
     const overlapCount = selected.length - rows.length;
@@ -70,7 +75,7 @@ export function renderManagerImprestImport(container, onImported) {
     preview.append(el('p', {}, `${chosen.length} sheet(s), ${rows.length} transaction(s) · Debit ${formatCurrency(debits)} · Credit ${formatCurrency(credits)} · Net ${formatCurrency(credits - debits)}.`));
     if (incomplete.length) preview.append(el('p', { class: 'text-critical' }, 'Select an eligible manager for every chosen sheet.'));
     if (overlapCount) preview.append(el('p', {}, `${overlapCount} transaction(s) already appear in live earlier-cost or payment records and will be skipped.`));
-    if (unresolved.length) preview.append(el('p', { class: 'text-critical' }, 'Some selected sheets do not reconcile to their printed totals. Review and acknowledge each difference.'));
+    if (unresolved.length) preview.append(el('p', { class: 'text-critical' }, 'Some selected sheets have a different person named inside or do not reconcile to their printed totals. Review and acknowledge each difference.'));
     const seen = new Map();
     let repeats = 0;
     rows.forEach(row => {
@@ -133,10 +138,12 @@ export function renderManagerImprestImport(container, onImported) {
           el('p', {}, sheet.title || 'Untitled sheet'),
           el('p', {}, sheet.error || `${sheet.entries.length} dated rows · debit ${formatCurrency(debit)} · credit ${formatCurrency(credit)} · ${sheet.categories.join(', ') || 'row categories'}`));
         if (sheet.variance) {
+          line.append(el('p', { class: 'text-critical' }, `Workbook printed totals: debit ${formatCurrency(sheet.reportedOutflow)}, credit ${formatCurrency(sheet.reportedInflow)}. Dated rows differ by ${formatCurrency(sheet.variance)}. Check source formulas before importing.`));
+        }
+        if (sheet.variance || sheet.title.match(/\(([^)]+)\)/)) {
           const reviewed = el('input', { type: 'checkbox' });
           reviewed.addEventListener('change', () => { selections.get(sheet.sheetName).reviewed = reviewed.checked; renderPreview(); });
-          line.append(el('p', { class: 'text-critical' }, `Workbook printed totals: debit ${formatCurrency(sheet.reportedOutflow)}, credit ${formatCurrency(sheet.reportedInflow)}. Dated rows differ by ${formatCurrency(sheet.variance)}. Check source formulas before importing.`),
-            el('label', { class: 'imp-row' }, [reviewed, 'I reviewed this sheet’s difference and will import its dated transactions.']));
+          line.append(el('label', { class: 'imp-row' }, [reviewed, 'I verified the manager named inside this sheet and any difference from its printed totals.']));
         }
         if (sheet.error || !sheet.entries.length) { checked.disabled = true; manager.disabled = true; }
         sheetList.append(line);
