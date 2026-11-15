@@ -60,9 +60,14 @@ export function renderManagerImprests(container) {
   const employees = store.get('employees');
   const managers = employees.filter(managerIsImprestEligible).sort((a, b) => a.name.localeCompare(b.name));
   const managerFilter = el('select');
-  managerFilter.append(el('option', { value: '' }, 'All managers'));
-  managers.forEach(person => managerFilter.append(el('option', { value: person.id }, `${person.name} · ${person.role}`)));
-  if (!privileged) { managerFilter.value = getCurrentUserId(); managerFilter.disabled = true; }
+  if (privileged) {
+    managerFilter.append(el('option', { value: '' }, 'All managers'));
+    managers.forEach(person => managerFilter.append(el('option', { value: person.id }, `${person.name} · ${person.role}`)));
+  } else {
+    const self = managers.find(person => person.id === getCurrentUserId());
+    managerFilter.append(el('option', { value: getCurrentUserId() }, self?.name || 'My imprest'));
+    managerFilter.disabled = true;
+  }
   const reload = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Refresh ledger');
   const status = el('p', { class: 'section-subtitle' }, 'Earlier costs enter the Debit column on the incurred date. Actual payments to managers enter Credit; provider payouts are shown separately. A negative balance means the manager is owed.');
   const summary = el('div', { class: 'imp-row' });
