@@ -5,6 +5,19 @@ import { compareDieselReports, lastDieselReading } from './dieselReportChain.js'
 const litres = (value) => Number(value) || 0;
 const sum = (rows, key) => rows.reduce((total, row) => total + litres(row[key]), 0);
 
+// Blue Sky's 100 L count on 14 November was taken before Midejab delivered
+// 1,500 L later that day (confirmed by Admin on 15 November). The records
+// contain dates but no time-of-day, so retain this narrowly identified
+// pre-delivery count rather than treating it as the day's closing stock.
+const isPostCountReceipt = (count, row) => !!count
+  && count.project === 'Blue Sky Project - Ajue-Ore'
+  && count.date === '2026-11-14'
+  && litres(count.countedLitres) === 100
+  && row.project === count.project
+  && row.date === count.date
+  && litres(row.litres) === 1500
+  && /midejab/i.test(row.station || row.supplier || '');
+
 // Counts are end-of-day physical readings of the site's storage tank. An
 // uncounted running balance is an estimate, never evidence of missing fuel.
 export function latestDieselStockCount(rows) {
@@ -21,9 +34,8 @@ export function latestDieselStockCount(rows) {
 export function siteOnGroundAsOf({ project, date, receipts, distributions, operations, counts }) {
   const inProject = (row) => row.project === project && row.date <= date;
   const count = latestDieselStockCount(counts.filter(inProject));
-  const afterCount = (row) => !count || row.date > count.date;
-  const receivedSince = sum(receipts.filter((row) => inProject(row) && afterCount(row)), 'litres');
-  const issuedSince = sum(siteFuelIssues(distributions, operations).filter((row) => inProject(row) && afterCount(row)), 'litres');
+  const receivedSince = sum(receipts.filter((row) => inProject(row) && (!count || row.date > count.date || isPostCountReceipt(count, row))), 'litres');
+  const issuedSince = sum(siteFuelIssues(distributions, operations).filter((row) => inProject(row) && (!count || row.date > count.date)), 'litres');
   const countBase = count ? litres(count.countedLitres) : 0;
   return { onGround: countBase + receivedSince - issuedSince,
     countDate: count?.date || null, countBase, receivedSince, issuedSince };
@@ -36,7 +48,7 @@ export function reconcileSiteDay({ project, date, receipts, distributions, opera
   const count = latestDieselStockCount(counts.filter((row) => row.project === project && row.date === date));
   const sincePrior = (row) => !prior || row.date > prior.date;
   const opening = (prior ? litres(prior.countedLitres) : 0)
-    + sum(siteReceipts.filter((row) => row.date < date && sincePrior(row)), 'litres')
+    + sum(siteReceipts.filter((row) => row.date < date && (sincePrior(row) || isPostCountReceipt(prior, row))), 'litres')
     - sum(issues.filter((row) => row.date < date && sincePrior(row)), 'litres');
   const supplied = sum(siteReceipts.filter((row) => row.date === date), 'litres');
   const dayIssues = issues.filter((row) => row.date === date);
@@ -45,13 +57,15 @@ export function reconcileSiteDay({ project, date, receipts, distributions, opera
   const distributed = dozerIssued + otherIssued;
   const expected = opening + supplied - distributed;
   const measured = count ? litres(count.countedLitres) : null;
-  const variance = measured === null ? null : measured - expected;
+  const postCountSupply = count ? sum(siteReceipts.filter((row) => isPostCountReceipt(count, row)), 'litres') : 0;
+  const variance = measured === null ? null : measured + postCountSupply - expected;
   const tolerance = Math.max(5, Math.abs(expected) * 0.02);
   return {
-    project, date, opening, supplied, distributed, dozerIssued, otherIssued, expected, measured, variance,
+    project, date, opening, supplied, distributed, dozerIssued, otherIssued, expected, measured, postCountSupply, variance,
     onGround: siteOnGroundAsOf({ project, date, receipts, distributions, operations, counts }).onGround,
     verified: !!prior, lastCountDate: prior?.date || null,
-    status: expected < -tolerance ? 'Over-allocated — review records'
+    status: postCountSupply ? 'Pre-delivery count — closing projected'
+      : expected < -tolerance ? 'Over-allocated — review records'
       : !prior && variance !== null && Math.abs(variance) > tolerance ? 'Provisional variance — verify opening'
       : variance !== null && variance < -tolerance ? 'Shortage — investigate'
         : variance !== null && variance > tolerance ? 'Surplus — investigate'
