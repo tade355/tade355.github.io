@@ -268,3 +268,22 @@ test('two reports use the final chronological closing and carry it forward', () 
  assert.equal(day.opening,320);assert.equal(day.used,75);assert.equal(day.closing,245);
  assert.equal(buildDailyDashboard({...inputs,date:'2026-11-15'}).diesel.rows[0].opening,245);
 });
+
+test('dashboard distribution tile uses the same explicit-or-report issue as site stock', () => {
+  const inputs = ctx({
+    date: '2026-11-15',
+    operations: [op({ date: '2026-11-15', equipment: 'EMG-1', dieselSupplied: 200, fuelUsed: 0, hoursWorked: 0, quantity: 0 })],
+    distributions: [],
+    fuelCreditCollections: [],
+    dieselReceipts: [],
+    dieselStockCounts: [{ project: P, date: '2026-11-14', countedLitres: 1600 }],
+  });
+  const legacy = buildDailyDashboard(inputs);
+  assert.equal(legacy.diesel.distributedToday, 200);
+  assert.equal(legacy.diesel.onGround, 1400);
+  assert.equal(legacy.diesel.distributionChart[0].value, 200);
+  const explicit = buildDailyDashboard({ ...inputs,
+    distributions: [{ project: P, date: '2026-11-15', equipment: 'EMG-1', litres: 200 }] });
+  assert.equal(explicit.diesel.distributedToday, 200);
+  assert.equal(explicit.diesel.onGround, 1400);
+});
