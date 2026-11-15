@@ -1,4 +1,4 @@
-import { machineProjectAsOf, machineStateAsOf } from './selectionOptions.js';
+import { machineProjectAsOf, machineStateAsOf, selectableProjects } from './selectionOptions.js';
 // Data behind the Daily Operations Dashboard view (views/dailyDashboard.js):
 // the same six sections as the HTML Daily Operations Dashboards — Operations,
 // Diesel, Fleet, Requests & Expenses, Profitability, Staff Performance — plus
@@ -142,9 +142,13 @@ export function buildDailyDashboard(ctx) {
   }).filter((r) => (allProjects || r.project === project) && r.date <= date);
   const stockIssues = siteFuelIssues(ctx.distributions, ctx.operations)
     .filter((r) => (allProjects || r.project === project) && r.date <= date);
+  const activeSiteNames = ctx.projects?.length
+    ? new Set(selectableProjects(ctx.projects).map((row) => row.name))
+    : null;
   const siteNames = allProjects
     ? [...new Set([...stockReceipts, ...stockIssues, ...ctx.dieselStockCounts]
-      .filter((r) => r.project && r.date <= date).map((r) => r.project))]
+      .filter((r) => r.project && r.date <= date && (!activeSiteNames || activeSiteNames.has(r.project)))
+      .map((r) => r.project))]
     : [project];
   const siteStocks = siteNames.map((site) => siteOnGroundAsOf({
     project: site, date, receipts: stockReceipts, distributions: ctx.distributions,
