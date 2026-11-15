@@ -30,7 +30,7 @@ function addPayment(employeeId, date, amount, source) {
   return store.add('expenses', {
     date, amount, category: 'Salary and Allowance', payee: allowancePayeeFor(employeeId),
     description: `Operator allowance payment — ${source}`,
-    paidBy: 'Bank transfer', project: '',
+    paidBy: '', project: '',
   });
 }
 

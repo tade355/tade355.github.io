@@ -69,8 +69,8 @@ export const OWNED_OPERATOR_PAYEE_ALIASES_BY_EMPLOYEE = {
 const ALL_OWNED_OPERATOR_ALIASES = new Set(Object.values(OWNED_OPERATOR_PAYEE_ALIASES_BY_EMPLOYEE).flat());
 
 export function allowancePayeeFor(employeeId) {
-  return OWNED_OPERATOR_PAYEE_ALIASES_BY_EMPLOYEE[employeeId]?.[0]
-    || store.get('employees').find((e) => e.id === employeeId)?.name || '';
+  return store.get('employees').find((e) => e.id === employeeId)?.name
+    || OWNED_OPERATOR_PAYEE_ALIASES_BY_EMPLOYEE[employeeId]?.[0] || '';
 }
 
 function allowanceAliasesFor(employeeId) {
