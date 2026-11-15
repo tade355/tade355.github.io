@@ -112,7 +112,10 @@ export function buildDailyDashboard(ctx) {
   const todayHours = sum(dayOps, (o) => o.hoursWorked);
 
   // -------------------------------------------------------------------- diesel
-  const otherSiteIssues = ctx.distributions.filter((d) => belongsToProject(d.project) && !d.equipment);
+  const siteIssues = siteFuelIssues(ctx.distributions, ctx.operations)
+    .filter((row) => belongsToProject(row.project));
+  const dayDozerIssues = siteIssues.filter((row) => row.date === date && !!row.equipment);
+  const dayOtherIssues = siteIssues.filter((row) => row.date === date && !row.equipment);
   const dist = ctx.distributions.filter((d) => belongsToProject(d.project) && !!d.equipment)
     .map((d) => currentDozerName(d.equipment) === d.equipment ? d : { ...d, equipment: currentDozerName(d.equipment) });
   const aldDay = (d) => d.date === date;
@@ -130,8 +133,8 @@ export function buildDailyDashboard(ctx) {
   const collectedAgo = sum(dayAgo.filter((c) => !soldNote(c)), (c) => c.litres);
   const soldAgo = sum(dayAgo.filter(soldNote), (c) => c.litres);
   const collectedPms = sum(scopedCollections.filter((c) => c.date === date && c.fuelType === 'PMS'), (c) => c.litres);
-  const distributedToday = sum(dist.filter(aldDay), (d) => d.litres);
-  const otherUseToday = sum(otherSiteIssues.filter(aldDay), (d) => d.litres);
+  const distributedToday = sum(dayDozerIssues, (row) => row.litres);
+  const otherUseToday = sum(dayOtherIssues, (row) => row.litres);
   const usedToday = sum(dayOps, (o) => o.fuelUsed);
   const dieselRate = ctx.dieselRateAsOf(date);
   // Use the same site-stock calculation as Resource Management. Each site's
@@ -141,8 +144,7 @@ export function buildDailyDashboard(ctx) {
     collections: ctx.fuelCreditCollections,
     operations: ctx.operations,
   }).filter((r) => (allProjects || r.project === project) && r.date <= date);
-  const stockIssues = siteFuelIssues(ctx.distributions, ctx.operations)
-    .filter((r) => (allProjects || r.project === project) && r.date <= date);
+  const stockIssues = siteIssues.filter((row) => row.date <= date);
   const activeSiteNames = ctx.projects?.length
     ? new Set(selectableProjects(ctx.projects).map((row) => row.name))
     : null;
@@ -396,7 +398,7 @@ export function buildDailyDashboard(ctx) {
   return {
     project, date, since,
     operations: { rows: operations, reporting: operations.filter((o) => o.reported).length, fleetCount: operations.length, todayHa, todayHours, cumulativeHa: cumStats.areaCleared },
-    diesel: { chainSince: dieselSince, efficiency, normLitresPerHa: NORM_LITRES_PER_HA, collectedAgo, soldAgo, collectedPms, distributedToday, otherUseToday, usedToday, usedCost: usedToday * dieselRate, dieselRate, onGround, onGroundDate: latestCount?.date || null, onGroundBase: latestCount ? latestCount.countedLitres : null, onGroundIn: rolledIn, onGroundOut: rolledOut, rows: diesel, fuelingChoices, fuelingRequest, stationBalance, distributionChart: dist.filter(aldDay).map((d) => ({ label: d.equipment, value: d.litres })) },
+    diesel: { chainSince: dieselSince, efficiency, normLitresPerHa: NORM_LITRES_PER_HA, collectedAgo, soldAgo, collectedPms, distributedToday, otherUseToday, usedToday, usedCost: usedToday * dieselRate, dieselRate, onGround, onGroundDate: latestCount?.date || null, onGroundBase: latestCount ? latestCount.countedLitres : null, onGroundIn: rolledIn, onGroundOut: rolledOut, rows: diesel, fuelingChoices, fuelingRequest, stationBalance, distributionChart: dayDozerIssues.map((row) => ({ label: currentDozerName(row.equipment), value: row.litres })) },
     fleet, vendorAccrual, requests,
     profit: { today: todayStats, cumulative: cumStats, contribution, extraRows },
     staff, flags,
