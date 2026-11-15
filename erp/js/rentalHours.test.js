@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { officeRentalUsage, matchesRentalEquipment } from './rentalHours.js';
+import { officeRentalUsage, matchesRentalEquipment, rentalDailyLedger } from './rentalHours.js';
 
 test('rental credit uses eight office hours per day, including partial days', () => {
   const usage = officeRentalUsage([
@@ -36,4 +36,20 @@ test('renamed Ogbomo dozers retain their separate historical rental credits and 
   ];
   assert.equal(officeRentalUsage(operations, 'Saheed (Osaro)', '2026-11-11').daysUsed, 1);
   assert.equal(officeRentalUsage(operations, 'Pastor (Osaro)', '2026-11-10').daysUsed, 0.75);
+});
+
+
+test('daily rental ledger separates business work and preserves running paid days', () => {
+  const rows = rentalDailyLedger([
+    { equipment: 'Ogbomo (Saheed)', date: '2026-11-12', hoursWorked: 6, workType: 'Office' },
+    { equipment: 'Saheed (Osaro)', date: '2026-11-12', hoursWorked: 3, workType: 'Business' },
+    { equipment: 'Saheed (Osaro)', date: '2026-11-13', hoursWorked: 10, workType: 'Office' },
+  ], [{ equipment: 'Ogbomo (Saheed)', paymentDate: '2026-11-11', daysPaid: 10 }], [], 'Saheed (Osaro)');
+  assert.deepEqual(rows.map((r) => r.date), ['2026-11-11', '2026-11-12', '2026-11-13']);
+  assert.equal(rows[1].usedDays, 0.75);
+  assert.equal(rows[1].businessHours, 3);
+  assert.equal(rows[1].businessDays, 1);
+  assert.equal(rows[1].balanceDays, 9.25);
+  assert.equal(rows[2].officeHours, 8);
+  assert.equal(rows[2].balanceDays, 8.25);
 });
