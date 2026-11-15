@@ -1,6 +1,7 @@
 import { selectableProjects, selectableMachines } from '../selectionOptions.js';
 import { store } from '../store.js';
 import { supabase } from '../supabaseClient.js';
+import { IMPREST_COLUMNS, managerIsImprestEligible } from '../imprestWorkbook.js';
 import { el, formatCurrency, formatDate } from '../utils.js';
 import { openModal, openCustomModal, statusPill, renderTable } from '../ui.js';
 import { getCurrentUser, getCurrentTier, filterByProject } from '../session.js';
@@ -30,27 +31,35 @@ export function submitFuelPlan(data, onSaved) {
   });
 }
 export function openEarlierCostForm(onSaved, record = null) {
+  const managers = store.get('employees').filter(managerIsImprestEligible).sort((a,b)=>a.name.localeCompare(b.name));
+  const legacyCategory = { 'Diesel transport':'Diesel Transport', 'Worker transport':'Staff Site Logistics', Maintenance:'Dozer Maintenance', Other:'MSc' };
   const id=record?.id||'COST-'+uuid();const token=uuid();
   const d=record?.data||{};
   openModal({title:record?'Edit Earlier Cost / Reimbursement Request':'Earlier Cost / Reimbursement Request',initial:{
     project:record?.project||d.project||'',incurredDate:d.incurredDate||todayISOString(),incurredTo:d.incurredTo||d.incurredDate||todayISOString(),category:d.category||'Other',equipment:d.equipment||'',
-    description:d.description||'',amount:d.amount||'',payee:d.payee||'',serviceProviders:d.serviceProviders||'',evidence:d.evidence||'',lateReason:d.lateReason||'',linkedFundRequestId:d.linkedFundRequestId||''
+    description:d.description||'',amount:d.amount||'',imprestManagerId:d.imprestManagerId||managers.find(person=>person.name===d.payee)?.id||'',imprestCategory:d.imprestCategory||legacyCategory[d.category]||'MSc',serviceProviders:d.serviceProviders||'',evidence:d.evidence||'',lateReason:d.lateReason||'',linkedFundRequestId:d.linkedFundRequestId||''
   },fields:[
     {name:'project',label:'Project',type:'select',required:true,options:filterByProject(selectableProjects(store.get('projects')),'name').map(p=>({value:p.name,label:p.name}))},
     {name:'incurredDate',label:'Cost period start',type:'date',required:true},
     {name:'incurredTo',label:'Cost period end',type:'date',required:true},
-    {name:'category',label:'Cost type',type:'select',options:['Diesel transport','Worker transport','Maintenance','Other'].map(x=>({value:x,label:x}))},
+    {name:'imprestCategory',label:'Imprest cost column',type:'select',required:true,options:IMPREST_COLUMNS.map(x=>({value:x,label:x}))},
     {name:'equipment',label:'Dozer code (required for maintenance)',type:'select',options:[{value:'',label:'— Not a dozer maintenance cost —'},...selectableMachines(store.get('inventory')).filter(i=>i.category==='Heavy Equipment').map(i=>({value:i.name,label:[i.assetCode||i.sku,i.name].filter(Boolean).join(' — ')}))]},
     {name:'description',label:'Cost details (include each date, provider and amount)',type:'textarea',required:true},
     {name:'amount',label:'Accumulated amount owed (₦)',type:'number',min:0,required:true},
-    {name:'payee',label:'Manager who receives the reimbursement',required:true},
+    {name:'imprestManagerId',label:'Site / maintenance manager receiving payment',type:'select',required:true,options:[{value:'',label:'— Select manager —'},...managers.map(person=>({value:person.id,label:person.name+' ('+person.role+')'}))]},
     {name:'serviceProviders',label:'Service providers the manager will pay (and amounts)',type:'textarea'},
     {name:'evidence',label:'Receipt / service reference',required:true},
     {name:'lateReason',label:'Reason for later submission',type:'textarea'},
     {name:'linkedFundRequestId',label:'Existing fund request for this same cost (leave blank if none)'},
   ],submitLabel:record?'Update reimbursement request':'Submit reimbursement request',onSubmit:async data=>{
     if(data.incurredTo<data.incurredDate) throw new Error('The cost period end cannot be before the start date.');
-    if(data.category==='Maintenance'&&!data.equipment) throw new Error('Select the dozer code for a maintenance reimbursement.');
+    const manager = managers.find(person=>person.id===data.imprestManagerId);
+    if(!manager) throw new Error('Select an active site or maintenance manager.');
+    data.payee = manager.name;
+    data.category = data.imprestCategory==='Diesel Transport' ? 'Diesel transport'
+      : ['Staff Site Logistics','Local Transport'].includes(data.imprestCategory) ? 'Worker transport'
+      : ['Vehicle Maintenance','Dozer Maintenance'].includes(data.imprestCategory) ? 'Maintenance' : 'Other';
+    if(data.imprestCategory==='Dozer Maintenance'&&!data.equipment) throw new Error('Select the dozer code for a maintenance reimbursement.');
     if(record){
       const {error}=await supabase.rpc('update_earlier_cost_request',{p_id:id,p_payload:{...data,kind:'Cost'},p_token:token});
       if(error) throw new Error(error.code==='PGRST202'?'Reimbursement editing has not been enabled by the administrator yet.':error.message);
