@@ -16,6 +16,8 @@ import { ownerSettlementBalances } from './dozerRentPayments.js';
 import { projectNames, computeProjectStats, companyWideStats } from './profitability.js';
 import { getCurrentUser } from '../session.js';
 import { dailyDashboardFor } from '../reportContext.js';
+import { selectableProjects } from '../selectionOptions.js';
+import { siteFuelIssues } from '../fuelLedger.js';
 import { buildAttention } from '../attention.js';
 import { DASHBOARD_BASIS_FROM } from '../rules.js';
 
@@ -219,49 +221,90 @@ export function renderDashboard(container) {
     }
     body.appendChild(sectionHeader('Dashboard', headerSubtitle));
 
-    // KPI row — the Executive Command Centre's headline numbers, same-day
-    // where a same-day figure exists, each with a 7-day sparkline (the
-    // 7 days up to and including the viewed day) where a real daily
-    // history is meaningful. No weather/GPS cards — this system has no
-    // weather API or GPS telemetry configured, and a fake number would be
-    // worse than no number.
-    const kpiGrid = el('div', { class: 'kpi-grid' }, [
+    // Keep operational decisions first. A missing work report is unknown, not zero.
+    const activeProjects = selectableProjects(store.get('projects'));
+    const projectNamesToday = activeProjects.map((p) => p.name);
+    const activeMachines = dozers.filter((item) => fleetStatus(item) === 'Active');
+    const normalizedMachine = (name) => /^(BIG-001|BIG-01|BIG 01)$/i.test(String(name || '')) ? 'EMG-005' : name;
+    const reportedMachines = new Set(daysOps.map((o) => normalizedMachine(o.equipment)));
+    const activeReported = activeMachines.filter((item) => reportedMachines.has(item.name)).length;
+    const missingReports = Math.max(0, activeMachines.length - activeReported);
+    const hasWorkReports = daysOps.length > 0;
+    const projectCoverage = activeProjects.map((p) => ({
+      name: p.name,
+      reported: daysOps.some((o) => o.siteName === p.name),
+    }));
+    const projectDashboards = projectNamesToday.map((name) => dailyDashboardFor(name, viewISO));
+    const projectOnGround = projectDashboards.reduce((total, report) => total + (Number(report.diesel.onGround) || 0), 0);
+    const hasPhysicalCount = projectDashboards.some((report) => report.diesel.onGroundDate);
+    const suppliedToday = allDieselReceipts()
+      .filter((receipt) => receipt.date === viewISO && projectNamesToday.includes(receipt.project))
+      .reduce((total, receipt) => total + (Number(receipt.litres) || 0), 0);
+    const issuedToday = siteFuelIssues(store.get('dieselSiteDistributions'), operations)
+      .filter((issue) => issue.date === viewISO && projectNamesToday.includes(issue.project))
+      .reduce((total, issue) => total + (Number(issue.litres) || 0), 0);
+    const litres = (value) => Number(value).toLocaleString(undefined, { maximumFractionDigits: 1 });
+
+    body.appendChild(el('h3', { class: 'subsection-title' }, 'Operations at a glance'));
+    body.appendChild(el('div', { class: 'kpi-grid dashboard-priority-grid' }, [
       statCard({
-        icon: 'gauge', label: 'Machine Availability', value: machineAvailability === null ? '—' : `${machineAvailability.toFixed(0)}%`,
-        hint: `${activeFleetCount} active of ${dozers.length} in Fleet Roster · ${idleCount} idle · ${unreportedCount} unreported`, target: 'Target: 85%', tone: machineAvailability !== null && machineAvailability < 85 ? 'warning' : 'good', href: '#/fleet',
+        icon: 'documents', label: 'Daily work reports', value: `${activeReported} of ${activeMachines.length}`,
+        hint: `${missingReports} active machine${missingReports === 1 ? '' : 's'} awaiting a work report · ${daysOps.length} report${daysOps.length === 1 ? '' : 's'} submitted`,
+        tone: missingReports ? 'warning' : 'good', href: '#/operations',
       }),
-      statCard({ icon: 'checkCircle', label: 'Active Machines', value: String(activeFleetCount), tone: 'good', href: '#/fleet' }),
-      statCard({ icon: 'alert', label: 'Down', value: String(downOnlyCount), tone: downOnlyCount ? 'warning' : 'good', href: '#/fleet' }),
-      statCard({ icon: 'wrench', label: 'Under Maintenance', value: String(maintenanceCount), tone: maintenanceCount ? 'warning' : 'good', href: '#/fleet' }),
-      statCard({ icon: 'gauge', label: 'Idle / Not Active', value: String(idleCount), tone: idleCount ? 'warning' : 'neutral', href: '#/fleet' }),
       statCard({
-        icon: 'banknote', label: `${dayLabel}'s Revenue (Tentative)`, value: formatCurrency(viewStats.provisionalRevenue), href: '#/projects',
-        hint: `${dayLabel}'s submitted reports x contract rate — not yet invoiced`,
-        trend: trendFor(viewStats.provisionalRevenue, prevDayStats.provisionalRevenue, { periodLabel: 'previous day' }),
-        sparkline: dailyStats.map((d) => d.provisionalRevenue),
+        icon: 'leaf', label: 'Active projects', value: String(activeProjects.length),
+        hint: projectCoverage.length ? projectCoverage.map((p) => `${p.name} · ${p.reported ? 'work reported' : 'awaiting work report'}`).join(' | ') : 'No active projects configured',
+        href: '#/projects?tab=Projects',
       }),
       statCard({
-        icon: 'wallet', label: `${dayLabel}'s Cost`, value: formatCurrency(viewStats.totalCost), href: '#/accounting',
-        trend: trendFor(viewStats.totalCost, prevDayStats.totalCost, { invert: true, periodLabel: 'previous day' }),
-        sparkline: dailyStats.map((d) => d.totalCost),
+        icon: 'gauge', label: 'Machine availability', value: machineAvailability === null ? '—' : `${machineAvailability.toFixed(0)}%`,
+        hint: `${activeFleetCount} active · ${idleCount} idle · ${maintenanceCount} under maintenance · ${unreportedCount} unreported (of ${dozers.length})`,
+        tone: unreportedCount || (machineAvailability !== null && machineAvailability < 85) ? 'warning' : 'good',
+        href: '#/fleet?tab=Roster',
       }),
       statCard({
-        icon: 'trendUp', label: `${dayLabel}'s Profit (Tentative)`, value: formatCurrency(viewStats.tentativeProfit), href: '#/projects',
-        hint: `Tentative Revenue minus Cost, ${isToday ? 'today' : dayLabel}`,
-        trend: trendFor(viewStats.tentativeProfit, prevDayStats.tentativeProfit, { periodLabel: 'previous day' }),
-        sparkline: dailyStats.map((d) => d.tentativeProfit),
+        icon: 'leaf', label: `${dayLabel}'s hectares`,
+        value: hasWorkReports ? `${viewHectares.toFixed(1)} ha` : 'Awaiting reports',
+        hint: hasWorkReports && missingReports ? `Partial: ${missingReports} active machine${missingReports === 1 ? '' : 's'} awaiting reports` : undefined,
+        href: '#/operations', sparkline: hasWorkReports ? dailyHectares : undefined,
       }),
       statCard({
-        icon: 'percent', label: 'ROI', value: viewROI === null ? '—' : `${viewROI.toFixed(0)}%`, hint: `Tentative Profit ÷ Cost, ${isToday ? 'today' : dayLabel}`,
-        trend: viewROI !== null && prevDayROI !== null ? trendFor(viewROI, prevDayROI, { periodLabel: 'previous day' }) : undefined,
+        icon: 'fuelCan', label: 'Diesel accountability', value: `${litres(projectOnGround)} L on ground`,
+        hint: `${litres(suppliedToday)} L supplied · ${litres(issuedToday)} L issued · ${hasPhysicalCount ? 'physical count recorded for at least one project' : 'provisional balance; physical count needed'}`,
+        tone: projectOnGround < 0 ? 'warning' : undefined, href: '#/resourceManagement?tab=Diesel',
+      }),
+      statCard({
+        icon: 'trendUp', label: `${dayLabel}'s profit (tentative)`,
+        value: hasWorkReports ? formatCurrency(viewStats.tentativeProfit) : 'Awaiting reports',
+        hint: hasWorkReports ? `Revenue ${formatCurrency(viewStats.provisionalRevenue)} − cost ${formatCurrency(viewStats.totalCost)}${missingReports ? ' · partial reports' : ''}` : 'Calculated when daily work reports arrive',
+        href: '#/projects?tab=Projects',
+      }),
+    ]));
+
+    body.appendChild(el('h3', { class: 'subsection-title' }, 'Finance and people'));
+    body.appendChild(el('div', { class: 'kpi-grid dashboard-support-grid' }, [
+      statCard({
+        icon: 'banknote', label: `${dayLabel}'s revenue (tentative)`,
+        value: hasWorkReports ? formatCurrency(viewStats.provisionalRevenue) : 'Awaiting reports',
+        hint: hasWorkReports ? 'Submitted work × contract rate; not yet invoiced' : undefined,
+        href: '#/projects',
+      }),
+      statCard({
+        icon: 'wallet', label: `${dayLabel}'s cost`,
+        value: hasWorkReports ? formatCurrency(viewStats.totalCost) : 'Awaiting reports',
+        hint: hasWorkReports && missingReports ? 'May increase as reports arrive' : undefined,
         href: '#/accounting',
       }),
-      statCard({ icon: 'fuelCan', label: `${dayLabel}'s Diesel`, value: `${viewDiesel.toLocaleString()} L`, href: '#/resourceManagement', sparkline: dailyDiesel }),
-      statCard({ icon: 'leaf', label: `${dayLabel}'s Hectares`, value: `${viewHectares.toFixed(1)} ha`, href: '#/operations', sparkline: dailyHectares }),
-      statCard({ icon: 'users', label: 'Active Staff', value: String(employees.filter((e) => e.status === 'Active').length), hint: `${employees.length} total`, href: '#/hr' }),
-      statCard({ icon: 'clipboard', label: 'Outstanding Approvals', value: String(outstandingApprovals), tone: outstandingApprovals ? 'warning' : 'good', href: '#/fundRequests' }),
-    ]);
-    body.appendChild(kpiGrid);
+      statCard({
+        icon: 'users', label: 'Active staff', value: String(employees.filter((e) => e.status === 'Active').length),
+        hint: 'Employment status; attendance is tracked separately', href: '#/hr',
+      }),
+      statCard({
+        icon: 'clipboard', label: 'Approvals requiring action', value: String(outstandingApprovals),
+        tone: outstandingApprovals ? 'warning' : 'good', href: '#/fundRequests?tab=Approvals',
+      }),
+    ]));
 
     // Executive Alert Center — every "watch this" signal, grouped by real
     // severity instead of one flat list, so the most urgent things are
