@@ -119,7 +119,7 @@ export function renderDieselTracking(container) {
     const issues = siteFuelIssues(distributions, operations);
     const totalReceived = receipts.reduce((sum, r) => sum + Number(r.litres || 0), 0);
     const totalIssued = issues.reduce((sum, o) => sum + Number(o.litres || 0), 0);
-    const siteNames = [...new Set([...receipts, ...issues, ...counts].map((row) => row.project).filter(Boolean))];
+    const siteNames = selectableProjects(store.get('projects')).map((row) => row.name);
     const onGround = siteNames.reduce((total, project) => total + siteOnGroundAsOf({
       project, date: asOf, receipts, distributions, operations, counts,
     }).onGround, 0);
@@ -133,7 +133,7 @@ export function renderDieselTracking(container) {
     const grid = el('div', { class: 'stats-grid' }, [
       statCard({ label: 'Total Received (All-Time)', value: `${totalReceived.toLocaleString()} L` }),
       statCard({ label: 'Total Issued (All Uses)', value: `${totalIssued.toLocaleString()} L` }),
-      statCard({ label: 'On Ground, Assigned Projects', value: `${onGround.toLocaleString()} L`, hint: unassignedLitres ? `${unassignedLitres.toLocaleString()} L received without a project — assign it before reconciliation.` : 'Physical counts anchor each project; later movements are carried forward.' }),
+      statCard({ label: 'On Ground, Active Projects', value: `${onGround.toLocaleString()} L`, hint: unassignedLitres ? `${unassignedLitres.toLocaleString()} L received without a project — assign it before reconciliation.` : 'Physical counts anchor each project; later movements are carried forward.' }),
       latestCount
         ? statCard({
           label: `Last ${latestCount.project} Count (${formatDate(latestCount.date)}) Variance`,
