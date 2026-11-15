@@ -1,3 +1,4 @@
+import { dieselEquipmentName, lastDieselReading } from './dieselReportChain.js';
 import { machineProjectAsOf, machineStateAsOf, selectableProjects } from './selectionOptions.js';
 // Data behind the Daily Operations Dashboard view (views/dailyDashboard.js):
 // the same six sections as the HTML Daily Operations Dashboards — Operations,
@@ -63,7 +64,7 @@ export function buildDailyDashboard(ctx) {
   const invByName = new Map(ctx.inventory.map((i) => [i.name, i]));
   // BIG-001 is the former record name of the machine now listed as EMG-005.
   // Normalize report and distribution names before joining dashboard sections.
-  const currentDozerName = (name) => name === 'BIG-001' && invByName.has('EMG-005') ? 'EMG-005' : name;
+  const currentDozerName = (name) => invByName.has(dieselEquipmentName(name)) ? dieselEquipmentName(name) : name;
   // A dozer belongs to the project it was assigned to on the viewed date.
   // currentProjectSince marks a redeployment; older dates fall back to the
   // latest operation logged on or before that date.
@@ -176,9 +177,7 @@ export function buildDailyDashboard(ctx) {
     // A submitted tank dip is the last known physical balance. Carry it
     // forward with later tank distributions and usage instead of restarting
     // every day from the unadjusted, zero-based ledger.
-    const lastReading = chainOps
-      .filter((o) => o.equipment === name && o.date < date && o.closingDiesel !== null && o.closingDiesel !== undefined && Number.isFinite(Number(o.closingDiesel)))
-      .sort((a, b) => b.date.localeCompare(a.date))[0];
+    const lastReading = lastDieselReading(chainOps.filter(o => o.equipment === name && o.date < date));
     const afterReading = (row) => !lastReading || row.date > lastReading.date;
     const closingBefore = (lastReading ? Number(lastReading.closingDiesel) : 0)
       + sum(tankDist.filter((d) => d.equipment === name && d.date < date && afterReading(d)), (d) => d.litres)
@@ -189,7 +188,7 @@ export function buildDailyDashboard(ctx) {
     const ha = sum(rows, (o) => o.quantity);
     const opening = closingBefore + distributed;
     const calculatedClosing = opening - used;
-    const reading = rows.find((o) => o.closingDiesel !== null && o.closingDiesel !== undefined && Number.isFinite(Number(o.closingDiesel)));
+    const reading = lastDieselReading(rows);
     const reportedClosing = reading ? Number(reading.closingDiesel) : undefined;
     const closing = reportedClosing ?? calculatedClosing;
     let status = 'Idle';
