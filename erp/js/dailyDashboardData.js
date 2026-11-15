@@ -107,7 +107,8 @@ export function buildDailyDashboard(ctx) {
   const todayHours = sum(dayOps, (o) => o.hoursWorked);
 
   // -------------------------------------------------------------------- diesel
-  const dist = ctx.distributions.filter((d) => belongsToProject(d.project))
+  const otherSiteIssues = ctx.distributions.filter((d) => belongsToProject(d.project) && !d.equipment);
+  const dist = ctx.distributions.filter((d) => belongsToProject(d.project) && !!d.equipment)
     .map((d) => currentDozerName(d.equipment) === d.equipment ? d : { ...d, equipment: currentDozerName(d.equipment) });
   const aldDay = (d) => d.date === date;
   const ago = (c) => c.fuelType === 'Diesel';
@@ -125,6 +126,7 @@ export function buildDailyDashboard(ctx) {
   const soldAgo = sum(dayAgo.filter(soldNote), (c) => c.litres);
   const collectedPms = sum(scopedCollections.filter((c) => c.date === date && c.fuelType === 'PMS'), (c) => c.litres);
   const distributedToday = sum(dist.filter(aldDay), (d) => d.litres);
+  const otherUseToday = sum(otherSiteIssues.filter(aldDay), (d) => d.litres);
   const usedToday = sum(dayOps, (o) => o.fuelUsed);
   const dieselRate = ctx.dieselRateAsOf(date);
   const counts = ctx.dieselStockCounts.filter((r) => !allProjects && recordProject(r) === project && r.date <= date).sort((a, b) => b.date.localeCompare(a.date));
@@ -375,7 +377,7 @@ export function buildDailyDashboard(ctx) {
   return {
     project, date, since,
     operations: { rows: operations, reporting: operations.filter((o) => o.reported).length, fleetCount: operations.length, todayHa, todayHours, cumulativeHa: cumStats.areaCleared },
-    diesel: { chainSince: dieselSince, efficiency, normLitresPerHa: NORM_LITRES_PER_HA, collectedAgo, soldAgo, collectedPms, distributedToday, usedToday, usedCost: usedToday * dieselRate, dieselRate, onGround, onGroundDate: latestCount?.date || null, onGroundBase: latestCount ? latestCount.countedLitres : null, onGroundIn: rolledIn, onGroundOut: rolledOut, rows: diesel, fuelingChoices, fuelingRequest, stationBalance, distributionChart: dist.filter(aldDay).map((d) => ({ label: d.equipment, value: d.litres })) },
+    diesel: { chainSince: dieselSince, efficiency, normLitresPerHa: NORM_LITRES_PER_HA, collectedAgo, soldAgo, collectedPms, distributedToday, otherUseToday, usedToday, usedCost: usedToday * dieselRate, dieselRate, onGround, onGroundDate: latestCount?.date || null, onGroundBase: latestCount ? latestCount.countedLitres : null, onGroundIn: rolledIn, onGroundOut: rolledOut, rows: diesel, fuelingChoices, fuelingRequest, stationBalance, distributionChart: dist.filter(aldDay).map((d) => ({ label: d.equipment, value: d.litres })) },
     fleet, vendorAccrual, requests,
     profit: { today: todayStats, cumulative: cumStats, contribution, extraRows },
     staff, flags,
