@@ -256,6 +256,7 @@ function dieselSection(d) {
     x.soldAgo ? statCard({ label: 'Sold to CEO', value: `${num(x.soldAgo, 0)} L`, hint: 'Not site diesel; left out of the supply' }) : null,
     statCard({ label: 'Supplied today (PMS)', value: `${num(x.collectedPms, 0)} L` }),
     statCard({ label: 'Distributed to dozers', value: `${num(x.distributedToday, 0)} L` }),
+    statCard({ label: 'Other site uses', value: `${num(x.otherUseToday, 0)} L`, hint: 'Repair, vehicles, generators, debris or other approved uses' }),
     statCard({ label: 'Used today', value: `${num(x.usedToday, 0)} L`, hint: `@ ${money(x.dieselRate)}/L = ${money(x.usedCost)}` }),
     statCard({ label: 'On ground, undistributed', value: x.onGround === null ? '—' : `${num(x.onGround, 0)} L`, tone: x.onGround < 0 ? 'critical' : undefined, hint: onGroundNote(x, formatDate) }),
   ]);
