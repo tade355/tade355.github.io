@@ -9,7 +9,7 @@ import { fleetItems } from './fleet.js';
 import { allDieselReceipts } from '../dieselSupplyStore.js';
 import { getCurrentTier } from '../session.js';
 import { siteFuelIssues } from '../fuelLedger.js';
-import { reconcileSiteDay } from '../dieselReconciliation.js';
+import { reconcileSiteDay, siteOnGroundAsOf } from '../dieselReconciliation.js';
 
 function projectOptions() {
   return selectableProjects(store.get('projects')).map((p) => ({ value: p.name, label: p.name }));
@@ -111,10 +111,19 @@ export function renderDieselTracking(container) {
 
   function refresh() {
     const receipts = allDieselReceipts();
-    const counts = store.get('dieselStockCounts').slice().sort((a, b) => (a.date < b.date ? 1 : -1));
-    const totalReceived = receipts.reduce((sum, r) => sum + r.litres, 0);
-    const totalIssued = siteFuelIssues(store.get('dieselSiteDistributions'), store.get('operations')).reduce((sum, o) => sum + Number(o.litres || 0), 0);
-    const expectedBalance = totalReceived - totalIssued;
+    const asOf = todayISOString();
+    const counts = store.get('dieselStockCounts').filter((row) => row.date <= asOf)
+      .slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+    const distributions = store.get('dieselSiteDistributions');
+    const operations = store.get('operations');
+    const issues = siteFuelIssues(distributions, operations);
+    const totalReceived = receipts.reduce((sum, r) => sum + Number(r.litres || 0), 0);
+    const totalIssued = issues.reduce((sum, o) => sum + Number(o.litres || 0), 0);
+    const siteNames = [...new Set([...receipts, ...issues, ...counts].map((row) => row.project).filter(Boolean))];
+    const onGround = siteNames.reduce((total, project) => total + siteOnGroundAsOf({
+      project, date: asOf, receipts, distributions, operations, counts,
+    }).onGround, 0);
+    const unassignedLitres = receipts.filter((row) => !row.project).reduce((total, row) => total + Number(row.litres || 0), 0);
     const latestCount = counts.find((row) => row.project);
     const latestSite = latestCount ? reconcileSiteDay({ project: latestCount.project, date: latestCount.date,
       receipts, distributions: store.get('dieselSiteDistributions'), operations: store.get('operations'), counts }) : null;
@@ -123,8 +132,8 @@ export function renderDieselTracking(container) {
     summarySlot.innerHTML = '';
     const grid = el('div', { class: 'stats-grid' }, [
       statCard({ label: 'Total Received (All-Time)', value: `${totalReceived.toLocaleString()} L` }),
-      statCard({ label: 'Total Distributed to Dozers', value: `${totalIssued.toLocaleString()} L` }),
-      statCard({ label: 'Calculated Site Balance, All Projects', value: `${expectedBalance.toLocaleString()} L`, hint: 'Includes unassigned receipts; verify each site with a physical count.' }),
+      statCard({ label: 'Total Issued (All Uses)', value: `${totalIssued.toLocaleString()} L` }),
+      statCard({ label: 'On Ground, Assigned Projects', value: `${onGround.toLocaleString()} L`, hint: unassignedLitres ? `${unassignedLitres.toLocaleString()} L received without a project — assign it before reconciliation.` : 'Physical counts anchor each project; later movements are carried forward.' }),
       latestCount
         ? statCard({
           label: `Last ${latestCount.project} Count (${formatDate(latestCount.date)}) Variance`,
