@@ -423,7 +423,7 @@ function profitSection(d) {
   const lines = [
     ['Revenue', 'provisionalRevenue', 'Ha × contract rate'],
     ['Diesel Cost', 'dieselCost', 'Litres used × diesel price'],
-    ['Logistics', 'logisticsCost', 'Actual dated operator and diesel transport; otherwise ₦50/L of diesel distributed'],
+    ['Logistics', 'logisticsCost', 'Actual dated operator and diesel transport; otherwise the project rate on the diesel distribution date'],
     ['Operator Allowance', 'operatorAllowanceCost', 'Owned EMG operators, day rate per 8 hrs'],
     ['Supervisor Sunday Allowance', 'supervisorSundayAllowance', SUNDAY_BONUS_BASIS_TEXT],
     ['Dozer Cost — Owned', 'dozerOwned', 'Hours × hourly rate'],
