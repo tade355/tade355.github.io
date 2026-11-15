@@ -1858,3 +1858,14 @@ a.btn { text-decoration: none; }
 .ago-need-edit { display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap; }
 .ago-need-edit .dd-small-input { width: 6.5rem; min-width: 6.5rem; }
 .ago-need-edit .btn { padding: 0.35rem 0.55rem; font-size: 0.75rem; }
+
+/* Dashboard priorities: two balanced rows of decisions, then supporting figures. */
+.dashboard-priority-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dashboard-support-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.dashboard-priority-grid .stat-hint, .dashboard-support-grid .stat-hint { overflow-wrap: anywhere; }
+@media (max-width: 1000px) {
+  .dashboard-priority-grid, .dashboard-support-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 580px) {
+  .dashboard-priority-grid, .dashboard-support-grid { grid-template-columns: 1fr; }
+}
