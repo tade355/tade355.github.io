@@ -59,8 +59,13 @@ export function renderManagerImprestImport(container, onImported) {
     preview.append(el('p', {}, `${chosen.length} sheet(s), ${rows.length} transaction(s) · Debit ${formatCurrency(debits)} · Credit ${formatCurrency(credits)} · Net ${formatCurrency(credits - debits)}.`));
     if (incomplete.length) preview.append(el('p', { class: 'text-critical' }, 'Select an eligible manager for every chosen sheet.'));
     if (unresolved.length) preview.append(el('p', { class: 'text-critical' }, 'Some selected sheets do not reconcile to their printed totals. Review and acknowledge each difference.'));
-    const fingerprints = rows.map(row => [row.managerId, row.date, row.debit, row.credit, row.purpose.toLowerCase().replace(/\s+/g, ' ')].join('|'));
-    const repeats = fingerprints.length - new Set(fingerprints).size;
+    const seen = new Map();
+    let repeats = 0;
+    rows.forEach(row => {
+      const fingerprint = [row.managerId, row.date, row.debit, row.credit, row.purpose.toLowerCase().replace(/\s+/g, ' ')].join('|');
+      if (seen.has(fingerprint) && seen.get(fingerprint) !== row.sourceSheet) repeats++;
+      else seen.set(fingerprint, row.sourceSheet);
+    });
     if (repeats) preview.append(el('p', { class: 'text-critical' }, `${repeats} transaction(s) look repeated across selected sheets. Deselect copied or overlapping sheets before importing.`));
     if (!rows.length || incomplete.length || unresolved.length || repeats) return;
     const submit = el('button', { type: 'button', class: 'btn btn-primary' }, `Import ${rows.length} reviewed transactions`);
