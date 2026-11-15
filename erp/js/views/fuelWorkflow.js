@@ -36,14 +36,16 @@ export function openEarlierCostForm(onSaved, record = null) {
   const id=record?.id||'COST-'+uuid();const token=uuid();
   const d=record?.data||{};
   openModal({title:record?'Edit Earlier Cost / Reimbursement Request':'Earlier Cost / Reimbursement Request',initial:{
-    project:record?.project||d.project||'',incurredDate:d.incurredDate||todayISOString(),incurredTo:d.incurredTo||d.incurredDate||todayISOString(),category:d.category||'Other',equipment:d.equipment||'',
+    project:record?.project||d.project||'',incurredDate:d.incurredDate||todayISOString(),incurredTo:d.incurredTo||d.incurredDate||todayISOString(),category:d.category||'Other',equipment:d.equipment||'',costTargetType:d.costTargetType||'Project',costTargetName:d.costTargetName||'',
     description:d.description||'',amount:d.amount||'',imprestManagerId:d.imprestManagerId||managers.find(person=>person.name===d.payee)?.id||'',imprestCategory:d.imprestCategory||legacyCategory[d.category]||'MSc',serviceProviders:d.serviceProviders||'',evidence:d.evidence||'',lateReason:d.lateReason||'',linkedFundRequestId:d.linkedFundRequestId||''
   },fields:[
     {name:'project',label:'Project',type:'select',required:true,options:filterByProject(selectableProjects(store.get('projects')),'name').map(p=>({value:p.name,label:p.name}))},
     {name:'incurredDate',label:'Cost period start',type:'date',required:true},
     {name:'incurredTo',label:'Cost period end',type:'date',required:true},
     {name:'imprestCategory',label:'Imprest cost column',type:'select',required:true,options:IMPREST_COLUMNS.map(x=>({value:x,label:x}))},
-    {name:'equipment',label:'Dozer code (required for maintenance)',type:'select',options:[{value:'',label:'— Not a dozer maintenance cost —'},...selectableMachines(store.get('inventory')).filter(i=>i.category==='Heavy Equipment').map(i=>({value:i.name,label:[i.assetCode||i.sku,i.name].filter(Boolean).join(' — ')}))]},
+    {name:'costTargetType',label:'Expense relates to',type:'select',required:true,options:['Project','Dozer','Vehicle','Errand'].map(value=>({value,label:value}))},
+    {name:'costTargetName',label:'Vehicle name / errand / other reference (when applicable)'},
+    {name:'equipment',label:'Dozer code (required for dozer costs)',type:'select',options:[{value:'',label:'— Not a dozer maintenance cost —'},...selectableMachines(store.get('inventory')).filter(i=>i.category==='Heavy Equipment').map(i=>({value:i.name,label:[i.assetCode||i.sku,i.name].filter(Boolean).join(' — ')}))]},
     {name:'description',label:'Cost details (include each date, provider and amount)',type:'textarea',required:true},
     {name:'amount',label:'Accumulated amount owed (₦)',type:'number',min:0,required:true},
     {name:'imprestManagerId',label:'Site / maintenance manager receiving payment',type:'select',required:true,options:[{value:'',label:'— Select manager —'},...managers.map(person=>({value:person.id,label:person.name+' ('+person.role+')'}))]},
@@ -59,7 +61,9 @@ export function openEarlierCostForm(onSaved, record = null) {
     data.category = data.imprestCategory==='Diesel Transport' ? 'Diesel transport'
       : ['Staff Site Logistics','Local Transport'].includes(data.imprestCategory) ? 'Worker transport'
       : ['Vehicle Maintenance','Dozer Maintenance'].includes(data.imprestCategory) ? 'Maintenance' : 'Other';
-    if(data.imprestCategory==='Dozer Maintenance'&&!data.equipment) throw new Error('Select the dozer code for a maintenance reimbursement.');
+    if((data.imprestCategory==='Dozer Maintenance'||data.costTargetType==='Dozer')&&!data.equipment) throw new Error('Select the dozer code for this reimbursement.');
+    if(['Vehicle','Errand'].includes(data.costTargetType)&&!data.costTargetName?.trim()) throw new Error('Enter the vehicle or errand this cost relates to.');
+    data.costTargetName = data.costTargetType==='Dozer' ? data.equipment : data.costTargetType==='Project' ? data.project : data.costTargetName.trim();
     if(record){
       const {error}=await supabase.rpc('update_earlier_cost_request',{p_id:id,p_payload:{...data,kind:'Cost'},p_token:token});
       if(error) throw new Error(error.code==='PGRST202'?'Reimbursement editing has not been enabled by the administrator yet.':error.message);
