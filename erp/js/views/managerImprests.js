@@ -44,6 +44,45 @@ function liveEntries(records, employees) {
   return entries;
 }
 
+
+// FR-195 is an existing fund request paid to Oki, not a second earlier-cost
+// request. Its source items and payment ledger are shown here without writing
+// another expense or changing project profitability.
+export function fundRequestImprestEntries(requests, payments, employees) {
+  const entries = [];
+  for (const request of requests) {
+    if (request.id !== 'FR-195') continue;
+    const items = request.items || [];
+    const payees = [...new Set(items.map(item => lower(item.accountName)).filter(Boolean))];
+    if (payees.length !== 1) continue;
+    const manager = employees.find(person => managerIsImprestEligible(person) && lower(person.name) === payees[0]);
+    if (!manager) continue;
+    const categoryFor = description => /diesel/i.test(description) ? 'Diesel Transport'
+      : /radiator|dozer|emg[ -]*0?\d+/i.test(description) ? 'Dozer Maintenance'
+      : 'Staff Site Logistics';
+    items.forEach((item, index) => {
+      const debit = Number(item.amount || 0);
+      const category = categoryFor(item.description || '');
+      const machine = (item.description || '').match(/EMG[ -]*0?([0-9]+)/i);
+      entries.push({ id: `${request.id}:item:${item.id || index}`, managerId: manager.id, managerName: manager.name,
+        date: request.date, project: request.project, site: '', allocation: machine ? `Dozer · EMG-${machine[1].padStart(3, '0')}` : '',
+        purpose: item.description || request.description || '', category, sourceOfCredit: '', debit, credit: 0,
+        categoryAmounts: { [category]: debit }, reference: request.id, status: request.status,
+        source: 'Fund request item (existing cost)', order: 0 });
+    });
+    const recorded = payments.filter(payment => payment.requestId === request.id);
+    const credits = recorded.length ? recorded : Number(request.paidAmount || 0) > 0
+      ? [{ id: `${request.id}:paid`, date: request.paidAt, amount: request.paidAmount, reference: request.paymentReference }] : [];
+    credits.forEach((payment, index) => entries.push({ id: `${request.id}:payment:${payment.id || index}`,
+      managerId: manager.id, managerName: manager.name, date: payment.date || request.paidAt || request.date,
+      project: request.project, site: '', allocation: '', purpose: `Payment to ${manager.name} for ${request.id}`,
+      category: '', sourceOfCredit: payment.reference || payment.notes || request.paymentReference || '',
+      debit: 0, credit: Number(payment.amount || 0), categoryAmounts: {}, reference: request.id,
+      status: 'Paid', source: 'Fund request payment (existing)', order: 2 }));
+  }
+  return entries;
+}
+
 function historicEntry(row, employees) {
   const manager = employees.find(person => person.id === row.manager_id);
   return { id: row.id, managerId: row.manager_id, managerName: manager?.name || row.manager_id,
@@ -83,7 +122,9 @@ export function renderManagerImprests(container) {
     const records = store.get('fuelWorkflows');
     const visible = privileged ? records : records.filter(record =>
       record.data?.imprestManagerId === getCurrentUserId());
-    const all = [...liveEntries(visible, employees), ...historic.map(row => historicEntry(row, employees))];
+    const linked = fundRequestImprestEntries(store.get('fundRequests'), store.get('fundRequestPayments'), employees);
+    const ownLinked = privileged ? linked : linked.filter(row => row.managerId === getCurrentUserId());
+    const all = [...liveEntries(visible, employees), ...ownLinked, ...historic.map(row => historicEntry(row, employees))];
     const selected = managerFilter.value ? all.filter(row => row.managerId === managerFilter.value) : all;
     const groups = new Map();
     selected.forEach(row => { if (!groups.has(row.managerId)) groups.set(row.managerId, []); groups.get(row.managerId).push(row); });
@@ -124,7 +165,7 @@ export function renderManagerImprests(container) {
     render();
   }
   managerFilter.addEventListener('change', render);
-  reload.addEventListener('click', async () => { await store.refreshCollection('fuelWorkflows'); await load(); });
+  reload.addEventListener('click', async () => { await Promise.all(['fuelWorkflows', 'fundRequests', 'fundRequestPayments'].map(key => store.refreshCollection(key))); await load(); });
   load();
 }
 
