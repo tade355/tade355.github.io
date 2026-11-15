@@ -1,4 +1,5 @@
-import { selectableProjects, selectableEmployees, selectableMachines } from '../selectionOptions.js';
+import { selectableProjects, selectableEmployees, selectableMachines, machineProjectAsOf } from '../selectionOptions.js';
+import { validateDieselBatch } from '../dieselBatch.js';
 import { renderFuelWorkflow } from './fuelWorkflow.js';
 import { stationAdvanceBalances, siteFuelIssues } from '../fuelLedger.js';
 import { store } from '../store.js';
@@ -221,9 +222,12 @@ function renderSiteDistributionTab(container) {
     "Calculated site stock: opening balance + deliveries − distribution = closing balance. Confirm it in Daily Reconciliation with a physical count.",
     actionSlot,
   ));
-  actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openDistributionForm() }, '+ Dozer Distribution'));
+  actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openBatchForm() }, '+ Distribute to Dozers'));
+  actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openSupplyForm() }, '+ New Supply from Station'));
   actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openOtherUseForm() }, '+ Other Diesel Use'));
 
+  const entrySlot = el('div');
+  container.appendChild(entrySlot);
   const filterBar = el('div', { class: 'filter-bar' });
   const { fromInput, toInput, elements } = dateRangeFields({ onChange: () => refresh() });
   elements.forEach((e) => filterBar.appendChild(e));
@@ -234,7 +238,7 @@ function renderSiteDistributionTab(container) {
   container.appendChild(el('h3', { class: 'subsection-title' }, 'Distributions'));
   container.appendChild(el('p', { class: 'section-subtitle' }, 'Record dozer fueling and other site uses separately. Both reduce diesel on ground; only dozer fueling updates tank balances.'));
   const suppliesContainer = el('div');
-  container.appendChild(el('h3', { class: 'subsection-title' }, 'New Supply from Fuel Credit'));
+  container.appendChild(el('h3', { class: 'subsection-title' }, 'New Supply / Station Collections'));
   container.appendChild(el('p', { class: 'section-subtitle' }, 'Diesel collections logged in Fuel Credit appear here automatically. Assign the site on older unassigned collections to include them in site stock; do not log a second receipt.'));
   container.appendChild(suppliesContainer);
   const distributionsContainer = el('div');
@@ -254,21 +258,21 @@ function renderSiteDistributionTab(container) {
       emptyText: 'No projects yet.',
     });
 
-    const supplies = allDieselReceipts().filter((r) => r.fromFuelCredit).sort((a, b) => b.date.localeCompare(a.date));
+    const supplies = filterByProject(allDieselReceipts(), 'project').filter(r => dateInRange(r.date, fromInput.value, toInput.value)).sort((a, b) => b.date.localeCompare(a.date));
     renderTable(suppliesContainer, {
       columns: [
         { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
         { key: 'station', label: 'Station' },
         { key: 'litres', label: 'New Supply', render: (r) => `${Number(r.litres || 0).toLocaleString()} L` },
         { key: 'project', label: 'Site / Project', render: (r) => r.project || 'Unassigned' },
-        { key: 'reference', label: 'Source', render: () => 'Fuel Credit collection' },
-        { key: 'action', label: '', render: (r) => r.project ? 'Included in site stock' : el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => assignCreditSupply(r) }, 'Assign site') },
+        { key: 'reference', label: 'Source', render: r => r.fromFuelCredit ? 'Station collection' : 'Diesel receipt' },
+        { key: 'action', label: '', render: (r) => r.project ? 'Included in site stock' : r.fromFuelCredit ? el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => assignCreditSupply(r) }, 'Assign site') : 'Assign site in Diesel Tracking' },
       ],
       rows: supplies,
       emptyText: 'No Fuel Credit diesel collections in this period.',
     });
 
-    const rows = store.get('dieselSiteDistributions').slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+    const rows = filterByProject(store.get('dieselSiteDistributions'), 'project').filter(r => dateInRange(r.date, fromInput.value, toInput.value)).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
     renderTable(distributionsContainer, {
       columns: [
         { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
@@ -299,6 +303,76 @@ function renderSiteDistributionTab(container) {
       rows,
       emptyText: 'No distributions logged yet.',
     });
+  }
+
+  function openSupplyForm() {
+    openModal({ title: 'New Supply from Station', fields: [
+      { name: 'date', label: 'Collection date', type: 'date', required: true },
+      { name: 'project', label: 'Receiving project', type: 'select', required: true, options: projectOptions() },
+      { name: 'station', label: 'Station', type: 'select', required: true, options: FUEL_STATIONS.map(s => ({ value: s, label: s })) },
+      { name: 'litres', label: 'Physical litres collected', type: 'number', required: true, min: 0.01, step: 0.01 },
+      { name: 'unitPrice', label: 'Price per litre (₦)', type: 'number', required: true, min: 0.01, step: 0.01 },
+      { name: 'reference', label: 'Collection reference / waybill' },
+      { name: 'notes', label: 'Notes', type: 'textarea' },
+    ], initial: { date: todayISOString(), unitPrice: 1900 }, submitLabel: 'Record New Supply', onSubmit: async data => {
+      if (!(Number(data.litres) > 0 && Number(data.unitPrice) > 0)) throw new Error('Enter positive litres and price.');
+      const existing = store.get('fuelCreditCollections').find(r => r.fuelType === 'Diesel' && r.project === data.project && r.station === data.station && r.date === data.date && Number(r.litres) === Number(data.litres) && (r.reference || '') === (data.reference || ''));
+      if (existing) throw new Error('This collection is already recorded. Check New Supply before adding it again.');
+      await store.add('fuelCreditCollections', { ...data, fuelType: 'Diesel' });
+      refresh();
+    } });
+  }
+
+  function openBatchForm() {
+    entrySlot.innerHTML = '';
+    const form = el('form', { class: 'card', style: 'padding:16px;margin:16px 0;max-width:760px' });
+    const field = (label, input) => el('label', { class: 'field', style: 'display:block;margin-bottom:12px' }, [el('span', { class: 'field-label' }, label), input]);
+    const date = el('input', { type: 'date', required: true, value: todayISOString() });
+    const project = el('select', { required: true }, [el('option', { value: '' }, 'Select project'), ...projectOptions().map(p => el('option', { value: p.value }, p.label))]);
+    const physical = el('input', { type: 'number', min: 0.01, step: 0.01, required: true, inputmode: 'decimal', placeholder: 'Measured litres being issued' });
+    const by = el('select', {}, employeeOptions().map(p => el('option', { value: p.value }, p.label)));
+    const notes = el('textarea', { rows: 2 });
+    const list = el('div');
+    const total = el('p', { role: 'status', 'aria-live': 'polite' });
+    const error = el('p', { role: 'alert' });
+    const submit = el('button', { type: 'submit', class: 'btn btn-primary', disabled: true }, 'Submit Distribution');
+    let controls = [], saving = false, uncertain = false;
+    const read = () => controls.map(c => ({ equipment: c.name, selected: c.check.checked, litres: c.qty.value }));
+    function update() {
+      const sum = read().filter(r => r.selected).reduce((s,r) => s + (Number(r.litres) || 0), 0);
+      total.textContent = `Distributed: ${sum.toLocaleString()} L · Physical: ${Number(physical.value || 0).toLocaleString()} L · Difference: ${(Number(physical.value || 0) - sum).toFixed(2)} L`;
+      try { validateDieselBatch(read(), physical.value); submit.disabled = saving || uncertain; } catch { submit.disabled = true; }
+    }
+    function drawMachines() {
+      list.innerHTML = ''; controls = [];
+      const machines = selectableMachines(fleetItems()).filter(m => machineProjectAsOf(m, date.value, store.get('operations'), store.get('machineStatusReports'), todayISOString()) === project.value);
+      for (const machine of machines) {
+        const check = el('input', { type: 'checkbox', 'aria-label': `Select ${machine.name}` });
+        const qty = el('input', { type: 'number', min: 0.01, step: 0.01, inputmode: 'decimal', placeholder: 'Litres', 'aria-label': `Litres for ${machine.name}`, disabled: true });
+        check.addEventListener('change', () => { qty.disabled = !check.checked; update(); }); qty.addEventListener('input', update);
+        list.appendChild(el('div', { style: 'display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,140px);gap:12px;align-items:center;margin:10px 0' }, [el('label', {}, [check, ` ${machine.name}`]), qty]));
+        controls.push({ name: machine.name, check, qty });
+      }
+      if (!machines.length) list.appendChild(el('p', {}, 'Select a project with assigned dozers. Check fleet assignments if a dozer is missing.'));
+      update();
+    }
+    form.append(el('h3', {}, 'Distribute diesel — one submission'), el('p', {}, 'Enter the physical quantity being distributed, then allocate it to the dozers. This is not the site tank closing count. No new supply is created by this form.'), field('Date', date), field('Project', project), field('Physical litres to distribute', physical), list, total, field('Distributed by', by), field('Notes (optional)', notes), error, submit, el('button', { type: 'button', class: 'btn btn-ghost', onClick: () => { entrySlot.innerHTML = ''; } }, 'Cancel'));
+    project.addEventListener('change', drawMachines); date.addEventListener('change', drawMachines); physical.addEventListener('input', update);
+    form.addEventListener('submit', async event => {
+      event.preventDefault(); if (saving || uncertain) return;
+      try {
+        const lines = validateDieselBatch(read(), physical.value);
+        if (!projectOptions().some(p => p.value === project.value)) throw new Error('Select a valid project.');
+        saving = true; submit.disabled = true; error.textContent = '';
+        await store.addDieselDistributionBatch(lines.map(line => ({ ...line, date: date.value, project: project.value, distributedBy: by.value || null, purpose: 'Dozer', recipient: null, notes: notes.value })));
+        entrySlot.innerHTML = ''; refresh();
+      } catch (err) {
+        error.textContent = err.message || 'Could not save. Refresh and check distributions before retrying.';
+        // A lost response can hide a committed batch. Require checking the ledger before retry.
+        if (/fetch|network|timeout/i.test(err.message || '')) { uncertain = true; error.textContent += ' Refresh and check the ledger before trying again.'; }
+      } finally { saving = false; update(); }
+    });
+    entrySlot.appendChild(form); drawMachines();
   }
 
   function assignCreditSupply(receipt) {
@@ -557,5 +631,7 @@ export function renderDieselManagement(container) {
 
   setTab(tab);
 }
+
+
 
 
