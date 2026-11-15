@@ -101,13 +101,6 @@ export function renderDashboard(container) {
   const body = el('div');
   container.appendChild(body);
 
-  const moduleStatuses = store.get('moduleStatuses');
-  if (moduleStatuses.length) {
-    const readiness = el('div', { class: 'card' }, [el('h3', {}, 'ERP readiness')]);
-    readiness.appendChild(el('div', { class: 'stats-grid' }, moduleStatuses.map((m) => statCard({ label: m.label, value: m.status, tone: m.status === 'Active' ? 'good' : 'warning' }))));
-    container.appendChild(readiness);
-  }
-
   prevBtn.addEventListener('click', () => refresh(addDays(dateInput.value || realTodayISO, -1)));
   nextBtn.addEventListener('click', () => refresh(addDays(dateInput.value || realTodayISO, 1)));
   todayBtn.addEventListener('click', () => refresh(realTodayISO));
@@ -441,71 +434,80 @@ export function renderDashboard(container) {
       body.appendChild(el('div', { class: 'action-feed-empty' }, `No activity logged for ${isToday ? 'today' : dayLabel} yet.`));
     }
 
-    const chartsGrid = el('div', { class: 'charts-grid' });
+    body.appendChild(el('h3', { class: 'subsection-title' }, 'Performance trends'));
+    const chartsGrid = el('div', { class: 'charts-grid dashboard-charts-grid' });
     body.appendChild(chartsGrid);
 
-    const profitCol = el('div');
-    chartsGrid.appendChild(profitCol);
-    renderMultiLineChart(profitCol, {
-      title: 'Revenue vs Cost vs Profit',
-      subtitle: `Company-wide, all projects, 6 months to ${monthLabel(currentMonthKey)}`,
-      categories: monthlyStats.map((m) => m.label),
-      series: [
-        { name: 'Revenue', colorVar: CATEGORICAL_COLORS[0], values: monthlyStats.map((m) => m.revenue) },
-        { name: 'Cost', colorVar: CATEGORICAL_COLORS[1], values: monthlyStats.map((m) => m.cost) },
-        { name: 'Profit', colorVar: CATEGORICAL_COLORS[2], values: monthlyStats.map((m) => m.profit) },
-      ],
-      formatValue: formatCurrency,
-    });
+    // Expand any graph to view its complete series and the exact values.
+    function addChart(title, render, columns, rows) {
+      const host = el('div', { class: 'dashboard-chart-host' });
+      chartsGrid.appendChild(host);
+      render(host, 280);
+      const expand = el('button', { type: 'button', class: 'btn btn-ghost dashboard-chart-expand', 'aria-label': `Open full chart: ${title}` }, 'Open full chart');
+      host.querySelector('.chart-card').appendChild(expand);
+      expand.addEventListener('click', () => {
+        const dialog = el('dialog', { class: 'dashboard-chart-dialog', 'aria-label': title });
+        const close = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Close');
+        const full = el('div', { class: 'dashboard-chart-full' });
+        const table = el('table', { class: 'dashboard-chart-data' });
+        table.appendChild(el('thead', {}, [el('tr', {}, columns.map((label) => el('th', { scope: 'col' }, label)))]));
+        table.appendChild(el('tbody', {}, rows.map((row) => el('tr', {}, row.map((value) => el('td', {}, String(value)))))));
+        dialog.append(el('div', { class: 'dashboard-chart-dialog-head' }, [el('h2', {}, title), close]), full,
+          el('div', { class: 'dashboard-chart-table-wrap' }, [table]));
+        body.appendChild(dialog);
+        render(full, 390);
+        close.addEventListener('click', () => dialog.close());
+        dialog.addEventListener('close', () => dialog.remove());
+        dialog.showModal();
+      });
+    }
 
-    const salesCol = el('div');
-    chartsGrid.appendChild(salesCol);
+    const profitSeries = [
+      { name: 'Revenue', colorVar: CATEGORICAL_COLORS[0], values: monthlyStats.map((m) => m.revenue) },
+      { name: 'Cost', colorVar: CATEGORICAL_COLORS[1], values: monthlyStats.map((m) => m.cost) },
+      { name: 'Profit', colorVar: CATEGORICAL_COLORS[2], values: monthlyStats.map((m) => m.profit) },
+    ];
+    addChart('Revenue vs Cost vs Profit', (host, height) => renderMultiLineChart(host, {
+      title: 'Revenue vs Cost vs Profit', subtitle: `Company-wide, 6 months to ${monthLabel(currentMonthKey)}`,
+      categories: monthlyStats.map((m) => m.label), series: profitSeries, formatValue: formatCurrency, height,
+    }), ['Month', 'Revenue', 'Cost', 'Profit'], monthlyStats.map((m) => [m.label, formatCurrency(m.revenue), formatCurrency(m.cost), formatCurrency(m.profit)]));
+
     const salesByMonth = months.map((key) => ({ label: monthLabel(key), value: revenueForMonth(key) }));
-    renderLineChart(salesCol, {
-      title: 'Sales Trend',
-      subtitle: `Total invoiced amount, 6 months to ${monthLabel(currentMonthKey)}`,
-      points: salesByMonth,
-      formatValue: formatCurrency,
-    });
+    addChart('Sales Trend', (host, height) => renderLineChart(host, {
+      title: 'Sales Trend', subtitle: 'Total invoiced amount by month',
+      points: salesByMonth, formatValue: formatCurrency, height,
+    }), ['Month', 'Invoiced sales'], salesByMonth.map((p) => [p.label, formatCurrency(p.value)]));
 
-    const landCol = el('div');
-    chartsGrid.appendChild(landCol);
     const areaByMonth = months.map((key) => ({ label: monthLabel(key), value: areaForMonth(key) }));
-    renderLineChart(landCol, {
-      title: 'Land Cleared Trend',
-      subtitle: `Hectares (Ha-unit operation types), 6 months to ${monthLabel(currentMonthKey)}`,
-      points: areaByMonth,
-      formatValue: (v) => `${v.toFixed(1)} ha`,
-    });
+    addChart('Land Cleared Trend', (host, height) => renderLineChart(host, {
+      title: 'Land Cleared Trend', subtitle: 'Hectares logged by month',
+      points: areaByMonth, formatValue: (v) => `${v.toFixed(1)} ha`, height,
+    }), ['Month', 'Hectares'], areaByMonth.map((p) => [p.label, `${p.value.toFixed(1)} ha`]));
 
-    const expenseCol = el('div');
-    chartsGrid.appendChild(expenseCol);
     const categories = [...new Set(expenses.map((e) => e.category))];
     const expenseBars = categories.map((cat, i) => ({
-      label: cat,
-      value: expenses.filter((e) => e.category === cat).reduce((sum, e) => sum + e.amount, 0),
+      label: cat, value: expenses.filter((e) => e.category === cat).reduce((sum, e) => sum + e.amount, 0),
       colorVar: CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length],
-    }));
-    renderBarChart(expenseCol, {
-      title: 'Expenses by Category',
-      subtitle: 'All-time total',
-      bars: expenseBars,
-      formatValue: formatCurrency,
-    });
+    })).sort((a, b) => b.value - a.value);
+    const compactExpenses = expenseBars.length > 5
+      ? [...expenseBars.slice(0, 5), { label: 'Other categories', value: expenseBars.slice(5).reduce((sum, b) => sum + b.value, 0), colorVar: CATEGORICAL_COLORS[5] }]
+      : expenseBars;
+    addChart('Expenses by Category', (host, height) => renderBarChart(host, {
+      title: 'Expenses by Category', subtitle: 'Largest categories, all-time; open for complete breakdown',
+      bars: host.classList.contains('dashboard-chart-full') ? expenseBars : compactExpenses,
+      formatValue: formatCurrency, height,
+    }), ['Category', 'Amount'], expenseBars.map((b) => [b.label, formatCurrency(b.value)]));
 
-    const opsCol = el('div');
-    chartsGrid.appendChild(opsCol);
     const areaBySite = {};
     operations.filter((o) => isHaOperationType(o.operationType)).forEach((o) => {
       areaBySite[o.siteName] = (areaBySite[o.siteName] || 0) + o.quantity;
     });
-    const siteBars = Object.entries(areaBySite).map(([label, value]) => ({ label, value }));
-    renderBarChart(opsCol, {
-      title: 'Land Cleared by Site',
-      subtitle: 'Hectares (Felling, Stacking, Direct Stacking, Root Picking, Bonding), all-time',
-      bars: siteBars,
-      formatValue: (v) => `${v.toFixed(1)} ha`,
-    });
+    const siteBars = Object.entries(areaBySite).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
+    addChart('Land Cleared by Site', (host, height) => renderBarChart(host, {
+      title: 'Land Cleared by Site', subtitle: 'All recorded hectares by project',
+      bars: siteBars, formatValue: (v) => `${v.toFixed(1)} ha`, height,
+    }), ['Project', 'Hectares'], siteBars.map((b) => [b.label, `${b.value.toFixed(1)} ha`]));
+
   }
 
   refresh(realTodayISO);
