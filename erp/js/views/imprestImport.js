@@ -66,7 +66,7 @@ export function renderManagerImprestImport(container, onImported) {
       const selectedManager = managers.find(person => person.id === selections.get(sheet.sheetName)?.manager);
       return named && selectedManager && named.toLowerCase().replace(/[^a-z]/g, '') !== selectedManager.name.toLowerCase().replace(/[^a-z]/g, '');
     });
-    const unresolved = chosen.filter(sheet => (sheet.variance || mismatchedNames.includes(sheet)) && !selections.get(sheet.sheetName)?.reviewed);
+    const unresolved = chosen.filter(sheet => (sheet.variance || sheet.skippedUndated || mismatchedNames.includes(sheet)) && !selections.get(sheet.sheetName)?.reviewed);
     const selected = selectedRows();
     const rows = selected.filter(row => !alreadyInERP(row));
     const overlapCount = selected.length - rows.length;
@@ -140,7 +140,8 @@ export function renderManagerImprestImport(container, onImported) {
         if (sheet.variance) {
           line.append(el('p', { class: 'text-critical' }, `Workbook printed totals: debit ${formatCurrency(sheet.reportedOutflow)}, credit ${formatCurrency(sheet.reportedInflow)}. Dated rows differ by ${formatCurrency(sheet.variance)}. Check source formulas before importing.`));
         }
-        if (sheet.variance || sheet.title.match(/\(([^)]+)\)/)) {
+        if (sheet.skippedUndated) line.append(el('p', { class: 'text-critical' }, `${sheet.skippedUndated} amount row(s) have no valid date and will not be imported.`));
+        if (sheet.variance || sheet.skippedUndated || sheet.title.match(/\(([^)]+)\)/)) {
           const reviewed = el('input', { type: 'checkbox' });
           reviewed.addEventListener('change', () => { selections.get(sheet.sheetName).reviewed = reviewed.checked; renderPreview(); });
           line.append(el('label', { class: 'imp-row' }, [reviewed, 'I verified the manager named inside this sheet and any difference from its printed totals.']));
