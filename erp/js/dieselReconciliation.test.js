@@ -54,3 +54,31 @@ test('site stock carries 720 L received, 600 L to a dozer and 20 L other use', (
   assert.equal(siteOnGroundAsOf(counted).onGround, 100);
   assert.equal(reconcileSiteDay(counted).variance, 0);
 });
+
+test('Blue Sky pre-delivery count carries Midejab supply into the following day', () => {
+  const project = 'Blue Sky Project - Ajue-Ore';
+  const args = {
+    project,
+    receipts: [
+      { project, date: '2026-11-13', litres: 720, station: 'Midejab Ltd' },
+      { project, date: '2026-11-14', litres: 1500, station: 'Midejab Ltd' },
+    ],
+    distributions: [
+      { project, date: '2026-11-14', equipment: 'EMG-007', litres: 600 },
+      { project, date: '2026-11-14', purpose: 'Other use', litres: 20 },
+      { project, date: '2026-11-15', equipment: 'EMG-007', litres: 200 },
+    ],
+    operations: [],
+    counts: [{ project, date: '2026-11-14', countedLitres: 100 }],
+  };
+  const day14 = reconcileSiteDay({ ...args, date: '2026-11-14' });
+  assert.equal(day14.measured, 100);
+  assert.equal(day14.postCountSupply, 1500);
+  assert.equal(day14.onGround, 1600);
+  assert.equal(day14.variance, 0);
+  assert.equal(day14.status, 'Pre-delivery count — closing projected');
+  const day15 = reconcileSiteDay({ ...args, date: '2026-11-15' });
+  assert.equal(day15.opening, 1600);
+  assert.equal(day15.onGround, 1400);
+  assert.equal(siteOnGroundAsOf({ ...args, date: '2026-11-15' }).onGround, 1400);
+});
