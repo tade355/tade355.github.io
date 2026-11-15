@@ -325,8 +325,8 @@ function renderSiteDistributionTab(container) {
 
   function openBatchForm() {
     entrySlot.innerHTML = '';
-    const form = el('form', { class: 'card', style: 'padding:16px;margin:16px 0;max-width:760px' });
-    const field = (label, input) => el('label', { class: 'field', style: 'display:block;margin-bottom:12px' }, [el('span', { class: 'field-label' }, label), input]);
+    const form = el('form', { class: 'card', style: 'padding:16px;margin:16px 0;width:100%;max-width:760px;box-sizing:border-box' });
+    const field = (label, input) => el('label', { class: 'field', style: 'margin-bottom:12px' }, [el('span', { class: 'field-label' }, label), input]);
     const date = el('input', { type: 'date', required: true, value: todayISOString() });
     const project = el('select', { required: true }, [el('option', { value: '' }, 'Select project'), ...projectOptions().map(p => el('option', { value: p.value }, p.label))]);
     const physical = el('input', { type: 'number', min: 0.01, step: 0.01, required: true, inputmode: 'decimal', placeholder: 'Measured litres being issued' });
@@ -350,7 +350,7 @@ function renderSiteDistributionTab(container) {
         const check = el('input', { type: 'checkbox', 'aria-label': `Select ${machine.name}` });
         const qty = el('input', { type: 'number', min: 0.01, step: 0.01, inputmode: 'decimal', placeholder: 'Litres', 'aria-label': `Litres for ${machine.name}`, disabled: true });
         check.addEventListener('change', () => { qty.disabled = !check.checked; update(); }); qty.addEventListener('input', update);
-        list.appendChild(el('div', { style: 'display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,140px);gap:12px;align-items:center;margin:10px 0' }, [el('label', {}, [check, ` ${machine.name}`]), qty]));
+        list.appendChild(el('div', { style: 'display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,140px);gap:12px;align-items:center;margin:10px 0' }, [el('label', { style: 'display:flex;align-items:center;gap:8px;min-height:44px' }, [check, ` ${machine.name}`]), el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Litres'), qty])]));
         controls.push({ name: machine.name, check, qty });
       }
       if (!machines.length) list.appendChild(el('p', {}, 'Select a project with assigned dozers. Check fleet assignments if a dozer is missing.'));
