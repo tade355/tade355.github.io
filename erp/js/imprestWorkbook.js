@@ -43,6 +43,7 @@ export function parseImprestSheet(rows, sheetName) {
   if (dateAt < 0 || purposeAt < 0 || debitAt < 0 || creditAt < 0) return { sheetName, entries: [], categories: [], error: 'Required Date, Purpose, Debit or Credit column missing.' };
   const categories = [...new Set(categoryCols.map(({ name }) => name))];
   const entries = [];
+  let skippedUndated = 0;
   for (let i = header + 1; i < rows.length; i++) {
     const row = rows[i] || [];
     const debit = amount(row[debitAt]);
@@ -51,7 +52,7 @@ export function parseImprestSheet(rows, sheetName) {
     const date = dateValue(row[dateAt]);
     const purpose = String(row[purposeAt] ?? '').trim() || (credit > 0 && debit === 0 ? 'Payment / credit recorded in workbook' : 'Cost recorded in workbook');
     // The first row below the headings is often a category-total summary.
-    if (!date) continue;
+    if (!date) { skippedUndated++; continue; }
     const categoryAmounts = {};
     categoryCols.forEach(({ col, name }) => { const value = amount(row[col]); if (value > 0) categoryAmounts[name] = (categoryAmounts[name] || 0) + value; });
     entries.push({ sourceSheet: sheetName, sourceRow: i + 1, date, purpose,
@@ -71,7 +72,7 @@ export function parseImprestSheet(rows, sheetName) {
   const variance = (reportedInflow === null ? 0 : Math.abs(calculatedInflow - reportedInflow))
     + (reportedOutflow === null ? 0 : Math.abs(calculatedOutflow - reportedOutflow));
   return { sheetName, title: String(rows[1]?.[0] || rows[0]?.[0] || ''), entries, categories,
-    reportedInflow, reportedOutflow, calculatedInflow, calculatedOutflow, variance };
+    reportedInflow, reportedOutflow, calculatedInflow, calculatedOutflow, variance, skippedUndated };
 }
 
 export function imprestStatement(entries) {
