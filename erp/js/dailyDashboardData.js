@@ -6,7 +6,7 @@ import { machineProjectAsOf, machineStateAsOf } from './selectionOptions.js';
 //
 // Pure (no store / DOM imports): everything is passed in through `ctx`, so the
 // figures can be unit-tested and reconciled against the published dashboards.
-import { DASHBOARD_BASIS_FROM, onDashboardBasis, dozerCostFor, DIESEL_LOGISTICS_PER_LITRE } from './dashboardBasis.js';
+import { DASHBOARD_BASIS_FROM, onDashboardBasis, dozerCostFor, dieselLogisticsCost } from './dashboardBasis.js';
 import { isSunday, addDays, requestSubmissionDate, rexFortnightStart } from './dateUtils.js';
 import { buildAttention } from './attention.js';
 import { fuelEfficiency, NORM_LITRES_PER_HA } from './fuelEfficiency.js';
@@ -281,7 +281,7 @@ export function buildDailyDashboard(ctx) {
     // Diesel logistics is charged on the diesel distributed to the dozer, once per dozer per day.
     let logistics = 0;
     if (onDashboardBasis(o.date) && ownership !== 'Partnership' && !todayStats.actualDieselTransport && !logisticsAssigned.has(o.equipment)) {
-      logistics = litres * DIESEL_LOGISTICS_PER_LITRE;
+      logistics = dieselLogisticsCost(litres, o.siteName, o.date);
       logisticsAssigned.add(o.equipment);
       logisticsAttributed += logistics;
     }
