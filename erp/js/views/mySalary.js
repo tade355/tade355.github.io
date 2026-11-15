@@ -3,8 +3,8 @@ import { sectionHeader, statCard, renderTable } from '../ui.js';
 import { getCurrentUser } from '../session.js';
 import { supabase } from '../supabaseClient.js';
 import { todayISOString } from '../dateUtils.js';
-import { ALLOWANCE_EQUIPMENT, operatorAllowanceForRows } from '../ownedOperatorAllowance.js';
-import { buildPayStatement, payStatementPeriod } from '../payStatement.js';
+import { payStatementPeriod } from '../payStatement.js';
+import { buildPersonalPayEntries } from '../personalPayLedger.js';
 import { printPersonalPay } from '../payStatementPrint.js';
 
 export async function renderMySalary(container) {
@@ -20,9 +20,7 @@ export async function renderMySalary(container) {
     container.appendChild(el('p',{role:'alert',class:'backup-warning'},'Your pay records could not be loaded. Please refresh or contact your administrator.'));
     return;
   }
-  ctx.expenses=(ctx.expenses || []).map(e=>({...e,payee:'personal-payment'}));
-  const entries=buildPayStatement(ctx,employee.id,
-    rows=>operatorAllowanceForRows(rows.filter(o=>ALLOWANCE_EQUIPMENT.has(o.equipment))),(_id,payee,category)=>payee==='personal-payment'&&category==='Salary and Allowance');
+  const entries=buildPersonalPayEntries(ctx,employee.id);
   const month=el('input',{type:'month','aria-label':'Pay month'});month.value=todayISOString().slice(0,7);
   const payslip=el('button',{type:'button',class:'btn btn-primary'},[ico('printer'),'Print Monthly Payslip']);
   const statement=el('button',{type:'button',class:'btn btn-ghost'},[ico('printer'),'Print Pay Statement']);

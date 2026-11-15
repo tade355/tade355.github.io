@@ -6,6 +6,8 @@ import { formatClock, formatDateTime } from '../clockFormat.js';
 import { unitForOperationType } from '../constants.js';
 import { operatorPeriod } from '../operatorPortalData.js';
 import { DOZER_OVERTIME_RATE_DEFAULT } from '../constants.js';
+import { buildPersonalPayEntries } from '../personalPayLedger.js';
+import { payStatementPeriod } from '../payStatement.js';
 
 const number = value => Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
 
@@ -18,8 +20,6 @@ export async function renderOperatorDashboard(container, { issuesOnly = false } 
   try {
     const { data, error } = await supabase.rpc('erp_operator_portal');
     if (error) throw new Error('Your records could not be loaded. Please refresh or contact your administrator.');
-    const { data: allowance, error: allowanceError } = await supabase.rpc('erp_operator_allowance');
-    if (!allowanceError && allowance) data.allowance = allowance;
     if (!data || data.assignmentStatus !== 'Ready') {
       body.replaceChildren(el('p', { class: 'backup-warning' }, data?.assignmentStatus === 'Needs review'
         ? 'Your dozer and project assignment need to be checked by your administrator.'
@@ -30,6 +30,16 @@ export async function renderOperatorDashboard(container, { issuesOnly = false } 
       el('p', {}, `${data.dozer.name} · ${data.project}`), statusPill(data.dozer.status || 'Not reported')]));
 
     if (!issuesOnly) {
+      const { data: pay, error: payError } = await supabase.rpc('erp_personal_pay');
+      if (payError || !pay || pay.employeeId !== data.employee.id) {
+        throw new Error('Your pay records could not be loaded. Please refresh or contact your administrator.');
+      }
+      const { data: allowanceRates } = await supabase.rpc('erp_operator_allowance');
+      const payEntries = buildPersonalPayEntries(pay, data.employee.id);
+      const allPeriodPay = payStatementPeriod(payEntries, '');
+      const paymentRows = payEntries.filter(row => Number(row.paid) > 0).map(row => ({
+        date: row.date, amount: row.paid, source: row.type, reference: row.id,
+      })).reverse();
       const today = todayISOString();
       const from = el('input', { type: 'date', value: rexFortnightStart(data.project, today) || today, 'aria-label': 'My work from' });
       const to = el('input', { type: 'date', value: today, max: today, 'aria-label': 'My work to' });
@@ -54,13 +64,13 @@ export async function renderOperatorDashboard(container, { issuesOnly = false } 
           { key: 'amount', label: 'Amount paid', render: row => formatCurrency(row.amount) },
           { key: 'source', label: 'Recorded from' },
           { key: 'reference', label: 'Reference' },
-        ], rows: data.allowance?.payments || [], emptyText: 'No allowance payment has been recorded yet.' });
+        ], rows: paymentRows, emptyText: 'No payment or credit has been recorded yet.' });
         summary.replaceChildren(el('p', { role: 'alert' }, 'The From date must be on or before the To date.'));
           reports.replaceChildren(); return;
         }
         const period = operatorPeriod(data.reports || [], from.value, to.value);
-        const rate = Number(data.allowance?.dayRate || 30000);
-        const overtimeRate = Number(data.allowance?.overtimeRate || DOZER_OVERTIME_RATE_DEFAULT);
+        const rate = Number(allowanceRates?.dayRate || pay.dayRate || 30000);
+        const overtimeRate = Number(allowanceRates?.overtimeRate || pay.overtimeRate || DOZER_OVERTIME_RATE_DEFAULT);
         const allowanceRows = period.rows.map(row => {
           const hours = Number(row.hours || 0);
           const baseHours = Math.min(hours, 8);
@@ -69,14 +79,13 @@ export async function renderOperatorDashboard(container, { issuesOnly = false } 
           return { ...row, baseHours, overtimeHours, earned };
         });
         const periodEarned = allowanceRows.reduce((sum, row) => sum + row.earned, 0);
-        const totalEarned = Number(data.allowance?.earned || 0);
-        const totalPaid = Number(data.allowance?.paid || 0);
-        const balance = Number(data.allowance?.balance ?? (totalEarned - totalPaid));
+        const totalPaid = allPeriodPay.paid;
+        const balance = allPeriodPay.closing;
         allowanceSummary.replaceChildren(
           statCard({ label: 'Daily rate (8 hrs)', value: formatCurrency(rate) }),
-          statCard({ label: 'Earned in selected period', value: formatCurrency(periodEarned) }),
+          statCard({ label: 'Estimated from selected work', value: formatCurrency(periodEarned) }),
           statCard({ label: 'Paid to date', value: formatCurrency(totalPaid), tone: 'good' }),
-          statCard({ label: 'Balance owed', value: formatCurrency(balance), tone: balance > 0 ? 'warning' : 'good' }),
+          statCard({ label: 'Balance including estimates', value: formatCurrency(balance), tone: balance > 0 ? 'warning' : 'good' }),
         );
         renderTable(allowanceLedger, { columns: [
           { key: 'date', label: 'Date', render: row => formatDate(row.date) },
@@ -101,6 +110,12 @@ export async function renderOperatorDashboard(container, { issuesOnly = false } 
       from.addEventListener('change', refreshPeriod); to.addEventListener('change', refreshPeriod);
       all.addEventListener('click', () => { from.value = ''; to.value = today; refreshPeriod(); });
       refreshPeriod();
+      renderTable(allowancePayments, { columns: [
+        { key: 'date', label: 'Payment date', render: row => formatDate(row.date) },
+        { key: 'amount', label: 'Amount paid', render: row => formatCurrency(row.amount) },
+        { key: 'source', label: 'Recorded from' },
+        { key: 'reference', label: 'Reference' },
+      ], rows: paymentRows, emptyText: 'No payment or credit has been recorded yet.' });
       const serviceHours = data.dozer.hoursSinceService;
       const interval = Number(data.dozer.serviceIntervalHours) || 250;
       body.appendChild(el('div', { class: 'card' }, [el('h3', {}, 'Dozer servicing'),
