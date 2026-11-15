@@ -37,3 +37,39 @@ export function officeRentalUsage(operations, equipment, from, to) {
   const hoursWorked = work.reduce((sum, row) => sum + row.hoursWorked, 0);
   return { work, hoursWorked, daysUsed: hoursWorked / 8, workedDates: work.length };
 }
+
+
+// Internal daily audit. Business work is shown to management, but never
+// consumes rental credit or enters the owner-facing rental statement.
+export function rentalDailyLedger(operations, credits, transfers, equipment) {
+  const payments = (credits || []).filter((r) => matchesRentalEquipment(r.equipment, equipment));
+  const movements = (transfers || []).filter((r) => matchesRentalEquipment(r.fromEquipment, equipment) || matchesRentalEquipment(r.toEquipment, equipment));
+  const firstDate = payments.map((r) => r.paymentDate).sort()[0] || movements.map((r) => r.transferDate).sort()[0];
+  if (!firstDate) return [];
+  const byDate = new Map();
+  const day = (date) => {
+    if (!byDate.has(date)) byDate.set(date, { date, paidDays: 0, officeHours: 0, usedDays: 0, businessHours: 0, businessDays: 0, daysIn: 0, daysOut: 0 });
+    return byDate.get(date);
+  };
+  payments.forEach((r) => { if (r.paymentDate) day(r.paymentDate).paidDays += Number(r.daysPaid || 0); });
+  movements.forEach((r) => {
+    if (!r.transferDate || r.transferDate < firstDate) return;
+    if (matchesRentalEquipment(r.toEquipment, equipment)) day(r.transferDate).daysIn += Number(r.daysTransferred || 0);
+    if (matchesRentalEquipment(r.fromEquipment, equipment)) day(r.transferDate).daysOut += Number(r.daysTransferred || 0);
+  });
+  officeRentalUsage(operations, equipment, firstDate).work.forEach((r) => {
+    day(r.date).officeHours += r.hoursWorked;
+    day(r.date).usedDays += r.daysUsed;
+  });
+  for (const r of operations || []) {
+    if (!matchesRentalEquipment(r.equipment, equipment) || !r.date || r.date < firstDate || r.workType !== 'Business') continue;
+    const hours = Number(r.hoursWorked || 0);
+    if (Number.isFinite(hours) && hours > 0) day(r.date).businessHours += hours;
+  }
+  let balance = 0;
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date)).map((r) => {
+    r.businessDays = r.businessHours > 0 ? 1 : 0;
+    balance += r.paidDays + r.daysIn - r.daysOut - r.usedDays;
+    return { ...r, balanceDays: balance };
+  });
+}
