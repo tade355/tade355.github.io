@@ -34,6 +34,7 @@ export async function renderOperatorDashboard(container, { issuesOnly = false } 
       if (payError || !pay || pay.employeeId !== data.employee.id) {
         throw new Error('Your pay records could not be loaded. Please refresh or contact your administrator.');
       }
+      const { data: allowanceRates } = await supabase.rpc('erp_operator_allowance');
       const payEntries = buildPersonalPayEntries(pay, data.employee.id);
       const allPeriodPay = payStatementPeriod(payEntries, '');
       const paymentRows = payEntries.filter(row => Number(row.paid) > 0).map(row => ({
@@ -68,8 +69,8 @@ export async function renderOperatorDashboard(container, { issuesOnly = false } 
           reports.replaceChildren(); return;
         }
         const period = operatorPeriod(data.reports || [], from.value, to.value);
-        const rate = Number(pay.dayRate || 30000);
-        const overtimeRate = Number(pay.overtimeRate || DOZER_OVERTIME_RATE_DEFAULT);
+        const rate = Number(allowanceRates?.dayRate || pay.dayRate || 30000);
+        const overtimeRate = Number(allowanceRates?.overtimeRate || pay.overtimeRate || DOZER_OVERTIME_RATE_DEFAULT);
         const allowanceRows = period.rows.map(row => {
           const hours = Number(row.hours || 0);
           const baseHours = Math.min(hours, 8);
