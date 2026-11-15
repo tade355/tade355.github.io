@@ -65,7 +65,7 @@ export function fundRequestImprestEntries(requests, payments, employees) {
       const category = categoryFor(item.description || '');
       const machine = (item.description || '').match(/EMG[ -]*0?([0-9]+)/i);
       entries.push({ id: `${request.id}:item:${item.id || index}`, managerId: manager.id, managerName: manager.name,
-        date: request.date, project: request.project, site: '', allocation: machine ? `Dozer · EMG-00${machine[1]}` : '',
+        date: request.date, project: request.project, site: '', allocation: machine ? `Dozer · EMG-${machine[1].padStart(3, '0')}` : '',
         purpose: item.description || request.description || '', category, sourceOfCredit: '', debit, credit: 0,
         categoryAmounts: { [category]: debit }, reference: request.id, status: request.status,
         source: 'Fund request item (existing cost)', order: 0 });
