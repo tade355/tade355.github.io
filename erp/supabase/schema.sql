@@ -389,6 +389,7 @@ create trigger trg_diesel_receipts_updated_at before update on diesel_receipts
 create table diesel_stock_counts (
   id             text primary key,
   date           date not null,
+  project        text,
   counted_litres numeric not null,
   counted_by     text references employees(id) on delete set null,
   notes          text,
