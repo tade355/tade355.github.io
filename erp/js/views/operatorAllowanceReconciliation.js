@@ -1,6 +1,7 @@
 import { store } from '../store.js';
 import { el, formatCurrency, formatDate } from '../utils.js';
 import { getCurrentTier } from '../session.js';
+import { renderTable } from '../ui.js';
 import { parseOperatorAllowanceSheet } from '../operatorAllowanceImport.js';
 import { allowancePayeeFor, isOwnedOperatorAllowancePaymentFor } from '../ownedOperatorAllowance.js';
 
@@ -123,6 +124,7 @@ export function renderOperatorAllowanceTools(container, refresh) {
         details.innerHTML = '';
         ready = false;
         refresh();
+        renderPaymentHistory();
       } catch (error) {
         status.textContent = `Could not complete import: ${error.message}. Saved payments are retained; retrying skips those already recorded.`;
         confirm.disabled = false;
@@ -152,6 +154,22 @@ export function renderOperatorAllowanceTools(container, refresh) {
 
   const paymentCard = el('div', { class: 'dd-tool dd-static' });
   paymentCard.appendChild(el('h3', { class: 'subsection-title' }, 'Record a later operator allowance payment'));
+  const historySlot = el('div');
+  function renderPaymentHistory() {
+    const rows = store.get('expenses').filter((e) => e.category === 'Salary and Allowance'
+      && store.get('employees').some((person) => isOwnedOperatorAllowancePaymentFor(person.id, e.payee, e.category)))
+      .slice().sort((a, b) => b.date.localeCompare(a.date));
+    renderTable(historySlot, {
+      columns: [
+        { key: 'date', label: 'Payment date', render: (r) => formatDate(r.date) },
+        { key: 'payee', label: 'Operator' },
+        { key: 'amount', label: 'Paid', render: (r) => formatCurrency(r.amount) },
+        { key: 'description', label: 'Record' },
+      ],
+      rows,
+      emptyText: 'No operator allowance payments recorded yet.',
+    });
+  }
   const paymentOperator = el('select');
   paymentOperator.appendChild(el('option', { value: '' }, 'Select operator'));
   operatorOptions(paymentOperator);
@@ -164,11 +182,14 @@ export function renderOperatorAllowanceTools(container, refresh) {
     if (!paymentOperator.value || !paymentDate.value || !Number.isFinite(amount) || amount <= 0) { window.alert('Choose an operator, date and positive amount.'); return; }
     if (paymentExists(paymentOperator.value, paymentDate.value, amount)) { window.alert('A payment of this amount is already recorded for that operator and date.'); return; }
     save.disabled = true;
-    try { await addPayment(paymentOperator.value, paymentDate.value, amount, 'manual entry'); paymentAmount.value = ''; refresh(); }
+    try { await addPayment(paymentOperator.value, paymentDate.value, amount, 'manual entry'); paymentAmount.value = ''; refresh(); renderPaymentHistory(); }
     catch (error) { window.alert(error.message || 'Could not record payment.'); }
     finally { save.disabled = false; }
   });
   paymentCard.appendChild(el('div', { class: 'imp-row' }, [paymentOperator, paymentDate, paymentAmount, save]));
+  paymentCard.appendChild(el('h3', { class: 'subsection-title' }, 'Allowance payment history'));
+  paymentCard.appendChild(historySlot);
+  renderPaymentHistory();
   container.appendChild(paymentCard);
 }
 
