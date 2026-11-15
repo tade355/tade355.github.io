@@ -95,3 +95,14 @@ test('a deal day on a hired dozer costs the amount paid, not hours x rate', asyn
   assert.equal(dozerCostFor(deal, 'Company', 46250), 462500);
   assert.equal(dozerCostFor({ hoursWorked: 4, operationType: 'Trekking' }, 'Company', 46250), 0);
 });
+
+test('Kangidi transport changes on 1 November; other sites and earlier dates retain their rates', () => {
+  const owners = new Map([['Company dozer','Company'],['Rented dozer','Rented'],['Partner dozer','Partnership']]);
+  const row = (project,date,equipment='Company dozer') => ({project,date,equipment,litres:30});
+  assert.equal(dieselLogisticsBasis([row('REX Forestry Project - Kangidi','2026-10-31')],owners),1500);
+  assert.equal(dieselLogisticsBasis([row('REX Forestry Project - Kangidi','2026-11-01')],owners),2000);
+  assert.equal(dieselLogisticsBasis([row('REX Forestry Project - Kangidi','2026-11-15','Rented dozer')],owners),2000);
+  assert.equal(dieselLogisticsBasis([row('Blue Sky Project - Ajue-Ore','2026-11-15')],owners),1500);
+  assert.equal(dieselLogisticsBasis([row('REX Forestry Project - Kangidi','2026-11-15','Partner dozer')],owners),0);
+  assert.equal(dieselLogisticsBasis([row('REX Forestry Project - Kangidi','2026-10-31'),row('REX Forestry Project - Kangidi','2026-11-01')],owners),3500);
+});
