@@ -6,39 +6,34 @@ import { printDozerSettlement, printDozerRentalStatement } from '../print.js';
 import { getCurrentTier, getCurrentUserId } from '../session.js';
 import { dozerRatesAsOf } from '../rateHistory.js';
 import { currentOwnerSettlements } from '../rentSettlementBasis.js';
+import { officeRentalUsage } from '../rentalHours.js';
 
 function rentedDozers() {
   return store.get('inventory').filter((item) => item.ownership === 'Rented');
-}
-
-function rentalWorkRows(equipment, from) {
-  return store.get('operations').filter((row) =>
-    row.equipment === equipment && row.date >= from && row.workType !== 'Business' && Number(row.hoursWorked || 0) > 0);
 }
 
 function rentalLedgerRow(dozer) {
   const credits = store.get('dozerRentalCredits').filter((row) => row.equipment === dozer.name);
   const transfers = store.get('dozerRentalTransfers');
   const firstDate = credits.map((row) => row.paymentDate).sort()[0] || todayISOString();
-  const work = rentalWorkRows(dozer.name, firstDate);
-  const workedDates = [...new Set(work.map((row) => row.date))];
-  const hoursWorked = work.reduce((sum, row) => sum + Number(row.hoursWorked || 0), 0);
+  const usage = officeRentalUsage(store.get('operations'), dozer.name, firstDate);
+  const { work, hoursWorked } = usage;
   const daysPaid = credits.reduce((sum, row) => sum + Number(row.daysPaid || 0), 0);
   const transferIn = transfers.filter((row) => row.toEquipment === dozer.name).reduce((sum, row) => sum + Number(row.daysTransferred || 0), 0);
   const transferOut = transfers.filter((row) => row.fromEquipment === dozer.name).reduce((sum, row) => sum + Number(row.daysTransferred || 0), 0);
-  const remainingDays = daysPaid + transferIn - transferOut - workedDates.length;
+  const remainingDays = daysPaid + transferIn - transferOut - usage.daysUsed;
   const latestCredit = credits.slice().sort((a, b) => String(b.paymentDate).localeCompare(String(a.paymentDate)))[0];
   const rate = Number(latestCredit?.dailyRate || dozer.rentalRatePerDay || 0);
   return {
     equipment: dozer.name,
     vendor: dozer.ownerName || latestCredit?.vendor || '—',
-    daysPaid, workedDays: workedDates.length, hoursWorked, transferIn, transferOut,
+    daysPaid, workedDays: usage.daysUsed, hoursWorked, transferIn, transferOut,
     remainingDays, remainingValue: remainingDays * rate, rate, firstDate,
     lastPaymentDate: latestCredit?.paymentDate,
     credits: credits.slice().sort((a, b) => String(a.paymentDate).localeCompare(String(b.paymentDate))),
     transfers: transfers.filter((row) => row.fromEquipment === dozer.name || row.toEquipment === dozer.name)
       .slice().sort((a, b) => String(a.transferDate).localeCompare(String(b.transferDate))),
-    work: work.slice().sort((a, b) => String(a.date).localeCompare(String(b.date))),
+    work,
   };
 }
 
@@ -118,6 +113,49 @@ function openRentalCreditForm(refresh) {
   });
 }
 
+function openRentalCreditCorrection(record, refresh) {
+  openCustomModal({
+    title: 'Correct Paid Rental Days',
+    build: (container) => {
+      const daysField = textField('daysPaid', 'Confirmed paid days', 'number', record.daysPaid, true);
+      daysField.querySelector('input').step = '0.125';
+      const reasonField = textField('reason', 'Reason for correction', 'text', '', true);
+      const submit = el('button', { type: 'button', class: 'btn btn-primary' }, 'Save Correction');
+      submit.addEventListener('click', async () => {
+        const daysPaid = Number(daysField.querySelector('input').value);
+        const reason = reasonField.querySelector('input').value.trim();
+        if (!Number.isFinite(daysPaid) || daysPaid <= 0 || !reason) {
+          window.alert('Enter the confirmed paid days and a reason.');
+          return;
+        }
+        const oldDays = Number(record.daysPaid || 0);
+        if (daysPaid === oldDays) { closeModal(); return; }
+        try {
+          submit.disabled = true;
+          const auditNote = 'Paid days corrected from ' + oldDays + ' to ' + daysPaid
+            + ' by ' + (getCurrentUserId() || 'Admin') + ': ' + reason;
+          await store.update('dozerRentalCredits', record.id, {
+            daysPaid, notes: [record.notes, auditNote].filter(Boolean).join('\n'),
+          });
+          closeModal(); refresh();
+        } catch (err) {
+          window.alert(err.message || 'Could not correct the paid days.');
+          submit.disabled = false;
+        }
+      });
+      container.append(
+        el('p', { class: 'section-subtitle' }, 'Correct only the paid-day entitlement. The recorded amount, payment date and fund request remain unchanged.'),
+        el('p', {}, record.equipment + ' · ' + record.fundRequestId + ' · ' + formatCurrency(record.amountPaid)),
+        daysField, reasonField,
+        el('div', { class: 'modal-actions' }, [
+          el('button', { type: 'button', class: 'btn btn-ghost', onClick: closeModal }, 'Cancel'),
+          submit,
+        ]),
+      );
+    },
+  });
+}
+
 function openRentalTransferForm(refresh) {
   const rows = rentedDozers().map(rentalLedgerRow).filter((row) => row.remainingDays > 0);
   if (rows.length < 1) { window.alert('No rented dozer has paid days available to transfer.'); return; }
@@ -165,19 +203,19 @@ function renderRentalCreditLedger(container, refresh) {
     canManage ? el('button', { class: 'btn btn-primary', onClick: () => openRentalCreditForm(refresh) }, '+ Allocate Paid Rental') : null,
     canManage ? el('button', { class: 'btn btn-secondary', onClick: () => openRentalTransferForm(refresh) }, 'Transfer Paid Days') : null,
   ].filter(Boolean));
-  container.appendChild(sectionHeader('Rented Dozer Credit Tracking', 'Payment-backed days, worked dates, hours, transfers and remaining rental for each hired dozer', actions));
-  container.appendChild(el('p', { class: 'section-subtitle' }, 'One date with recorded work consumes one rental day. Hours are shown as supporting evidence. Saheed and Pastor remain separate even when their vendor is the same.'));
+  container.appendChild(sectionHeader('Rented Dozer Credit Tracking', 'Payment-backed days, office hours, transfers and remaining rental for each hired dozer', actions));
+  container.appendChild(el('p', { class: 'section-subtitle' }, 'Eight office hours consume one rental day; partial days are deducted proportionally. Saheed and Pastor have separate balances.'));
   const table = el('div'); container.appendChild(table);
   renderTable(table, {
     columns: [
       { key: 'equipment', label: 'Dozer' }, { key: 'vendor', label: 'Vendor' },
       { key: 'daysPaid', label: 'Days Paid', render: (r) => r.daysPaid.toFixed(2) },
-      { key: 'workedDays', label: 'Worked Days' },
-      { key: 'hoursWorked', label: 'Hours Worked', render: (r) => r.hoursWorked.toFixed(1) + ' hrs' },
+      { key: 'workedDays', label: 'Days Used', render: (r) => r.workedDays.toFixed(2) },
+      { key: 'hoursWorked', label: 'Office Hours', render: (r) => r.hoursWorked.toFixed(1) + ' hrs' },
       { key: 'transferIn', label: 'Days In', render: (r) => r.transferIn.toFixed(2) },
       { key: 'transferOut', label: 'Days Out', render: (r) => r.transferOut.toFixed(2) },
       { key: 'remainingDays', label: 'Rental Left', render: (r) => el('strong', { class: r.remainingDays < 2 ? 'text-critical' : 'text-good' }, r.remainingDays.toFixed(2) + ' days') },
-      { key: 'remainingValue', label: 'Value Left', render: (r) => formatCurrency(r.remainingValue) },
+      { key: 'remainingValue', label: 'Indicative Value Left', render: (r) => formatCurrency(r.remainingValue) },
       { key: 'lastPaymentDate', label: 'Last Payment', render: (r) => r.lastPaymentDate ? formatDate(r.lastPaymentDate) : 'Not allocated' },
       { key: 'print', label: '', render: (r) => el('button', { class: 'btn btn-ghost btn-sm', onClick: () => printDozerRentalStatement(r) }, 'Print Statement') },
     ], rows, emptyText: 'No rented dozers are configured yet.',
@@ -198,6 +236,9 @@ function renderRentalCreditLedger(container, refresh) {
       { key: 'entryType', label: 'Entry' }, { key: 'movement', label: 'Days' },
       { key: 'fundRequestId', label: 'Fund Request', render: (r) => r.fundRequestId || '—' },
       { key: 'detail', label: 'Details', wrap: true },
+      { key: 'correction', label: '', render: (r) => canManage && r.entryType === 'Payment'
+        ? el('button', { class: 'btn btn-ghost btn-sm', onClick: () => openRentalCreditCorrection(r, refresh) }, 'Correct Days')
+        : '—' },
     ], rows: history, emptyText: 'No rental payments or transfers recorded yet.',
   });
 }
@@ -225,14 +266,9 @@ function textField(name, label, type, value, required) {
   return el('label', { class: 'field' }, [el('span', { class: 'field-label' }, label + (required ? ' *' : '')), input]);
 }
 
-// Distinct days worked in a period, excluding Business days — this is what
-// feeds a Partnership dozer's formal, owner-shareable settlement.
+// Formal owner settlement uses the same eight-hour office-day rule as rental credit.
 function officeDaysWorked(equipment, from, to) {
-  return new Set(
-    store.get('operations')
-      .filter((o) => o.equipment === equipment && dateInRange(o.date, from, to) && o.workType !== 'Business')
-      .map((o) => o.date),
-  ).size;
+  return officeRentalUsage(store.get('operations'), equipment, from, to).daysUsed;
 }
 
 function maintenanceCostFor(equipment, from, to) {
@@ -261,7 +297,8 @@ function openSettlementForm(record, refresh) {
       const periodEndField = textField('periodEnd', 'Period End', 'date', record?.periodEnd, true);
       const topGrid = el('div', { class: 'form-grid-2' }, [equipmentField, periodStartField, periodEndField]);
 
-      const daysField = textField('daysWorked', 'Days Worked (Office days only)', 'number', record?.daysWorked ?? 0, true);
+      const daysField = textField('daysWorked', 'Days Worked (8 office hours = 1 day)', 'number', record?.daysWorked ?? 0, true);
+      daysField.querySelector('input').step = '0.125';
       const rentalField = textField('rentalRatePerDay', 'Rental Rate/Day (₦)', 'number', record?.rentalRatePerDay ?? 0, true);
       const feeField = textField('managementFeePerDay', 'Management Fee/Day (₦, retained)', 'number', record?.managementFeePerDay ?? 0, true);
       const repairsField = textField('repairsCost', 'Repairs Cost (₦)', 'number', record?.repairsCost ?? 0);

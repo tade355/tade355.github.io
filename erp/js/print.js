@@ -1093,11 +1093,11 @@ export function printDozerRentalStatement(row) {
       <div><strong>Daily Rate:</strong> ${formatCurrency(row.rate)}</div>
       <div><strong>Tracking From:</strong> ${formatDate(row.firstDate)}</div>
       <div><strong>Days Paid:</strong> ${row.daysPaid.toFixed(2)}</div>
-      <div><strong>Worked Days:</strong> ${row.workedDays}</div>
-      <div><strong>Total Hours:</strong> ${row.hoursWorked.toFixed(1)} hrs</div>
-      <div><strong>Rental Left:</strong> ${row.remainingDays.toFixed(2)} days (${formatCurrency(row.remainingValue)})</div>
+      <div><strong>Rental Days Used:</strong> ${row.workedDays.toFixed(2)}</div>
+      <div><strong>Office Hours:</strong> ${row.hoursWorked.toFixed(1)} hrs</div>
+      <div><strong>Rental Left:</strong> ${row.remainingDays.toFixed(2)} days</div>
     </div>
-    <div class="print-block"><strong>Counting rule:</strong> Each distinct date with recorded productive work consumes one rental day. Hours are displayed as supporting evidence. Transfers retain their date and reason.</div>
+    <div class="print-block"><strong>Counting rule:</strong> Eight office hours consume one rental day; a partial day is deducted proportionally. No more than eight hours are counted on one date. Transfers retain their date and reason.</div>
     <h3>Payments and Day Transfers</h3>
     <table class="print-table">
       <thead><tr><th>Date</th><th>Entry</th><th>Days</th><th>Details</th></tr></thead>
@@ -1105,11 +1105,11 @@ export function printDozerRentalStatement(row) {
     </table>
     <h3>Work Evidence</h3>
     <table class="print-table">
-      <thead><tr><th>Date</th><th>Hours Worked</th><th>Project(s)</th><th>Rental Days Used</th></tr></thead>
-      <tbody>${workByDate.size ? [...workByDate.values()].map((item) => `<tr><td>${formatDate(item.date)}</td><td>${item.hours.toFixed(1)} hrs</td><td>${[...item.projects].join(', ') || '—'}</td><td>1.00</td></tr>`).join('') : '<tr><td colspan="4">No work recorded from the first rental credit date.</td></tr>'}</tbody>
+      <thead><tr><th>Date</th><th>Office Hours</th><th>Project(s)</th><th>Rental Days Used</th></tr></thead>
+      <tbody>${workByDate.size ? [...workByDate.values()].map((item) => `<tr><td>${formatDate(item.date)}</td><td>${item.hours.toFixed(1)} hrs</td><td>${[...item.projects].join(', ') || '—'}</td><td>${(item.hours / 8).toFixed(2)}</td></tr>`).join('') : '<tr><td colspan="4">No work recorded from the first rental credit date.</td></tr>'}</tbody>
       <tfoot><tr><td>Total</td><td>${row.hoursWorked.toFixed(1)} hrs</td><td></td><td>${row.workedDays.toFixed(2)}</td></tr></tfoot>
     </table>
-    <div class="print-block"><strong>Remaining rental:</strong> ${row.remainingDays.toFixed(2)} days · ${formatCurrency(row.remainingValue)}</div>
+    <div class="print-block"><strong>Remaining rental:</strong> ${row.remainingDays.toFixed(2)} days. Indicative value at recorded daily rate: ${formatCurrency(row.remainingValue)}.</div>
     ${signatureBlock(['Prepared By', 'Vendor / Representative'])}
   `;
   render(html);
