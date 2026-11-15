@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { officeRentalUsage } from './rentalHours.js';
+import { officeRentalUsage, matchesRentalEquipment } from './rentalHours.js';
 
 test('rental credit uses eight office hours per day, including partial days', () => {
   const usage = officeRentalUsage([
@@ -23,4 +23,17 @@ test('private business work and extra hours do not consume or appear in owner us
   assert.equal(usage.daysUsed, 1.5);
   assert.equal(usage.work[0].hoursWorked, 8);
   assert.equal(usage.work.some(row => row.project.includes('Private')), false);
+});
+
+
+test('renamed Ogbomo dozers retain their separate historical rental credits and hours', () => {
+  assert.equal(matchesRentalEquipment('Ogbomo (Saheed)', 'Saheed (Osaro)'), true);
+  assert.equal(matchesRentalEquipment('Ogbomo Dozer (Pastor)', 'Pastor (Osaro)'), true);
+  assert.equal(matchesRentalEquipment('Ogbomo (Saheed)', 'Pastor (Osaro)'), false);
+  const operations = [
+    { equipment: 'Ogbomo (Saheed)', date: '2026-11-12', hoursWorked: 8, workType: 'Office' },
+    { equipment: 'Pastor (Osaro)', date: '2026-11-12', hoursWorked: 6, workType: 'Office' },
+  ];
+  assert.equal(officeRentalUsage(operations, 'Saheed (Osaro)', '2026-11-11').daysUsed, 1);
+  assert.equal(officeRentalUsage(operations, 'Pastor (Osaro)', '2026-11-10').daysUsed, 0.75);
 });
