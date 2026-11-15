@@ -39,7 +39,7 @@ export function openEarlierCostForm(onSaved, record = null) {
     project:record?.project||d.project||'',incurredDate:d.incurredDate||todayISOString(),incurredTo:d.incurredTo||d.incurredDate||todayISOString(),category:d.category||'Other',equipment:d.equipment||'',costTargetType:d.costTargetType||'Project',costTargetName:d.costTargetName||'',
     description:d.description||'',amount:d.amount||'',imprestManagerId:d.imprestManagerId||managers.find(person=>person.name===d.payee)?.id||'',imprestCategory:d.imprestCategory||legacyCategory[d.category]||'MSc',serviceProviders:d.serviceProviders||'',evidence:d.evidence||'',lateReason:d.lateReason||'',linkedFundRequestId:d.linkedFundRequestId||''
   },fields:[
-    {name:'project',label:'Project',type:'select',required:true,options:filterByProject(selectableProjects(store.get('projects')),'name').map(p=>({value:p.name,label:p.name}))},
+    {name:'project',label:'Project',type:'select',required:true,options:selectableProjects(store.get('projects')).map(p=>({value:p.name,label:p.name}))},
     {name:'incurredDate',label:'Cost period start',type:'date',required:true},
     {name:'incurredTo',label:'Cost period end',type:'date',required:true},
     {name:'imprestCategory',label:'Imprest cost column',type:'select',required:true,options:IMPREST_COLUMNS.map(x=>({value:x,label:x}))},
