@@ -233,6 +233,10 @@ function renderSiteDistributionTab(container) {
   container.appendChild(ledgerContainer);
   container.appendChild(el('h3', { class: 'subsection-title' }, 'Distributions'));
   container.appendChild(el('p', { class: 'section-subtitle' }, 'Record dozer fueling and other site uses separately. Both reduce diesel on ground; only dozer fueling updates tank balances.'));
+  const suppliesContainer = el('div');
+  container.appendChild(el('h3', { class: 'subsection-title' }, 'New Supply from Fuel Credit'));
+  container.appendChild(el('p', { class: 'section-subtitle' }, 'Diesel collections logged in Fuel Credit appear here automatically. Assign the site on older unassigned collections to include them in site stock; do not log a second receipt.'));
+  container.appendChild(suppliesContainer);
   const distributionsContainer = el('div');
   container.appendChild(distributionsContainer);
 
@@ -248,6 +252,20 @@ function renderSiteDistributionTab(container) {
       ],
       rows: ledgerRows,
       emptyText: 'No projects yet.',
+    });
+
+    const supplies = allDieselReceipts().filter((r) => r.fromFuelCredit).sort((a, b) => b.date.localeCompare(a.date));
+    renderTable(suppliesContainer, {
+      columns: [
+        { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
+        { key: 'station', label: 'Station' },
+        { key: 'litres', label: 'New Supply', render: (r) => `${Number(r.litres || 0).toLocaleString()} L` },
+        { key: 'project', label: 'Site / Project', render: (r) => r.project || 'Unassigned' },
+        { key: 'reference', label: 'Source', render: () => 'Fuel Credit collection' },
+        { key: 'action', label: '', render: (r) => r.project ? 'Included in site stock' : el('button', { class: 'btn btn-ghost', type: 'button', onClick: () => assignCreditSupply(r) }, 'Assign site') },
+      ],
+      rows: supplies,
+      emptyText: 'No Fuel Credit diesel collections in this period.',
     });
 
     const rows = store.get('dieselSiteDistributions').slice().sort((a, b) => (a.date < b.date ? 1 : -1));
@@ -280,6 +298,25 @@ function renderSiteDistributionTab(container) {
       ],
       rows,
       emptyText: 'No distributions logged yet.',
+    });
+  }
+
+  function assignCreditSupply(receipt) {
+    const collection = store.get('fuelCreditCollections').find((c) => c.id === receipt.id);
+    if (!collection) { window.alert('Source collection not found. Refresh the data and try again.'); return; }
+    openModal({
+      title: 'Assign Fuel Credit supply to site',
+      fields: [{ name: 'project', label: 'Site / Project', type: 'select', required: true, options: [
+        { value: '', label: '— Select project —' },
+        ...store.get('projects').map((p) => ({ value: p.name, label: p.name })),
+      ] }],
+      initial: { project: collection.project || '' },
+      submitLabel: 'Assign Site',
+      onSubmit: async ({ project }) => {
+        if (!project || !store.get('projects').some((p) => p.name === project)) throw new Error('Select a valid project.');
+        await store.update('fuelCreditCollections', collection.id, { ...collection, project });
+        refresh();
+      },
     });
   }
 
