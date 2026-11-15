@@ -1,3 +1,4 @@
+import { previousDieselClosing, precedingDieselReports, unallocatedDieselSupply } from '../dieselReportChain.js';
 import { selectableProjects, selectableEmployees, selectableMachines } from '../selectionOptions.js';
 import { operationMilestones } from '../operationMilestones.js';
 import { store } from '../store.js';
@@ -163,29 +164,16 @@ function openForm(record, refresh) {
       const fuelField = textField('fuelUsed', 'Fuel/Diesel Used (litres)', 'number', record?.fuelUsed, true);
       const closingDieselField = textField('closingDiesel', 'Closing Diesel (litres)', 'number', record?.closingDiesel);
 
-      // The diesel tank ledger for this dozer, in the same order the real
-      // end-of-day report follows: Opening = this dozer's last logged
-      // Closing Diesel (most recent prior report, any date before this
-      // one) + today's Diesel Supplied. Diesel Used = the dozer's
-      // configured consumption rate (Fleet Management → Fleet Roster) x
-      // Hours Worked, tiered around the first 8 hrs/day since most dozers
-      // burn less once past that — Trekking uses its own flat rate
-      // instead of the tiered one. Closing = Opening − Used. Every field
-      // stays plain and editable so a real tank dip always wins over the
-      // computed estimate; it just won't be recomputed again unless one
-      // of its own driving inputs changes.
-      function latestClosingDieselBefore(equipment, date) {
-        if (!equipment || !date) return null;
-        const rows = store.get('operations')
-          .filter((o) => o.equipment === equipment && o.date < date && o.closingDiesel !== null && o.closingDiesel !== undefined)
-          .sort((a, b) => (a.date < b.date ? 1 : -1));
-        return rows.length ? rows[0].closingDiesel : null;
+      function dieselDraft() {
+        return { id: record?.id, equipment: equipmentField.querySelector('select').value,
+          date: dateField.querySelector('input').value, siteName: siteField.querySelector('select').value,
+          timeResumed: timeResumedField.querySelector('input').value, timeClosed: timeClosedField.querySelector('input').value };
       }
 
       function recomputeOpeningDiesel() {
         const equipment = equipmentField.querySelector('select').value;
         const date = dateField.querySelector('input').value;
-        const prevClosing = latestClosingDieselBefore(equipment, date);
+        const prevClosing = previousDieselClosing(store.get('operations'), dieselDraft());
         const supplied = Number(dieselSuppliedField.querySelector('input').value) || 0;
         if (prevClosing === null && !supplied) return;
         openingDieselField.querySelector('input').value = ((prevClosing || 0) + supplied).toFixed(1);
@@ -201,11 +189,8 @@ function openForm(record, refresh) {
         const date = dateField.querySelector('input').value;
         const project = siteField.querySelector('select').value;
         if (!equipment || !date || !project) return;
-        const matches = store.get('dieselSiteDistributions')
-          .filter((d) => d.equipment === equipment && d.date === date && d.project === project);
-        if (!matches.length) return;
-        const total = matches.reduce((sum, d) => sum + (d.litres || 0), 0);
-        dieselSuppliedField.querySelector('input').value = total.toFixed(1);
+        const supplied = unallocatedDieselSupply(store.get('operations'), dieselDraft(), store.get('dieselSiteDistributions'));
+        if (supplied !== null) dieselSuppliedField.querySelector('input').value = supplied.toFixed(1);
       }
 
       // Always computes now — dieselUsedFor falls back to the fleet-wide
@@ -215,7 +200,13 @@ function openForm(record, refresh) {
         const asset = store.get('inventory').find((i) => i.name === equipmentField.querySelector('select').value);
         const opType = operationTypeField.querySelector('select').value;
         const hours = Number(hoursField.querySelector('input').value) || 0;
-        fuelField.querySelector('input').value = dieselUsedFor(asset, opType, hours).toFixed(1);
+        const draft = dieselDraft();
+        const priorHours = precedingDieselReports(store.get('operations'), draft)
+          .filter(row => row.date === draft.date && row.operationType !== 'Trekking')
+          .reduce((sum,row) => sum + Number(row.hoursWorked || 0),0);
+        const used = opType === 'Trekking' ? dieselUsedFor(asset, opType, hours)
+          : dieselUsedFor(asset, opType, priorHours + hours) - dieselUsedFor(asset, opType, priorHours);
+        fuelField.querySelector('input').value = used.toFixed(1);
       }
 
       function recomputeClosingDiesel() {
@@ -228,7 +219,7 @@ function openForm(record, refresh) {
       openingDieselField.querySelector('input').addEventListener('input', recomputeClosingDiesel);
       fuelField.querySelector('input').addEventListener('input', recomputeClosingDiesel);
       dieselSuppliedField.querySelector('input').addEventListener('input', () => { recomputeOpeningDiesel(); recomputeClosingDiesel(); });
-      dateField.querySelector('input').addEventListener('input', () => { recomputeDieselSupplied(); recomputeOpeningDiesel(); recomputeClosingDiesel(); });
+      dateField.querySelector('input').addEventListener('input', () => { recomputeDieselSupplied(); recomputeOpeningDiesel(); recomputeDieselUsed(); recomputeClosingDiesel(); });
       siteField.querySelector('select').addEventListener('change', () => { applyHistoryDefaults({ fromSite: true }); recomputeDieselSupplied(); recomputeOpeningDiesel(); recomputeDieselUsed(); recomputeClosingDiesel(); });
       equipmentField.querySelector('select').addEventListener('change', () => { applyHistoryDefaults({ fromEquipment: true }); recomputeDieselSupplied(); recomputeOpeningDiesel(); recomputeDieselUsed(); recomputeClosingDiesel(); });
       operationTypeField.querySelector('select').addEventListener('change', () => { recomputeDieselUsed(); recomputeClosingDiesel(); });
@@ -254,6 +245,8 @@ function openForm(record, refresh) {
         // Setting .value directly doesn't fire hoursField's own 'input'
         // listener, so Diesel Used (which depends on Hours Worked) needs
         // an explicit nudge here too.
+        recomputeDieselSupplied();
+        recomputeOpeningDiesel();
         recomputeDieselUsed();
         recomputeClosingDiesel();
       }
@@ -418,7 +411,7 @@ function openForm(record, refresh) {
       container.appendChild(heading('Work done'));
       container.appendChild(workGrid);
 
-      container.appendChild(heading('Diesel', `All four fill in automatically — Used is ${DEFAULT_DIESEL_RATES.first8h} L/hr for the first 8 hrs and ${DEFAULT_DIESEL_RATES.after8h} L/hr after that (${DEFAULT_DIESEL_RATES.trekking} L/hr flat for Trekking). Only change Closing Diesel, and only if you have a real tank dip — that is what the discrepancy report checks against.`));
+      container.appendChild(heading('Diesel', `Same-day reports carry forward in time order. Supply is counted once. Used is ${DEFAULT_DIESEL_RATES.first8h} L/hr for the first 8 hrs and ${DEFAULT_DIESEL_RATES.after8h} L/hr after that (${DEFAULT_DIESEL_RATES.trekking} L/hr flat for Trekking). Only change Closing Diesel, and only if you have a real tank dip — that is what the discrepancy report checks against.`));
       container.appendChild(dieselGrid);
 
       container.appendChild(workTypeWrap);
