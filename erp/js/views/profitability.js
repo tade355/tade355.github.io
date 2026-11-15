@@ -613,7 +613,7 @@ function renderDashboardBasis(body, project, from, to) {
   const lines = [
     ['Revenue', s.provisionalRevenue, `${s.areaCleared.toFixed(1)} ha × contract rate`],
     ['Diesel Cost', s.dieselCost, `${s.fuelUsed.toLocaleString()} L used × diesel price`],
-    ['Diesel Logistics', s.dieselLogistics, '₦50/L supplied to Company and Rented dozers'],
+    ['Diesel Logistics', s.dieselLogistics, 'Dated project rate: Kangidi ₦2,000/30 L from 1 Nov 2026; other sites ₦50/L'],
     ['Operator Allowance', s.operatorAllowanceCost, 'Owned EMG fleet: day rate per 8 hrs (₦50,000 on Sundays)'],
     ['Supervisor Sunday Allowance', s.supervisorSundayAllowance, SUNDAY_BONUS_BASIS_TEXT],
     ['Dozer Cost — Owned', s.dozerOwned, 'Hours × hourly rate'],
