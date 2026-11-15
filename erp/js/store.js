@@ -300,6 +300,18 @@ export const store = {
     emitRecordAction('created', collection);
     return store.find(collection, id);
   },
+  async addDieselDistributionBatch(records) {
+    if (!records.length) throw new Error('Select at least one dozer.');
+    const payload = [];
+    for (const record of records) payload.push(rowToDb({ ...record, id: await unusedId('dieselSiteDistributions') }));
+    // One INSERT statement: RLS, checks and triggers apply to every row atomically.
+    const { data, error } = await supabase.from(CONFIG.dieselSiteDistributions.table).insert(payload).select('*');
+    if (error) throw new Error(`No distributions were saved (${error.message}).`);
+    const saved = data.map(rowFromDb);
+    state.dieselSiteDistributions = [...state.dieselSiteDistributions, ...saved];
+    emitRecordAction('created', 'dieselSiteDistributions');
+    return saved;
+  },
   async recordPayrollPayment(record) {
     const id = record.id || (await unusedId('payrollPayments'));
     const payload = rowToDb({ ...record, id });
@@ -359,3 +371,5 @@ export const store = {
 };
 
 export { COLLECTIONS };
+
+
