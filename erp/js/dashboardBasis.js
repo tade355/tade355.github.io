@@ -7,9 +7,9 @@
 // figures can be unit-tested and reconciled against the dashboards.
 import { isSunday, addDays } from './dateUtils.js';
 
-import { DASHBOARD_BASIS_FROM, DIESEL_LOGISTICS_PER_LITRE, SUNDAY_BONUS_MIN_HOURS, SUNDAY_BONUS_TIERS, SUNDAY_BONUS_DAYS } from './rules.js';
+import { DASHBOARD_BASIS_FROM, DIESEL_LOGISTICS_PER_LITRE, dieselLogisticsCost, SUNDAY_BONUS_MIN_HOURS, SUNDAY_BONUS_TIERS, SUNDAY_BONUS_DAYS } from './rules.js';
 
-export { DASHBOARD_BASIS_FROM, DIESEL_LOGISTICS_PER_LITRE };
+export { DASHBOARD_BASIS_FROM, DIESEL_LOGISTICS_PER_LITRE, dieselLogisticsCost };
 export const onDashboardBasis = (date) => !!date && date >= DASHBOARD_BASIS_FROM;
 
 // Operator allowance is unchanged (ownedOperatorAllowance.js): the shared rule
@@ -18,11 +18,11 @@ export const onDashboardBasis = (date) => !!date && date >= DASHBOARD_BASIS_FROM
 // Diesel logistics: ₦50 per litre supplied to Company-owned and Rented
 // dozers (Partnership/Chizon dozers are excluded).
 
-// Sum of ₦50/L over the diesel distributed to non-Partnership dozers.
+// Apply each distribution's project transport rate on its own date.
 export function dieselLogisticsBasis(distributions, ownershipByName) {
   return distributions
     .filter((d) => onDashboardBasis(d.date) && ownershipByName.get(d.equipment) !== 'Partnership')
-    .reduce((sum, d) => sum + (d.litres || 0) * DIESEL_LOGISTICS_PER_LITRE, 0);
+    .reduce((sum, d) => sum + dieselLogisticsCost(d.litres, d.project, d.date), 0);
 }
 
 // Rolling transport requests contain a previously owed balance and repeat earlier
