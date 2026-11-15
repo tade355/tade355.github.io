@@ -257,3 +257,14 @@ test('all-project current stock excludes archived project balances', () => {
   }));
   assert.equal(d.diesel.onGround, 100);
 });
+
+test('two reports use the final chronological closing and carry it forward', () => {
+ const equipment='Pastor (Osaro)', project='Site A';
+ const rows=[{id:'b',date:'2026-11-13',siteName:project,equipment,timeResumed:'10:00',timeClosed:'11:00',hoursWorked:1,fuelUsed:25,closingDiesel:245},
+ {id:'a',date:'2026-11-13',siteName:project,equipment,timeResumed:'08:00',timeClosed:'10:00',hoursWorked:2,fuelUsed:50,closingDiesel:270},
+ {id:'prev',date:'2026-11-12',siteName:project,equipment:'Ogbomo Dozer (Pastor)',timeResumed:'09:00',timeClosed:'17:00',hoursWorked:6,fuelUsed:150,closingDiesel:320}];
+ const inputs=ctx({project,date:'2026-11-13',inventory:[{name:equipment,category:'Heavy Equipment',currentProject:project,fleetStatus:'Active'}],operations:rows,distributions:[]});
+ const day=buildDailyDashboard(inputs).diesel.rows[0];
+ assert.equal(day.opening,320);assert.equal(day.used,75);assert.equal(day.closing,245);
+ assert.equal(buildDailyDashboard({...inputs,date:'2026-11-15'}).diesel.rows[0].opening,245);
+});
