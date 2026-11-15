@@ -173,11 +173,11 @@ export function renderProjects(container) {
     [projectSelect, operationTypeSelect].forEach((input) => input.addEventListener('change', refresh));
 
     function openRateHistoryForm(record) {
-      if (!store.get('projects').length) { window.alert('Add a project first.'); return; }
+      if (!record && !selectableProjects(store.get('projects')).length) { window.alert('Add an active project first.'); return; }
       openModal({
         title: record ? 'Edit Rate Change' : 'Log Rate Change',
         fields: [
-          { name: 'project', label: 'Project', type: 'select', required: true, options: selectableProjects(store.get('projects')).map((p) => ({ value: p.name, label: p.name })) },
+          { name: 'project', label: 'Project', type: 'select', required: true, options: [...selectableProjects(store.get('projects')), ...store.get('projects').filter((p) => record?.project === p.name && !selectableProjects(store.get('projects')).some((active) => active.name === p.name))].map((p) => ({ value: p.name, label: p.name })) },
           { name: 'operationType', label: 'Operation Type', type: 'select', options: [
             { value: '', label: '— General (all operations) —' },
             ...OPERATION_TYPES.map((t) => ({ value: t.value, label: t.value })),
