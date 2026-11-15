@@ -12,7 +12,7 @@ import { buildAttention } from './attention.js';
 import { fuelEfficiency, NORM_LITRES_PER_HA } from './fuelEfficiency.js';
 import { mergeDieselReceipts } from './dieselSupply.js';
 import { siteFuelIssues } from './fuelLedger.js';
-import { latestDieselStockCount } from './dieselReconciliation.js';
+import { siteOnGroundAsOf } from './dieselReconciliation.js';
 
 import { EXPECTED_HA_PER_8HRS, IDEAL_START, DIESEL_FILL_LITRES, LATE_FLAG_MINUTES } from './rules.js';
 
@@ -133,9 +133,8 @@ export function buildDailyDashboard(ctx) {
   const otherUseToday = sum(otherSiteIssues.filter(aldDay), (d) => d.litres);
   const usedToday = sum(dayOps, (o) => o.fuelUsed);
   const dieselRate = ctx.dieselRateAsOf(date);
-  const latestCount = latestDieselStockCount(ctx.dieselStockCounts.filter((r) => !allProjects && recordProject(r) === project && r.date <= date));
-  // Reconcile the same receipts and site issues used in Resource Management.
-  // With no physical count, movement from zero is provisional, not a measured balance.
+  // Use the same site-stock calculation as Resource Management. Each site's
+  // last physical count anchors its balance, including on all-project views.
   const stockReceipts = mergeDieselReceipts({
     receipts: ctx.dieselReceipts || [],
     collections: ctx.fuelCreditCollections,
@@ -143,10 +142,24 @@ export function buildDailyDashboard(ctx) {
   }).filter((r) => (allProjects || r.project === project) && r.date <= date);
   const stockIssues = siteFuelIssues(ctx.distributions, ctx.operations)
     .filter((r) => (allProjects || r.project === project) && r.date <= date);
-  const afterCount = (r) => !latestCount || r.date > latestCount.date;
-  const rolledIn = sum(stockReceipts.filter(afterCount), (r) => r.litres);
-  const rolledOut = sum(stockIssues.filter(afterCount), (r) => r.litres);
-  const onGround = (latestCount ? Number(latestCount.countedLitres || 0) : 0) + rolledIn - rolledOut;
+  const siteNames = allProjects
+    ? [...new Set([...stockReceipts, ...stockIssues, ...ctx.dieselStockCounts]
+      .filter((r) => r.project && r.date <= date).map((r) => r.project))]
+    : [project];
+  const siteStocks = siteNames.map((site) => siteOnGroundAsOf({
+    project: site, date, receipts: stockReceipts, distributions: ctx.distributions,
+    operations: ctx.operations, counts: ctx.dieselStockCounts,
+  }));
+  const stock = allProjects
+    ? { onGround: sum(siteStocks, (r) => r.onGround), countDate: null,
+      countBase: sum(siteStocks, (r) => r.countBase),
+      receivedSince: sum(siteStocks, (r) => r.receivedSince),
+      issuedSince: sum(siteStocks, (r) => r.issuedSince) }
+    : siteStocks[0];
+  const onGround = stock.onGround;
+  const latestCount = stock.countDate ? { date: stock.countDate, countedLitres: stock.countBase } : null;
+  const rolledIn = stock.receivedSince;
+  const rolledOut = stock.issuedSince;
   // The diesel chain starts on the "since" date with each dozer at zero, the
   // way the dashboards track it (opening = previous closing + diesel
   // distributed, used = standard litres, closing = opening − used). Diesel

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { reconcileSiteDay, reconcileDozerDay } from './dieselReconciliation.js';
+import { reconcileSiteDay, reconcileDozerDay, siteOnGroundAsOf } from './dieselReconciliation.js';
 
 test('site fuel reconciles deliveries, issues and a physical count without double-counting a report', () => {
   const args = {
@@ -36,3 +36,21 @@ test('dozer issued without a daily report is flagged for follow-up', () => {
   assert.equal(rows[0].status, 'Daily report needed');
 });
 
+
+test('site stock carries 720 L received, 600 L to a dozer and 20 L other use', () => {
+  const args = {
+    project: 'Blue Sky', date: '2026-11-14',
+    receipts: [{ project: 'Blue Sky', date: '2026-11-13', litres: 720 }],
+    distributions: [
+      { project: 'Blue Sky', date: '2026-11-14', equipment: 'EMG-007', litres: 600 },
+      { project: 'Blue Sky', date: '2026-11-14', purpose: 'Site use', litres: 20 },
+    ],
+    operations: [], counts: [],
+  };
+  assert.equal(siteOnGroundAsOf({ ...args, date: '2026-11-13' }).onGround, 720);
+  assert.equal(siteOnGroundAsOf(args).onGround, 100);
+  assert.equal(reconcileSiteDay(args).onGround, 100);
+  const counted = { ...args, counts: [{ project: 'Blue Sky', date: '2026-11-14', countedLitres: 100 }] };
+  assert.equal(siteOnGroundAsOf(counted).onGround, 100);
+  assert.equal(reconcileSiteDay(counted).variance, 0);
+});

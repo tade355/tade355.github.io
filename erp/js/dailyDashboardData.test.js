@@ -222,3 +222,19 @@ test('daily fleet status is unreported without a dated machine report', () => {
   assert.equal(d.fleet[0].fleetStatus, 'Unreported');
   assert.ok(d.diesel.fuelingChoices.some((row) => row.equipment === 'EMG-1'));
 });
+
+test('daily dashboard uses the same counted site stock as reconciliation', () => {
+  const inputs = ctx({
+    date: '2026-11-14', operations: [],
+    dieselReceipts: [{ project: P, date: '2026-11-13', litres: 720 }],
+    fuelCreditCollections: [],
+    distributions: [
+      { project: P, date: '2026-11-14', equipment: 'EMG-1', litres: 600 },
+      { project: P, date: '2026-11-14', purpose: 'Site use', litres: 20 },
+    ],
+    dieselStockCounts: [{ project: P, date: '2026-11-14', countedLitres: 100 }],
+  });
+  const dashboard = buildDailyDashboard(inputs);
+  assert.equal(dashboard.diesel.onGround, 100);
+  assert.equal(dashboard.diesel.onGroundDate, '2026-11-14');
+});

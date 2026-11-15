@@ -14,6 +14,20 @@ export function latestDieselStockCount(rows) {
   )[0] || null;
 }
 
+// End-of-day site stock: the latest physical count is authoritative; later
+// receipts and issues roll forward from it. Without a count, the balance is
+// provisional from recorded movements.
+export function siteOnGroundAsOf({ project, date, receipts, distributions, operations, counts }) {
+  const inProject = (row) => row.project === project && row.date <= date;
+  const count = latestDieselStockCount(counts.filter(inProject));
+  const afterCount = (row) => !count || row.date > count.date;
+  const receivedSince = sum(receipts.filter((row) => inProject(row) && afterCount(row)), 'litres');
+  const issuedSince = sum(siteFuelIssues(distributions, operations).filter((row) => inProject(row) && afterCount(row)), 'litres');
+  const countBase = count ? litres(count.countedLitres) : 0;
+  return { onGround: countBase + receivedSince - issuedSince,
+    countDate: count?.date || null, countBase, receivedSince, issuedSince };
+}
+
 export function reconcileSiteDay({ project, date, receipts, distributions, operations, counts }) {
   const siteReceipts = receipts.filter((row) => row.project === project && row.date <= date);
   const issues = siteFuelIssues(distributions, operations).filter((row) => row.project === project && row.date <= date);
@@ -34,6 +48,7 @@ export function reconcileSiteDay({ project, date, receipts, distributions, opera
   const tolerance = Math.max(5, Math.abs(expected) * 0.02);
   return {
     project, date, opening, supplied, distributed, dozerIssued, otherIssued, expected, measured, variance,
+    onGround: siteOnGroundAsOf({ project, date, receipts, distributions, operations, counts }).onGround,
     verified: !!prior, lastCountDate: prior?.date || null,
     status: expected < -tolerance ? 'Over-allocated — review records'
       : !prior && variance !== null && Math.abs(variance) > tolerance ? 'Provisional variance — verify opening'
