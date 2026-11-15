@@ -111,11 +111,12 @@ export function buildProfitReport(ctx, { project, from, to, sections }) {
   const dist = ctx.distributions.filter((d) => d.project === project && d.date >= from && d.date <= to);
   const colls = ctx.fuelCreditCollections.filter((c) => c.date >= from && c.date <= to && c.fuelType === 'Diesel');
   const isSold = (c) => /sold to/i.test(c.notes || '');
-  const dieselDozers = [...new Set([...dist.map((d) => d.equipment), ...ops.map((o) => o.equipment)])].sort();
+  const dieselDozers = [...new Set([...dist.map((d) => d.equipment), ...ops.map((o) => o.equipment)].filter(Boolean))].sort();
   report.diesel = {
     collected: sum(colls.filter((c) => !isSold(c)), (c) => c.litres),
     sold: sum(colls.filter(isSold), (c) => c.litres),
-    distributed: sum(dist, (d) => d.litres),
+    distributed: sum(dist.filter((d) => !!d.equipment), (d) => d.litres),
+    otherUse: sum(dist.filter((d) => !d.equipment), (d) => d.litres),
     used: sum(ops, (o) => o.fuelUsed),
     usedCost: sum(ops, (o) => (o.fuelUsed || 0) * ctx.dieselRateAsOf(o.date)),
     perDozer: dieselDozers.map((e) => {

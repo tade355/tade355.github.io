@@ -162,6 +162,24 @@ function renderStationLedgerTab(container) {
 // per-dozer handout log.
 // ---------------------------------------------------------------------
 
+function otherUseFields() {
+  return [
+    { name: 'date', label: 'Date', type: 'date', required: true },
+    { name: 'project', label: 'Site / Project', type: 'select', required: true, options: projectOptions() },
+    { name: 'purpose', label: 'Use', type: 'select', required: true, options: [
+      { value: 'Maintenance', label: 'Repair / maintenance' },
+      { value: 'Vehicle', label: 'Vehicle / transport' },
+      { value: 'Debris Burning', label: 'Burning debris' },
+      { value: 'Generator', label: 'Generator / site power' },
+      { value: 'Other', label: 'Other site use' },
+    ] },
+    { name: 'recipient', label: 'Issued to / used for', required: true },
+    { name: 'litres', label: 'Litres Issued', type: 'number', required: true, min: 0 },
+    { name: 'distributedBy', label: 'Distributed By', type: 'select', options: employeeOptions() },
+    { name: 'notes', label: 'Details / authorization', type: 'textarea' },
+  ];
+}
+
 function distributionFields() {
   return [
     { name: 'date', label: 'Date', type: 'date', required: true },
@@ -203,7 +221,8 @@ function renderSiteDistributionTab(container) {
     "Calculated site stock: opening balance + deliveries − distribution = closing balance. Confirm it in Daily Reconciliation with a physical count.",
     actionSlot,
   ));
-  actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openDistributionForm() }, '+ Log Distribution'));
+  actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openDistributionForm() }, '+ Dozer Distribution'));
+  actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openOtherUseForm() }, '+ Other Diesel Use'));
 
   const filterBar = el('div', { class: 'filter-bar' });
   const { fromInput, toInput, elements } = dateRangeFields({ onChange: () => refresh() });
@@ -213,7 +232,7 @@ function renderSiteDistributionTab(container) {
   const ledgerContainer = el('div');
   container.appendChild(ledgerContainer);
   container.appendChild(el('h3', { class: 'subsection-title' }, 'Distributions'));
-  container.appendChild(el('p', { class: 'section-subtitle' }, "Record diesel handed to each dozer. Entries also update the daily operations report."));
+  container.appendChild(el('p', { class: 'section-subtitle' }, 'Record dozer fueling and other site uses separately. Both reduce diesel on ground; only dozer fueling updates tank balances.'));
   const distributionsContainer = el('div');
   container.appendChild(distributionsContainer);
 
@@ -236,7 +255,9 @@ function renderSiteDistributionTab(container) {
       columns: [
         { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
         { key: 'project', label: 'Site / Project' },
-        { key: 'equipment', label: 'Dozer / Equipment' },
+        { key: 'purpose', label: 'Use', render: (r) => r.purpose || 'Dozer' },
+        { key: 'equipment', label: 'Dozer / Equipment', render: (r) => r.equipment || '—' },
+        { key: 'recipient', label: 'Issued to / for', render: (r) => r.recipient || '—' },
         { key: 'litres', label: 'Litres', render: (r) => `${r.litres.toLocaleString()} L` },
         { key: 'distributedBy', label: 'Distributed By', render: (r) => employeeName(r.distributedBy) },
         { key: 'notes', label: 'Notes', render: (r) => r.notes || '—' },
@@ -244,9 +265,9 @@ function renderSiteDistributionTab(container) {
           key: 'actions',
           label: '',
           render: (r) => actionButtons({
-            onEdit: () => openDistributionForm(r),
+            onEdit: () => r.purpose && r.purpose !== 'Dozer' ? openOtherUseForm(r) : openDistributionForm(r),
             onDelete: async () => {
-              if (!confirmDelete(`Distribution to ${r.equipment} on ${formatDate(r.date)}`)) return;
+              if (!confirmDelete(`Diesel issued for ${r.equipment || r.recipient || r.purpose} on ${formatDate(r.date)}`)) return;
               try {
                 await store.remove('dieselSiteDistributions', r.id);
                 refresh();
@@ -271,8 +292,25 @@ function renderSiteDistributionTab(container) {
       initial: record || { date: todayISOString() },
       submitLabel: record ? 'Save Changes' : 'Log Distribution',
       onSubmit: async (data) => {
-        if (record) await store.update('dieselSiteDistributions', record.id, data);
-        else await store.add('dieselSiteDistributions', data);
+        const payload = { ...data, purpose: 'Dozer', recipient: null };
+        if (record) await store.update('dieselSiteDistributions', record.id, payload);
+        else await store.add('dieselSiteDistributions', payload);
+        refresh();
+      },
+    });
+  }
+
+  function openOtherUseForm(record) {
+    if (!projectOptions().length) { window.alert('Add a project first.'); return; }
+    openModal({
+      title: record ? 'Edit Other Diesel Use' : 'Log Other Diesel Use',
+      fields: otherUseFields(),
+      initial: record || { date: todayISOString(), purpose: 'Maintenance' },
+      submitLabel: record ? 'Save Changes' : 'Log Diesel Use',
+      onSubmit: async (data) => {
+        const payload = { ...data, equipment: null };
+        if (record) await store.update('dieselSiteDistributions', record.id, payload);
+        else await store.add('dieselSiteDistributions', payload);
         refresh();
       },
     });
@@ -284,7 +322,7 @@ function renderSiteDistributionTab(container) {
 function renderDailyReconciliationTab(container) {
   container.innerHTML = '';
   container.appendChild(sectionHeader('Daily Diesel Reconciliation',
-    'Check project deliveries against dozer distributions and a physical site-tank count. Dozer closing figures come from daily reports.'));
+    'Check project deliveries against dozer fueling, other site uses, and the physical site-tank count. Dozer closing figures come from daily reports.'));
   const controls = el('div', { class: 'filter-bar' });
   const dateInput = el('input', { type: 'date', value: todayISOString() });
   const projectSelect = el('select', {}, projectOptions().map((p) => el('option', { value: p.value }, p.label)));
@@ -310,7 +348,8 @@ function renderDailyReconciliationTab(container) {
     const cards = el('div', { class: 'stats-grid' }, [
       statCard({ label: 'Opening on site', value: `${site.opening.toLocaleString()} L` }),
       statCard({ label: 'Supplied today', value: `${site.supplied.toLocaleString()} L` }),
-      statCard({ label: 'Distributed to dozers', value: `${site.distributed.toLocaleString()} L` }),
+      statCard({ label: 'To dozers', value: `${site.dozerIssued.toLocaleString()} L` }),
+      statCard({ label: 'Other site uses', value: `${site.otherIssued.toLocaleString()} L` }),
       statCard({ label: 'Expected on ground', value: `${site.expected.toLocaleString()} L`, tone: site.expected < 0 ? 'critical' : undefined }),
       statCard({ label: 'Physical count', value: site.measured === null ? 'Not recorded' : `${site.measured.toLocaleString()} L` }),
       statCard({ label: 'Site variance', value: site.variance === null ? 'Not verified' : `${site.variance.toLocaleString()} L`, hint: site.status, tone: site.status.includes('investigate') || site.status.includes('Over-allocated') ? 'critical' : undefined }),

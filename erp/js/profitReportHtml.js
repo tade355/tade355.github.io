@@ -186,6 +186,7 @@ ${rows || '      <tr><td colspan="4">Nothing flagged in this period.</td></tr>'}
   <div class="tiles">
     ${tile('Collected at station', `${fmt(d.collected)} L`, { note: d.sold ? `Excludes ${fmt(d.sold)} L sold` : '' })}
     ${tile('Distributed to dozers', `${fmt(d.distributed)} L`)}
+    ${tile('Other site use', `${fmt(d.otherUse || 0)} L`)}
     ${tile('Used (standard)', `${fmt(d.used)} L`, { note: money(d.usedCost) })}
   </div>
   <div class="table-wrap"><table>

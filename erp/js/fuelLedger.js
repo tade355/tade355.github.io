@@ -26,5 +26,5 @@ export function siteFuelIssues(distributions, operations) {
   const key = (project, equipment, date) => `${project}|${equipment}|${date}`;
   const explicit = new Set(distributions.map((r) => key(r.project, r.equipment, r.date)));
   return [...distributions, ...operations.filter((o) => o.dieselSupplied && !explicit.has(key(o.siteName, o.equipment, o.date)))
-    .map((o) => ({ date: o.date, project: o.siteName, equipment: o.equipment, litres: o.dieselSupplied, legacyReport: true }))];
+    .map((o) => ({ date: o.date, project: o.siteName, equipment: o.equipment, purpose: 'Dozer', litres: o.dieselSupplied, legacyReport: true }))];
 }
