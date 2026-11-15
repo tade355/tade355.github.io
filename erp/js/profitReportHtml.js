@@ -72,7 +72,7 @@ export function buildProfitReportHtml(r, { title = 'Operations Profitability Rep
     const lines = [
       ['Revenue', t.provisionalRevenue, `${fmt(t.areaCleared, 1)} ha × contract rate`],
       ['Diesel Cost', t.dieselCost, `${fmt(t.fuelUsed)} L used`],
-      ['Logistics', t.logisticsCost, '₦50/L of diesel supplied to Company and Rented dozers'],
+      ['Logistics', t.logisticsCost, 'Dated project diesel transport rate'],
       ['Operator Allowance', t.operatorAllowanceCost, 'Owned EMG operators'],
       ['Supervisor Sunday Allowance', t.supervisorSundayAllowance, SUNDAY_BONUS_BASIS_TEXT],
       ['Dozer Cost — Owned', t.dozerOwned, 'Hours × hourly rate'],
