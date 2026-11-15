@@ -1,7 +1,7 @@
 import { store } from '../store.js';
 import { el, formatCurrency, formatDate } from '../utils.js';
 import { renderTable, sectionHeader, openModal } from '../ui.js';
-import { filterByProject, getCurrentTier, getCurrentUserId } from '../session.js';
+import { getCurrentTier, getCurrentUserId } from '../session.js';
 import { todayISOString } from '../dateUtils.js';
 import { supabase } from '../supabaseClient.js';
 import { imprestStatement, IMPREST_COLUMNS, managerIsImprestEligible } from '../imprestWorkbook.js';
@@ -25,7 +25,7 @@ function liveEntries(records, employees) {
     const category = data.imprestCategory || liveCategory(data.category);
     const debit = Number(data.amount || 0);
     entries.push({ id: `${record.id}:cost`, managerId, managerName, date: data.incurredDate || record.createdAt?.slice(0, 10) || '',
-      project: record.project, site: data.site || '', purpose: data.description || '', category,
+      project: record.project, site: data.site || '', allocation: [data.costTargetType, data.costTargetName].filter(Boolean).join(' · '), purpose: data.description || '', category,
       sourceOfCredit: '', debit, credit: 0, categoryAmounts: { [category]: debit },
       reference: record.id, status: record.status, source: 'Earlier cost', order: 1 });
     for (const [index, event] of (record.events || []).entries()) {
@@ -75,9 +75,9 @@ export function renderManagerImprests(container) {
 
   let historic = [];
   function render() {
-    const records = filterByProject(store.get('fuelWorkflows'), 'project');
+    const records = store.get('fuelWorkflows');
     const visible = privileged ? records : records.filter(record =>
-      record.requestedBy === getCurrentUserId() || record.data?.imprestManagerId === getCurrentUserId());
+      record.data?.imprestManagerId === getCurrentUserId());
     const all = [...liveEntries(visible, employees), ...historic.map(row => historicEntry(row, employees))];
     const selected = managerFilter.value ? all.filter(row => row.managerId === managerFilter.value) : all;
     const groups = new Map();
@@ -94,7 +94,7 @@ export function renderManagerImprests(container) {
     const rows = statements.flatMap(statement => statement.rows.map(row => ({ ...row, managerName: statement.managerName })));
     const columns = [
       { key: 'date', label: 'Date', render: row => formatDate(row.date) },
-      { key: 'managerName', label: 'Manager' }, { key: 'project', label: 'Project' }, { key: 'site', label: 'Site / location' },
+      { key: 'managerName', label: 'Manager' }, { key: 'project', label: 'Project' }, { key: 'allocation', label: 'Cost relates to' }, { key: 'site', label: 'Site / location' },
       { key: 'purpose', label: 'Purpose' }, { key: 'debit', label: 'Debit · cost', render: row => row.debit ? formatCurrency(row.debit) : '—' },
       { key: 'credit', label: 'Credit · payment', render: row => row.credit ? formatCurrency(row.credit) : '—' },
       ...categoryNames.map(name => ({ key: `cat:${name}`, label: name, render: row => row.categoryAmounts?.[name] ? formatCurrency(row.categoryAmounts[name]) : '—' })),
