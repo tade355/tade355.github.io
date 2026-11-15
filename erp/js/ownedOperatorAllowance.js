@@ -68,12 +68,26 @@ export const OWNED_OPERATOR_PAYEE_ALIASES_BY_EMPLOYEE = {
 
 const ALL_OWNED_OPERATOR_ALIASES = new Set(Object.values(OWNED_OPERATOR_PAYEE_ALIASES_BY_EMPLOYEE).flat());
 
+export function allowancePayeeFor(employeeId) {
+  return OWNED_OPERATOR_PAYEE_ALIASES_BY_EMPLOYEE[employeeId]?.[0]
+    || store.get('employees').find((e) => e.id === employeeId)?.name || '';
+}
+
+function allowanceAliasesFor(employeeId) {
+  const aliases = OWNED_OPERATOR_PAYEE_ALIASES_BY_EMPLOYEE[employeeId] || [];
+  const name = store.get('employees').find((e) => e.id === employeeId)?.name?.trim().toLowerCase();
+  return name ? [...aliases, name] : aliases;
+}
+
 export function isOwnedOperatorAllowancePayment(payee, category) {
-  return !!payee && category === ALLOWANCE_EXPENSE_CATEGORY && ALL_OWNED_OPERATOR_ALIASES.has(payee.trim().toLowerCase());
+  return !!payee && category === ALLOWANCE_EXPENSE_CATEGORY
+    && (ALL_OWNED_OPERATOR_ALIASES.has(payee.trim().toLowerCase())
+      || store.get('employees').some((e) => allowanceAliasesFor(e.id).includes(payee.trim().toLowerCase())
+        && store.get('operations').some((o) => o.operatorId === e.id && ALLOWANCE_EQUIPMENT.has(o.equipment))));
 }
 
 export function isOwnedOperatorAllowancePaymentFor(employeeId, payee, category) {
   if (!payee || category !== ALLOWANCE_EXPENSE_CATEGORY) return false;
-  const aliases = OWNED_OPERATOR_PAYEE_ALIASES_BY_EMPLOYEE[employeeId] || [];
+  const aliases = allowanceAliasesFor(employeeId);
   return aliases.includes(payee.trim().toLowerCase());
 }
