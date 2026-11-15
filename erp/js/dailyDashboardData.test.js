@@ -238,3 +238,22 @@ test('daily dashboard uses the same counted site stock as reconciliation', () =>
   assert.equal(dashboard.diesel.onGround, 100);
   assert.equal(dashboard.diesel.onGroundDate, '2026-11-14');
 });
+
+test('all-project current stock excludes archived project balances', () => {
+  const kangidi = 'REX Forestry Project - Kangidi';
+  const blueSky = 'Blue Sky Project - Ajue-Ore';
+  const d = buildDailyDashboard(ctx({
+    project: 'all', date: '2026-11-15', operations: [], inventory: [],
+    projects: [
+      { name: kangidi, status: 'Active' },
+      { name: blueSky, status: 'Active' },
+      { name: 'Kajola', status: 'Completed' },
+    ],
+    dieselReceipts: [], fuelCreditCollections: [], distributions: [],
+    dieselStockCounts: [
+      { project: blueSky, date: '2026-11-14', countedLitres: 100 },
+      { project: 'Kajola', date: '2026-11-14', countedLitres: 895 },
+    ],
+  }));
+  assert.equal(d.diesel.onGround, 100);
+});
