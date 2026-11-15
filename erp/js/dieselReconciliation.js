@@ -6,13 +6,19 @@ const sum = (rows, key) => rows.reduce((total, row) => total + litres(row[key]),
 
 // Counts are end-of-day physical readings of the site's storage tank. An
 // uncounted running balance is an estimate, never evidence of missing fuel.
+export function latestDieselStockCount(rows) {
+  return [...rows].sort((a, b) =>
+    String(b.date || '').localeCompare(String(a.date || ''))
+    || String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || ''))
+    || String(b.id || '').localeCompare(String(a.id || ''))
+  )[0] || null;
+}
+
 export function reconcileSiteDay({ project, date, receipts, distributions, operations, counts }) {
   const siteReceipts = receipts.filter((row) => row.project === project && row.date <= date);
   const issues = siteFuelIssues(distributions, operations).filter((row) => row.project === project && row.date <= date);
-  const prior = counts.filter((row) => row.project === project && row.date < date)
-    .sort((a, b) => b.date.localeCompare(a.date))[0];
-  const count = counts.filter((row) => row.project === project && row.date === date)
-    .sort((a, b) => String(b.updatedAt || b.id).localeCompare(String(a.updatedAt || a.id)))[0];
+  const prior = latestDieselStockCount(counts.filter((row) => row.project === project && row.date < date));
+  const count = latestDieselStockCount(counts.filter((row) => row.project === project && row.date === date));
   const sincePrior = (row) => !prior || row.date > prior.date;
   const opening = (prior ? litres(prior.countedLitres) : 0)
     + sum(siteReceipts.filter((row) => row.date < date && sincePrior(row)), 'litres')
