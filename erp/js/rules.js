@@ -34,3 +34,14 @@ export const REQUEST_WAIT_DAYS = 7; // a Pending or Approved request older than 
 export const VOUCHER_WAIT_DAYS = 1; // a fueling voucher waiting for approval longer than this is chased
 export const STOCK_COUNT_MAX_AGE_DAYS = 2; // diesel on ground is a calculation until Oki counts again
 export const BACKUP_MAX_AGE_DAYS = 7;
+
+ 
+// Project transport charges are dated so past profitability retains its rate.
+export function dieselLogisticsRateAsOf(project, date) {
+  if (/\b(?:kangidi|kankidi)\b/i.test(String(project || '')) && date >= '2026-11-01') return 2000 / 30;
+  return DIESEL_LOGISTICS_PER_LITRE;
+}
+
+export function dieselLogisticsCost(litres, project, date) {
+  return Math.round(Number(litres || 0) * dieselLogisticsRateAsOf(project, date) * 100) / 100;
+}
