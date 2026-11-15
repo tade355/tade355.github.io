@@ -1,3 +1,4 @@
+import { selectableEmployees } from '../selectionOptions.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, formatMonthLong, el, ico } from '../utils.js';
@@ -209,8 +210,8 @@ function openRunForm(record, onSaved, { review = false } = {}) {
       ]);
       const items = el('div', { class: 'line-items-container' });
       const total = el('strong', {}, formatCurrency(0));
-      const sourceLines = record?.lines?.length ? record.lines : store.get('employees')
-        .filter((employee) => employee.status === 'Active' && isMonthlySalaryStaff(employee))
+      const sourceLines = record?.lines?.length ? record.lines : selectableEmployees(store.get('employees'))
+        .filter((employee) => isMonthlySalaryStaff(employee))
         .map((employee) => ({ employeeId: employee.id, baseSalary: employee.salary || 0, bonus: 0, deductions: 0, amountPaid: 0 }));
       const refreshTotal = () => {
         let sum = 0;
@@ -222,7 +223,7 @@ function openRunForm(record, onSaved, { review = false } = {}) {
       };
       const addSelect = el('select', {}, [
         el('option', { value: '' }, '+ Add monthly staff'),
-        ...store.get('employees').filter((employee) => employee.status === 'Active' && isMonthlySalaryStaff(employee)
+        ...selectableEmployees(store.get('employees')).filter((employee) => isMonthlySalaryStaff(employee)
           && !sourceLines.some((line) => line.employeeId === employee.id))
           .map((employee) => el('option', { value: employee.id }, `${employee.name} (${employee.role})`)),
       ]);
@@ -232,7 +233,7 @@ function openRunForm(record, onSaved, { review = false } = {}) {
       const updateEmployeeChoices = () => {
         const used = new Set([...items.querySelectorAll('.payroll-line-row')].map((row) => row.dataset.employeeId));
         addSelect.replaceChildren(el('option', { value: '' }, '+ Add monthly staff'));
-        store.get('employees').filter((employee) => employee.status === 'Active' && isMonthlySalaryStaff(employee)
+        selectableEmployees(store.get('employees')).filter((employee) => isMonthlySalaryStaff(employee)
           && !used.has(employee.id)).forEach((employee) => addSelect.appendChild(el('option', { value: employee.id }, `${employee.name} (${employee.role})`)));
       };
       const addLine = (line) => items.appendChild(makePayrollLine(line, refreshTotal, canEdit, updateEmployeeChoices));
