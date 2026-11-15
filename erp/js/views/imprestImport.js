@@ -40,6 +40,15 @@ export function renderManagerImprestImport(container, onImported) {
   const selections = new Map();
   const managers = store.get('employees').filter(managerIsImprestEligible).sort((a, b) => a.name.localeCompare(b.name));
 
+  function alreadyInERP(row) {
+    const manager = managers.find(person => person.id === row.managerId);
+    return store.get('fuelWorkflows').some(record => record.kind === 'Cost' && record.status !== 'Rejected'
+      && (record.data?.imprestManagerId === row.managerId || record.data?.payee?.toLowerCase() === manager?.name?.toLowerCase())
+      && (row.debit > 0
+        ? record.data?.incurredDate === row.date && Number(record.data?.amount) === row.debit
+        : (record.events || []).some(event => event.type === 'payment' && event.date === row.date && Number(event.amount) === row.credit)));
+  }
+
   function selectedRows() {
     return parsed.flatMap(sheet => {
       const choice = selections.get(sheet.sheetName);
@@ -53,11 +62,14 @@ export function renderManagerImprestImport(container, onImported) {
     const chosen = parsed.filter(sheet => selections.get(sheet.sheetName)?.checked);
     const incomplete = chosen.filter(sheet => !selections.get(sheet.sheetName)?.manager);
     const unresolved = chosen.filter(sheet => sheet.variance && !selections.get(sheet.sheetName)?.reviewed);
-    const rows = selectedRows();
+    const selected = selectedRows();
+    const rows = selected.filter(row => !alreadyInERP(row));
+    const overlapCount = selected.length - rows.length;
     const debits = rows.reduce((sum, row) => sum + row.debit, 0);
     const credits = rows.reduce((sum, row) => sum + row.credit, 0);
     preview.append(el('p', {}, `${chosen.length} sheet(s), ${rows.length} transaction(s) · Debit ${formatCurrency(debits)} · Credit ${formatCurrency(credits)} · Net ${formatCurrency(credits - debits)}.`));
     if (incomplete.length) preview.append(el('p', { class: 'text-critical' }, 'Select an eligible manager for every chosen sheet.'));
+    if (overlapCount) preview.append(el('p', {}, `${overlapCount} transaction(s) already appear in live earlier-cost or payment records and will be skipped.`));
     if (unresolved.length) preview.append(el('p', { class: 'text-critical' }, 'Some selected sheets do not reconcile to their printed totals. Review and acknowledge each difference.'));
     const seen = new Map();
     let repeats = 0;
