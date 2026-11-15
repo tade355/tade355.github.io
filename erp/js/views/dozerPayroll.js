@@ -1,3 +1,4 @@
+import { selectableEmployees } from '../selectionOptions.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, dateInRange, ico } from '../utils.js';
@@ -214,7 +215,7 @@ function buildLineRow(line, onChange, getPeriod, getOvertimeRate, getRunContext)
 }
 
 function openRunForm(record, onSaved) {
-  if (!store.get('employees').some((e) => e.status === 'Active' && e.dayRate)) {
+  if (!selectableEmployees(store.get('employees')).some((e) => e.dayRate)) {
     window.alert('No Active employees have a Day Rate set. Set a Day Rate on at least one operator in HR first.');
     return;
   }
@@ -274,8 +275,8 @@ function openRunForm(record, onSaved) {
 
       const addSelect = el('select', {}, [
         el('option', { value: '' }, '+ Add an operator to this run —'),
-        ...store.get('employees')
-          .filter((e) => e.status === 'Active' && !initialLines.some((l) => l.employeeId === e.id))
+        ...selectableEmployees(store.get('employees'))
+          .filter((e) => !initialLines.some((l) => l.employeeId === e.id))
           .map((e) => el('option', { value: e.id }, `${e.name} (${e.role})`)),
       ]);
       addSelect.addEventListener('change', () => {
