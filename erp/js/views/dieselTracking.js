@@ -9,7 +9,7 @@ import { fleetItems } from './fleet.js';
 import { allDieselReceipts } from '../dieselSupplyStore.js';
 import { getCurrentTier } from '../session.js';
 import { siteFuelIssues } from '../fuelLedger.js';
-import { reconcileSiteDay, siteOnGroundAsOf } from '../dieselReconciliation.js';
+import { reconcileSiteDay, siteOnGroundAsOf, isClosingDieselStockCount } from '../dieselReconciliation.js';
 
 function projectOptions() {
   return selectableProjects(store.get('projects')).map((p) => ({ value: p.name, label: p.name }));
@@ -88,6 +88,10 @@ function countFields() {
     { name: 'project', label: 'Site / Project', type: 'select', required: true, options: projectOptions() },
     { name: 'countedLitres', label: 'Counted Litres (physical tank reading)', type: 'number', required: true, min: 0 },
     { name: 'countedBy', label: 'Counted By', type: 'select', required: true, options: employeeOptions() },
+    { name: 'countBasis', label: 'Count basis', type: 'select', required: true, options: [
+      { value: 'closing', label: 'Verified closing physical count' },
+      { value: 'preliminary', label: 'Pre-movement / placeholder (does not reset stock)' },
+    ] },
     { name: 'notes', label: 'Notes', type: 'textarea' },
   ];
 }
@@ -124,7 +128,7 @@ export function renderDieselTracking(container) {
       project, date: asOf, receipts, distributions, operations, counts,
     }).onGround, 0);
     const unassignedLitres = receipts.filter((row) => !row.project).reduce((total, row) => total + Number(row.litres || 0), 0);
-    const latestCount = counts.find((row) => row.project);
+    const latestCount = counts.find((row) => row.project && isClosingDieselStockCount(row));
     const latestSite = latestCount ? reconcileSiteDay({ project: latestCount.project, date: latestCount.date,
       receipts, distributions: store.get('dieselSiteDistributions'), operations: store.get('operations'), counts }) : null;
     const variance = latestSite?.variance ?? null;
@@ -217,13 +221,16 @@ export function renderDieselTracking(container) {
         { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
         { key: 'project', label: 'Project', render: (r) => r.project || 'Legacy — project unknown' },
         { key: 'countedLitres', label: 'Counted', render: (r) => `${r.countedLitres.toLocaleString()} L` },
+        { key: 'basis', label: 'Basis', render: (r) => isClosingDieselStockCount(r) ? 'Verified closing' : 'Preliminary / pre-movement' },
         { key: 'expected', label: 'Expected site balance', render: (r) => r.project ? `${reconcileSiteDay({ project: r.project, date: r.date, receipts, distributions: store.get('dieselSiteDistributions'), operations: store.get('operations'), counts }).expected.toLocaleString()} L` : '—' },
         {
           key: 'variance',
           label: 'Variance',
           render: (r) => {
             if (!r.project) return 'Project required';
+            if (!isClosingDieselStockCount(r)) return 'Not a closing reconciliation';
             const v = reconcileSiteDay({ project: r.project, date: r.date, receipts, distributions: store.get('dieselSiteDistributions'), operations: store.get('operations'), counts }).variance;
+            if (v === null) return 'No verified count';
             const label = `${v > 0 ? '+' : ''}${v.toLocaleString()} L`;
             const pillStatus = Math.abs(v) < 1 ? 'Completed' : (v < 0 ? 'Down' : 'Under Maintenance');
             return el('span', { class: `pill ${statusPillClass(pillStatus)}` }, label);
@@ -394,11 +401,14 @@ export function renderDieselTracking(container) {
     openModal({
       title: record ? 'Edit Stock Count' : 'Log Stock Count',
       fields: countFields(),
-      initial: record || { date: todayISOString() },
+      initial: record ? { ...record, countBasis: isClosingDieselStockCount(record) ? 'closing' : 'preliminary',
+        notes: String(record.notes || '').replace(/^NON_CLOSING_COUNT:\\s*/i, '') } : { date: todayISOString(), countBasis: 'closing' },
       submitLabel: record ? 'Save Changes' : 'Log Count',
       onSubmit: async (data) => {
-        if (record) await store.update('dieselStockCounts', record.id, data);
-        else await store.add('dieselStockCounts', data);
+        const { countBasis, ...fields } = data;
+        fields.notes = countBasis === 'preliminary' ? 'NON_CLOSING_COUNT: ' + (fields.notes || '') : (fields.notes || '');
+        if (record) await store.update('dieselStockCounts', record.id, fields);
+        else await store.add('dieselStockCounts', fields);
         refresh();
       },
     });
