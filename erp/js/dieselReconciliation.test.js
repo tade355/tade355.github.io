@@ -82,3 +82,35 @@ test('Blue Sky pre-delivery count carries Midejab supply into the following day'
   assert.equal(day15.onGround, 1400);
   assert.equal(siteOnGroundAsOf({ ...args, date: '2026-11-15' }).onGround, 1400);
 });
+
+test('preliminary zero counts do not erase Blue Sky recorded stock movements', () => {
+  const project = 'Blue Sky Project - Ajue-Ore';
+  const args = {
+    project, date: '2026-11-21',
+    receipts: [
+      { project, date: '2026-11-14', litres: 1500, station: 'Midejab Ltd' },
+      { project, date: '2026-11-20', litres: 1470, station: 'Midejab Ltd' },
+      { project, date: '2026-11-20', litres: 579.92, station: 'Midejab Ltd' },
+    ],
+    distributions: [
+      { project, date: '2026-11-15', equipment: 'EMG-007', purpose: 'Dozer', litres: 1400 },
+      { project, date: '2026-11-16', equipment: 'EMG-007', purpose: 'Dozer', litres: 170 },
+      { project, date: '2026-11-20', equipment: 'EMG-006', purpose: 'Tank Drill', litres: 210 },
+      { project, date: '2026-11-20', equipment: 'EMG-004', purpose: 'Dozer', litres: 579.92 },
+      { project, date: '2026-11-20', equipment: 'EMG-007', purpose: 'Dozer', litres: 180 },
+      { project, date: '2026-11-20', equipment: 'EMG-008', purpose: 'Dozer', litres: 30 },
+      { project, date: '2026-11-21', equipment: 'EMG-007', purpose: 'Dozer', litres: 510 },
+      { project, date: '2026-11-21', equipment: 'EMG-008', purpose: 'Dozer', litres: 480 },
+      { project, date: '2026-11-21', equipment: 'EMG-006', purpose: 'Dozer', litres: 490 },
+    ],
+    operations: [],
+    counts: [
+      { project, date: '2026-11-14', countedLitres: 100 },
+      { project, date: '2026-11-20', countedLitres: 0, notes: 'NON_CLOSING_COUNT: before movements' },
+      { project, date: '2026-11-21', countedLitres: 0, notes: 'NON_CLOSING_COUNT: placeholder' },
+    ],
+  };
+  assert.equal(siteOnGroundAsOf(args).onGround, 20);
+  assert.equal(reconcileSiteDay(args).measured, null);
+  assert.equal(reconcileSiteDay(args).status, 'Physical count needed');
+});
