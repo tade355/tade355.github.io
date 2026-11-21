@@ -173,7 +173,7 @@ function openForm(record, refresh) {
       function recomputeOpeningDiesel() {
         const equipment = equipmentField.querySelector('select').value;
         const date = dateField.querySelector('input').value;
-        const prevClosing = previousDieselClosing(store.get('operations'), dieselDraft());
+        const prevClosing = previousDieselClosing(store.get('operations'), dieselDraft(), store.get('dieselSiteDistributions'));
         const supplied = Number(dieselSuppliedField.querySelector('input').value) || 0;
         if (prevClosing === null && !supplied) return;
         openingDieselField.querySelector('input').value = ((prevClosing || 0) + supplied).toFixed(1);

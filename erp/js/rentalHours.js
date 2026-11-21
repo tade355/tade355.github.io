@@ -31,6 +31,7 @@ export function officeRentalUsage(operations, equipment, from, to) {
   const work = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date)).map((entry) => ({
     date: entry.date,
     hoursWorked: Math.min(8, entry.hoursWorked),
+    extraHours: Math.max(0, entry.hoursWorked - 8),
     project: [...entry.projects].join(', '),
     daysUsed: Math.min(8, entry.hoursWorked) / 8,
   }));
@@ -48,7 +49,7 @@ export function rentalDailyLedger(operations, credits, transfers, equipment) {
   if (!firstDate) return [];
   const byDate = new Map();
   const day = (date) => {
-    if (!byDate.has(date)) byDate.set(date, { date, paidDays: 0, officeHours: 0, usedDays: 0, businessHours: 0, businessDays: 0, daysIn: 0, daysOut: 0 });
+    if (!byDate.has(date)) byDate.set(date, { date, paidDays: 0, officeHours: 0, extraHours: 0, usedDays: 0, businessHours: 0, businessDays: 0, daysIn: 0, daysOut: 0 });
     return byDate.get(date);
   };
   payments.forEach((r) => { if (r.paymentDate) day(r.paymentDate).paidDays += Number(r.daysPaid || 0); });
@@ -59,6 +60,7 @@ export function rentalDailyLedger(operations, credits, transfers, equipment) {
   });
   officeRentalUsage(operations, equipment, firstDate).work.forEach((r) => {
     day(r.date).officeHours += r.hoursWorked;
+    day(r.date).extraHours += r.extraHours;
     day(r.date).usedDays += r.daysUsed;
   });
   for (const r of operations || []) {

@@ -12,7 +12,7 @@ import { isSunday, addDays, requestSubmissionDate, rexFortnightStart } from './d
 import { buildAttention } from './attention.js';
 import { fuelEfficiency, NORM_LITRES_PER_HA } from './fuelEfficiency.js';
 import { mergeDieselReceipts } from './dieselSupply.js';
-import { siteFuelIssues } from './fuelLedger.js';
+import { siteFuelIssues, tankTransferDelta } from './fuelLedger.js';
 import { siteOnGroundAsOf } from './dieselReconciliation.js';
 
 import { EXPECTED_HA_PER_8HRS, IDEAL_START, DIESEL_FILL_LITRES, LATE_FLAG_MINUTES } from './rules.js';
@@ -41,6 +41,7 @@ const sum = (arr, fn) => arr.reduce((s, x) => s + (fn(x) || 0), 0);
 const expectedHa = (hours) => (hours / 8) * EXPECTED_HA_PER_8HRS;
 const pct = (actual, expected) => (expected > 0 ? (actual / expected) * 100 : null);
 const KNOWN_PROJECT_REDEPLOYMENTS = {
+  'EMG-004': { project: 'Blue Sky Project - Ajue-Ore', since: '2026-11-20' },
   'EMG-007': { project: 'Blue Sky Project - Ajue-Ore', since: '2026-11-12' },
   'EMG-008': { project: 'Blue Sky Project - Ajue-Ore', since: '2026-11-12' },
 };
@@ -60,7 +61,7 @@ export function buildDailyDashboard(ctx) {
   const selectedSince = ctx.since || DASHBOARD_BASIS_FROM;
   const since = selectedSince <= date ? selectedSince : date;
   const dieselSince = rexFortnightStart(project, date) ? DASHBOARD_BASIS_FROM : since;
-  const inv = ctx.inventory.filter((i) => i.category === 'Heavy Equipment');
+  const inv = ctx.inventory.filter((i) => i.category === 'Heavy Equipment' && (!i.demobilizedAt || i.demobilizedAt > date));
   const invByName = new Map(ctx.inventory.map((i) => [i.name, i]));
   // BIG-001 is the former record name of the machine now listed as EMG-005.
   // Normalize report and distribution names before joining dashboard sections.
@@ -116,7 +117,7 @@ export function buildDailyDashboard(ctx) {
     .filter((row) => belongsToProject(row.project));
   const dayDozerIssues = siteIssues.filter((row) => row.date === date && !!row.equipment);
   const dayOtherIssues = siteIssues.filter((row) => row.date === date && !row.equipment);
-  const dist = ctx.distributions.filter((d) => belongsToProject(d.project) && !!d.equipment)
+  const dist = ctx.distributions.filter((d) => belongsToProject(d.project) && !!d.equipment && (d.purpose || 'Dozer') === 'Dozer')
     .map((d) => currentDozerName(d.equipment) === d.equipment ? d : { ...d, equipment: currentDozerName(d.equipment) });
   const aldDay = (d) => d.date === date;
   const ago = (c) => c.fuelType === 'Diesel';
@@ -183,18 +184,20 @@ export function buildDailyDashboard(ctx) {
     const afterReading = (row) => !lastReading || row.date > lastReading.date;
     const closingBefore = (lastReading ? Number(lastReading.closingDiesel) : 0)
       + sum(tankDist.filter((d) => d.equipment === name && d.date < date && afterReading(d)), (d) => d.litres)
-      - sum(chainOps.filter((o) => o.equipment === name && o.date < date && afterReading(o)), (o) => o.fuelUsed);
+      - sum(chainOps.filter((o) => o.equipment === name && o.date < date && afterReading(o)), (o) => o.fuelUsed)
+      + tankTransferDelta(ctx.distributions, name, addDays(date, -1), lastReading?.date ? addDays(lastReading.date, -1) : '');
     const distributed = sum(tankDist.filter((d) => d.equipment === name && d.date === date), (d) => d.litres);
     const rows = dayOps.filter((o) => o.equipment === name);
     const used = sum(rows, (o) => o.fuelUsed);
     const ha = sum(rows, (o) => o.quantity);
-    const opening = closingBefore + distributed;
+    const opening = closingBefore + distributed + tankTransferDelta(ctx.distributions, name, date, addDays(date, -1));
     const calculatedClosing = opening - used;
     const reading = lastDieselReading(rows);
     const reportedClosing = reading ? Number(reading.closingDiesel) : undefined;
-    const closing = reportedClosing ?? calculatedClosing;
+    const tankMovementToday = tankTransferDelta(ctx.distributions, name, date, addDays(date, -1));
+    const closing = reportedClosing === undefined ? calculatedClosing : reportedClosing + tankMovementToday;
     let status = 'Idle';
-    if (rows.length) status = reportedClosing !== undefined && Math.abs(reportedClosing - calculatedClosing) > 0.5 ? 'Closing restated' : 'Reconciled';
+    if (rows.length) status = tankMovementToday ? 'Tank transfer after report' : reportedClosing !== undefined && Math.abs(reportedClosing - calculatedClosing) > 0.5 ? 'Closing restated' : 'Reconciled';
     else if (!opening && !closing) status = 'No balance';
     return { equipment: name, opening, distributed, used, closing, calculatedClosing, efficiency: ha > 0 ? used / ha : null, status, reportedClosing, worked: rows.length > 0 };
   }).filter((r) => r.opening || r.distributed || r.used || r.closing || r.worked)

@@ -1,3 +1,9 @@
+// Mobilisation is a project cost, not a single day's operating logistics.
+export function isLowbedCost(row) {
+  const text = [row?.description, row?.notes, row?.purpose, ...(row?.items || []).map(item => item.description)].filter(Boolean).join(' ');
+  return /low[ -]?bed|mobilis(?:ation|ation|e|ed|ing)|demobilis(?:ation|ation|e|ed|ing)/i.test(text);
+}
+
 // Project logistics requested for a specific day are incurred costs even while
 // the approval and payment workflow is still open. The request date is the
 // service date until the form records a separate incurred date.
@@ -6,7 +12,7 @@ export function ordinaryProjectLogistics(requests, from, to, linkedWorkflowReque
   for (const request of requests || []) {
     if (request.costHead !== 'Logistics' || !request.date || request.date < from || request.date > to) continue;
     if (!['Pending', 'Approved', 'Partially Approved', 'Paid'].includes(request.status)) continue;
-    if (linkedWorkflowRequestIds.has(request.id)) continue;
+    if (linkedWorkflowRequestIds.has(request.id) || isLowbedCost(request)) continue;
     const description = `${request.description || ''} ${(request.items || []).map(item => item.description || '').join(' ')}`;
     if (!/transport|waybill|delivery|t-far|t\s*far|fare/i.test(description)) continue;
     // A pending request can be for planned work. Count it as a provisional

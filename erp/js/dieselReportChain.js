@@ -15,17 +15,22 @@ export function precedingDieselReports(reports, draft) {
     && (row.date < draft.date || (row.date === draft.date && (!draft.timeResumed || compareDieselReports(row, draft) < 0))))
     .slice().sort(compareDieselReports);
 }
-export function previousDieselClosing(reports, draft) {
+export function previousDieselClosing(reports, draft, distributions = []) {
   let balance = null;
+  let lastDate = '';
   for (const row of precedingDieselReports(reports, draft)) {
     if (reading(row.closingDiesel)) balance = Number(row.closingDiesel);
     else if (reading(row.openingDiesel)) balance = Number(row.openingDiesel) - Number(row.fuelUsed || 0);
     else if (balance !== null) balance += Number(row.dieselSupplied || 0) - Number(row.fuelUsed || 0);
+    lastDate = row.date;
   }
-  return balance;
+  const transfers = distributions.filter(row => row.purpose === 'Tank Transfer' && row.date >= lastDate && row.date <= draft.date && (row.date < draft.date || lastDate < draft.date));
+  const delta = transfers.reduce((sum, row) => sum + (dieselEquipmentName(row.recipient) === dieselEquipmentName(draft.equipment) ? Number(row.litres || 0) : 0)
+    - (dieselEquipmentName(row.equipment) === dieselEquipmentName(draft.equipment) ? Number(row.litres || 0) : 0), 0);
+  return balance === null && !transfers.length ? null : Number(balance || 0) + delta;
 }
 export function unallocatedDieselSupply(reports, draft, distributions) {
-  const matches = distributions.filter(row => row.date === draft.date && row.project === draft.siteName
+  const matches = distributions.filter(row => (row.purpose || 'Dozer') === 'Dozer' && row.date === draft.date && row.project === draft.siteName
     && dieselEquipmentName(row.equipment) === dieselEquipmentName(draft.equipment));
   if (!matches.length) return null;
   const total = matches.reduce((sum,row) => sum + Number(row.litres || 0),0);

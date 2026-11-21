@@ -1,7 +1,7 @@
 import { selectableProjects, selectableEmployees, selectableMachines, machineProjectAsOf } from '../selectionOptions.js';
 import { validateDieselBatch } from '../dieselBatch.js';
 import { renderFuelWorkflow } from './fuelWorkflow.js';
-import { stationAdvanceBalances, siteFuelIssues } from '../fuelLedger.js';
+import { stationAdvanceBalances, siteFuelIssues, pendingSiteFuelIssues } from '../fuelLedger.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
@@ -225,6 +225,7 @@ function renderSiteDistributionTab(container) {
   actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openBatchForm() }, '+ Distribute to Dozers'));
   actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openSupplyForm() }, '+ New Supply from Station'));
   actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openOtherUseForm() }, '+ Other Diesel Use'));
+  actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openTankTransferForm() }, '+ Drill / Transfer Tank Diesel'));
 
   const entrySlot = el('div');
   container.appendChild(entrySlot);
@@ -241,6 +242,10 @@ function renderSiteDistributionTab(container) {
   container.appendChild(el('h3', { class: 'subsection-title' }, 'New Supply / Station Collections'));
   container.appendChild(el('p', { class: 'section-subtitle' }, 'Diesel collections logged in Fuel Credit appear here automatically. Assign the site on older unassigned collections to include them in site stock; do not log a second receipt.'));
   container.appendChild(suppliesContainer);
+  const pendingContainer = el('div');
+  container.appendChild(el('h3', { class: 'subsection-title' }, 'Daily reports awaiting distribution confirmation'));
+  container.appendChild(el('p', { class: 'section-subtitle' }, 'Review the litres reported for each dozer and date, then confirm the handout. These suggestions already count provisionally in site stock and are replaced by the confirmed entry.'));
+  container.appendChild(pendingContainer);
   const distributionsContainer = el('div');
   container.appendChild(distributionsContainer);
 
@@ -272,6 +277,17 @@ function renderSiteDistributionTab(container) {
       emptyText: 'No Fuel Credit diesel collections in this period.',
     });
 
+    const pending = filterByProject(pendingSiteFuelIssues(store.get('dieselSiteDistributions'), store.get('operations')), 'project')
+      .filter(r => dateInRange(r.date, fromInput.value, toInput.value)).sort((a, b) => b.date.localeCompare(a.date));
+    renderTable(pendingContainer, {
+      columns: [
+        { key: 'date', label: 'Date', render: r => formatDate(r.date) },
+        { key: 'project', label: 'Project' },
+        { key: 'equipment', label: 'Dozer' },
+        { key: 'litres', label: 'Reported', render: r => `${r.litres.toLocaleString()} L` },
+        { key: 'action', label: '', render: r => el('button', { class: 'btn btn-primary btn-sm', onClick: () => openDistributionForm(null, r) }, 'Review and confirm') },
+      ], rows: pending, emptyText: 'All reported distributions in this period are confirmed.',
+    });
     const rows = filterByProject(store.get('dieselSiteDistributions'), 'project').filter(r => dateInRange(r.date, fromInput.value, toInput.value)).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
     renderTable(distributionsContainer, {
       columns: [
@@ -287,7 +303,7 @@ function renderSiteDistributionTab(container) {
           key: 'actions',
           label: '',
           render: (r) => actionButtons({
-            onEdit: () => r.purpose && r.purpose !== 'Dozer' ? openOtherUseForm(r) : openDistributionForm(r),
+            onEdit: () => r.purpose === 'Tank Transfer' ? openTankTransferForm(r) : r.purpose && r.purpose !== 'Dozer' ? openOtherUseForm(r) : openDistributionForm(r),
             onDelete: async () => {
               if (!confirmDelete(`Diesel issued for ${r.equipment || r.recipient || r.purpose} on ${formatDate(r.date)}`)) return;
               try {
@@ -394,16 +410,42 @@ function renderSiteDistributionTab(container) {
     });
   }
 
-  function openDistributionForm(record) {
+  function openTankTransferForm(record) {
+    openModal({
+      title: record ? 'Correct Tank Transfer' : 'Drill Diesel from Dozer Tank',
+      fields: [
+        { name: 'date', label: 'Transfer date', type: 'date', required: true },
+        { name: 'project', label: 'Project', type: 'select', required: true, options: projectOptions() },
+        { name: 'equipment', label: 'Drilled from dozer', type: 'select', required: true, options: fleetOptions() },
+        { name: 'recipient', label: 'Transferred into dozer', type: 'select', required: true, options: fleetOptions() },
+        { name: 'litres', label: 'Litres transferred', type: 'number', required: true, min: 0.01, step: 0.01 },
+        { name: 'distributedBy', label: 'Recorded by', type: 'select', options: employeeOptions() },
+        { name: 'notes', label: 'Reason / tank reading', type: 'textarea' },
+      ],
+      initial: record || { date: todayISOString() },
+      submitLabel: record ? 'Save Transfer' : 'Record Tank Transfer',
+      onSubmit: async data => {
+        if (data.equipment === data.recipient) throw new Error('Choose two different dozers.');
+        if (!(Number(data.litres) > 0)) throw new Error('Enter positive litres.');
+        const payload = { ...data, purpose: 'Tank Transfer' };
+        if (record) await store.update('dieselSiteDistributions', record.id, payload);
+        else await store.add('dieselSiteDistributions', payload);
+        refresh();
+      },
+    });
+  }
+
+  function openDistributionForm(record, suggestion = null) {
     if (!projectOptions().length) { window.alert('Add a project first.'); return; }
     if (!fleetOptions().length) { window.alert('Add a fleet asset first.'); return; }
     openModal({
-      title: record ? 'Edit Distribution' : 'Log Distribution',
+      title: record ? 'Edit Distribution' : suggestion ? 'Confirm Reported Distribution' : 'Log Distribution',
       fields: distributionFields(),
-      initial: record || { date: todayISOString() },
-      submitLabel: record ? 'Save Changes' : 'Log Distribution',
+      initial: record || suggestion || { date: todayISOString() },
+      submitLabel: record ? 'Save Changes' : suggestion ? 'Confirm Distribution' : 'Log Distribution',
       onSubmit: async (data) => {
         const payload = { ...data, purpose: 'Dozer', recipient: null };
+        if (!record && store.get('dieselSiteDistributions').some(r => (r.purpose || 'Dozer') === 'Dozer' && r.date === data.date && r.project === data.project && r.equipment === data.equipment)) throw new Error('A confirmed distribution already exists for this dozer, site and date. Edit it instead.');
         if (record) await store.update('dieselSiteDistributions', record.id, payload);
         else await store.add('dieselSiteDistributions', payload);
         refresh();

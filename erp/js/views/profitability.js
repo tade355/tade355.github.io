@@ -1,5 +1,5 @@
 import { workflowCosts } from '../fuelWorkflow.js';
-import { ordinaryProjectLogistics } from '../projectLogistics.js';
+import { ordinaryProjectLogistics, isLowbedCost } from '../projectLogistics.js';
 import { store } from '../store.js';
 import { formatCurrency, formatDate, el, dateInRange, invoiceTotal, ico } from '../utils.js';
 import { weekOf, isSunday } from '../dateUtils.js';
@@ -239,8 +239,8 @@ export function computeProjectStats(project, from, to) {
   const supervisorSundayAllowance = supervisorSundayAllowanceBasis(operations, store.get('operations').filter((o) => o.siteName === project));
   const dozerByOwnership = dozerCostByOwnership(operations);
 
-  const logisticsCost = legacyExpenses.filter((e) => e.category === 'Logistics').reduce((sum, e) => sum + e.amount, 0)
-    + legacyRequests.filter((r) => r.costHead === 'Logistics').reduce((sum, r) => sum + fundRequestTotal(r), 0)
+  const logisticsCost = legacyExpenses.filter((e) => e.category === 'Logistics' && !isLowbedCost(e)).reduce((sum, e) => sum + e.amount, 0)
+    + legacyRequests.filter((r) => r.costHead === 'Logistics' && !isLowbedCost(r)).reduce((sum, r) => sum + fundRequestTotal(r), 0)
     + commercialBikeLogisticsForRows(operations)
     + tacomaLogisticsForRows(project, from, to, operations)
     + dieselLogistics + actualTransport.operator + actualTransport.diesel + ordinaryLogistics.total + workflow.dieselTransport + workflow.workerTransport;
@@ -253,14 +253,19 @@ export function computeProjectStats(project, from, to) {
   // full by Operator Allowance above on the days they actually worked, often weeks before the
   // lump payment date, so counting the payment too would double that same cost. Manager Sunday
   // Allowance is folded in here too — it's a fixed schedule computed from Daily Operations, not a logged Expense.
-  const otherCost = legacyExpenses.filter((e) => !NON_OPERATIONS_COST_CATEGORIES.has(e.category) && !isOwnedOperatorAllowancePayment(e.payee, e.category)).reduce((sum, e) => sum + e.amount, 0)
-    + legacyRequests.filter((r) => !NON_OPERATIONS_COST_CATEGORIES.has(r.costHead)).reduce((sum, r) => sum + fundRequestTotal(r), 0)
+  const otherCost = legacyExpenses.filter((e) => !NON_OPERATIONS_COST_CATEGORIES.has(e.category) && !isLowbedCost(e) && !isOwnedOperatorAllowancePayment(e.payee, e.category)).reduce((sum, e) => sum + e.amount, 0)
+    + legacyRequests.filter((r) => !NON_OPERATIONS_COST_CATEGORIES.has(r.costHead) && !isLowbedCost(r)).reduce((sum, r) => sum + fundRequestTotal(r), 0)
     + managerSundayAllowanceForRows(operations, project)
     + supervisorSundayAllowance + workflow.other;
   // PMS (Tacoma + any unexplained litres) on the dashboard basis; PMS used
   // for maintenance is counted under Maintenance Incurred instead.
   const pmsCost = pms.tacoma + pms.bikes + pms.unexplained + workflow.pms;
-  const totalCost = dozerCost + dieselCost + operatorAllowanceCost + logisticsCost + otherCost + pmsCost;
+  const projectPeriod = !from || !to || from !== to;
+  const lowbedCost = projectPeriod
+    ? expenses.filter(isLowbedCost).reduce((sum, e) => sum + Number(e.amount || 0), 0)
+      + fundRequests.filter(isLowbedCost).reduce((sum, r) => sum + fundRequestTotal(r), 0)
+    : 0;
+  const totalCost = dozerCost + dieselCost + operatorAllowanceCost + logisticsCost + otherCost + pmsCost + lowbedCost;
 
   // Machine Recovery (dashboard basis only).
   const mcRecovered = machineRecoveredBasis(operations, ownershipByName, hourlyRateAsOf);
@@ -288,6 +293,7 @@ export function computeProjectStats(project, from, to) {
     dieselCost,
     operatorAllowanceCost,
     logisticsCost,
+    lowbedCost,
     otherCost,
     dieselLogistics,
     actualOperatorTransport: actualTransport.operator + ordinaryLogistics.operator + workflow.workerTransport,
@@ -573,6 +579,7 @@ function renderAllProjects(body, from, to) {
       { key: 'dieselCost', label: 'Diesel Cost', render: (r) => formatCurrency(r.dieselCost) },
       { key: 'operatorAllowanceCost', label: 'Operator Allowance', render: (r) => formatCurrency(r.operatorAllowanceCost) },
       { key: 'logisticsCost', label: 'Logistics Cost', render: (r) => formatCurrency(r.logisticsCost) },
+      { key: 'lowbedCost', label: 'Lowbed / Mobilisation', render: (r) => formatCurrency(r.lowbedCost) },
       { key: 'otherCost', label: 'Other Cost', render: (r) => formatCurrency(r.otherCost) },
       { key: 'totalCost', label: 'Total Cost', render: (r) => formatCurrency(r.totalCost) },
       { key: 'opsProfit', label: 'Operations Profit', render: (r) => el('strong', { class: r.opsProfit >= 0 ? 'text-good' : 'text-critical' }, formatCurrency(r.opsProfit)) },
