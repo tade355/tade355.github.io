@@ -1,7 +1,7 @@
 import { selectableProjects, selectableEmployees, selectableMachines, machineProjectAsOf } from '../selectionOptions.js';
 import { validateDieselBatch } from '../dieselBatch.js';
 import { renderFuelWorkflow } from './fuelWorkflow.js';
-import { stationAdvanceBalances, siteFuelIssues, pendingSiteFuelIssues } from '../fuelLedger.js';
+import { stationAdvanceBalances, siteFuelIssues, pendingSiteFuelIssues, siteFuelRecoveries } from '../fuelLedger.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
@@ -202,7 +202,7 @@ function distributionFields() {
 // report; summing diesel_site_distributions on top of that would count it
 // twice.
 function siteDieselLedger(from, to) {
-  const receipts = allDieselReceipts().filter((r) => r.project);
+  const receipts = [...allDieselReceipts(), ...siteFuelRecoveries(store.get('dieselSiteDistributions'))].filter((r) => r.project);
   const issues = siteFuelIssues(store.get('dieselSiteDistributions'), store.get('operations'));
   return filterByProject(store.get('projects'), 'name').map((p) => {
     const openingReceipts = from ? receipts.filter((r) => r.project === p.name && r.date < from).reduce((sum, r) => sum + r.litres, 0) : 0;
@@ -225,7 +225,7 @@ function renderSiteDistributionTab(container) {
   actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openBatchForm() }, '+ Distribute to Dozers'));
   actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openSupplyForm() }, '+ New Supply from Station'));
   actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openOtherUseForm() }, '+ Other Diesel Use'));
-  actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openTankTransferForm() }, '+ Drill / Transfer Tank Diesel'));
+  actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openTankDrillForm() }, '+ Drill to Site Stock'));
 
   const entrySlot = el('div');
   container.appendChild(entrySlot);
@@ -237,7 +237,7 @@ function renderSiteDistributionTab(container) {
   const ledgerContainer = el('div');
   container.appendChild(ledgerContainer);
   container.appendChild(el('h3', { class: 'subsection-title' }, 'Distributions'));
-  container.appendChild(el('p', { class: 'section-subtitle' }, 'Record dozer fueling and other site uses separately. Both reduce diesel on ground; only dozer fueling updates tank balances.'));
+  container.appendChild(el('p', { class: 'section-subtitle' }, 'Drilling adds fuel from a dozer tank to site stock. Later distributions to one or more dozers reduce site stock; direct historical tank transfers stay separate.'));
   const suppliesContainer = el('div');
   container.appendChild(el('h3', { class: 'subsection-title' }, 'New Supply / Station Collections'));
   container.appendChild(el('p', { class: 'section-subtitle' }, 'Diesel collections logged in Fuel Credit appear here automatically. Assign the site on older unassigned collections to include them in site stock; do not log a second receipt.'));
@@ -303,7 +303,7 @@ function renderSiteDistributionTab(container) {
           key: 'actions',
           label: '',
           render: (r) => actionButtons({
-            onEdit: () => r.purpose === 'Tank Transfer' ? openTankTransferForm(r) : r.purpose && r.purpose !== 'Dozer' ? openOtherUseForm(r) : openDistributionForm(r),
+            onEdit: () => r.purpose === 'Tank Transfer' ? openTankTransferForm(r) : r.purpose === 'Tank Drill' ? openTankDrillForm(r) : r.purpose && r.purpose !== 'Dozer' ? openOtherUseForm(r) : openDistributionForm(r),
             onDelete: async () => {
               if (!confirmDelete(`Diesel issued for ${r.equipment || r.recipient || r.purpose} on ${formatDate(r.date)}`)) return;
               try {
@@ -410,14 +410,44 @@ function renderSiteDistributionTab(container) {
     });
   }
 
+  function openTankDrillForm(record) {
+    const donorOptions = fleetOptions();
+    if (record?.equipment && !donorOptions.some(o => o.value === record.equipment))
+      donorOptions.unshift({ value: record.equipment, label: record.equipment + ' (historical)' });
+    openModal({
+      title: record ? 'Correct Drilled Diesel' : 'Drill Diesel into Site Stock',
+      fields: [
+        { name: 'date', label: 'Drilling date', type: 'date', required: true },
+        { name: 'project', label: 'Receiving project', type: 'select', required: true, options: projectOptions() },
+        { name: 'equipment', label: 'Drilled from dozer', type: 'select', required: true, options: donorOptions },
+        { name: 'litres', label: 'Litres recovered on ground', type: 'number', required: true, min: 0.01, step: 0.01 },
+        { name: 'distributedBy', label: 'Recorded by', type: 'select', options: employeeOptions() },
+        { name: 'notes', label: 'Tank reading / reason', type: 'textarea' },
+      ],
+      initial: record || { date: todayISOString() },
+      submitLabel: record ? 'Save Correction' : 'Record Drilling',
+      onSubmit: async data => {
+        if (!(Number(data.litres) > 0)) throw new Error('Enter positive litres.');
+        const payload = { ...data, purpose: 'Tank Drill', recipient: null };
+        if (record) await store.update('dieselSiteDistributions', record.id, payload);
+        else await store.add('dieselSiteDistributions', payload);
+        refresh();
+      },
+    });
+  }
+
   function openTankTransferForm(record) {
+    const historicalOptions = fleetOptions();
+    for (const name of [record?.equipment, record?.recipient]) {
+      if (name && !historicalOptions.some(o => o.value === name)) historicalOptions.unshift({ value: name, label: name + ' (historical)' });
+    }
     openModal({
       title: record ? 'Correct Tank Transfer' : 'Drill Diesel from Dozer Tank',
       fields: [
         { name: 'date', label: 'Transfer date', type: 'date', required: true },
         { name: 'project', label: 'Project', type: 'select', required: true, options: projectOptions() },
-        { name: 'equipment', label: 'Drilled from dozer', type: 'select', required: true, options: fleetOptions() },
-        { name: 'recipient', label: 'Transferred into dozer', type: 'select', required: true, options: fleetOptions() },
+        { name: 'equipment', label: 'Drilled from dozer', type: 'select', required: true, options: historicalOptions },
+        { name: 'recipient', label: 'Transferred into dozer', type: 'select', required: true, options: historicalOptions },
         { name: 'litres', label: 'Litres transferred', type: 'number', required: true, min: 0.01, step: 0.01 },
         { name: 'distributedBy', label: 'Recorded by', type: 'select', options: employeeOptions() },
         { name: 'notes', label: 'Reason / tank reading', type: 'textarea' },
@@ -500,7 +530,7 @@ function renderDailyReconciliationTab(container) {
       : 'No earlier project stock count is available. Opening is provisional from recorded movements.'));
     const cards = el('div', { class: 'stats-grid' }, [
       statCard({ label: 'Opening on site', value: `${site.opening.toLocaleString()} L` }),
-      statCard({ label: 'Supplied today', value: `${site.supplied.toLocaleString()} L` }),
+      statCard({ label: 'Added to site stock today', value: `${site.supplied.toLocaleString()} L`, hint: site.recovered ? `${site.recovered.toLocaleString()} L recovered by drilling` : undefined }),
       statCard({ label: 'To dozers', value: `${site.dozerIssued.toLocaleString()} L` }),
       statCard({ label: 'Other site uses', value: `${site.otherIssued.toLocaleString()} L` }),
       statCard({ label: 'Expected on ground', value: `${site.expected.toLocaleString()} L`, tone: site.expected < 0 ? 'critical' : undefined }),
