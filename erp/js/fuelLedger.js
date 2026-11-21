@@ -20,34 +20,11 @@ export function stationAdvanceBalances(prepayments, receipts, credits) {
   });
 }
 
-// A report is a draft distribution until it is confirmed in Site Distribution.
-// Group by site, machine and date because one machine may have several work rows.
-export function pendingSiteFuelIssues(distributions, operations) {
-  const key = (project, equipment, date) => `${project}|${equipment}|${date}`;
-  const confirmed = new Set((distributions || []).filter((r) => (r.purpose || 'Dozer') === 'Dozer')
-    .map((r) => key(r.project, r.equipment, r.date)));
-  const pending = new Map();
-  for (const row of operations || []) {
-    const litres = Number(row.dieselSupplied || 0);
-    if (!row.siteName || !row.equipment || !row.date || litres <= 0) continue;
-    const id = key(row.siteName, row.equipment, row.date);
-    if (confirmed.has(id)) continue;
-    const item = pending.get(id) || { project: row.siteName, equipment: row.equipment, date: row.date, purpose: 'Dozer', litres: 0, legacyReport: true };
-    item.litres += litres;
-    pending.set(id, item);
-  }
-  return [...pending.values()];
-}
-
-// Confirmed site issues and unconfirmed report suggestions represent the same
-// physical handout. Tank-to-tank drilling never changes site stock.
+// Explicit movements win for the same site/machine/day. Legacy reports remain
+// a fallback until they can be reconciled; never add both representations.
 export function siteFuelIssues(distributions, operations) {
-  return [...(distributions || []).filter((r) => r.purpose !== 'Tank Transfer'),
-    ...pendingSiteFuelIssues(distributions, operations)];
-}
-
-export function tankTransferDelta(distributions, equipment, throughDate, afterDate = '') {
-  return (distributions || []).filter((r) => r.purpose === 'Tank Transfer' && r.date <= throughDate && (!afterDate || r.date > afterDate))
-    .reduce((sum, r) => sum + (r.recipient === equipment ? Number(r.litres || 0) : 0)
-      - (r.equipment === equipment ? Number(r.litres || 0) : 0), 0);
+  const key = (project, equipment, date) => `${project}|${equipment}|${date}`;
+  const explicit = new Set(distributions.map((r) => key(r.project, r.equipment, r.date)));
+  return [...distributions, ...operations.filter((o) => o.dieselSupplied && !explicit.has(key(o.siteName, o.equipment, o.date)))
+    .map((o) => ({ date: o.date, project: o.siteName, equipment: o.equipment, purpose: 'Dozer', litres: o.dieselSupplied, legacyReport: true }))];
 }
