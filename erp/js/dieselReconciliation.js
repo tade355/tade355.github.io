@@ -20,8 +20,12 @@ const isPostCountReceipt = (count, row) => !!count
 
 // Counts are end-of-day physical readings of the site's storage tank. An
 // uncounted running balance is an estimate, never evidence of missing fuel.
+export function isClosingDieselStockCount(row) {
+  return !/^NON_CLOSING_COUNT:/i.test(String(row?.notes || '').trim());
+}
+
 export function latestDieselStockCount(rows) {
-  return [...rows].sort((a, b) =>
+  return [...rows].filter(isClosingDieselStockCount).sort((a, b) =>
     String(b.date || '').localeCompare(String(a.date || ''))
     || String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || ''))
     || String(b.id || '').localeCompare(String(a.id || ''))

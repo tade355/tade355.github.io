@@ -562,6 +562,10 @@ function renderDailyReconciliationTab(container) {
       { name: 'project', label: 'Project', type: 'select', required: true, options: projectOptions() },
       { name: 'countedLitres', label: 'Litres physically on ground', type: 'number', required: true, min: 0 },
       { name: 'countedBy', label: 'Counted by', type: 'select', required: true, options: employeeOptions().filter((e) => e.value) },
+      { name: 'countBasis', label: 'Count basis', type: 'select', required: true, options: [
+        { value: 'closing', label: 'Verified closing physical count' },
+        { value: 'preliminary', label: 'Pre-movement / placeholder (does not reset stock)' },
+      ] },
       { name: 'notes', label: 'Method / notes', type: 'textarea' },
     ], initial: { date: dateInput.value, project: projectSelect.value }, submitLabel: 'Save Count',
     onSubmit: async (data) => { await store.add('dieselStockCounts', data); refresh(); } });
