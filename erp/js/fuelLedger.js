@@ -1,3 +1,5 @@
+import { dieselEquipmentName } from './dieselReportChain.js';
+
 export function stationAdvanceBalances(prepayments, receipts, credits) {
   const stations = [...new Set([...prepayments.map((p) => p.station), ...receipts.map((r) => r.station), ...credits.map((c) => c.station)].filter(Boolean))];
   return stations.map((station) => {
@@ -20,11 +22,32 @@ export function stationAdvanceBalances(prepayments, receipts, credits) {
   });
 }
 
-// Explicit movements win for the same site/machine/day. Legacy reports remain
-// a fallback until they can be reconciled; never add both representations.
+// Daily reports are provisional until their site handout is confirmed.
+export function pendingSiteFuelIssues(distributions, operations) {
+  const key = (project, equipment, date) => `${project}|${dieselEquipmentName(equipment)}|${date}`;
+  const confirmed = new Set((distributions || []).filter(r => (r.purpose || 'Dozer') === 'Dozer')
+    .map(r => key(r.project, r.equipment, r.date)));
+  const pending = new Map();
+  for (const row of operations || []) {
+    const litres = Number(row.dieselSupplied || 0);
+    if (!row.siteName || !row.equipment || !row.date || litres <= 0) continue;
+    const id = key(row.siteName, row.equipment, row.date);
+    if (confirmed.has(id)) continue;
+    const item = pending.get(id) || { project: row.siteName, equipment: dieselEquipmentName(row.equipment), date: row.date, purpose: 'Dozer', litres: 0, legacyReport: true };
+    item.litres += litres;
+    pending.set(id, item);
+  }
+  return [...pending.values()];
+}
+
 export function siteFuelIssues(distributions, operations) {
-  const key = (project, equipment, date) => `${project}|${equipment}|${date}`;
-  const explicit = new Set(distributions.map((r) => key(r.project, r.equipment, r.date)));
-  return [...distributions, ...operations.filter((o) => o.dieselSupplied && !explicit.has(key(o.siteName, o.equipment, o.date)))
-    .map((o) => ({ date: o.date, project: o.siteName, equipment: o.equipment, purpose: 'Dozer', litres: o.dieselSupplied, legacyReport: true }))];
+  return [...(distributions || []).filter(r => r.purpose !== 'Tank Transfer'),
+    ...pendingSiteFuelIssues(distributions, operations)];
+}
+
+// A tank transfer changes machine balances, never the site's ground stock.
+export function tankTransferDelta(distributions, equipment, throughDate, afterDate = '') {
+  return (distributions || []).filter(r => r.purpose === 'Tank Transfer' && r.date <= throughDate && (!afterDate || r.date > afterDate))
+    .reduce((sum, r) => sum + (dieselEquipmentName(r.recipient) === dieselEquipmentName(equipment) ? Number(r.litres || 0) : 0)
+      - (dieselEquipmentName(r.equipment) === dieselEquipmentName(equipment) ? Number(r.litres || 0) : 0), 0);
 }
