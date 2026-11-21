@@ -402,7 +402,7 @@ export function renderDieselTracking(container) {
       title: record ? 'Edit Stock Count' : 'Log Stock Count',
       fields: countFields(),
       initial: record ? { ...record, countBasis: isClosingDieselStockCount(record) ? 'closing' : 'preliminary',
-        notes: String(record.notes || '').replace(/^NON_CLOSING_COUNT:\\s*/i, '') } : { date: todayISOString(), countBasis: 'closing' },
+        notes: String(record.notes || '').replace(/^NON_CLOSING_COUNT:\s*/i, '') } : { date: todayISOString(), countBasis: 'closing' },
       submitLabel: record ? 'Save Changes' : 'Log Count',
       onSubmit: async (data) => {
         const { countBasis, ...fields } = data;
