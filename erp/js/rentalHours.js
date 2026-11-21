@@ -40,6 +40,24 @@ export function officeRentalUsage(operations, equipment, from, to) {
 }
 
 
+// Internal operator extra-hour entitlement. This never changes owner rental
+// credit or records a payment: Accounts must record a separate payment.
+export function extraHourRateForOwnership(ownership) {
+  return ownership === 'Rented' ? 50000 : ownership === 'Partnership' || ownership === 'Company' ? 10000 : 0;
+}
+
+export function internalExtraHourAllowances(operations, inventory) {
+  return (inventory || []).flatMap((asset) => {
+    const rate = extraHourRateForOwnership(asset.ownership);
+    if (!rate) return [];
+    return officeRentalUsage(operations, asset.name, '0000-01-01').work
+      .filter((day) => day.extraHours > 0)
+      .map((day) => ({ date: day.date, equipment: asset.name, ownership: asset.ownership,
+        project: day.project, extraHours: day.extraHours, hourlyRate: rate,
+        amountDue: day.extraHours * rate }));
+  }).sort((a, b) => b.date.localeCompare(a.date) || a.equipment.localeCompare(b.equipment));
+}
+
 // Internal daily audit. Business work is shown to management, but never
 // consumes rental credit or enters the owner-facing rental statement.
 export function rentalDailyLedger(operations, credits, transfers, equipment) {
