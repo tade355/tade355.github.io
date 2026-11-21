@@ -181,7 +181,7 @@ export function renderDashboard(container) {
     const prevDayROI = prevDayStats.totalCost ? (prevDayStats.tentativeProfit / prevDayStats.totalCost) * 100 : null;
 
     // Match the Fleet Roster's latest machine-status report as of the viewed day.
-    const dozers = fleetItems();
+    const dozers = fleetItems().filter(item => !item.demobilizedAt || item.demobilizedAt > viewISO);
     const fleetStatus = (item) => reportedFleetStatusFor(item, viewISO)?.status || 'Unreported';
     const activeFleetCount = dozers.filter((item) => fleetStatus(item) === 'Active').length;
     const downOnlyCount = dozers.filter((item) => fleetStatus(item) === 'Down').length;
