@@ -41,13 +41,21 @@ export function pendingSiteFuelIssues(distributions, operations) {
 }
 
 export function siteFuelIssues(distributions, operations) {
-  return [...(distributions || []).filter(r => r.purpose !== 'Tank Transfer'),
+  return [...(distributions || []).filter(r => r.purpose !== 'Tank Transfer' && r.purpose !== 'Tank Drill'),
     ...pendingSiteFuelIssues(distributions, operations)];
 }
 
-// A tank transfer changes machine balances, never the site's ground stock.
+// Drilling recovers fuel from a machine into site stock. Later dozer issues
+// are separate movements, so the recovered litres can serve multiple machines.
+export function siteFuelRecoveries(distributions) {
+  return (distributions || []).filter(r => r.purpose === 'Tank Drill')
+    .map(r => ({ ...r, source: 'Drilled from ' + r.equipment }));
+}
+
+// A direct tank transfer changes only machine balances. A drill removes fuel
+// from the donor tank and adds it to the project's ground stock.
 export function tankTransferDelta(distributions, equipment, throughDate, afterDate = '') {
-  return (distributions || []).filter(r => r.purpose === 'Tank Transfer' && r.date <= throughDate && (!afterDate || r.date > afterDate))
+  return (distributions || []).filter(r => (r.purpose === 'Tank Transfer' || r.purpose === 'Tank Drill') && r.date <= throughDate && (!afterDate || r.date > afterDate))
     .reduce((sum, r) => sum + (dieselEquipmentName(r.recipient) === dieselEquipmentName(equipment) ? Number(r.litres || 0) : 0)
       - (dieselEquipmentName(r.equipment) === dieselEquipmentName(equipment) ? Number(r.litres || 0) : 0), 0);
 }
