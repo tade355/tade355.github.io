@@ -6,7 +6,7 @@ import { printDozerSettlement, printDozerRentalStatement } from '../print.js';
 import { getCurrentTier, getCurrentUserId } from '../session.js';
 import { dozerRatesAsOf } from '../rateHistory.js';
 import { currentOwnerSettlements } from '../rentSettlementBasis.js';
-import { officeRentalUsage, matchesRentalEquipment, rentalDailyLedger } from '../rentalHours.js';
+import { officeRentalUsage, matchesRentalEquipment, rentalDailyLedger, internalExtraHourAllowances } from '../rentalHours.js';
 
 function rentedDozers() {
   return store.get('inventory').filter((item) => item.ownership === 'Rented');
@@ -253,6 +253,22 @@ function renderRentalCreditLedger(container, refresh) {
     };
     picker.addEventListener('change', showDaily);
     showDaily();
+
+    container.appendChild(el('h3', { class: 'subsection-title' }, 'Extra-Hour Operator Allowance — Internal'));
+    container.appendChild(el('p', { class: 'section-subtitle' }, 'Recorded office hours above 8 in one day: Rented ₦50,000/hr; Partnership and Company ₦10,000/hr. These are calculated entitlements, not recorded payments. They are excluded from owner statements and rental-day usage.'));
+    const allowanceTable = el('div'); container.appendChild(allowanceTable);
+    const allowanceRows = internalExtraHourAllowances(store.get('operations'), store.get('inventory'));
+    renderTable(allowanceTable, {
+      columns: [
+        { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
+        { key: 'equipment', label: 'Dozer' },
+        { key: 'ownership', label: 'Ownership' },
+        { key: 'project', label: 'Project' },
+        { key: 'extraHours', label: 'Extra Hours', render: (r) => r.extraHours.toFixed(1) + ' hrs' },
+        { key: 'hourlyRate', label: 'Operator Rate', render: (r) => formatCurrency(r.hourlyRate) + '/hr' },
+        { key: 'amountDue', label: 'Calculated Due', render: (r) => formatCurrency(r.amountDue) },
+      ], rows: allowanceRows, emptyText: 'No office hours above eight have been reported.',
+    });
   }
   container.appendChild(el('h3', { class: 'subsection-title' }, 'Rental Payment & Transfer History'));
   const history = [
