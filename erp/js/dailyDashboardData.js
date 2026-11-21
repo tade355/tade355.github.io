@@ -61,7 +61,7 @@ export function buildDailyDashboard(ctx) {
   const selectedSince = ctx.since || DASHBOARD_BASIS_FROM;
   const since = selectedSince <= date ? selectedSince : date;
   const dieselSince = rexFortnightStart(project, date) ? DASHBOARD_BASIS_FROM : since;
-  const inv = ctx.inventory.filter((i) => i.category === 'Heavy Equipment');
+  const inv = ctx.inventory.filter((i) => i.category === 'Heavy Equipment' && (!i.demobilizedAt || i.demobilizedAt > date));
   const invByName = new Map(ctx.inventory.map((i) => [i.name, i]));
   // BIG-001 is the former record name of the machine now listed as EMG-005.
   // Normalize report and distribution names before joining dashboard sections.
