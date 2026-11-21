@@ -185,7 +185,7 @@ export function buildDailyDashboard(ctx) {
     const closingBefore = (lastReading ? Number(lastReading.closingDiesel) : 0)
       + sum(tankDist.filter((d) => d.equipment === name && d.date < date && afterReading(d)), (d) => d.litres)
       - sum(chainOps.filter((o) => o.equipment === name && o.date < date && afterReading(o)), (o) => o.fuelUsed)
-      + tankTransferDelta(ctx.distributions, name, addDays(date, -1), lastReading?.date || '');
+      + tankTransferDelta(ctx.distributions, name, addDays(date, -1), lastReading?.date ? addDays(lastReading.date, -1) : '');
     const distributed = sum(tankDist.filter((d) => d.equipment === name && d.date === date), (d) => d.litres);
     const rows = dayOps.filter((o) => o.equipment === name);
     const used = sum(rows, (o) => o.fuelUsed);
