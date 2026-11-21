@@ -14,7 +14,7 @@ export function selectableMachines(items) {
   return items.filter((item) => {
     const name = String(item.name || '').trim().toLowerCase();
     const status = String(item.fleetStatus || item.status || '').trim().toLowerCase();
-    return !item.archivedAt && !item.withdrawnAt && !item.disengagedAt
+    return !item.archivedAt && !item.withdrawnAt && !item.disengagedAt && !item.demobilizedAt
       && !['withdrawn', 'disengaged', 'retired', 'archived'].includes(status)
       && name !== 'chi-005';
   });
