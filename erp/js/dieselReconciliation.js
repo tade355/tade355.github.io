@@ -1,4 +1,4 @@
-import { siteFuelIssues } from './fuelLedger.js';
+import { siteFuelIssues, siteFuelRecoveries } from './fuelLedger.js';
 import { dieselUsedFor } from './constants.js';
 import { compareDieselReports, lastDieselReading } from './dieselReportChain.js';
 
@@ -34,7 +34,8 @@ export function latestDieselStockCount(rows) {
 export function siteOnGroundAsOf({ project, date, receipts, distributions, operations, counts }) {
   const inProject = (row) => row.project === project && row.date <= date;
   const count = latestDieselStockCount(counts.filter(inProject));
-  const receivedSince = sum(receipts.filter((row) => inProject(row) && (!count || row.date > count.date || isPostCountReceipt(count, row))), 'litres');
+  const siteReceipts = [...receipts, ...siteFuelRecoveries(distributions)];
+  const receivedSince = sum(siteReceipts.filter((row) => inProject(row) && (!count || row.date > count.date || isPostCountReceipt(count, row))), 'litres');
   const issuedSince = sum(siteFuelIssues(distributions, operations).filter((row) => inProject(row) && (!count || row.date > count.date)), 'litres');
   const countBase = count ? litres(count.countedLitres) : 0;
   return { onGround: countBase + receivedSince - issuedSince,
@@ -42,7 +43,7 @@ export function siteOnGroundAsOf({ project, date, receipts, distributions, opera
 }
 
 export function reconcileSiteDay({ project, date, receipts, distributions, operations, counts }) {
-  const siteReceipts = receipts.filter((row) => row.project === project && row.date <= date);
+  const siteReceipts = [...receipts, ...siteFuelRecoveries(distributions)].filter((row) => row.project === project && row.date <= date);
   const issues = siteFuelIssues(distributions, operations).filter((row) => row.project === project && row.date <= date);
   const prior = latestDieselStockCount(counts.filter((row) => row.project === project && row.date < date));
   const count = latestDieselStockCount(counts.filter((row) => row.project === project && row.date === date));
@@ -51,6 +52,7 @@ export function reconcileSiteDay({ project, date, receipts, distributions, opera
     + sum(siteReceipts.filter((row) => row.date < date && (sincePrior(row) || isPostCountReceipt(prior, row))), 'litres')
     - sum(issues.filter((row) => row.date < date && sincePrior(row)), 'litres');
   const supplied = sum(siteReceipts.filter((row) => row.date === date), 'litres');
+  const recovered = sum(siteFuelRecoveries(distributions).filter((row) => row.project === project && row.date === date), 'litres');
   const dayIssues = issues.filter((row) => row.date === date);
   const dozerIssued = sum(dayIssues.filter((row) => !!row.equipment), 'litres');
   const otherIssued = sum(dayIssues.filter((row) => !row.equipment), 'litres');
@@ -61,7 +63,7 @@ export function reconcileSiteDay({ project, date, receipts, distributions, opera
   const variance = measured === null ? null : measured + postCountSupply - expected;
   const tolerance = Math.max(5, Math.abs(expected) * 0.02);
   return {
-    project, date, opening, supplied, distributed, dozerIssued, otherIssued, expected, measured, postCountSupply, variance,
+    project, date, opening, supplied, recovered, distributed, dozerIssued, otherIssued, expected, measured, postCountSupply, variance,
     onGround: siteOnGroundAsOf({ project, date, receipts, distributions, operations, counts }).onGround,
     verified: !!prior, lastCountDate: prior?.date || null,
     status: postCountSupply ? 'Pre-delivery count — closing projected'

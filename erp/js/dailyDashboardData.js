@@ -12,7 +12,7 @@ import { isSunday, addDays, requestSubmissionDate, rexFortnightStart } from './d
 import { buildAttention } from './attention.js';
 import { fuelEfficiency, NORM_LITRES_PER_HA } from './fuelEfficiency.js';
 import { mergeDieselReceipts } from './dieselSupply.js';
-import { siteFuelIssues, tankTransferDelta } from './fuelLedger.js';
+import { siteFuelIssues, siteFuelRecoveries, tankTransferDelta } from './fuelLedger.js';
 import { siteOnGroundAsOf } from './dieselReconciliation.js';
 
 import { EXPECTED_HA_PER_8HRS, IDEAL_START, DIESEL_FILL_LITRES, LATE_FLAG_MINUTES } from './rules.js';
@@ -146,11 +146,12 @@ export function buildDailyDashboard(ctx) {
     operations: ctx.operations,
   }).filter((r) => (allProjects || r.project === project) && r.date <= date);
   const stockIssues = siteIssues.filter((row) => row.date <= date);
+  const stockRecoveries = siteFuelRecoveries(ctx.distributions).filter((row) => row.date <= date);
   const activeSiteNames = ctx.projects?.length
     ? new Set(selectableProjects(ctx.projects).map((row) => row.name))
     : null;
   const siteNames = allProjects
-    ? [...new Set([...stockReceipts, ...stockIssues, ...ctx.dieselStockCounts]
+    ? [...new Set([...stockReceipts, ...stockRecoveries, ...stockIssues, ...ctx.dieselStockCounts]
       .filter((r) => r.project && r.date <= date && (!activeSiteNames || activeSiteNames.has(r.project)))
       .map((r) => r.project))]
     : [project];
