@@ -376,20 +376,21 @@ export function renderFleet(container) {
       const asOf = todayISOString();
       const withStatus = fleetItems().map((item) => ({
         ...item,
-        fleetStatus: reportedFleetStatusFor(item, asOf)?.status || 'Unreported',
+        fleetStatus: item.demobilizedAt && item.demobilizedAt <= asOf ? 'Demobilized' : reportedFleetStatusFor(item, asOf)?.status || 'Unreported',
         lastStatusReportDate: reportedFleetStatusFor(item, asOf)?.date || '',
       }));
       const priority = { Down: 0, 'Under Maintenance': 1, Idle: 2, Active: 3, Unreported: 4 };
       const rows = withStatus.sort((a,b) => (priority[a.fleetStatus] ?? 4) - (priority[b.fleetStatus] ?? 4) || a.name.localeCompare(b.name, undefined, { numeric: true }));
-      const companyCount = rows.filter((r) => r.ownership === 'Company' || !r.ownership).length;
-      const partnershipCount = rows.filter((r) => r.ownership === 'Partnership').length;
-      const rentedCount = rows.filter((r) => r.ownership === 'Rented').length;
-      const downCount = rows.filter((r) => r.fleetStatus === 'Down' || r.fleetStatus === 'Under Maintenance').length;
-      const dueForServiceCount = rows.filter((r) => serviceStatusFor(r).status !== 'OK').length;
+      const currentRows = rows.filter((r) => r.fleetStatus !== 'Demobilized');
+      const companyCount = currentRows.filter((r) => r.ownership === 'Company' || !r.ownership).length;
+      const partnershipCount = currentRows.filter((r) => r.ownership === 'Partnership').length;
+      const rentedCount = currentRows.filter((r) => r.ownership === 'Rented').length;
+      const downCount = currentRows.filter((r) => r.fleetStatus === 'Down' || r.fleetStatus === 'Under Maintenance').length;
+      const dueForServiceCount = currentRows.filter((r) => serviceStatusFor(r).status !== 'OK').length;
 
       summarySlot.innerHTML = '';
       const grid = el('div', { class: 'stats-grid' }, [
-        statCard({ label: 'Fleet Size', value: String(rows.length) }),
+        statCard({ label: 'Fleet Size', value: String(currentRows.length) }),
         statCard({ label: 'Company Owned', value: String(companyCount) }),
         statCard({ label: 'Partnership', value: String(partnershipCount) }),
         statCard({ label: 'Rented', value: String(rentedCount) }),
