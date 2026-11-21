@@ -24,7 +24,7 @@ export function previousDieselClosing(reports, draft, distributions = []) {
     else if (balance !== null) balance += Number(row.dieselSupplied || 0) - Number(row.fuelUsed || 0);
     lastDate = row.date;
   }
-  const transfers = distributions.filter(row => row.purpose === 'Tank Transfer' && row.date > lastDate && row.date <= draft.date);
+  const transfers = distributions.filter(row => row.purpose === 'Tank Transfer' && row.date >= lastDate && row.date <= draft.date && (row.date < draft.date || lastDate < draft.date));
   const delta = transfers.reduce((sum, row) => sum + (dieselEquipmentName(row.recipient) === dieselEquipmentName(draft.equipment) ? Number(row.litres || 0) : 0)
     - (dieselEquipmentName(row.equipment) === dieselEquipmentName(draft.equipment) ? Number(row.litres || 0) : 0), 0);
   return balance === null && !transfers.length ? null : Number(balance || 0) + delta;
