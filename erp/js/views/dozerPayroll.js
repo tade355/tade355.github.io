@@ -7,6 +7,7 @@ import { DOZER_OVERTIME_RATE_DEFAULT } from '../constants.js';
 import { printDozerPayslip, printDozerPayrollRegister } from '../print.js';
 import { ALLOWANCE_EQUIPMENT, operatorAllowanceForRows, isOwnedOperatorAllowancePaymentFor } from '../ownedOperatorAllowance.js';
 import { renderOperatorAllowanceTools } from './operatorAllowanceReconciliation.js';
+import { renderOperatorAllowanceStatements } from './operatorAllowanceStatement.js';
 
 function employeeLabel(id) {
   const e = store.get('employees').find((x) => x.id === id);
@@ -420,6 +421,7 @@ export function renderDozerPayroll(container) {
   container.appendChild(sectionHeader('Operator Allowance (Day-Rate Payroll)', 'Field operators paid per day worked (8h = 1 day) plus overtime, separate from monthly office payroll', addBtn));
 
   renderOperatorAllowanceTools(container, refresh);
+  renderOperatorAllowanceStatements(container);
 
   const summarySlot = el('div');
   container.appendChild(summarySlot);
