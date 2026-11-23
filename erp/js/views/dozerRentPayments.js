@@ -15,7 +15,8 @@ function rentedDozers() {
 function rentalLedgerRow(dozer) {
   const credits = store.get('dozerRentalCredits').filter((row) => matchesRentalEquipment(row.equipment, dozer.name));
   const transfers = store.get('dozerRentalTransfers');
-  const firstDate = credits.map((row) => row.paymentDate).sort()[0] || todayISOString();
+  const relevantTransfers = transfers.filter((row) => matchesRentalEquipment(row.fromEquipment, dozer.name) || matchesRentalEquipment(row.toEquipment, dozer.name));
+  const firstDate = [...credits.map((row) => row.paymentDate), ...relevantTransfers.map((row) => row.transferDate)].filter(Boolean).sort()[0] || todayISOString();
   const usage = officeRentalUsage(store.get('operations'), dozer.name, firstDate);
   const { work, hoursWorked } = usage;
   const daysPaid = credits.reduce((sum, row) => sum + Number(row.daysPaid || 0), 0);
@@ -31,8 +32,7 @@ function rentalLedgerRow(dozer) {
     remainingDays, remainingValue: remainingDays * rate, rate, firstDate,
     lastPaymentDate: latestCredit?.paymentDate,
     credits: credits.slice().sort((a, b) => String(a.paymentDate).localeCompare(String(b.paymentDate))),
-    transfers: transfers.filter((row) => matchesRentalEquipment(row.fromEquipment, dozer.name) || matchesRentalEquipment(row.toEquipment, dozer.name))
-      .slice().sort((a, b) => String(a.transferDate).localeCompare(String(b.transferDate))),
+    transfers: relevantTransfers.slice().sort((a, b) => String(a.transferDate).localeCompare(String(b.transferDate))),
     work,
   };
 }
