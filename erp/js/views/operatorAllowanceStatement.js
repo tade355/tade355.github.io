@@ -139,7 +139,7 @@ function statementHtml(statement) {
     + (row.earned ? clean(formatCurrency(row.earned)) : '—') + '</td><td>'
     + (row.paid ? clean(formatCurrency(row.paid)) : '—') + '</td><td>'
     + (row.adjustment ? clean(formatCurrency(row.adjustment)) : '—') + '</td><td>'
-    + clean(formatCurrency(row.balance)) + '</td><td>' + clean(row.notes.join('; ')) + '</td></tr>').join('');
+    + clean(formatCurrency(row.balance)) + '</td></tr>').join('');
   return '<section style="break-after:page"><div class="print-header"><img src="assets/logo.png" alt="Emagrims Ltd" class="print-logo">'
     + '<div class="print-company"><h1>Emagrims Ltd</h1><p>Your Dependable Agricultural Partner</p></div>'
     + '<div class="print-doc-meta"><div class="print-doc-title">OPERATOR ALLOWANCE STATEMENT</div></div></div>'
@@ -147,13 +147,13 @@ function statementHtml(statement) {
     + '</div><div><strong>Period:</strong> ' + clean(formatDate(statement.from)) + ' – ' + clean(formatDate(statement.to))
     + '</div><div><strong>Printed:</strong> ' + clean(formatDate(todayISOString())) + '</div></div>'
     + '<table class="print-table"><thead><tr><th>Date</th><th>Hours</th><th>Allowance earned</th><th>Payment made</th>'
-    + '<th>Adjustment</th><th>Running balance</th><th>Details</th></tr></thead><tbody>'
+    + '<th>Adjustment</th><th>Running balance</th></tr></thead><tbody>'
     + '<tr><td>Balance B/F</td><td>—</td><td>—</td><td>—</td><td>—</td><td>'
-    + clean(formatCurrency(statement.opening)) + '</td><td>Before selected period</td></tr>'
+    + clean(formatCurrency(statement.opening)) + '</td></tr>'
     + body + '</tbody><tfoot><tr><td colspan="2">Period totals</td><td>' + clean(formatCurrency(statement.earned))
     + '</td><td>' + clean(formatCurrency(statement.paid)) + '</td><td>'
     + clean(formatCurrency(statement.adjustments)) + '</td><td>'
-    + clean(formatCurrency(statement.closing)) + '</td><td>Closing balance</td></tr></tfoot></table>'
+    + clean(formatCurrency(statement.closing)) + '</td></tr></tfoot></table>'
     + '<p>Balance = opening + approved earnings + adjustments − recorded allowance payments. '
     + 'Statement reconciliations are shown separately from earnings.</p></section>';
 }
