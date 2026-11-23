@@ -72,3 +72,6 @@ Run a new migration once in the Supabase SQL editor, in number order. `schema.sq
 - `0080_reimbursement_profit_period.sql` — validates reimbursement cost periods and requires a dozer code for maintenance reimbursements so costs can be allocated correctly.
 
 - `0081_action_center.sql` — creates the assigned action list used by the Action Center and its personal alerts. Run before using meeting-action assignment.
+
+
+- `0084_access_hardening.sql` — project-scoped supervisor access for finance and fuel vouchers; private training submissions, materials, and videos. Apply after 0083.
