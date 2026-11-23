@@ -123,6 +123,30 @@ function recordedVideoCount(record, questions) {
   return questions.filter((q) => q.video && answers[q.key]?.videoUrl).length;
 }
 
+function trainingVideoObjectPath(value) {
+  if (!value || typeof value !== 'string') return '';
+  const marker = '/object/public/trainee-videos/';
+  const signedMarker = '/object/sign/trainee-videos/';
+  const pathMarker = '/object/trainee-videos/';
+  for (const markerText of [marker, signedMarker, pathMarker]) {
+    const index = value.indexOf(markerText);
+    if (index >= 0) return decodeURIComponent(value.slice(index + markerText.length).split('?')[0]);
+  }
+  return value.replace(/^\/+/, '').split('?')[0];
+}
+
+async function setPrivateTrainingVideo(video, savedValue) {
+  const objectPath = trainingVideoObjectPath(savedValue);
+  if (!objectPath) return;
+  try {
+    const { data, error } = await supabase.storage.from('trainee-videos').createSignedUrl(objectPath, 10 * 60);
+    if (error) throw error;
+    video.src = data.signedUrl;
+  } catch {
+    video.replaceWith(el('p', { class: 'section-subtitle' }, 'This video is unavailable for your access level.'));
+  }
+}
+
 function viewSubmission(record, refresh) {
   const quiz = quizById(record.quizId);
   const questions = quiz.questions;
@@ -154,8 +178,8 @@ function viewSubmission(record, refresh) {
           const videoUrl = answers[q.key]?.videoUrl;
           if (videoUrl) {
             const video = el('video', { controls: 'controls', style: 'width: 100%; max-width: 420px; border-radius: 6px; margin-top: 0.5rem;' });
-            video.src = videoUrl;
             block.appendChild(video);
+            setPrivateTrainingVideo(video, videoUrl);
           } else {
             block.appendChild(el('p', { style: 'margin: 0.4rem 0 0;' }, 'Not recorded.'));
           }
@@ -337,7 +361,7 @@ export function renderTraining(container) {
           label: '',
           render: (r) => el('div', { class: 'row-actions' }, [
             el('button', { class: 'icon-btn', type: 'button', title: 'View answers', onClick: () => viewSubmission(r, renderListBody) }, [ico('eye')]),
-            el('button', {
+            getCurrentTier() === 'Admin' ? el('button', {
               class: 'icon-btn icon-btn-danger',
               type: 'button',
               title: 'Delete',
@@ -350,7 +374,7 @@ export function renderTraining(container) {
                   window.alert(err.message || 'Could not delete this submission.');
                 }
               },
-            }, [ico('trash')]),
+            }, [ico('trash')]) : null,
           ]),
         },
       ],
@@ -687,12 +711,11 @@ export function renderTraining(container) {
         for (const q of videoQuestions) {
           const blob = state.videoBlobs[q.num];
           if (blob) {
-            const fileName = `${quiz.id}_q${q.num}_${Date.now()}_${employee.id}.webm`;
+            const fileName = `${employee.id}/${quiz.id}_q${q.num}_${Date.now()}_${employee.id}.webm`;
             // eslint-disable-next-line no-await-in-loop
             const { error: uploadError } = await supabase.storage.from('trainee-videos').upload(fileName, blob, { contentType: blob.type });
             if (uploadError) throw new Error(`Could not upload your video for Question ${q.num} (${uploadError.message}).`);
-            const { data: publicUrlData } = supabase.storage.from('trainee-videos').getPublicUrl(fileName);
-            answers[q.key] = { videoUrl: publicUrlData.publicUrl, durationSeconds: state.videoSeconds[q.num] || 0 };
+            answers[q.key] = { videoUrl: fileName, durationSeconds: state.videoSeconds[q.num] || 0 };
           } else {
             answers[q.key] = { videoUrl: null, durationSeconds: 0 };
           }
@@ -721,3 +744,4 @@ export function renderTraining(container) {
 
   showList();
 }
+
