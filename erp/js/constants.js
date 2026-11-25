@@ -146,6 +146,8 @@ export const EXPENSE_CATEGORIES = [
   'Fuel',
   'PMS',
   'Maintenance',
+  'Extra Hours',
+  'Business Deals',
   'Payroll',
   'Logistics',
   'Administration',
