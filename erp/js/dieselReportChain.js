@@ -19,8 +19,9 @@ export function precedingDieselReports(reports, draft) {
 export function transferAfterDieselReading(transfer, report) {
   if (!report) return true;
   if (transfer.date !== report.date) return transfer.date > report.date;
-  if (!transfer.createdAt || !report.createdAt) return false;
-  return new Date(transfer.createdAt).getTime() > new Date(report.createdAt).getTime();
+  const readingSavedAt = report.updatedAt || report.createdAt;
+  if (!transfer.createdAt || !readingSavedAt) return false;
+  return new Date(transfer.createdAt).getTime() > new Date(readingSavedAt).getTime();
 }
 export function previousDieselClosing(reports, draft, distributions = []) {
   let balance = null;
