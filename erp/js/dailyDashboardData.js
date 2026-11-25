@@ -215,7 +215,9 @@ export function buildDailyDashboard(ctx) {
     const calculatedClosing = opening - used;
     const reading = lastDieselReading(rows);
     const reportedClosing = reading ? Number(reading.closingDiesel) : undefined;
-    const tankMovementToday = tankTransferDelta(ctx.distributions, name, date, addDays(date, -1));
+    // A saved tank reading already includes movements entered before its last correction.
+    const tankMovementToday = tankTransferDelta(ctx.distributions.filter((row) =>
+      transferAfterDieselReading(row, reading)), name, date, addDays(date, -1));
     const closing = reportedClosing === undefined ? calculatedClosing : reportedClosing + tankMovementToday;
     let status = 'Idle';
     if (rows.length) status = tankMovementToday ? 'Tank transfer after report' : reportedClosing !== undefined && Math.abs(reportedClosing - calculatedClosing) > 0.5 ? 'Closing restated' : 'Reconciled';
