@@ -15,6 +15,7 @@ import { allDieselReceipts } from '../dieselSupplyStore.js';
 import { stationBalances as creditBalances } from './fuelCredit.js';
 import { getCurrentTier, filterByProject } from '../session.js';
 import { reconcileSiteDay, reconcileDozerDay } from '../dieselReconciliation.js';
+import { dieselEquipmentName } from '../dieselReportChain.js';
 
 function projectOptions() {
   return filterByProject(selectableProjects(store.get('projects')), 'name').map((p) => ({ value: p.name, label: p.name }));
@@ -353,7 +354,7 @@ function renderSiteDistributionTab(container) {
     const physical = el('input', { type: 'number', min: 0.01, step: 0.01, required: true, inputmode: 'decimal', placeholder: 'Measured litres being issued' });
     const by = el('select', {}, employeeOptions().map(p => el('option', { value: p.value }, p.label)));
     const notes = el('textarea', { rows: 2 });
-    const list = el('div');
+    const list = el('div', { style: 'overflow-x:auto' });
     const total = el('p', { role: 'status', 'aria-live': 'polite' });
     const error = el('p', { role: 'alert' });
     const submit = el('button', { type: 'submit', class: 'btn btn-primary', disabled: true }, 'Submit Distribution');
@@ -367,11 +368,33 @@ function renderSiteDistributionTab(container) {
     function drawMachines() {
       list.innerHTML = ''; controls = [];
       const machines = selectableMachines(fleetItems()).filter(m => machineProjectAsOf(m, date.value, store.get('operations'), store.get('machineStatusReports'), todayISOString()) === project.value);
+      const reports = new Map();
+      const confirmed = new Map();
+      for (const row of store.get('operations')) {
+        if (row.date !== date.value || row.siteName !== project.value) continue;
+        const name = dieselEquipmentName(row.equipment);
+        reports.set(name, (reports.get(name) || 0) + Number(row.dieselSupplied || 0));
+      }
+      for (const row of store.get('dieselSiteDistributions')) {
+        if (row.date !== date.value || row.project !== project.value || (row.purpose || 'Dozer') !== 'Dozer') continue;
+        const name = dieselEquipmentName(row.equipment);
+        confirmed.set(name, (confirmed.get(name) || 0) + Number(row.litres || 0));
+      }
+      const columns = 'minmax(110px,1fr) minmax(95px,115px) minmax(95px,115px) minmax(110px,140px)';
+      list.appendChild(el('div', { style: `display:grid;grid-template-columns:${columns};gap:10px;min-width:530px;font-weight:600;margin-top:12px` }, [
+        el('span', {}, 'Dozer'), el('span', {}, 'Manager submitted'), el('span', {}, 'Site confirmed'), el('span', {}, 'New distribution'),
+      ]));
       for (const machine of machines) {
+        const name = dieselEquipmentName(machine.name);
         const check = el('input', { type: 'checkbox', 'aria-label': `Select ${machine.name}` });
-        const qty = el('input', { type: 'number', min: 0.01, step: 0.01, inputmode: 'decimal', placeholder: 'Litres', 'aria-label': `Litres for ${machine.name}`, disabled: true });
+        const qty = el('input', { type: 'number', min: 0.01, step: 0.01, inputmode: 'decimal', placeholder: 'Litres', 'aria-label': `New litres for ${machine.name}`, disabled: true });
         check.addEventListener('change', () => { qty.disabled = !check.checked; update(); }); qty.addEventListener('input', update);
-        list.appendChild(el('div', { style: 'display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,140px);gap:12px;align-items:center;margin:10px 0' }, [el('label', { style: 'display:flex;align-items:center;gap:8px;min-height:44px' }, [check, ` ${machine.name}`]), el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Litres'), qty])]));
+        list.appendChild(el('div', { style: `display:grid;grid-template-columns:${columns};gap:10px;align-items:center;min-width:530px;margin:10px 0` }, [
+          el('label', { style: 'display:flex;align-items:center;gap:8px;min-height:44px' }, [check, ` ${machine.name}`]),
+          el('span', {}, `${Number(reports.get(name) || 0).toLocaleString()} L`),
+          el('span', {}, `${Number(confirmed.get(name) || 0).toLocaleString()} L`),
+          qty,
+        ]));
         controls.push({ name: machine.name, check, qty });
       }
       if (!machines.length) list.appendChild(el('p', {}, 'Select a project with assigned dozers. Check fleet assignments if a dozer is missing.'));
