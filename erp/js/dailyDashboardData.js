@@ -187,11 +187,16 @@ export function buildDailyDashboard(ctx) {
       + sum(tankDist.filter((d) => d.equipment === name && d.date < date && afterReading(d)), (d) => d.litres)
       - sum(chainOps.filter((o) => o.equipment === name && o.date < date && afterReading(o)), (o) => o.fuelUsed)
       + tankTransferDelta(ctx.distributions, name, addDays(date, -1), lastReading?.date ? addDays(lastReading.date, -1) : '');
-    const distributed = sum(tankDist.filter((d) => d.equipment === name && d.date === date), (d) => d.litres);
+    const issuedToTank = sum(tankDist.filter((d) => d.equipment === name && d.date === date), (d) => d.litres);
+    const drilledFromTank = sum(ctx.distributions.filter((d) => d.equipment === name && d.date === date && d.purpose === 'Tank Drill'), (d) => d.litres);
+    // Show fuel recovered from this dozer as negative distribution. Keep the
+    // physical opening calculation on the existing transfer ledger so drilling
+    // changes the tank balance exactly once.
+    const distributed = issuedToTank - drilledFromTank;
     const rows = dayOps.filter((o) => o.equipment === name);
     const used = sum(rows, (o) => o.fuelUsed);
     const ha = sum(rows, (o) => o.quantity);
-    const opening = closingBefore + distributed + tankTransferDelta(ctx.distributions, name, date, addDays(date, -1));
+    const opening = closingBefore + issuedToTank + tankTransferDelta(ctx.distributions, name, date, addDays(date, -1));
     const calculatedClosing = opening - used;
     const reading = lastDieselReading(rows);
     const reportedClosing = reading ? Number(reading.closingDiesel) : undefined;
