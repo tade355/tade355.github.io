@@ -283,7 +283,7 @@ function dieselSection(d) {
   return section('diesel', 2, 'Diesel Management', [
     tiles,
     el('div', { class: 'dd-grid-2' }, [chartBox, fuelBox]),
-    el('p', { class: 'section-subtitle' }, `Opening = previous closing + diesel distributed; used = standard litres from the daily reports; chain starts ${formatDate(d.diesel.chainSince)}.`),
+    el('p', { class: 'section-subtitle' }, `Distributed shows tank issues less any litres drilled from that dozer (negative when only drilling occurred). Opening = previous closing + tank issues and transfers; used = standard litres from daily reports. Chain starts ${formatDate(d.diesel.chainSince)}.`),
     table,
     el('h4', { class: 'subsection-title' }, 'Diesel Against Work'),
     el('p', { class: 'section-subtitle' }, `${formatDate(d.since)} to ${formatDate(d.date)}. Norm ${num(x.normLitresPerHa, 0)} L per hectare (8 hrs x 25 L for 1.3 ha); flagged above 125% of it. Needs at least 1 ha in the period.`),
