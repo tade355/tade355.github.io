@@ -1,4 +1,4 @@
-import { dieselEquipmentName, lastDieselReading } from './dieselReportChain.js';
+import { dieselEquipmentName, lastDieselReading, transferAfterDieselReading } from './dieselReportChain.js';
 import { machineProjectAsOf, machineStateAsOf, selectableProjects } from './selectionOptions.js';
 // Data behind the Daily Operations Dashboard view (views/dailyDashboard.js):
 // the same six sections as the HTML Daily Operations Dashboards — Operations,
@@ -188,10 +188,15 @@ export function buildDailyDashboard(ctx) {
     // every day from the unadjusted, zero-based ledger.
     const lastReading = lastDieselReading(chainOps.filter(o => o.equipment === name && o.date < date));
     const afterReading = (row) => !lastReading || row.date > lastReading.date;
+    const carriedTransfers = sum(ctx.distributions.filter((row) =>
+      (row.purpose === 'Tank Transfer' || row.purpose === 'Tank Drill') &&
+      row.date < date && transferAfterDieselReading(row, lastReading)), (row) =>
+      (dieselEquipmentName(row.recipient) === name ? Number(row.litres || 0) : 0)
+      - (dieselEquipmentName(row.equipment) === name ? Number(row.litres || 0) : 0));
     const closingBefore = (lastReading ? Number(lastReading.closingDiesel) : 0)
       + sum(tankDist.filter((d) => d.equipment === name && d.date < date && afterReading(d)), (d) => d.litres)
       - sum(chainOps.filter((o) => o.equipment === name && o.date < date && afterReading(o)), (o) => o.fuelUsed)
-      + tankTransferDelta(ctx.distributions, name, addDays(date, -1), lastReading?.date ? addDays(lastReading.date, -1) : '');
+      + carriedTransfers;
     const issuedToTank = sum(tankDist.filter((d) => d.equipment === name && d.date === date), (d) => d.litres);
     const drilledFromTank = sum(ctx.distributions.filter((d) => d.equipment === name && d.date === date && d.purpose === 'Tank Drill'), (d) => d.litres);
     // Show fuel recovered from this dozer as negative distribution. Keep the
