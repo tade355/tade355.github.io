@@ -15,16 +15,23 @@ export function precedingDieselReports(reports, draft) {
     && (row.date < draft.date || (row.date === draft.date && (!draft.timeResumed || compareDieselReports(row, draft) < 0))))
     .slice().sort(compareDieselReports);
 }
+// A tank reading already includes transfers recorded before that report.
+export function transferAfterDieselReading(transfer, report) {
+  if (!report) return true;
+  if (transfer.date !== report.date) return transfer.date > report.date;
+  if (!transfer.createdAt || !report.createdAt) return false;
+  return new Date(transfer.createdAt).getTime() > new Date(report.createdAt).getTime();
+}
 export function previousDieselClosing(reports, draft, distributions = []) {
   let balance = null;
-  let lastDate = '';
+  let lastReport = null;
   for (const row of precedingDieselReports(reports, draft)) {
     if (reading(row.closingDiesel)) balance = Number(row.closingDiesel);
     else if (reading(row.openingDiesel)) balance = Number(row.openingDiesel) - Number(row.fuelUsed || 0);
     else if (balance !== null) balance += Number(row.dieselSupplied || 0) - Number(row.fuelUsed || 0);
-    lastDate = row.date;
+    lastReport = row;
   }
-  const transfers = distributions.filter(row => (row.purpose === 'Tank Transfer' || row.purpose === 'Tank Drill') && row.date >= lastDate && row.date <= draft.date && (row.date < draft.date || lastDate < draft.date));
+  const transfers = distributions.filter(row => (row.purpose === 'Tank Transfer' || row.purpose === 'Tank Drill') && row.date < draft.date && transferAfterDieselReading(row, lastReport));
   const delta = transfers.reduce((sum, row) => sum + (dieselEquipmentName(row.recipient) === dieselEquipmentName(draft.equipment) ? Number(row.litres || 0) : 0)
     - (dieselEquipmentName(row.equipment) === dieselEquipmentName(draft.equipment) ? Number(row.litres || 0) : 0), 0);
   return balance === null && !transfers.length ? null : Number(balance || 0) + delta;
