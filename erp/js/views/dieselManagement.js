@@ -1,5 +1,4 @@
 import { selectableProjects, selectableEmployees, selectableMachines, machineProjectAsOf } from '../selectionOptions.js';
-import { validateDieselBatch } from '../dieselBatch.js';
 import { renderFuelWorkflow } from './fuelWorkflow.js';
 import { stationAdvanceBalances, siteFuelIssues, siteFuelComparisons, siteFuelRecoveries } from '../fuelLedger.js';
 import { store } from '../store.js';
@@ -223,7 +222,7 @@ function renderSiteDistributionTab(container) {
     "Calculated site stock: opening balance + deliveries − distribution = closing balance. Confirm it in Daily Reconciliation with a physical count.",
     actionSlot,
   ));
-  actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openBatchForm() }, '+ Distribute to Dozers'));
+  actionSlot.appendChild(el('button', { class: 'btn btn-primary', onClick: () => openBatchForm() }, 'Confirm Daily Dozer Diesel'));
   actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openSupplyForm() }, '+ New Supply from Station'));
   actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openOtherUseForm() }, '+ Other Diesel Use'));
   actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openTankDrillForm() }, '+ Drill to Site Stock'));
@@ -245,7 +244,7 @@ function renderSiteDistributionTab(container) {
   container.appendChild(suppliesContainer);
   const pendingContainer = el('div');
   container.appendChild(el('h3', { class: 'subsection-title' }, 'Manager reports vs site distributions'));
-  container.appendChild(el('p', { class: 'section-subtitle' }, 'Compare the manager-reported diesel with confirmed site handouts for each dozer and date. Differences remain provisional until reviewed; confirmed litres replace the matching reported amount in site stock.'));
+  container.appendChild(el('p', { class: 'section-subtitle' }, 'Compare manager-reported diesel with the site-confirmed daily total. Once confirmed, the site figure overrides the report in stock and dashboard calculations.'));
   container.appendChild(pendingContainer);
   const distributionsContainer = el('div');
   container.appendChild(distributionsContainer);
@@ -288,10 +287,8 @@ function renderSiteDistributionTab(container) {
         { key: 'reported', label: 'Manager report', render: r => `${r.reported.toLocaleString()} L` },
         { key: 'confirmed', label: 'Site confirmed', render: r => `${r.confirmed.toLocaleString()} L` },
         { key: 'difference', label: 'Difference', render: r => `${r.difference.toLocaleString()} L` },
-        { key: 'status', label: 'Review', render: r => Math.abs(r.difference) <= 0.05 ? 'Matched' : r.difference > 0 ? 'Reported amount unconfirmed' : 'Site issue exceeds report' },
-        { key: 'action', label: '', render: r => r.difference > 0.05
-          ? el('button', { class: 'btn btn-primary btn-sm', onClick: () => openDistributionForm(null, { date: r.date, project: r.project, equipment: r.equipment, litres: r.difference }) }, 'Review and confirm')
-          : '' },
+        { key: 'status', label: 'Review', render: r => !r.hasConfirmation ? 'Awaiting site confirmation' : Math.abs(r.difference) <= 0.05 ? 'Matched' : 'Site total overrides report' },
+        { key: 'action', label: '', render: r => !r.hasConfirmation ? 'Use Confirm Daily Dozer Diesel' : 'Confirmed' },
       ], rows: comparisons, emptyText: 'No manager reports or site distributions in this period.',
     });
     const rows = filterByProject(store.get('dieselSiteDistributions'), 'project').filter(r => dateInRange(r.date, fromInput.value, toInput.value)).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
@@ -347,76 +344,91 @@ function renderSiteDistributionTab(container) {
 
   function openBatchForm() {
     entrySlot.innerHTML = '';
-    const form = el('form', { class: 'card', style: 'padding:16px;margin:16px 0;width:100%;max-width:760px;box-sizing:border-box' });
+    const form = el('div', { class: 'card', style: 'padding:16px;margin:16px 0;width:100%;max-width:760px;box-sizing:border-box' });
     const field = (label, input) => el('label', { class: 'field', style: 'margin-bottom:12px' }, [el('span', { class: 'field-label' }, label), input]);
     const date = el('input', { type: 'date', required: true, value: todayISOString() });
     const project = el('select', { required: true }, [el('option', { value: '' }, 'Select project'), ...projectOptions().map(p => el('option', { value: p.value }, p.label))]);
-    const physical = el('input', { type: 'number', min: 0.01, step: 0.01, required: true, inputmode: 'decimal', placeholder: 'Measured litres being issued' });
     const by = el('select', {}, employeeOptions().map(p => el('option', { value: p.value }, p.label)));
     const notes = el('textarea', { rows: 2 });
     const list = el('div', { style: 'overflow-x:auto' });
-    const total = el('p', { role: 'status', 'aria-live': 'polite' });
     const error = el('p', { role: 'alert' });
-    const submit = el('button', { type: 'submit', class: 'btn btn-primary', disabled: true }, 'Submit Distribution');
-    let controls = [], saving = false, uncertain = false;
-    const read = () => controls.map(c => ({ equipment: c.name, selected: c.check.checked, litres: c.qty.value }));
-    function update() {
-      const sum = read().filter(r => r.selected).reduce((s,r) => s + (Number(r.litres) || 0), 0);
-      total.textContent = `Distributed: ${sum.toLocaleString()} L · Physical: ${Number(physical.value || 0).toLocaleString()} L · Difference: ${(Number(physical.value || 0) - sum).toFixed(2)} L`;
-      try { validateDieselBatch(read(), physical.value); submit.disabled = saving || uncertain; } catch { submit.disabled = true; }
-    }
+    let saving = false;
+
     function drawMachines() {
-      list.innerHTML = ''; controls = [];
+      list.innerHTML = '';
+      if (!project.value) return;
       const machines = selectableMachines(fleetItems()).filter(m => machineProjectAsOf(m, date.value, store.get('operations'), store.get('machineStatusReports'), todayISOString()) === project.value);
-      const reports = new Map();
-      const confirmed = new Map();
-      for (const row of store.get('operations')) {
-        if (row.date !== date.value || row.siteName !== project.value) continue;
-        const name = dieselEquipmentName(row.equipment);
-        reports.set(name, (reports.get(name) || 0) + Number(row.dieselSupplied || 0));
-      }
-      for (const row of store.get('dieselSiteDistributions')) {
-        if (row.date !== date.value || row.project !== project.value || (row.purpose || 'Dozer') !== 'Dozer') continue;
-        const name = dieselEquipmentName(row.equipment);
-        confirmed.set(name, (confirmed.get(name) || 0) + Number(row.litres || 0));
-      }
-      const columns = 'minmax(110px,1fr) minmax(95px,115px) minmax(95px,115px) minmax(110px,140px)';
+      const comparisons = new Map(siteFuelComparisons(store.get('dieselSiteDistributions'), store.get('operations'))
+        .filter(r => r.date === date.value && r.project === project.value).map(r => [dieselEquipmentName(r.equipment), r]));
+      const columns = 'minmax(110px,1fr) minmax(110px,140px) minmax(125px,155px) minmax(65px,85px)';
       list.appendChild(el('div', { style: `display:grid;grid-template-columns:${columns};gap:10px;min-width:530px;font-weight:600;margin-top:12px` }, [
-        el('span', {}, 'Dozer'), el('span', {}, 'Manager submitted'), el('span', {}, 'Site confirmed'), el('span', {}, 'New distribution'),
+        el('span', {}, 'Dozer'), el('span', {}, 'Manager submitted'), el('span', {}, 'Site confirmed'), el('span', {}, ''),
       ]));
       for (const machine of machines) {
         const name = dieselEquipmentName(machine.name);
-        const check = el('input', { type: 'checkbox', 'aria-label': `Select ${machine.name}` });
-        const qty = el('input', { type: 'number', min: 0.01, step: 0.01, inputmode: 'decimal', placeholder: 'Litres', 'aria-label': `New litres for ${machine.name}`, disabled: true });
-        check.addEventListener('change', () => { qty.disabled = !check.checked; update(); }); qty.addEventListener('input', update);
+        const comparison = comparisons.get(name);
+        const qty = el('input', { type: 'number', min: 0, step: 0.01, inputmode: 'decimal',
+          value: comparison?.hasConfirmation ? comparison.confirmed : '',
+          placeholder: 'Litres', 'aria-label': `Site confirmed litres for ${machine.name}` });
+        const save = el('button', { type: 'button', class: 'btn btn-primary btn-sm' }, 'Save');
+        save.addEventListener('click', async () => {
+          if (saving) return;
+          const litres = Number(qty.value);
+          if (qty.value === '' || !Number.isFinite(litres) || litres < 0) {
+            error.textContent = 'Enter a valid site-confirmed total, including 0 L when no diesel was issued.';
+            return;
+          }
+          if (!projectOptions().some(p => p.value === project.value)) {
+            error.textContent = 'Select a valid project.';
+            return;
+          }
+          saving = true; save.disabled = true; error.textContent = '';
+          try {
+            const existing = store.get('dieselSiteDistributions').filter(row =>
+              row.date === date.value && row.project === project.value &&
+              (row.purpose || 'Dozer') === 'Dozer' && dieselEquipmentName(row.equipment) === name);
+            if (existing.length) {
+              // Preserve earlier physical entries in the audit trail, but leave
+              // one effective daily total for all stock and dashboard views.
+              for (const old of existing.slice(1)) {
+                await store.update('dieselSiteDistributions', old.id, {
+                  litres: 0,
+                  notes: `${old.notes || ''} [Superseded: ${old.litres} L included in daily total ${existing[0].id}]`.trim(),
+                });
+              }
+              await store.update('dieselSiteDistributions', existing[0].id, {
+                litres, distributedBy: by.value || existing[0].distributedBy || null,
+                notes: notes.value || existing[0].notes || null,
+              });
+            } else {
+              await store.add('dieselSiteDistributions', {
+                date: date.value, project: project.value, equipment: machine.name,
+                litres, purpose: 'Dozer', recipient: null,
+                distributedBy: by.value || null, notes: notes.value || null,
+              });
+            }
+            refresh();
+            drawMachines();
+          } catch (err) {
+            error.textContent = err.message || 'Could not save this site confirmation. Refresh and check the ledger before retrying.';
+          } finally { saving = false; save.disabled = false; }
+        });
         list.appendChild(el('div', { style: `display:grid;grid-template-columns:${columns};gap:10px;align-items:center;min-width:530px;margin:10px 0` }, [
-          el('label', { style: 'display:flex;align-items:center;gap:8px;min-height:44px' }, [check, ` ${machine.name}`]),
-          el('span', {}, `${Number(reports.get(name) || 0).toLocaleString()} L`),
-          el('span', {}, `${Number(confirmed.get(name) || 0).toLocaleString()} L`),
-          qty,
+          el('span', {}, machine.name),
+          el('span', {}, `${Number(comparison?.reported || 0).toLocaleString()} L`),
+          qty, save,
         ]));
-        controls.push({ name: machine.name, check, qty });
       }
-      if (!machines.length) list.appendChild(el('p', {}, 'Select a project with assigned dozers. Check fleet assignments if a dozer is missing.'));
-      update();
+      if (!machines.length) list.appendChild(el('p', {}, 'No dozers are assigned to this project on this date.'));
     }
-    form.append(el('h3', {}, 'Distribute diesel — one submission'), el('p', {}, 'Enter the physical quantity being distributed, then allocate it to the dozers. This is not the site tank closing count. No new supply is created by this form.'), field('Date', date), field('Project', project), field('Physical litres to distribute', physical), list, total, field('Distributed by', by), field('Notes (optional)', notes), error, submit, el('button', { type: 'button', class: 'btn btn-ghost', onClick: () => { entrySlot.innerHTML = ''; } }, 'Cancel'));
-    project.addEventListener('change', drawMachines); date.addEventListener('change', drawMachines); physical.addEventListener('input', update);
-    form.addEventListener('submit', async event => {
-      event.preventDefault(); if (saving || uncertain) return;
-      try {
-        const lines = validateDieselBatch(read(), physical.value);
-        if (!projectOptions().some(p => p.value === project.value)) throw new Error('Select a valid project.');
-        saving = true; submit.disabled = true; error.textContent = '';
-        await store.addDieselDistributionBatch(lines.map(line => ({ ...line, date: date.value, project: project.value, distributedBy: by.value || null, purpose: 'Dozer', recipient: null, notes: notes.value })));
-        entrySlot.innerHTML = ''; refresh();
-      } catch (err) {
-        error.textContent = err.message || 'Could not save. Refresh and check distributions before retrying.';
-        // A lost response can hide a committed batch. Require checking the ledger before retry.
-        if (/fetch|network|timeout/i.test(err.message || '')) { uncertain = true; error.textContent += ' Refresh and check the ledger before trying again.'; }
-      } finally { saving = false; update(); }
-    });
-    entrySlot.appendChild(form); drawMachines();
+    form.append(el('h3', {}, 'Confirm daily diesel by dozer'),
+      el('p', {}, 'Enter the total physically issued to each dozer for this date. If it was fueled twice, enter the combined total once. Site confirmed overrides the manager report for stock and dashboard calculations.'),
+      field('Date', date), field('Project', project), field('Confirmed by', by), field('Notes (optional)', notes),
+      list, error, el('button', { type: 'button', class: 'btn btn-ghost', onClick: () => { entrySlot.innerHTML = ''; } }, 'Close'));
+    project.addEventListener('change', drawMachines);
+    date.addEventListener('change', drawMachines);
+    entrySlot.appendChild(form);
+    drawMachines();
   }
 
   function assignCreditSupply(receipt) {
