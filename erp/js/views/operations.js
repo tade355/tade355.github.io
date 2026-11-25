@@ -6,7 +6,7 @@ import { todayISOString } from '../dateUtils.js';
 import { formatDate, el, ico } from '../utils.js';
 import { renderTable, actionButtons, statusPill, sectionHeader, openCustomModal, closeModal, confirmDelete, statCard } from '../ui.js';
 import { OPERATION_TYPES, unitForOperationType, isHaOperationType, dieselUsedFor, DEFAULT_DIESEL_RATES } from '../constants.js';
-import { filterByProject, getAssignedProject, getCurrentUserId, getCurrentTier } from '../session.js';
+import { filterByProject, getAssignedProject, getCurrentUserId } from '../session.js';
 import { createAttachmentPicker } from '../attachments.js';
 import { formatClock, clockToStorage } from '../clockFormat.js';
 
@@ -163,9 +163,8 @@ function openForm(record, refresh) {
       const openingDieselField = textField('openingDiesel', 'Opening Diesel (litres)', 'number', record?.openingDiesel);
       const fuelField = textField('fuelUsed', 'Fuel/Diesel Used (litres)', 'number', record?.fuelUsed, true);
       const closingDieselField = textField('closingDiesel', 'Closing Diesel (litres)', 'number', record?.closingDiesel);
-      const canCorrectDieselBalances = ['Admin', 'Accounts'].includes(getCurrentTier());
       [openingDieselField, fuelField, closingDieselField].forEach(field => {
-        field.querySelector('input').readOnly = !canCorrectDieselBalances;
+        field.querySelector('input').disabled = true;
       });
 
       function dieselDraft() {
@@ -324,7 +323,7 @@ function openForm(record, refresh) {
         recomputeOpeningDiesel();
         recomputeDieselUsed();
         recomputeClosingDiesel();
-      } else if (!canCorrectDieselBalances) {
+      } else {
         recomputeOpeningDiesel();
         recomputeDieselUsed();
         recomputeClosingDiesel();
@@ -347,11 +346,9 @@ function openForm(record, refresh) {
       const submitBtn = actions.lastChild;
 
       submitBtn.addEventListener('click', async () => {
-        if (!canCorrectDieselBalances) {
-          recomputeOpeningDiesel();
-          recomputeDieselUsed();
-          recomputeClosingDiesel();
-        }
+        recomputeOpeningDiesel();
+        recomputeDieselUsed();
+        recomputeClosingDiesel();
         const equipment = equipmentField.querySelector('select').value;
         const relevant = needsWorkType(equipment);
         const workType = relevant ? workTypeField.querySelector('select').value : null;
@@ -424,7 +421,7 @@ function openForm(record, refresh) {
       container.appendChild(heading('Work done'));
       container.appendChild(workGrid);
 
-      container.appendChild(heading('Diesel', `Same-day reports carry forward in time order. Supply is counted once. Used is ${DEFAULT_DIESEL_RATES.first8h} L/hr for the first 8 hrs and ${DEFAULT_DIESEL_RATES.after8h} L/hr after that (${DEFAULT_DIESEL_RATES.trekking} L/hr flat for Trekking). Managers may change Diesel Supplied; Site Distribution must confirm the reported litres. Opening, Used, and Closing are calculated and locked for managers.`));
+      container.appendChild(heading('Diesel', `Same-day reports carry forward in time order. Supply is counted once. Used is ${DEFAULT_DIESEL_RATES.first8h} L/hr for the first 8 hrs and ${DEFAULT_DIESEL_RATES.after8h} L/hr after that (${DEFAULT_DIESEL_RATES.trekking} L/hr flat for Trekking). Only Diesel Supplied can be edited here; Site Distribution must confirm the reported litres. Opening, Used, and Closing are calculated and locked.`));
       container.appendChild(dieselGrid);
 
       container.appendChild(workTypeWrap);
