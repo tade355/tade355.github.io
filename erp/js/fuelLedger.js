@@ -40,9 +40,12 @@ export function pendingSiteFuelIssues(distributions, operations) {
     item.litres += litres;
     reported.set(id, item);
   }
-  return [...reported.entries()].map(([id, item]) => ({
-    ...item, litres: Math.round((item.litres - (confirmed.get(id) || 0)) * 100) / 100,
-  })).filter(item => item.litres > 0.05);
+  // A site confirmation is the final daily amount, even when it differs
+  // from the manager report. Do not add the report's difference as fuel.
+  return [...reported.entries()]
+    .filter(([id]) => !confirmed.has(id))
+    .map(([, item]) => item)
+    .filter(item => item.litres > 0.05);
 }
 
 // Keep manager reports and confirmed handouts side by side for review.
@@ -51,7 +54,7 @@ export function siteFuelComparisons(distributions, operations) {
   const get = (project, equipment, date) => {
     const name = dieselEquipmentName(equipment);
     const key = `${project}|${name}|${date}`;
-    if (!rows.has(key)) rows.set(key, { project, equipment: name, date, reported: 0, confirmed: 0 });
+    if (!rows.has(key)) rows.set(key, { project, equipment: name, date, reported: 0, confirmed: 0, hasConfirmation: false });
     return rows.get(key);
   };
   for (const row of operations || []) {
@@ -61,7 +64,9 @@ export function siteFuelComparisons(distributions, operations) {
   }
   for (const row of distributions || []) {
     if ((row.purpose || 'Dozer') !== 'Dozer' || !row.project || !row.equipment || !row.date) continue;
-    get(row.project, row.equipment, row.date).confirmed += Number(row.litres || 0);
+    const item = get(row.project, row.equipment, row.date);
+    item.confirmed += Number(row.litres || 0);
+    item.hasConfirmation = true;
   }
   return [...rows.values()].map((row) => ({
     ...row,
