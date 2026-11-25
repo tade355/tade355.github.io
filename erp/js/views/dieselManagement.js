@@ -306,7 +306,7 @@ function renderSiteDistributionTab(container) {
           key: 'actions',
           label: '',
           render: (r) => actionButtons({
-            onEdit: () => r.purpose === 'Tank Transfer' ? openTankTransferForm(r) : r.purpose === 'Tank Drill' ? openTankDrillForm(r) : r.purpose && r.purpose !== 'Dozer' ? openOtherUseForm(r) : openDistributionForm(r),
+            onEdit: () => r.purpose === 'Tank Transfer' ? openTankTransferForm(r) : r.purpose === 'Tank Drill' ? openTankDrillForm(r) : r.purpose && r.purpose !== 'Dozer' ? openOtherUseForm(r) : openBatchForm(r.date, r.project),
             onDelete: async () => {
               if (!confirmDelete(`Diesel issued for ${r.equipment || r.recipient || r.purpose} on ${formatDate(r.date)}`)) return;
               try {
@@ -342,12 +342,13 @@ function renderSiteDistributionTab(container) {
     } });
   }
 
-  function openBatchForm() {
+  function openBatchForm(initialDate = todayISOString(), initialProject = '') {
     entrySlot.innerHTML = '';
     const form = el('div', { class: 'card', style: 'padding:16px;margin:16px 0;width:100%;max-width:760px;box-sizing:border-box' });
     const field = (label, input) => el('label', { class: 'field', style: 'margin-bottom:12px' }, [el('span', { class: 'field-label' }, label), input]);
-    const date = el('input', { type: 'date', required: true, value: todayISOString() });
+    const date = el('input', { type: 'date', required: true, value: initialDate });
     const project = el('select', { required: true }, [el('option', { value: '' }, 'Select project'), ...projectOptions().map(p => el('option', { value: p.value }, p.label))]);
+    project.value = initialProject;
     const by = el('select', {}, employeeOptions().map(p => el('option', { value: p.value }, p.label)));
     const notes = el('textarea', { rows: 2 });
     const list = el('div', { style: 'overflow-x:auto' });
