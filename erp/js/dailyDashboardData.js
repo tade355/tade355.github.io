@@ -186,7 +186,10 @@ export function buildDailyDashboard(ctx) {
     // A submitted tank dip is the last known physical balance. Carry it
     // forward with later tank distributions and usage instead of restarting
     // every day from the unadjusted, zero-based ledger.
-    const lastReading = lastDieselReading(chainOps.filter(o => o.equipment === name && o.date < date));
+    // A dozer can move projects. Its last tank reading follows the machine,
+    // including a reading submitted at the previous site.
+    const lastReading = lastDieselReading(ctx.operations.filter((o) =>
+      currentDozerName(o.equipment) === name && o.date < date));
     const afterReading = (row) => !lastReading || row.date > lastReading.date;
     const carriedTransfers = sum(ctx.distributions.filter((row) =>
       (row.purpose === 'Tank Transfer' || row.purpose === 'Tank Drill') &&
