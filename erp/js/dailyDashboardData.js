@@ -180,7 +180,9 @@ export function buildDailyDashboard(ctx) {
   // issued for a repair rather than for the tank ("not tank fuel" /
   // "maintenance diesel" in the distribution notes) is left out of the chain.
   const tankDist = dist.filter((d) => d.date >= dieselSince && !/not tank fuel|maintenance diesel/i.test(d.notes || ''));
-  const chainOps = allOps.filter((o) => o.date >= dieselSince);
+  // Tank history belongs to the dozer, even when it moves between projects.
+  const chainOps = ctx.operations.filter((o) => o.date >= dieselSince)
+    .map((o) => currentDozerName(o.equipment) === o.equipment ? o : { ...o, equipment: currentDozerName(o.equipment) });
   const chainNames = [...new Set([...tankDist.map((d) => d.equipment), ...chainOps.map((o) => o.equipment)])].filter(equipmentBelongs);
   const diesel = chainNames.map((name) => {
     // A submitted tank dip is the last known physical balance. Carry it
