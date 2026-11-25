@@ -53,9 +53,16 @@ function textField(name, label, type, value, required) {
   return el('label', { class: 'field' }, [el('span', { class: 'field-label' }, label + (required ? ' *' : '')), input]);
 }
 
-function buildItemRow(item, onChange) {
+function buildItemRow(item, onChange, dozerNames) {
+  const tagged = /^\[([^\]]+)\]\s*(.*)$/.exec(item.description || '');
   const description = el('input', { type: 'text', class: 'li-description', placeholder: 'What is this for?' });
-  description.value = item.description || '';
+  description.value = tagged ? tagged[2] : item.description || '';
+  const target = el('select', { class: 'li-dozer-target', 'aria-label': 'Cost allocation' }, [
+    el('option', { value: '' }, 'No dozer / general'),
+    el('option', { value: '__shared__' }, 'Share equally among selected dozers'),
+    ...dozerNames.map((name) => el('option', { value: name }, name)),
+  ]);
+  target.value = tagged && dozerNames.includes(tagged[1]) ? tagged[1] : '';
   const quantity = el('input', { type: 'number', class: 'li-quantity', min: 0, step: '0.01', placeholder: 'Qty' });
   quantity.value = item.quantity ?? 1;
   const unit = el('input', { type: 'text', class: 'li-unit', placeholder: 'Unit (keg, item, day)' });
@@ -69,7 +76,7 @@ function buildItemRow(item, onChange) {
   const itemName = field('Item / description', description);
   itemName.classList.add('request-item-name');
   const row = el('div', { class: 'request-item-card' }, [
-    itemName, field('Quantity', quantity), field('Unit (optional)', unit),
+    itemName, field('Applies to', target), field('Quantity', quantity), field('Unit (optional)', unit),
     field('Unit price (₦)', rate), field('Amount (₦)', amount), removeBtn,
   ]);
   const recalculate = () => { amount.value = ((Number(quantity.value) || 0) * (Number(rate.value) || 0)).toFixed(2); onChange(); };
@@ -133,15 +140,26 @@ function openRequestForm(record, onSaved) {
         staffTags, staffSearch, staffSuggestions,
       ]);
       const costHeadField = selectField('costHead', 'Request category *', costHeadOptions(), record?.costHead);
-      const dozers = store.get('inventory').filter(item => item.category === 'Heavy Equipment');
-      const equipmentField = selectField('equipment', 'Dozer code *', [
-        { value: '', label: '— Select the dozer —' },
-        ...dozers.map(item => ({ value: item.name, label: [item.assetCode || item.sku, item.name].filter((v, i, a) => v && a.indexOf(v) === i).join(' — ') })),
-      ], record?.equipment);
+      const dozers = store.get('inventory').filter(item => item.category === 'Heavy Equipment' && !item.archivedAt);
+      const dozerNames = dozers.map((item) => item.name);
+      const recordedDozers = String(record?.equipment || '').split(',').map((name) => name.trim()).filter(Boolean);
+      const selectedDozers = new Set(recordedDozers);
+      const equipmentChoices = el('div', { class: 'request-dozer-choices' }, dozerNames.map((name) => {
+        const checkbox = el('input', { type: 'checkbox', value: name });
+        checkbox.checked = selectedDozers.has(name);
+        checkbox.addEventListener('change', () => {
+          if (checkbox.checked) selectedDozers.add(name);
+          else selectedDozers.delete(name);
+        });
+        return el('label', { class: 'request-dozer-choice' }, [checkbox, ' ', name]);
+      }));
+      const equipmentField = el('div', { class: 'field' }, [
+        el('span', { class: 'field-label' }, 'Dozers involved (optional)'),
+        el('small', {}, 'Select the dozers sharing transport or workmanship. Assign parts to a specific dozer below.'),
+        equipmentChoices,
+      ]);
       const updateEquipmentVisibility = () => {
-        const maintenance = costHeadField.querySelector('select').value === 'Maintenance';
-        equipmentField.hidden = !maintenance;
-        equipmentField.querySelector('select').required = maintenance;
+        equipmentField.hidden = costHeadField.querySelector('select').value !== 'Maintenance';
       };
       costHeadField.querySelector('select').addEventListener('change', updateEquipmentVisibility);
       updateEquipmentVisibility();
@@ -161,12 +179,12 @@ function openRequestForm(record, onSaved) {
       }
 
       const initialItems = record?.items?.length ? record.items : [{}];
-      initialItems.forEach((item) => itemsContainer.appendChild(buildItemRow(item, recomputeTotal)));
+      initialItems.forEach((item) => itemsContainer.appendChild(buildItemRow(item, recomputeTotal, dozerNames)));
       recomputeTotal();
 
       const addLineBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, '+ Add another item');
       addLineBtn.addEventListener('click', () => {
-        itemsContainer.appendChild(buildItemRow({}, recomputeTotal));
+        itemsContainer.appendChild(buildItemRow({}, recomputeTotal, dozerNames));
         recomputeTotal();
       });
 
@@ -224,6 +242,7 @@ function openRequestForm(record, onSaved) {
       submitBtn.addEventListener('click', async () => {
         const items = [...itemsContainer.children].map((row) => ({
           description: row.querySelector('.li-description').value,
+          allocation: row.querySelector('.li-dozer-target').value,
           quantity: Number(row.querySelector('.li-quantity').value) || 0,
           unit: row.querySelector('.li-unit').value,
           rate: Number(row.querySelector('.li-rate').value) || 0,
@@ -234,15 +253,33 @@ function openRequestForm(record, onSaved) {
         })).filter((it) => it.description || it.amount);
 
         if (!costHeadField.querySelector('select').value) { window.alert('Select a request category.'); return; }
-        if (costHeadField.querySelector('select').value === 'Maintenance' && !equipmentField.querySelector('select').value) { window.alert('Select the dozer code for this maintenance request.'); return; }
         if (!dateField.querySelector('input').value) { window.alert('Date is required.'); return; }
         if (!items.length) { window.alert('Add at least one item.'); return; }
         if (!accountNameField.querySelector('input').value.trim() || !accountNumberField.querySelector('input').value.trim() || !bankField.querySelector('input').value.trim()) { window.alert('Enter the recipient account name, number and bank.'); return; }
         if (items.some((item) => !item.description.trim())) { window.alert('Give each item a name or description.'); return; }
         if (items.some((item) => item.quantity <= 0 || item.rate < 0)) { window.alert('Each line needs a quantity and a valid rate.'); return; }
-        const accountNumbers = [...new Set(items.map((item) => String(item.accountNumber || '').trim()).filter(Boolean))];
+        const maintenance = costHeadField.querySelector('select').value === 'Maintenance';
+        if (maintenance && items.some((item) => item.allocation === '__shared__') && selectedDozers.size < 2) {
+          window.alert('Select at least two dozers to share transport or workmanship costs.'); return;
+        }
+        // Keep one fund request and its original total. Split shared charges
+        // into dozer-labelled item rows so every machine has an auditable cost.
+        const allocatedItems = items.flatMap((item) => {
+          const { allocation, ...base } = item;
+          if (!maintenance || !allocation) return [base];
+          if (allocation !== '__shared__') return [{ ...base, description: `[${allocation}] ${item.description}` }];
+          const names = [...selectedDozers];
+          const totalKobo = Math.round(item.amount * 100);
+          const eachKobo = Math.floor(totalKobo / names.length);
+          return names.map((name, index) => {
+            const amount = (eachKobo + (index < totalKobo % names.length ? 1 : 0)) / 100;
+            return { ...base, description: `[${name}] ${item.description} (shared ${index + 1}/${names.length})`,
+              quantity: 1, rate: amount, amount };
+          });
+        });
+                const accountNumbers = [...new Set(items.map((item) => String(item.accountNumber || '').trim()).filter(Boolean))];
         if (accountNumbers.length > 1) { window.alert('A single request can only use one account number. Submit separate requests for different recipients.'); return; }
-        const calculatedTotal = items.reduce((sum, item) => sum + item.amount, 0);
+        const calculatedTotal = allocatedItems.reduce((sum, item) => sum + item.amount, 0);
         if (!Number.isFinite(calculatedTotal) || calculatedTotal <= 0) { window.alert('The calculated total must be greater than zero.'); return; }
 
         if (!record) {
@@ -270,9 +307,9 @@ function openRequestForm(record, onSaved) {
           submittedBy: submittedByField.querySelector('select').value,
           concernedStaff: [...selectedStaff],
           costHead: costHeadField.querySelector('select').value,
-          equipment: costHeadField.querySelector('select').value === 'Maintenance' ? equipmentField.querySelector('select').value : null,
+          equipment: maintenance ? [...new Set([...selectedDozers, ...items.map((item) => item.allocation).filter((value) => value && value !== '__shared__')])].join(', ') || null : null,
           description: descriptionInput.value,
-          items,
+          items: allocatedItems,
           status: newStatus,
           approvedBy: isNewDecision ? getCurrentUserId() : (record?.approvedBy || ''),
           attachments: attachmentPicker.getAttachments(),
