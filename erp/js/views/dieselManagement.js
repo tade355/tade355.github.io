@@ -284,7 +284,7 @@ function renderSiteDistributionTab(container) {
         { key: 'date', label: 'Date', render: r => formatDate(r.date) },
         { key: 'project', label: 'Project' },
         { key: 'equipment', label: 'Dozer' },
-        { key: 'litres', label: 'Reported', render: r => `${r.litres.toLocaleString()} L` },
+        { key: 'litres', label: 'Litres still to verify', render: r => `${r.litres.toLocaleString()} L` },
         { key: 'action', label: '', render: r => el('button', { class: 'btn btn-primary btn-sm', onClick: () => openDistributionForm(null, r) }, 'Review and confirm') },
       ], rows: pending, emptyText: 'All reported distributions in this period are confirmed.',
     });
@@ -475,7 +475,7 @@ function renderSiteDistributionTab(container) {
       submitLabel: record ? 'Save Changes' : suggestion ? 'Confirm Distribution' : 'Log Distribution',
       onSubmit: async (data) => {
         const payload = { ...data, purpose: 'Dozer', recipient: null };
-        if (!record && store.get('dieselSiteDistributions').some(r => (r.purpose || 'Dozer') === 'Dozer' && r.date === data.date && r.project === data.project && r.equipment === data.equipment)) throw new Error('A confirmed distribution already exists for this dozer, site and date. Edit it instead.');
+        if (!record && !suggestion && store.get('dieselSiteDistributions').some(r => (r.purpose || 'Dozer') === 'Dozer' && r.date === data.date && r.project === data.project && r.equipment === data.equipment)) throw new Error('A confirmed distribution already exists for this dozer, site and date. Edit it instead.');
         if (record) await store.update('dieselSiteDistributions', record.id, payload);
         else await store.add('dieselSiteDistributions', payload);
         refresh();
