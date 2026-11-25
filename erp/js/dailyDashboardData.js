@@ -116,6 +116,11 @@ export function buildDailyDashboard(ctx) {
   const siteIssues = siteFuelIssues(ctx.distributions, ctx.operations)
     .filter((row) => belongsToProject(row.project));
   const dayDozerIssues = siteIssues.filter((row) => row.date === date && !!row.equipment);
+  const distributionByDozer = new Map();
+  for (const row of dayDozerIssues) {
+    const name = currentDozerName(row.equipment);
+    distributionByDozer.set(name, (distributionByDozer.get(name) || 0) + Number(row.litres || 0));
+  }
   const dayOtherIssues = siteIssues.filter((row) => row.date === date && !row.equipment);
   const dist = ctx.distributions.filter((d) => belongsToProject(d.project) && !!d.equipment && (d.purpose || 'Dozer') === 'Dozer')
     .map((d) => currentDozerName(d.equipment) === d.equipment ? d : { ...d, equipment: currentDozerName(d.equipment) });
@@ -407,7 +412,7 @@ export function buildDailyDashboard(ctx) {
   return {
     project, date, since,
     operations: { rows: operations, reporting: operations.filter((o) => o.reported).length, fleetCount: operations.length, todayHa, todayHours, cumulativeHa: cumStats.areaCleared },
-    diesel: { chainSince: dieselSince, efficiency, normLitresPerHa: NORM_LITRES_PER_HA, collectedAgo, soldAgo, collectedPms, distributedToday, otherUseToday, usedToday, usedCost: usedToday * dieselRate, dieselRate, onGround, onGroundDate: latestCount?.date || null, onGroundBase: latestCount ? latestCount.countedLitres : null, onGroundIn: rolledIn, onGroundOut: rolledOut, rows: diesel, fuelingChoices, fuelingRequest, stationBalance, distributionChart: dayDozerIssues.map((row) => ({ label: currentDozerName(row.equipment), value: row.litres })) },
+    diesel: { chainSince: dieselSince, efficiency, normLitresPerHa: NORM_LITRES_PER_HA, collectedAgo, soldAgo, collectedPms, distributedToday, otherUseToday, usedToday, usedCost: usedToday * dieselRate, dieselRate, onGround, onGroundDate: latestCount?.date || null, onGroundBase: latestCount ? latestCount.countedLitres : null, onGroundIn: rolledIn, onGroundOut: rolledOut, rows: diesel, fuelingChoices, fuelingRequest, stationBalance, distributionChart: [...distributionByDozer].map(([label, value]) => ({ label, value })) },
     fleet, vendorAccrual, requests,
     profit: { today: todayStats, cumulative: cumStats, contribution, extraRows },
     staff, flags,

@@ -45,6 +45,30 @@ export function pendingSiteFuelIssues(distributions, operations) {
   })).filter(item => item.litres > 0.05);
 }
 
+// Keep manager reports and confirmed handouts side by side for review.
+export function siteFuelComparisons(distributions, operations) {
+  const rows = new Map();
+  const get = (project, equipment, date) => {
+    const name = dieselEquipmentName(equipment);
+    const key = `${project}|${name}|${date}`;
+    if (!rows.has(key)) rows.set(key, { project, equipment: name, date, reported: 0, confirmed: 0 });
+    return rows.get(key);
+  };
+  for (const row of operations || []) {
+    if (!row.siteName || !row.equipment || !row.date) continue;
+    const litres = Number(row.dieselSupplied || 0);
+    if (litres > 0) get(row.siteName, row.equipment, row.date).reported += litres;
+  }
+  for (const row of distributions || []) {
+    if ((row.purpose || 'Dozer') !== 'Dozer' || !row.project || !row.equipment || !row.date) continue;
+    get(row.project, row.equipment, row.date).confirmed += Number(row.litres || 0);
+  }
+  return [...rows.values()].map((row) => ({
+    ...row,
+    difference: Math.round((row.reported - row.confirmed) * 100) / 100,
+  }));
+}
+
 export function siteFuelIssues(distributions, operations) {
   return [...(distributions || []).filter(r => r.purpose !== 'Tank Transfer' && r.purpose !== 'Tank Drill'),
     ...pendingSiteFuelIssues(distributions, operations)];

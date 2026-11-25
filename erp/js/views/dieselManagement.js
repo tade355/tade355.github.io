@@ -1,7 +1,7 @@
 import { selectableProjects, selectableEmployees, selectableMachines, machineProjectAsOf } from '../selectionOptions.js';
 import { validateDieselBatch } from '../dieselBatch.js';
 import { renderFuelWorkflow } from './fuelWorkflow.js';
-import { stationAdvanceBalances, siteFuelIssues, pendingSiteFuelIssues, siteFuelRecoveries } from '../fuelLedger.js';
+import { stationAdvanceBalances, siteFuelIssues, siteFuelComparisons, siteFuelRecoveries } from '../fuelLedger.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
@@ -243,8 +243,8 @@ function renderSiteDistributionTab(container) {
   container.appendChild(el('p', { class: 'section-subtitle' }, 'Diesel collections logged in Fuel Credit appear here automatically. Assign the site on older unassigned collections to include them in site stock; do not log a second receipt.'));
   container.appendChild(suppliesContainer);
   const pendingContainer = el('div');
-  container.appendChild(el('h3', { class: 'subsection-title' }, 'Daily reports awaiting distribution confirmation'));
-  container.appendChild(el('p', { class: 'section-subtitle' }, 'Review the litres reported for each dozer and date, then confirm the handout. These suggestions already count provisionally in site stock and are replaced by the confirmed entry.'));
+  container.appendChild(el('h3', { class: 'subsection-title' }, 'Manager reports vs site distributions'));
+  container.appendChild(el('p', { class: 'section-subtitle' }, 'Compare the manager-reported diesel with confirmed site handouts for each dozer and date. Differences remain provisional until reviewed; confirmed litres replace the matching reported amount in site stock.'));
   container.appendChild(pendingContainer);
   const distributionsContainer = el('div');
   container.appendChild(distributionsContainer);
@@ -277,16 +277,21 @@ function renderSiteDistributionTab(container) {
       emptyText: 'No Fuel Credit diesel collections in this period.',
     });
 
-    const pending = filterByProject(pendingSiteFuelIssues(store.get('dieselSiteDistributions'), store.get('operations')), 'project')
-      .filter(r => dateInRange(r.date, fromInput.value, toInput.value)).sort((a, b) => b.date.localeCompare(a.date));
+    const comparisons = filterByProject(siteFuelComparisons(store.get('dieselSiteDistributions'), store.get('operations')), 'project')
+      .filter(r => dateInRange(r.date, fromInput.value, toInput.value)).sort((a, b) => b.date.localeCompare(a.date) || a.equipment.localeCompare(b.equipment));
     renderTable(pendingContainer, {
       columns: [
         { key: 'date', label: 'Date', render: r => formatDate(r.date) },
         { key: 'project', label: 'Project' },
         { key: 'equipment', label: 'Dozer' },
-        { key: 'litres', label: 'Litres still to verify', render: r => `${r.litres.toLocaleString()} L` },
-        { key: 'action', label: '', render: r => el('button', { class: 'btn btn-primary btn-sm', onClick: () => openDistributionForm(null, r) }, 'Review and confirm') },
-      ], rows: pending, emptyText: 'All reported distributions in this period are confirmed.',
+        { key: 'reported', label: 'Manager report', render: r => `${r.reported.toLocaleString()} L` },
+        { key: 'confirmed', label: 'Site confirmed', render: r => `${r.confirmed.toLocaleString()} L` },
+        { key: 'difference', label: 'Difference', render: r => `${r.difference.toLocaleString()} L` },
+        { key: 'status', label: 'Review', render: r => Math.abs(r.difference) <= 0.05 ? 'Matched' : r.difference > 0 ? 'Reported amount unconfirmed' : 'Site issue exceeds report' },
+        { key: 'action', label: '', render: r => r.difference > 0.05
+          ? el('button', { class: 'btn btn-primary btn-sm', onClick: () => openDistributionForm(null, { date: r.date, project: r.project, equipment: r.equipment, litres: r.difference }) }, 'Review and confirm')
+          : '' },
+      ], rows: comparisons, emptyText: 'No manager reports or site distributions in this period.',
     });
     const rows = filterByProject(store.get('dieselSiteDistributions'), 'project').filter(r => dateInRange(r.date, fromInput.value, toInput.value)).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
     renderTable(distributionsContainer, {
