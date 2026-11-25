@@ -1,4 +1,4 @@
-import { selectableProjects, selectableEmployees } from '../selectionOptions.js';
+import { selectableProjects, selectableEmployees, selectableMachines } from '../selectionOptions.js';
 import { requestSubmissionDate } from '../dateUtils.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
@@ -140,7 +140,7 @@ function openRequestForm(record, onSaved) {
         staffTags, staffSearch, staffSuggestions,
       ]);
       const costHeadField = selectField('costHead', 'Request category *', costHeadOptions(), record?.costHead);
-      const dozers = store.get('inventory').filter(item => item.category === 'Heavy Equipment' && !item.archivedAt);
+      const dozers = selectableMachines(store.get('inventory')).filter(item => item.category === 'Heavy Equipment');
       const dozerNames = dozers.map((item) => item.name);
       const recordedDozers = String(record?.equipment || '').split(',').map((name) => name.trim()).filter(Boolean);
       const selectedDozers = new Set(recordedDozers);
