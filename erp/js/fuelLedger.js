@@ -25,19 +25,24 @@ export function stationAdvanceBalances(prepayments, receipts, credits) {
 // Daily reports are provisional until their site handout is confirmed.
 export function pendingSiteFuelIssues(distributions, operations) {
   const key = (project, equipment, date) => `${project}|${dieselEquipmentName(equipment)}|${date}`;
-  const confirmed = new Set((distributions || []).filter(r => (r.purpose || 'Dozer') === 'Dozer')
-    .map(r => key(r.project, r.equipment, r.date)));
-  const pending = new Map();
+  const confirmed = new Map();
+  for (const row of distributions || []) {
+    if ((row.purpose || 'Dozer') !== 'Dozer') continue;
+    const id = key(row.project, row.equipment, row.date);
+    confirmed.set(id, (confirmed.get(id) || 0) + Number(row.litres || 0));
+  }
+  const reported = new Map();
   for (const row of operations || []) {
     const litres = Number(row.dieselSupplied || 0);
     if (!row.siteName || !row.equipment || !row.date || litres <= 0) continue;
     const id = key(row.siteName, row.equipment, row.date);
-    if (confirmed.has(id)) continue;
-    const item = pending.get(id) || { project: row.siteName, equipment: dieselEquipmentName(row.equipment), date: row.date, purpose: 'Dozer', litres: 0, legacyReport: true };
+    const item = reported.get(id) || { project: row.siteName, equipment: dieselEquipmentName(row.equipment), date: row.date, purpose: 'Dozer', litres: 0, legacyReport: true };
     item.litres += litres;
-    pending.set(id, item);
+    reported.set(id, item);
   }
-  return [...pending.values()];
+  return [...reported.entries()].map(([id, item]) => ({
+    ...item, litres: Math.round((item.litres - (confirmed.get(id) || 0)) * 100) / 100,
+  })).filter(item => item.litres > 0.05);
 }
 
 export function siteFuelIssues(distributions, operations) {
