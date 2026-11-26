@@ -183,7 +183,19 @@ export function buildDailyDashboard(ctx) {
   // Tank history belongs to the dozer, even when it moves between projects.
   const chainOps = ctx.operations.filter((o) => o.date >= dieselSince)
     .map((o) => currentDozerName(o.equipment) === o.equipment ? o : { ...o, equipment: currentDozerName(o.equipment) });
-  const chainNames = [...new Set([...tankDist.map((d) => d.equipment), ...chainOps.map((o) => o.equipment)])].filter(equipmentBelongs);
+  const visibleFleetNames = new Set(inv.map((item) => item.name));
+  const chainNames = [...new Set([...tankDist.map((d) => d.equipment), ...chainOps.map((o) => o.equipment)])]
+    .filter(equipmentBelongs)
+    .filter((name) => {
+      const asset = invByName.get(name);
+      // Never resurrect a demobilized machine from a carried tank balance.
+      if (asset?.demobilizedAt && asset.demobilizedAt <= date) return false;
+      if (visibleFleetNames.has(name)) return true;
+      // Retain dated historical activity for obsolete names, but do not
+      // carry them indefinitely into later dashboards as idle machines.
+      return chainOps.some((row) => row.equipment === name && row.date === date)
+        || tankDist.some((row) => row.equipment === name && row.date === date);
+    });
   const diesel = chainNames.map((name) => {
     // A submitted tank dip is the last known physical balance. Carry it
     // forward with later tank distributions and usage instead of restarting
