@@ -172,10 +172,16 @@ function openForm(record, refresh) {
       const dieselEditSwitch = canCorrectDiesel ? el('input', {
         type: 'checkbox', role: 'switch', 'aria-label': 'Edit diesel figures',
       }) : null;
-      const dieselEditControl = dieselEditSwitch ? el('label', { class: 'field' }, [
-        dieselEditSwitch, el('span', {}, 'Edit diesel figures'),
-        el('small', {}, 'Olumide only. Switch off to restore automatic calculations. Resets to locked when the form closes.'),
-      ]) : null;
+      const dieselEditControl = dieselEditSwitch ? el('div', { class: 'diesel-edit-control' }) : null;
+      if (dieselEditControl) {
+        const switchLabel = el('label', {}, [dieselEditSwitch, el('strong', {}, 'Edit diesel figures')]);
+        switchLabel.style.cssText = 'display:flex;align-items:center;gap:10px;margin:0;cursor:pointer;';
+        dieselEditSwitch.style.cssText = 'width:18px;height:18px;min-width:18px;margin:0;flex:0 0 18px;accent-color:#166534;';
+        const help = el('small', {}, 'Olumide only. Turn off to restore automatic calculations. Each form opens locked.');
+        help.style.cssText = 'display:block;margin:6px 0 0 28px;line-height:1.5;color:#526458;';
+        dieselEditControl.style.cssText = 'padding:12px 14px;margin:12px 0 16px;border:1px solid #c9dfd0;border-radius:10px;background:#f2f8f4;';
+        dieselEditControl.append(switchLabel, help);
+      }
       dieselEditSwitch?.addEventListener('change', () => {
         dieselCorrectionMode = canCorrectDiesel && dieselEditSwitch.checked;
         dieselFields.forEach(field => { field.querySelector('input').disabled = !dieselCorrectionMode; });
@@ -453,7 +459,7 @@ function openForm(record, refresh) {
       container.appendChild(heading('Work done'));
       container.appendChild(workGrid);
 
-      container.appendChild(heading('Diesel', `Same-day reports carry forward in time order. Supply is counted once. Used is ${DEFAULT_DIESEL_RATES.first8h} L/hr for the first 8 hrs and ${DEFAULT_DIESEL_RATES.after8h} L/hr after that (${DEFAULT_DIESEL_RATES.trekking} L/hr flat for Trekking). Only Diesel Supplied can be edited here; Site Distribution must confirm the reported litres. Opening, Used, and Closing are calculated and locked.`));
+      container.appendChild(heading('Diesel', `Same-day reports carry forward in time order. Supply is counted once. Used is ${DEFAULT_DIESEL_RATES.first8h} L/hr for the first 8 hrs and ${DEFAULT_DIESEL_RATES.after8h} L/hr after that (${DEFAULT_DIESEL_RATES.trekking} L/hr flat for Trekking). Site Distribution must confirm the reported supply. Opening, Used, and Closing are calculated and locked by default. Olumide can unlock them with the correction switch below.`));
       if (dieselEditControl) container.appendChild(dieselEditControl);
       container.appendChild(dieselGrid);
 
