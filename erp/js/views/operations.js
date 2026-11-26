@@ -163,8 +163,31 @@ function openForm(record, refresh) {
       const openingDieselField = textField('openingDiesel', 'Opening Diesel (litres)', 'number', record?.openingDiesel);
       const fuelField = textField('fuelUsed', 'Fuel/Diesel Used (litres)', 'number', record?.fuelUsed, true);
       const closingDieselField = textField('closingDiesel', 'Closing Diesel (litres)', 'number', record?.closingDiesel);
-      [openingDieselField, fuelField, closingDieselField].forEach(field => {
-        field.querySelector('input').disabled = true;
+      // Correction mode is local to this form and belongs only to Olumide.
+      // Other accounts retain the existing calculated diesel fields.
+      let dieselCorrectionMode = false;
+      const canCorrectDiesel = getCurrentUserId() === 'EMP-26';
+      const dieselFields = [openingDieselField, fuelField, closingDieselField];
+      dieselFields.forEach(field => { field.querySelector('input').disabled = true; });
+      const dieselEditSwitch = canCorrectDiesel ? el('input', {
+        type: 'checkbox', role: 'switch', 'aria-label': 'Edit diesel figures',
+      }) : null;
+      const dieselEditControl = dieselEditSwitch ? el('label', { class: 'field' }, [
+        dieselEditSwitch, el('span', {}, 'Edit diesel figures'),
+        el('small', {}, 'Olumide only. Switch off to restore automatic calculations. Resets to locked when the form closes.'),
+      ]) : null;
+      dieselEditSwitch?.addEventListener('change', () => {
+        dieselCorrectionMode = canCorrectDiesel && dieselEditSwitch.checked;
+        dieselFields.forEach(field => { field.querySelector('input').disabled = !dieselCorrectionMode; });
+        if (dieselCorrectionMode && record) {
+          [[openingDieselField, record.openingDiesel], [fuelField, record.fuelUsed],
+            [closingDieselField, record.closingDiesel]].forEach(([field, value]) => {
+              if (value != null) field.querySelector('input').value = value;
+            });
+        }
+        if (!dieselCorrectionMode) {
+          recomputeOpeningDiesel(); recomputeDieselUsed(); recomputeClosingDiesel();
+        }
       });
 
       function dieselDraft() {
@@ -174,6 +197,7 @@ function openForm(record, refresh) {
       }
 
       function recomputeOpeningDiesel() {
+        if (dieselCorrectionMode) return;
         const equipment = equipmentField.querySelector('select').value;
         const date = dateField.querySelector('input').value;
         const prevClosing = previousDieselClosing(store.get('operations'), dieselDraft(), store.get('dieselSiteDistributions'));
@@ -200,6 +224,7 @@ function openForm(record, refresh) {
       // D8K rates when a dozer has no override of its own, so Fuel Used no
       // longer depends on anyone having configured that machine first.
       function recomputeDieselUsed() {
+        if (dieselCorrectionMode) return;
         const asset = store.get('inventory').find((i) => i.name === equipmentField.querySelector('select').value);
         const opType = operationTypeField.querySelector('select').value;
         const hours = Number(hoursField.querySelector('input').value) || 0;
@@ -213,6 +238,7 @@ function openForm(record, refresh) {
       }
 
       function recomputeClosingDiesel() {
+        if (dieselCorrectionMode) return;
         const opening = openingDieselField.querySelector('input').value;
         if (opening === '') return;
         const used = Number(fuelField.querySelector('input').value) || 0;
@@ -349,6 +375,12 @@ function openForm(record, refresh) {
         recomputeOpeningDiesel();
         recomputeDieselUsed();
         recomputeClosingDiesel();
+        if (dieselCorrectionMode && dieselFields.some(field => {
+          const value = field.querySelector('input').value;
+          return value === '' || !Number.isFinite(Number(value)) || Number(value) < 0;
+        })) {
+          window.alert('Enter valid non-negative opening, used and closing diesel figures.'); return;
+        }
         const equipment = equipmentField.querySelector('select').value;
         const relevant = needsWorkType(equipment);
         const workType = relevant ? workTypeField.querySelector('select').value : null;
@@ -422,6 +454,7 @@ function openForm(record, refresh) {
       container.appendChild(workGrid);
 
       container.appendChild(heading('Diesel', `Same-day reports carry forward in time order. Supply is counted once. Used is ${DEFAULT_DIESEL_RATES.first8h} L/hr for the first 8 hrs and ${DEFAULT_DIESEL_RATES.after8h} L/hr after that (${DEFAULT_DIESEL_RATES.trekking} L/hr flat for Trekking). Only Diesel Supplied can be edited here; Site Distribution must confirm the reported litres. Opening, Used, and Closing are calculated and locked.`));
+      if (dieselEditControl) container.appendChild(dieselEditControl);
       container.appendChild(dieselGrid);
 
       container.appendChild(workTypeWrap);
