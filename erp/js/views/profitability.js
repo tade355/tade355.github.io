@@ -269,7 +269,7 @@ export function computeProjectStats(project, from, to) {
 
   // Machine Recovery (dashboard basis only).
   const mcRecovered = machineRecoveredBasis(operations, ownershipByName, hourlyRateAsOf);
-  const maintenanceIncurred = maintenanceBasis({ fundRequests, expenses, fundRequestTotal, pms }) + workflow.maintenance;
+  const maintenanceIncurred = maintenanceBasis({ fundRequests, expenses, fundRequestTotal, pms, distributions }) + workflow.maintenance;
 
   const revenue = invoices.reduce((sum, i) => sum + invoiceTotal(i), 0);
   const profit = revenue - totalCost;
