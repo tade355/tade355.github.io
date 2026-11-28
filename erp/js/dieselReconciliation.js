@@ -1,6 +1,6 @@
-import { siteFuelIssues, siteFuelRecoveries } from './fuelLedger.js';
+import { siteFuelIssues, siteFuelRecoveries, isTankLoss } from './fuelLedger.js';
 import { dieselUsedFor } from './constants.js';
-import { compareDieselReports, lastDieselReading } from './dieselReportChain.js';
+import { compareDieselReports, lastDieselReading, transferAfterDieselReading } from './dieselReportChain.js';
 
 const litres = (value) => Number(value) || 0;
 const sum = (rows, key) => rows.reduce((total, row) => total + litres(row[key]), 0);
@@ -83,7 +83,8 @@ export function reconcileSiteDay({ project, date, receipts, distributions, opera
 export function reconcileDozerDay({ project, date, distributions, operations, fleet = [] }) {
   const issues = siteFuelIssues(distributions, operations).filter((row) => row.project === project && row.date === date && row.equipment);
   const reports = operations.filter((row) => row.siteName === project && row.date === date);
-  const machines = [...new Set([...issues.map((row) => row.equipment), ...reports.map((row) => row.equipment)])].filter(Boolean);
+  const lossRows = distributions.filter(row => isTankLoss(row) && row.project === project && row.date === date);
+  const machines = [...new Set([...lossRows.map(row => row.equipment), ...issues.map((row) => row.equipment), ...reports.map((row) => row.equipment)])].filter(Boolean);
   return machines.map((equipment) => {
     const machineIssues = issues.filter((row) => row.equipment === equipment);
     const nonTank = (row) => /not tank fuel|maintenance diesel/i.test(row.notes || '');
@@ -99,12 +100,15 @@ export function reconcileDozerDay({ project, date, distributions, operations, fl
     const last = lastDieselReading(rows) || rows[rows.length - 1];
     const first = rows[0];
     const opening = first?.openingDiesel == null ? null : litres(first.openingDiesel) - litres(first.dieselSupplied);
-    const expected = opening === null ? null : opening + issued - used;
-    const reported = last?.closingDiesel == null ? null : litres(last.closingDiesel);
+    const losses = lossRows.filter(row => row.equipment === equipment);
+    const tankLoss = sum(losses, 'litres');
+    const expected = opening === null ? null : opening + issued - used - tankLoss;
+    const reported = last?.closingDiesel == null ? null : litres(last.closingDiesel)
+      - sum(losses.filter(row => transferAfterDieselReading(row, last)), 'litres');
     const variance = reported === null || expected === null ? null : reported - expected;
     const tolerance = Math.max(5, Math.abs(expected || 0) * 0.02);
     return {
-      equipment, issued, otherUse, reportIssued, used, opening, expected, reported, variance, normative,
+      equipment, issued, otherUse, tankLoss, reportIssued, used, opening, expected, reported, variance, normative,
       status: !last ? (otherUse && !issued ? 'Maintenance/non-tank issue — verify supporting record' : 'Daily report needed')
         : hasExplicitIssue && Math.abs(issued - reportIssued) > 1 ? 'Distribution/report mismatch'
         : opening === null ? 'Opening reading needed'
