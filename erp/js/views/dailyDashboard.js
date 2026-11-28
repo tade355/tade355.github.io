@@ -5,7 +5,7 @@ import { isOperatorAccount } from '../operatorPortalData.js';
 // 6 Staff Performance, with the Actions/Flags list on top. Everything is
 // derived live from ERP records (see dailyDashboardData.js).
 import { el, formatCurrency, formatDate } from '../utils.js';
-import { getCurrentTier, getCurrentUser } from '../session.js';
+import { getCurrentTier, getCurrentUser, filterByProject } from '../session.js';
 import { store } from '../store.js';
 import { statCard, statusPill } from '../ui.js';
 import { renderBarChart, CATEGORICAL_COLORS } from '../charts.js';
@@ -209,6 +209,20 @@ export function renderDailyDashboard(container) {
     const projectLabel = project === 'all' ? 'All Projects' : project;
     body.appendChild(el('p', { class: 'section-subtitle' }, `${projectLabel} — ${formatDate(date)}. Expected output ${EXPECTED_HA_PER_8HRS} ha per 8 hrs; ideal start ${IDEAL_START} AM; cumulative figures since ${formatDate(since)}.`));
     body.appendChild(flagsBanner(d.flags));
+    const reportRemarks = filterByProject(store.get('operations'), 'siteName')
+      .filter(row => row.date === date && (project === 'all' || row.siteName === project) && String(row.notes || '').trim());
+    if (reportRemarks.length) {
+      const remarks = el('section', { 'aria-label': 'Manager report remarks' }, [
+        el('h3', {}, `Manager report remarks (${reportRemarks.length})`),
+      ]);
+      reportRemarks.forEach(row => {
+        const text = el('p', {}, row.notes);
+        text.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0 12px;';
+        remarks.append(el('strong', {}, `${row.equipment} — ${row.siteName} — ${row.id}`), text);
+      });
+      remarks.style.cssText = 'border-left:4px solid #d69e20;padding:12px 16px;margin:12px 0;background:#fff9eb;';
+      body.appendChild(remarks);
+    }
     body.appendChild(el('div', { class: 'dd-jump' }, ['operations:1. Operations', 'diesel:2. Diesel', 'fleet:3. Fleet', 'requests:4. Requests & Expenses', 'profit:5. Profitability', 'staff:6. Staff Performance']
       .map((t) => { const [id, label] = t.split(':'); return el('a', { href: `#/dailyDashboard`, onClick: (e) => { e.preventDefault(); document.getElementById(`dd-${id}`)?.scrollIntoView({ behavior: 'smooth' }); } }, label); })));
 
