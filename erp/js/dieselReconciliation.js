@@ -92,7 +92,7 @@ export function reconcileDozerDay({ project, date, distributions, operations, fl
     const otherUse = sum(machineIssues.filter(nonTank), 'litres');
     const rows = reports.filter((row) => row.equipment === equipment).sort(compareDieselReports);
     const reportIssued = sum(rows, 'dieselSupplied');
-    const hasExplicitIssue = distributions.some((row) => row.project === project && row.date === date && row.equipment === equipment);
+    const hasExplicitIssue = distributions.some((row) => row.project === project && row.date === date && row.equipment === equipment && (row.purpose || 'Dozer') === 'Dozer');
     const used = sum(rows, 'fuelUsed');
     const asset = fleet.find((row) => row.name === equipment);
     const normative = rows.reduce((total, row) => total + dieselUsedFor(asset, row.operationType, litres(row.hoursWorked)), 0);
@@ -111,12 +111,12 @@ export function reconcileDozerDay({ project, date, distributions, operations, fl
     return {
       equipment, issued, otherUse, tankLoss, maintenanceFuel, reportIssued, used, opening, expected, reported, variance, normative,
       status: !last ? (otherUse && !issued ? 'Maintenance/non-tank issue — verify supporting record' : 'Daily report needed')
-        : hasExplicitIssue && Math.abs(issued - reportIssued) > 1 ? 'Distribution/report mismatch'
         : opening === null ? 'Opening reading needed'
         : expected < -tolerance ? 'Consumption exceeds available fuel'
           : Math.abs(variance || 0) > tolerance ? 'Closing variance — investigate'
             : overConsumption ? 'High reported use — review hours/rate'
               : reported === null ? 'Closing reading needed'
+            : hasExplicitIssue && Math.abs(issued - reportIssued) > 1 ? 'Site confirmed supply overrides manager report'
             : 'Reported balance agrees',
     };
   });
