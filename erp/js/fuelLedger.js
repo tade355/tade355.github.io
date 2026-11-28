@@ -81,12 +81,22 @@ export function siteFuelIssues(distributions, operations) {
 
 // Drilling recovers fuel from a machine into site stock. Later dozer issues
 // are separate movements, so the recovered litres can serve multiple machines.
+export function maintenanceFuelDetails(row) {
+  if (row?.purpose !== 'Tank Drill' || !String(row.notes || '').startsWith('[MAINTENANCE FUEL] ')) return null;
+  try {
+    const data = JSON.parse(row.notes.slice('[MAINTENANCE FUEL] '.length));
+    if (!['Idling', 'Test running'].includes(data.kind) || !(Number(data.hours) > 0) || !(Number(data.unitPrice) > 0)) return null;
+    return { ...data, hours: Number(data.hours), unitPrice: Number(data.unitPrice),
+      cost: Number(row.litres || 0) * Number(data.unitPrice) };
+  } catch (_) { return null; }
+}
+
 export function isTankLoss(row) {
   return row?.purpose === 'Tank Drill' && /^\[TANK LOSS\]/.test(String(row.notes || ''));
 }
 
 export function siteFuelRecoveries(distributions) {
-  return (distributions || []).filter(r => r.purpose === 'Tank Drill' && !isTankLoss(r))
+  return (distributions || []).filter(r => r.purpose === 'Tank Drill' && !isTankLoss(r) && !String(r.notes || '').startsWith('[MAINTENANCE FUEL] '))
     .map(r => ({ ...r, source: 'Drilled from ' + r.equipment }));
 }
 
