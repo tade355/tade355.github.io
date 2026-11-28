@@ -1,3 +1,4 @@
+import { maintenanceFuelDetails } from './fuelLedger.js';
 // "Daily Dashboard basis" — the cost rules behind the Daily Operations
 // Dashboards, applied to every operation dated on/after DASHBOARD_BASIS_FROM.
 // Earlier dates keep the legacy Profitability rules, so history entered
@@ -117,14 +118,16 @@ export function pmsBasis(collections) {
 // Maintenance expenses and PMS used for maintenance — the money spent on
 // repairing the fleet, shown under Machine Recovery rather than inside
 // Operations Profit.
-export function maintenanceBasis({ fundRequests, expenses, fundRequestTotal, pms }) {
+export function maintenanceBasis({ fundRequests, expenses, fundRequestTotal, pms, distributions = [] }) {
   const fromRequests = fundRequests
     .filter((r) => onDashboardBasis(r.date) && (r.status === 'Approved' || r.status === 'Paid') && r.costHead === 'Maintenance')
     .reduce((sum, r) => sum + fundRequestTotal(r), 0);
   const fromExpenses = expenses
     .filter((e) => onDashboardBasis(e.date) && e.category === 'Maintenance' && !String(e.id || '').startsWith('FUEL-WF:'))
     .reduce((sum, e) => sum + (e.amount || 0), 0);
-  return fromRequests + fromExpenses + pms.maintenance;
+  const maintenanceFuel = distributions.filter(row => onDashboardBasis(row.date))
+    .reduce((total, row) => total + (maintenanceFuelDetails(row)?.cost || 0), 0);
+  return fromRequests + fromExpenses + pms.maintenance + maintenanceFuel;
 }
 
 // Rental / dozer cost of one operation. Trekking is free for Company and
