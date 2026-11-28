@@ -1,6 +1,6 @@
 import { selectableProjects, selectableEmployees, selectableMachines, machineProjectAsOf } from '../selectionOptions.js';
 import { renderFuelWorkflow } from './fuelWorkflow.js';
-import { stationAdvanceBalances, siteFuelIssues, siteFuelComparisons, siteFuelRecoveries } from '../fuelLedger.js';
+import { stationAdvanceBalances, siteFuelIssues, siteFuelComparisons, siteFuelRecoveries, isTankLoss } from '../fuelLedger.js';
 import { store } from '../store.js';
 import { todayISOString } from '../dateUtils.js';
 import { formatCurrency, formatDate, el, dateInRange } from '../utils.js';
@@ -226,6 +226,7 @@ function renderSiteDistributionTab(container) {
   actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openSupplyForm() }, '+ New Supply from Station'));
   actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openOtherUseForm() }, '+ Other Diesel Use'));
   actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openTankDrillForm() }, '+ Drill to Site Stock'));
+  actionSlot.appendChild(el('button', { class: 'btn btn-ghost', onClick: () => openTankLossForm() }, '+ Record Tank Loss'));
 
   const entrySlot = el('div');
   container.appendChild(entrySlot);
@@ -296,7 +297,7 @@ function renderSiteDistributionTab(container) {
       columns: [
         { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
         { key: 'project', label: 'Site / Project' },
-        { key: 'purpose', label: 'Use', render: (r) => r.purpose || 'Dozer' },
+        { key: 'purpose', label: 'Use', render: (r) => isTankLoss(r) ? 'Tank Loss' : r.purpose || 'Dozer' },
         { key: 'equipment', label: 'Dozer / Equipment', render: (r) => r.equipment || '—' },
         { key: 'recipient', label: 'Issued to / for', render: (r) => r.recipient || '—' },
         { key: 'litres', label: 'Litres', render: (r) => `${r.litres.toLocaleString()} L` },
@@ -306,7 +307,7 @@ function renderSiteDistributionTab(container) {
           key: 'actions',
           label: '',
           render: (r) => actionButtons({
-            onEdit: () => r.purpose === 'Tank Transfer' ? openTankTransferForm(r) : r.purpose === 'Tank Drill' ? openTankDrillForm(r) : r.purpose && r.purpose !== 'Dozer' ? openOtherUseForm(r) : openBatchForm(r.date, r.project),
+            onEdit: () => isTankLoss(r) ? openTankLossForm(r) : r.purpose === 'Tank Transfer' ? openTankTransferForm(r) : r.purpose === 'Tank Drill' ? openTankDrillForm(r) : r.purpose && r.purpose !== 'Dozer' ? openOtherUseForm(r) : openBatchForm(r.date, r.project),
             onDelete: async () => {
               if (!confirmDelete(`Diesel issued for ${r.equipment || r.recipient || r.purpose} on ${formatDate(r.date)}`)) return;
               try {
@@ -451,6 +452,39 @@ function renderSiteDistributionTab(container) {
     });
   }
 
+  function openTankLossForm(record) {
+    const options = fleetOptions();
+    if (record?.equipment && !options.some(o => o.value === record.equipment))
+      options.unshift({ value: record.equipment, label: record.equipment + ' (historical)' });
+    openModal({
+      title: record ? 'Correct Tank Loss' : 'Record Tank Loss',
+      fields: [
+        { name: 'date', label: 'Loss date', type: 'date', required: true },
+        { name: 'project', label: 'Project', type: 'select', required: true, options: projectOptions() },
+        { name: 'equipment', label: 'Dozer', type: 'select', required: true, options },
+        { name: 'litres', label: 'Litres lost (not recovered)', type: 'number', required: true, min: 0.01, step: 0.01 },
+        { name: 'distributedBy', label: 'Recorded by', type: 'select', required: true, options: employeeOptions() },
+        { name: 'notes', label: 'Cause, evidence/reference and verification details', type: 'textarea', required: true },
+      ],
+      initial: record ? { ...record, notes: String(record.notes || '').replace(/^\[TANK LOSS\]\s*/, '') } : { date: todayISOString() },
+      submitLabel: record ? 'Save Loss Correction' : 'Record Loss',
+      onSubmit: async data => {
+        if (!Number.isFinite(Number(data.litres)) || Number(data.litres) <= 0) throw new Error('Enter positive litres lost.');
+        if (!String(data.notes || '').trim()) throw new Error('Explain the loss and supporting verification.');
+        if (!record && store.get('dieselSiteDistributions').some(row => isTankLoss(row) &&
+          row.date === data.date && row.equipment === data.equipment && row.project === data.project))
+          throw new Error('A tank loss already exists for this dozer and date. Edit the existing loss to avoid a duplicate deduction.');
+        // Reuse the existing audited tank-withdrawal record. The loss marker
+        // excludes it from recoveries: no fuel is added to ground stock.
+        const payload = { ...data, litres: Number(data.litres), purpose: 'Tank Drill',
+          recipient: null, notes: '[TANK LOSS] ' + data.notes.trim() };
+        if (record) await store.update('dieselSiteDistributions', record.id, payload);
+        else await store.add('dieselSiteDistributions', payload);
+        refresh();
+      },
+    });
+  }
+
   function openTankDrillForm(record) {
     const donorOptions = fleetOptions();
     if (record?.equipment && !donorOptions.some(o => o.value === record.equipment))
@@ -589,6 +623,7 @@ function renderDailyReconciliationTab(container) {
       { key: 'equipment', label: 'Dozer' },
       { key: 'opening', label: 'Opening in tank', render: (r) => r.opening === null ? '—' : `${r.opening.toLocaleString()} L` },
       { key: 'issued', label: 'Distribution log', render: (r) => `${r.issued.toLocaleString()} L` },
+      { key: 'tankLoss', label: 'Tank loss', render: (r) => `${Number(r.tankLoss || 0).toLocaleString()} L` },
       { key: 'otherUse', label: 'Non-tank issue', render: (r) => `${r.otherUse.toLocaleString()} L` },
       { key: 'reportIssued', label: 'Daily report supply', render: (r) => `${r.reportIssued.toLocaleString()} L` },
       { key: 'used', label: 'Used', render: (r) => `${r.used.toLocaleString()} L` },
