@@ -504,6 +504,8 @@ export function renderOperations(container) {
     refresh();
   });
 
+  const remarksPanel = el('div', { 'aria-label': 'Daily report remarks' });
+  container.appendChild(remarksPanel);
   const tableContainer = el('div');
   container.appendChild(tableContainer);
 
@@ -525,6 +527,22 @@ export function renderOperations(container) {
       });
     }
 
+    const withRemarks = rows.filter(row => String(row.notes || '').trim());
+    remarksPanel.replaceChildren();
+    if (withRemarks.length) {
+      const heading = el('h3', {}, `Reports with remarks (${withRemarks.length})`);
+      const list = el('div');
+      withRemarks.slice(0, 10).forEach(row => {
+        const text = el('p', {}, row.notes);
+        text.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0 0;';
+        const card = el('article', {}, [
+          el('strong', {}, `${formatDate(row.date)} — ${row.equipment} — ${row.siteName}`), text,
+        ]);
+        card.style.cssText = 'border-left:4px solid #d69e20;padding:10px 12px;margin:8px 0;background:#fff9eb;';
+        list.appendChild(card);
+      });
+      remarksPanel.append(heading, el('p', {}, 'Latest 10 remarks for the selected filters. All remarks are also shown in the report table below.'), list);
+    }
     const milestones = operationMilestones(rows);
     const totalFuel = rows.reduce((sum, row) => sum + (Number(row.fuelUsed) || 0), 0);
     const totalHours = rows.reduce((sum, row) => sum + (Number(row.hoursWorked) || 0), 0);
@@ -554,6 +572,12 @@ export function renderOperations(container) {
         { key: 'blockNumber', label: 'Block/Plot', render: (r) => r.blockNumber || '—' },
         { key: 'customer', label: 'Client', render: (r) => customers.find((c) => c.id === r.customerId)?.name || '—' },
         { key: 'equipment', label: 'Equipment' },
+        { key: 'notes', label: 'Remarks', wrap: true, render: (r) => {
+          if (!String(r.notes || '').trim()) return '—';
+          const text = el('span', {}, r.notes);
+          text.style.cssText = 'display:block;min-width:240px;max-width:440px;white-space:pre-wrap;overflow-wrap:anywhere;';
+          return text;
+        } },
         { key: 'operator', label: 'Operator', render: (r) => employees.find((e) => e.id === r.operatorId)?.name || 'Unknown' },
         { key: 'hoursWorked', label: 'Hours', render: (r) => `${r.hoursWorked} h` },
         { key: 'timeResumed', label: 'Resumed', render: (r) => formatClock(r.timeResumed) },
