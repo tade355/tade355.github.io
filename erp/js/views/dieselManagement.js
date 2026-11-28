@@ -294,7 +294,8 @@ function renderSiteDistributionTab(container) {
         { key: 'action', label: '', render: r => !r.hasConfirmation ? 'Use Confirm Daily Dozer Diesel' : 'Confirmed' },
       ], rows: comparisons, emptyText: 'No manager reports or site distributions in this period.',
     });
-    const rows = filterByProject(store.get('dieselSiteDistributions'), 'project').filter(r => dateInRange(r.date, fromInput.value, toInput.value)).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+    const rows = filterByProject(store.get('dieselSiteDistributions'), 'project').filter(r => dateInRange(r.date, fromInput.value, toInput.value))
+      .filter(r => !(Number(r.litres) === 0 && /^\[Superseded:/i.test(String(r.notes || '')))).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
     renderTable(distributionsContainer, {
       columns: [
         { key: 'date', label: 'Date', render: (r) => formatDate(r.date) },
