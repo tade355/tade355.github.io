@@ -12,7 +12,7 @@ import { isSunday, addDays, requestSubmissionDate, rexFortnightStart } from './d
 import { buildAttention } from './attention.js';
 import { fuelEfficiency, NORM_LITRES_PER_HA } from './fuelEfficiency.js';
 import { mergeDieselReceipts } from './dieselSupply.js';
-import { siteFuelIssues, siteFuelRecoveries, tankTransferDelta, isTankLoss } from './fuelLedger.js';
+import { siteFuelIssues, siteFuelRecoveries, tankTransferDelta, isTankLoss, maintenanceFuelDetails } from './fuelLedger.js';
 import { siteOnGroundAsOf } from './dieselReconciliation.js';
 
 import { EXPECTED_HA_PER_8HRS, IDEAL_START, DIESEL_FILL_LITRES, LATE_FLAG_MINUTES } from './rules.js';
@@ -232,7 +232,7 @@ export function buildDailyDashboard(ctx) {
       transferAfterDieselReading(row, reading)), name, date, addDays(date, -1));
     const closing = reportedClosing === undefined ? calculatedClosing : reportedClosing + tankMovementToday;
     let status = 'Idle';
-    if (rows.length) status = tankMovementToday ? (ctx.distributions.some(row => isTankLoss(row) && row.equipment === name && row.date === date && transferAfterDieselReading(row, reading)) ? 'Tank loss deducted' : 'Tank transfer after report') : reportedClosing !== undefined && Math.abs(reportedClosing - calculatedClosing) > 0.5 ? 'Closing restated' : 'Reconciled';
+    if (rows.length) status = tankMovementToday ? (ctx.distributions.some(row => (isTankLoss(row) || maintenanceFuelDetails(row)) && row.equipment === name && row.date === date && transferAfterDieselReading(row, reading)) ? 'Tank deduction recorded' : 'Tank transfer after report') : reportedClosing !== undefined && Math.abs(reportedClosing - calculatedClosing) > 0.5 ? 'Closing restated' : 'Reconciled';
     else if (!opening && !closing) status = 'No balance';
     return { equipment: name, opening, distributed, used, closing, calculatedClosing, efficiency: ha > 0 ? used / ha : null, status, reportedClosing, worked: rows.length > 0 };
   }).filter((r) => r.opening || r.distributed || r.used || r.closing || r.worked)
