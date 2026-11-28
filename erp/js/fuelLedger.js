@@ -81,8 +81,12 @@ export function siteFuelIssues(distributions, operations) {
 
 // Drilling recovers fuel from a machine into site stock. Later dozer issues
 // are separate movements, so the recovered litres can serve multiple machines.
+export function isTankLoss(row) {
+  return row?.purpose === 'Tank Drill' && /^\[TANK LOSS\]/.test(String(row.notes || ''));
+}
+
 export function siteFuelRecoveries(distributions) {
-  return (distributions || []).filter(r => r.purpose === 'Tank Drill')
+  return (distributions || []).filter(r => r.purpose === 'Tank Drill' && !isTankLoss(r))
     .map(r => ({ ...r, source: 'Drilled from ' + r.equipment }));
 }
 
